@@ -7,7 +7,10 @@
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__execute_sql",
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__apply_migration",
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__deploy_edge_function",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git pull *)"
     ]
   }
 }
