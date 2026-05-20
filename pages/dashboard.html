@@ -8,115 +8,221 @@
 <link rel="stylesheet" href="../styles/main.css">
 <link rel="stylesheet" href="../styles/layout.css">
 <link rel="stylesheet" href="../styles/components.css">
+<style>
+  .admin-bar {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .admin-badge {
+    background: var(--brand-gold);
+    color: #1A3A5C;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .admin-selector {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 180px;
+  }
+  .admin-selector option { color: #000; background: #fff; }
+</style>
 </head>
 <body>
 
 <div class="portal-shell">
-  <!-- Sidebar injetado pelo app.js -->
   <div data-component="sidebar"></div>
 
   <div class="main-area">
-    <!-- Header injetado pelo app.js -->
     <div data-component="header"></div>
 
     <main class="page-content" id="page-content">
 
-      <div class="page-header page-header-row">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Visão geral do seu caso de superendividamento.</p>
+      <!-- Admin bar (shown only for admin users) -->
+      <div id="admin-bar" class="admin-bar" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="admin-badge">ADMIN</span>
+          <span style="font-size:13px;opacity:.75;">Painel Administrativo</span>
         </div>
-        <a href="onboarding.html" class="btn btn-primary btn-sm">+ Completar cadastro</a>
-      </div>
-
-      <!-- Progress Tracker -->
-      <div data-component="progress-bar" style="margin-bottom:16px;"></div>
-
-      <!-- KPI Cards -->
-      <div class="kpi-grid" style="margin-bottom:16px;">
-        <div class="kpi kpi-red">
-          <span class="kpi-label">Dívida Total Declarada</span>
-          <div class="kpi-value" id="kpi-divida">R$ —</div>
-          <div class="kpi-hint">Aguardando dados</div>
-        </div>
-        <div class="kpi kpi-warn">
-          <span class="kpi-label">Credores</span>
-          <div class="kpi-value" id="kpi-credores">—</div>
-          <div class="kpi-hint">Cadastrados no portal</div>
-        </div>
-        <div class="kpi kpi-muted">
-          <span class="kpi-label">Documentos</span>
-          <div class="kpi-value" id="kpi-docs">0 / 0</div>
-          <div class="kpi-hint">Enviados / necessários</div>
-        </div>
-        <div class="kpi">
-          <span class="kpi-label">Fase do Caso</span>
-          <div class="kpi-value" id="kpi-fase" style="font-size:16px;">Cadastro</div>
-          <div class="kpi-hint">Etapa atual</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;opacity:.55;">Visualizar como cliente:</span>
+          <select id="client-selector" class="admin-selector" onchange="window.switchView(this.value)">
+            <option value="">— Visão geral —</option>
+          </select>
         </div>
       </div>
 
-      <!-- Status Cards Row -->
-      <div class="status-cards-grid" style="margin-bottom:16px;">
-        <div class="status-card">
-          <div class="status-card-icon icon-bg-blue">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2C6.13 2 3 5.13 3 9s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7z" stroke="#2E6DA4" stroke-width="1.5"/>
-              <path d="M10 6v4l2.5 2.5" stroke="#2E6DA4" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="status-card-body">
-            <div class="status-card-label">Próxima Ação</div>
-            <div class="status-card-value" id="sc-next-action" style="font-size:14px;">Completar cadastro</div>
-            <div class="status-card-hint" id="sc-next-hint">Acesse a aba Onboarding</div>
+      <!-- ── ADMIN OVERVIEW ─────────────────────────────── -->
+      <div id="admin-overview" style="display:none;">
+
+        <div class="page-header page-header-row">
+          <div>
+            <h1>Visão Geral</h1>
+            <p>Métricas e clientes do escritório.</p>
           </div>
         </div>
 
-        <div class="status-card">
-          <div class="status-card-icon icon-bg-ok">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M4 10h12M10 4v12" stroke="#1a7a4a" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+        <div class="kpi-grid" style="margin-bottom:16px;">
+          <div class="kpi">
+            <span class="kpi-label">Clientes</span>
+            <div class="kpi-value" id="adm-kpi-clientes">—</div>
+            <div class="kpi-hint">Casos cadastrados</div>
           </div>
-          <div class="status-card-body">
-            <div class="status-card-label">Documentos Aprovados</div>
-            <div class="status-card-value" id="sc-docs-ok">0</div>
-            <div class="status-card-hint">de <span id="sc-docs-total">0</span> necessários</div>
+          <div class="kpi kpi-red">
+            <span class="kpi-label">Dívida Total Declarada</span>
+            <div class="kpi-value" id="adm-kpi-dividas" style="font-size:18px;">—</div>
+            <div class="kpi-hint">Soma de todos os casos</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <span class="kpi-label">Docs em Revisão</span>
+            <div class="kpi-value" id="adm-kpi-docs">—</div>
+            <div class="kpi-hint">Aguardando análise</div>
+          </div>
+          <div class="kpi kpi-ok">
+            <span class="kpi-label">Onboardings Concluídos</span>
+            <div class="kpi-value" id="adm-kpi-onboarding">—</div>
+            <div class="kpi-hint">Cadastros completos</div>
           </div>
         </div>
 
-        <div class="status-card">
-          <div class="status-card-icon icon-bg-warn">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 3l7 13H3L10 3z" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/>
-              <path d="M10 9v4M10 15v.5" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+        <div class="sec">
+          <div class="sec-header">
+            <div class="sec-num">1</div>
+            <h2 class="sec-title">Clientes</h2>
+            <span class="sec-tag" id="adm-clients-count">—</span>
           </div>
-          <div class="status-card-body">
-            <div class="status-card-label">Pendências</div>
-            <div class="status-card-value" id="sc-pendencias">—</div>
-            <div class="status-card-hint">Itens aguardando ação</div>
+          <div style="overflow-x:auto;">
+            <table class="table" style="width:100%;min-width:520px;">
+              <thead>
+                <tr>
+                  <th>E-mail</th>
+                  <th>Nome</th>
+                  <th>Fase</th>
+                  <th>Credores</th>
+                  <th>Cadastro</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="adm-clients-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
 
-      <!-- Activity Feed -->
-      <div class="sec">
-        <div class="sec-header">
-          <div class="sec-num">1</div>
-          <h2 class="sec-title">Atividade Recente</h2>
-          <span class="sec-tag" id="activity-count">—</span>
+      </div><!-- /admin-overview -->
+
+      <!-- ── CLIENT VIEW (pessoal ou admin visualizando cliente) ─── -->
+      <div id="client-view">
+
+        <div class="page-header page-header-row">
+          <div>
+            <h1 id="view-title">Dashboard</h1>
+            <p id="view-subtitle">Visão geral do seu caso de superendividamento.</p>
+          </div>
+          <a href="onboarding.html" class="btn btn-primary btn-sm" id="btn-onboarding">+ Completar cadastro</a>
         </div>
 
-        <div class="activity-list" id="activity-list">
-          <div class="empty-state">
-            <div class="empty-state-icon">📋</div>
-            <h3>Nenhuma atividade ainda</h3>
-            <p>As atualizações do seu caso aparecerão aqui.</p>
-            <a href="onboarding.html" class="btn btn-primary btn-sm">Iniciar cadastro</a>
+        <div data-component="progress-bar" style="margin-bottom:16px;"></div>
+
+        <div class="kpi-grid" style="margin-bottom:16px;">
+          <div class="kpi kpi-red">
+            <span class="kpi-label">Dívida Total Declarada</span>
+            <div class="kpi-value" id="kpi-divida">R$ —</div>
+            <div class="kpi-hint">Aguardando dados</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <span class="kpi-label">Credores</span>
+            <div class="kpi-value" id="kpi-credores">—</div>
+            <div class="kpi-hint">Cadastrados no portal</div>
+          </div>
+          <div class="kpi kpi-muted">
+            <span class="kpi-label">Documentos</span>
+            <div class="kpi-value" id="kpi-docs">0 / 0</div>
+            <div class="kpi-hint">Enviados / necessários</div>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Fase do Caso</span>
+            <div class="kpi-value" id="kpi-fase" style="font-size:16px;">Cadastro</div>
+            <div class="kpi-hint">Etapa atual</div>
           </div>
         </div>
-      </div>
+
+        <div class="status-cards-grid" style="margin-bottom:16px;">
+          <div class="status-card">
+            <div class="status-card-icon icon-bg-blue">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 2C6.13 2 3 5.13 3 9s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7z" stroke="#2E6DA4" stroke-width="1.5"/>
+                <path d="M10 6v4l2.5 2.5" stroke="#2E6DA4" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="status-card-body">
+              <div class="status-card-label">Próxima Ação</div>
+              <div class="status-card-value" id="sc-next-action" style="font-size:14px;">Completar cadastro</div>
+              <div class="status-card-hint" id="sc-next-hint">Acesse a aba Onboarding</div>
+            </div>
+          </div>
+
+          <div class="status-card">
+            <div class="status-card-icon icon-bg-ok">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10h12M10 4v12" stroke="#1a7a4a" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="status-card-body">
+              <div class="status-card-label">Documentos Aprovados</div>
+              <div class="status-card-value" id="sc-docs-ok">0</div>
+              <div class="status-card-hint">de <span id="sc-docs-total">0</span> necessários</div>
+            </div>
+          </div>
+
+          <div class="status-card">
+            <div class="status-card-icon icon-bg-warn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 3l7 13H3L10 3z" stroke="#b45309" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M10 9v4M10 15v.5" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="status-card-body">
+              <div class="status-card-label">Pendências</div>
+              <div class="status-card-value" id="sc-pendencias">—</div>
+              <div class="status-card-hint">Itens aguardando ação</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-header">
+            <div class="sec-num">1</div>
+            <h2 class="sec-title">Atividade Recente</h2>
+            <span class="sec-tag" id="activity-count">—</span>
+          </div>
+          <div class="activity-list" id="activity-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">📋</div>
+              <h3>Nenhuma atividade ainda</h3>
+              <p>As atualizações do seu caso aparecerão aqui.</p>
+              <a href="onboarding.html" class="btn btn-primary btn-sm">Iniciar cadastro</a>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /client-view -->
 
     </main>
 
@@ -127,59 +233,135 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
 <script type="module" src="../js/app.js"></script>
 <script type="module">
-import { CaseService, DebtService, DocumentService } from '../services/database.js';
+import { CaseService, DebtService, DocumentService, AdminService } from '../services/database.js';
 import { formatCurrency } from '../utils/helpers.js';
 
 const FASE_LABEL = {
-  cadastro:    'Cadastro',
-  analise:     'Em Análise',
-  negociacao:  'Negociação',
-  acordo:      'Acordo',
-  encerrado:   'Encerrado',
+  cadastro:   'Cadastro',
+  analise:    'Em Análise',
+  negociacao: 'Negociação',
+  acordo:     'Acordo',
+  encerrado:  'Encerrado',
 };
 
-document.addEventListener('app:ready', async () => {
-  loadProgressBar();
-  await loadDashboardData();
+let isAdminUser = false;
+
+/* ── Listen for user identity ───────────────────────── */
+document.addEventListener('app:user-loaded', async e => {
+  const { isAdmin } = e.detail || {};
+  isAdminUser = !!isAdmin;
+
+  if (isAdmin) {
+    document.getElementById('admin-bar').style.display     = 'flex';
+    document.getElementById('btn-onboarding').style.display = 'none';
+  }
 });
 
-function loadProgressBar() {
-  const container = document.querySelector('[data-component="progress-bar"]');
-  if (!container) return;
-  fetch('../components/progress-bar.html')
-    .then(r => r.text())
-    .then(html => {
-      container.innerHTML = html;
-      updateTrackerState('cadastro');
+/* ── Bootstrap data after app is ready ─────────────── */
+document.addEventListener('app:ready', async () => {
+  if (isAdminUser) {
+    await loadAdminOverview();
+  } else {
+    loadProgressBar();
+    await loadClientData(null);
+  }
+});
+
+/* ── Admin overview ─────────────────────────────────── */
+async function loadAdminOverview() {
+  document.getElementById('admin-overview').style.display = '';
+  document.getElementById('client-view').style.display    = 'none';
+
+  try {
+    const stats = await AdminService.getStats();
+    document.getElementById('adm-kpi-clientes').textContent   = stats.total_clientes   ?? '—';
+    document.getElementById('adm-kpi-dividas').textContent    = formatCurrency(stats.total_dividas ?? 0);
+    document.getElementById('adm-kpi-docs').textContent       = stats.docs_review      ?? '—';
+    document.getElementById('adm-kpi-onboarding').textContent = stats.onboarding_done  ?? '—';
+  } catch (_) {}
+
+  try {
+    const clients = await AdminService.getClients();
+    const count   = clients.length;
+    document.getElementById('adm-clients-count').textContent = count + ' cliente' + (count !== 1 ? 's' : '');
+
+    const sel = document.getElementById('client-selector');
+    clients.forEach(c => {
+      const opt       = document.createElement('option');
+      opt.value       = c.user_id;
+      opt.textContent = c.full_name || c.email;
+      opt.dataset.name  = c.full_name || c.email;
+      opt.dataset.email = c.email;
+      sel.appendChild(opt);
     });
+
+    const tbody = document.getElementById('adm-clients-tbody');
+    if (count === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Nenhum cliente cadastrado</td></tr>';
+    } else {
+      tbody.innerHTML = clients.map(c => `
+        <tr>
+          <td style="font-size:13px;">${c.email}</td>
+          <td>${c.full_name || '—'}</td>
+          <td><span class="chip">${FASE_LABEL[c.fase] || c.fase || 'Cadastro'}</span></td>
+          <td style="text-align:center;">${c.n_credores || 0}</td>
+          <td style="font-size:12px;color:var(--muted);">${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm"
+              onclick="document.getElementById('client-selector').value='${c.user_id}';window.switchView('${c.user_id}')">
+              Ver
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    console.error('Admin clients error:', e);
+  }
 }
 
-function updateTrackerState(activeStage) {
-  const stages = ['cadastro','docs','analise','proposta','concluido'];
-  const idx = stages.indexOf(activeStage);
-  stages.forEach((s, i) => {
-    const step = document.getElementById('step-' + s);
-    const conn = document.getElementById('conn-' + (i < stages.length - 1 ? stages[i] : null));
-    if (!step) return;
-    if (i < idx)        { step.className = 't-step done';   if (conn) conn.classList.add('done'); }
-    else if (i === idx) { step.className = 't-step active'; }
-    else                { step.className = 't-step'; }
-  });
-}
+/* ── View switcher (admin only) ─────────────────────── */
+window.switchView = async function(userId) {
+  if (!userId) {
+    document.getElementById('admin-overview').style.display = '';
+    document.getElementById('client-view').style.display    = 'none';
+    return;
+  }
 
-async function loadDashboardData() {
-  const [caso, dividas, docs] = await Promise.all([
-    CaseService.get().catch(() => null),
-    DebtService.list().catch(() => []),
-    DocumentService.list().catch(() => []),
-  ]);
+  document.getElementById('admin-overview').style.display = 'none';
+  document.getElementById('client-view').style.display    = '';
 
-  // KPIs
+  const sel = document.getElementById('client-selector');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('view-title').textContent    = opt.dataset.name  || opt.text;
+  document.getElementById('view-subtitle').textContent = opt.dataset.email || '';
+
+  loadProgressBar();
+  await loadClientData(userId);
+};
+
+/* ── Client data (own or specific userId for admin) ─── */
+async function loadClientData(userId) {
+  let caso, dividas, docs;
+
+  if (userId) {
+    [caso, dividas, docs] = await Promise.all([
+      AdminService.getClientCaso(userId).catch(() => null),
+      AdminService.getClientDebts(userId).catch(() => []),
+      AdminService.getClientDocs(userId).catch(() => []),
+    ]);
+  } else {
+    [caso, dividas, docs] = await Promise.all([
+      CaseService.get().catch(() => null),
+      DebtService.list().catch(() => []),
+      DocumentService.list().catch(() => []),
+    ]);
+  }
+
   if (caso) {
     const totalDividas = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
     if (totalDividas) document.getElementById('kpi-divida').textContent = formatCurrency(totalDividas);
@@ -188,16 +370,14 @@ async function loadDashboardData() {
     updateTrackerState(caso.fase === 'analise' ? 'analise' : caso.fase === 'negociacao' ? 'proposta' : 'cadastro');
   }
 
-  // Documents
   const aprovados = docs.filter(d => d.status === 'aprovado').length;
   const total     = DocumentService.TYPES.length;
-  document.getElementById('kpi-docs').textContent    = aprovados + ' / ' + total;
-  document.getElementById('sc-docs-ok').textContent  = aprovados;
-  document.getElementById('sc-docs-total').textContent = total;
+  document.getElementById('kpi-docs').textContent       = aprovados + ' / ' + total;
+  document.getElementById('sc-docs-ok').textContent     = aprovados;
+  document.getElementById('sc-docs-total').textContent  = total;
 
-  // Status cards
-  const pendDocs    = docs.filter(d => d.status === 'pendente').length;
-  const pendTotal   = pendDocs + (caso && !caso.onboarding_done ? 1 : 0);
+  const pendDocs  = docs.filter(d => d.status === 'pendente').length;
+  const pendTotal = pendDocs + (caso && !caso.onboarding_done ? 1 : 0);
   document.getElementById('sc-pendencias').textContent = pendTotal || '—';
 
   if (caso?.proxima_acao) {
@@ -208,31 +388,19 @@ async function loadDashboardData() {
     document.getElementById('sc-next-hint').textContent   = 'Acesse a aba Onboarding';
   }
 
-  // Footer
-  if (caso) {
-    document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
-  }
+  if (caso) document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
 
-  // Activity feed
   buildActivityFeed(caso, dividas, docs);
 }
 
 function buildActivityFeed(caso, dividas, docs) {
   const items = [];
-
-  if (caso?.onboarding_done) {
-    items.push({ label: 'Cadastro concluído', hint: formatDate(caso.updated_at), type: 'ok' });
-  }
-  dividas.slice(-3).forEach(d => {
-    items.push({ label: 'Dívida cadastrada: ' + d.credor, hint: formatCurrency(d.valor), type: 'warn' });
-  });
-  docs.filter(d => d.status === 'aprovado').forEach(d => {
-    items.push({ label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' });
-  });
+  if (caso?.onboarding_done) items.push({ label: 'Cadastro concluído', hint: formatDate(caso.updated_at), type: 'ok' });
+  dividas.slice(-3).forEach(d => items.push({ label: 'Dívida cadastrada: ' + d.credor, hint: formatCurrency(d.valor), type: 'warn' }));
+  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
 
   const list = document.getElementById('activity-list');
   if (items.length === 0) return;
-
   document.getElementById('activity-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
   list.innerHTML = items.map(it => `
     <div class="activity-item">
@@ -243,6 +411,27 @@ function buildActivityFeed(caso, dividas, docs) {
       </div>
     </div>
   `).join('');
+}
+
+function updateTrackerState(activeStage) {
+  const stages = ['cadastro','docs','analise','proposta','concluido'];
+  const idx    = stages.indexOf(activeStage);
+  stages.forEach((s, i) => {
+    const step = document.getElementById('step-' + s);
+    const conn = document.getElementById('conn-' + (i < stages.length - 1 ? stages[i] : null));
+    if (!step) return;
+    if (i < idx)        { step.className = 't-step done';   if (conn) conn.classList.add('done'); }
+    else if (i === idx) { step.className = 't-step active'; }
+    else                { step.className = 't-step'; }
+  });
+}
+
+function loadProgressBar() {
+  const container = document.querySelector('[data-component="progress-bar"]');
+  if (!container) return;
+  fetch('../components/progress-bar.html')
+    .then(r => r.text())
+    .then(html => { container.innerHTML = html; updateTrackerState('cadastro'); });
 }
 
 function formatDate(iso) {

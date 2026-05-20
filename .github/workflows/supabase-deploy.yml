@@ -1,0 +1,43 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Set Supabase secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase secrets set \
+            RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" \
+            FRESHDESK_API_KEY="${{ secrets.FRESHDESK_API_KEY }}" \
+            FRESHDESK_DOMAIN="hmdesk" \
+            FROM_EMAIL="Portal Hermida Maia <portal@hermidamaia.adv.br>" \
+            OFFICE_EMAIL="contato@hermidamaia.adv.br" \
+            --project-ref sspvizogbcyigquqycsz
+
+      - name: Deploy portal-notify
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy portal-notify \
+            --project-ref sspvizogbcyigquqycsz
+
+      - name: Deploy freshdesk-proxy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy freshdesk-proxy \
+            --project-ref sspvizogbcyigquqycsz

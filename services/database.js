@@ -16,11 +16,55 @@ async function getUserId() {
   return user.id;
 }
 
+export async function checkIsAdmin() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  return !!data;
+}
+
+export const AdminService = {
+  async getStats() {
+    const { data, error } = await supabase.rpc('admin_get_stats');
+    if (error) throw error;
+    return data;
+  },
+  async getClients() {
+    const { data, error } = await supabase.rpc('admin_get_clients');
+    if (error) throw error;
+    return data || [];
+  },
+  async getClientCaso(userId) {
+    const { data, error } = await supabase
+      .from('portal_casos').select('*').eq('user_id', userId).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  async getClientDebts(userId) {
+    const { data, error } = await supabase
+      .from('portal_dividas').select('*').eq('user_id', userId).order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+  async getClientDocs(userId) {
+    const { data, error } = await supabase
+      .from('portal_documentos').select('*').eq('user_id', userId);
+    if (error) throw error;
+    return data || [];
+  },
+};
+
 export const CaseService = {
   async get() {
+    const uid = await getUserId();
     const { data, error } = await supabase
       .from('portal_casos')
       .select('*')
+      .eq('user_id', uid)
       .maybeSingle();
     if (error) throw error;
     return data;
@@ -53,9 +97,11 @@ export const CaseService = {
 
 export const DebtService = {
   async list() {
+    const uid = await getUserId();
     const { data, error } = await supabase
       .from('portal_dividas')
       .select('*')
+      .eq('user_id', uid)
       .order('created_at', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -85,9 +131,11 @@ export const DocumentService = {
   TYPES: DOCUMENT_TYPES,
 
   async list() {
+    const uid = await getUserId();
     const { data, error } = await supabase
       .from('portal_documentos')
-      .select('*');
+      .select('*')
+      .eq('user_id', uid);
     if (error) throw error;
     return data || [];
   },

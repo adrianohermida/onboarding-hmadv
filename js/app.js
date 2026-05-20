@@ -1,7 +1,7 @@
-import { Router }      from './router.js';
-import { AuthService }  from '../services/auth.js';
-import { showToast }    from '../utils/helpers.js';
-import { CaseService }  from '../services/database.js';
+import { Router }                        from './router.js';
+import { AuthService }                   from '../services/auth.js';
+import { showToast }                     from '../utils/helpers.js';
+import { CaseService, checkIsAdmin }     from '../services/database.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
@@ -48,10 +48,14 @@ async function loadUser() {
   const user = await AuthService.getUser();
   if (!user) return;
 
-  try { await CaseService.ensureExists(); } catch (_) {}
-  const caso = await CaseService.get().catch(() => null);
+  const isAdmin = await checkIsAdmin().catch(() => false);
 
-  document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: { user, caso } }));
+  if (!isAdmin) {
+    try { await CaseService.ensureExists(); } catch (_) {}
+  }
+  const caso = isAdmin ? null : await CaseService.get().catch(() => null);
+
+  document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: { user, caso, isAdmin } }));
 }
 
 function initRouter() {

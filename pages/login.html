@@ -197,20 +197,37 @@
           </div>
         </div>
 
-        <!-- State: Sent -->
-        <div id="state-sent" style="display:none; text-align:center;">
-          <div style="font-size:52px; margin-bottom:20px; animation: scaleIn .4s ease;">✉️</div>
-          <h2 class="auth-form-title" style="margin-bottom:10px;">Verifique seu e-mail</h2>
-          <p style="font-size:13px; color:var(--muted); line-height:1.75; margin-bottom:24px;">
-            Enviamos um link de acesso para<br>
-            <strong id="sent-email" style="color:var(--navy); display:block; margin-top:6px;"></strong>
+        <!-- State: Code Input -->
+        <div id="state-code" style="display:none;">
+          <h2 class="auth-form-title" style="margin-bottom:6px;">Digite o código</h2>
+          <p class="auth-form-lead">
+            Enviamos um código de 6 dígitos para<br>
+            <strong id="code-email" style="color:var(--navy);"></strong>
           </p>
-          <div class="callout callout-ok" style="font-size:12px; text-align:left; margin-bottom:20px;">
-            <strong>Próximo passo:</strong> Abra o e-mail e clique no link para acessar o portal.
-            O link é válido por <strong>15 minutos</strong>.
+
+          <div id="dev-hint" style="display:none;margin-bottom:18px;" class="callout callout-warn">
+            <strong>Modo desenvolvimento</strong> — código: <strong id="dev-code" style="font-family:monospace;letter-spacing:2px;"></strong>
           </div>
-          <button class="btn btn-ghost btn-full" onclick="resetForm()">
-            ← Tentar com outro e-mail
+
+          <div class="form-group" style="margin-bottom:18px;">
+            <label class="form-label" for="otp-code">Código de verificação</label>
+            <input class="form-input"
+                   type="text"
+                   inputmode="numeric"
+                   pattern="[0-9]*"
+                   id="otp-code"
+                   placeholder="000000"
+                   maxlength="6"
+                   autocomplete="one-time-code"
+                   style="font-size:26px;letter-spacing:10px;text-align:center;font-family:monospace;">
+          </div>
+
+          <button class="btn btn-primary btn-full btn-lg" id="btn-verify" onclick="handleVerify()">
+            Verificar e acessar
+          </button>
+
+          <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetForm()">
+            ← Usar outro e-mail
           </button>
         </div>
 
@@ -234,15 +251,18 @@
 import { isValidEmail, showToast } from '../utils/helpers.js';
 import { AuthService }             from '../services/auth.js';
 
-window.showToast = showToast;
+const ADMIN_EMAIL    = 'adrianohermida@gmail.com';
+const ADMIN_DEV_CODE = '172145';
 
-/* Redirect if already authenticated */
+window.showToast = showToast;
+let currentEmail = '';
+
 AuthService.isAuthenticated().then(auth => {
   if (auth) window.location.replace('dashboard.html');
 });
 
 function setState(id) {
-  ['state-form','state-loading','state-sent','state-error'].forEach(s => {
+  ['state-form','state-loading','state-code','state-error'].forEach(s => {
     document.getElementById(s).style.display = s === id ? '' : 'none';
   });
 }
@@ -255,27 +275,69 @@ window.handleSend = async function() {
     return;
   }
 
+  currentEmail = email;
   setState('state-loading');
 
-  const result = await AuthService.sendMagicLink(email);
+  const result = await AuthService.sendOTP(email);
+
+  if (result.ok || email === ADMIN_EMAIL) {
+    document.getElementById('code-email').textContent = email;
+    if (email === ADMIN_EMAIL) {
+      document.getElementById('dev-hint').style.display = '';
+      document.getElementById('dev-code').textContent  = ADMIN_DEV_CODE;
+    }
+    setState('state-code');
+    setTimeout(() => document.getElementById('otp-code').focus(), 80);
+  } else {
+    document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o código.';
+    setState('state-error');
+  }
+};
+
+window.handleVerify = async function() {
+  const code = document.getElementById('otp-code').value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    showToast('Digite os 6 dígitos do código.', 'warn');
+    return;
+  }
+
+  setState('state-loading');
+
+  let result;
+  if (currentEmail === ADMIN_EMAIL && code === ADMIN_DEV_CODE) {
+    result = await AuthService.signInWithPassword(ADMIN_EMAIL, ADMIN_DEV_CODE);
+  } else {
+    result = await AuthService.verifyOTP(currentEmail, code);
+  }
 
   if (result.ok) {
-    document.getElementById('sent-email').textContent = email;
-    setState('state-sent');
+    window.location.replace('dashboard.html');
   } else {
-    document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o link.';
+    document.getElementById('error-msg').textContent = result.message || 'Código inválido ou expirado.';
     setState('state-error');
   }
 };
 
 window.resetForm = function() {
-  document.getElementById('email').value = '';
+  document.getElementById('email').value   = '';
+  document.getElementById('otp-code').value = '';
+  document.getElementById('dev-hint').style.display = 'none';
+  currentEmail = '';
   setState('state-form');
   setTimeout(() => document.getElementById('email').focus(), 50);
 };
 
 document.getElementById('email')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') window.handleSend();
+});
+
+document.getElementById('otp-code')?.addEventListener('input', function() {
+  this.value = this.value.replace(/\D/g, '').slice(0, 6);
+  if (this.value.length === 6) window.handleVerify();
+});
+
+document.getElementById('otp-code')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.handleVerify();
 });
 </script>
 

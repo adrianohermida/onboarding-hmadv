@@ -21,6 +21,12 @@ export const AuthService = {
     return { ok: true, data };
   },
 
+  async signInWithPassword(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { ok: false, message: error.message };
+    return { ok: true, data };
+  },
+
   async sendMagicLink(email) { return this.sendOTP(email); },
 
   async getSession() {

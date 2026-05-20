@@ -75,11 +75,11 @@ import { AuthService } from '../services/auth.js';
 window.handleLogout = () => AuthService.logout();
 
 document.addEventListener('app:user-loaded', e => {
-  const { user, caso } = e.detail || {};
+  const { user, caso, isAdmin } = e.detail || {};
   if (!user) return;
   const emailEl = document.getElementById('sidebar-user-email');
   if (emailEl) emailEl.textContent = user.email;
   const statusEl = document.getElementById('sidebar-case-status');
-  if (statusEl) statusEl.textContent = caso?.fase || 'Cadastro';
+  if (statusEl) statusEl.textContent = isAdmin ? 'Administrador' : (caso?.fase || 'Cadastro');
 });
 </script>
