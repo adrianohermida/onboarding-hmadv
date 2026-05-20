@@ -1,0 +1,25 @@
+<header class="portal-header" role="banner">
+  <div class="header-breadcrumb" id="header-breadcrumb" aria-label="Navegação">
+    <strong>Portal</strong>
+  </div>
+
+  <div class="header-actions">
+    <div class="header-user" id="header-user" title="Usuário autenticado">
+      <div class="header-avatar" id="header-avatar" aria-hidden="true">HM</div>
+      <span id="header-user-name" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span>
+    </div>
+  </div>
+</header>
+
+<script type="module">
+document.addEventListener('app:user-loaded', e => {
+  const user = e.detail;
+  if (!user) return;
+  const email = user.email || '';
+  const initials = email.substring(0, 2).toUpperCase();
+  const nameEl   = document.getElementById('header-user-name');
+  const avatarEl = document.getElementById('header-avatar');
+  if (nameEl)   nameEl.textContent   = user.user_metadata?.full_name || email;
+  if (avatarEl) avatarEl.textContent = initials;
+});
+</script>

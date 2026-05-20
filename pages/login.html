@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acesso — Hermida Maia Advocacia</title>
+<meta name="description" content="Portal do cliente — Hermida Maia Sociedade Individual de Advocacia">
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<style>
+  .auth-shell { background: var(--navy); position: relative; overflow: hidden; }
+
+  /* Decorative radial glows */
+  .auth-shell::before {
+    content: '';
+    position: absolute;
+    top: -120px; left: -120px;
+    width: 480px; height: 480px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,166,35,.08), transparent 65%);
+    pointer-events: none;
+  }
+  .auth-shell::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 360px; height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(46,109,164,.12), transparent 65%);
+    pointer-events: none;
+  }
+
+  /* Split layout: brand left, form right */
+  .auth-layout {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Left brand panel */
+  .auth-brand-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+    text-align: center;
+  }
+
+  .auth-eagle {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 28px;
+    filter: drop-shadow(0 8px 24px rgba(245,166,35,.25));
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+  }
+
+  .auth-firm-name {
+    font-family: var(--sans);
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .auth-firm-name span { color: var(--brand-gold); }
+
+  .auth-firm-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,.4);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  .auth-tagline {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(255,255,255,.75);
+    line-height: 1.6;
+    max-width: 300px;
+    border-top: 1px solid rgba(255,255,255,.1);
+    padding-top: 28px;
+  }
+
+  .auth-tagline span { color: var(--brand-gold); font-style: italic; }
+
+  /* Right form panel */
+  .auth-form-panel {
+    width: 420px;
+    flex-shrink: 0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 44px;
+    min-height: 100vh;
+  }
+
+  .auth-form-inner { width: 100%; }
+
+  .auth-form-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--navy);
+    margin-bottom: 6px;
+    font-weight: 400;
+  }
+
+  .auth-form-lead {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  /* Responsive: stacked on mobile */
+  @media (max-width: 768px) {
+    .auth-layout      { flex-direction: column; }
+    .auth-brand-panel { padding: 40px 24px 28px; }
+    .auth-eagle       { width: 80px; height: 80px; margin-bottom: 16px; }
+    .auth-firm-name   { font-size: 22px; }
+    .auth-tagline     { display: none; }
+    .auth-form-panel  { width: 100%; min-height: auto; padding: 32px 24px 48px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-layout">
+
+    <!-- Left: Brand panel -->
+    <div class="auth-brand-panel">
+      <img src="../assets/logo-hermidamaia.svg"
+           alt="Hermida Maia — Águia"
+           class="auth-eagle"
+           width="120" height="120">
+
+      <div class="auth-firm-name">HERMIDA<span> MAIA</span></div>
+      <div class="auth-firm-sub">Sociedade Individual de Advocacia</div>
+
+      <p class="auth-tagline">
+        Portal exclusivo para acompanhamento do seu caso de
+        <span>superendividamento.</span>
+      </p>
+    </div>
+
+    <!-- Right: Form panel -->
+    <div class="auth-form-panel">
+      <div class="auth-form-inner">
+
+        <!-- State: Form -->
+        <div id="state-form">
+          <h2 class="auth-form-title">Acesso ao Portal</h2>
+          <p class="auth-form-lead">
+            Informe seu e-mail cadastrado. Enviaremos um link de acesso seguro e válido por 15 minutos.
+          </p>
+
+          <div class="form-group" style="margin-bottom:18px;">
+            <label class="form-label required" for="email">E-mail</label>
+            <input class="form-input"
+                   type="email"
+                   id="email"
+                   placeholder="seu@email.com.br"
+                   autocomplete="email"
+                   autofocus>
+          </div>
+
+          <button class="btn btn-primary btn-full btn-lg" id="btn-send" onclick="handleSend()">
+            Enviar link de acesso
+          </button>
+
+          <div class="divider"></div>
+
+          <div class="callout callout-blue" style="font-size:12px;">
+            <strong>Acesso seguro e sem senha.</strong> Você receberá um link único —
+            clique nele para entrar no portal. Nenhuma senha é armazenada.
+          </div>
+        </div>
+
+        <!-- State: Loading -->
+        <div id="state-loading" style="display:none;">
+          <div class="loading-state" style="padding:40px 0;">
+            <div class="spinner"></div>
+            <p>Enviando link de acesso...</p>
+          </div>
+        </div>
+
+        <!-- State: Sent -->
+        <div id="state-sent" style="display:none; text-align:center;">
+          <div style="font-size:52px; margin-bottom:20px; animation: scaleIn .4s ease;">✉️</div>
+          <h2 class="auth-form-title" style="margin-bottom:10px;">Verifique seu e-mail</h2>
+          <p style="font-size:13px; color:var(--muted); line-height:1.75; margin-bottom:24px;">
+            Enviamos um link de acesso para<br>
+            <strong id="sent-email" style="color:var(--navy); display:block; margin-top:6px;"></strong>
+          </p>
+          <div class="callout callout-ok" style="font-size:12px; text-align:left; margin-bottom:20px;">
+            <strong>Próximo passo:</strong> Abra o e-mail e clique no link para acessar o portal.
+            O link é válido por <strong>15 minutos</strong>.
+          </div>
+          <button class="btn btn-ghost btn-full" onclick="resetForm()">
+            ← Tentar com outro e-mail
+          </button>
+        </div>
+
+        <!-- State: Error -->
+        <div id="state-error" style="display:none; text-align:center;">
+          <div style="font-size:52px; margin-bottom:16px;">⚠️</div>
+          <h2 class="auth-form-title" style="margin-bottom:8px;">Erro ao enviar</h2>
+          <p id="error-msg" style="font-size:13px; color:var(--red); margin-bottom:20px;"></p>
+          <button class="btn btn-outline btn-full" onclick="resetForm()">Tentar novamente</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script type="module">
+import { isValidEmail, showToast } from '../utils/helpers.js';
+import { AuthService }             from '../services/auth.js';
+
+window.showToast = showToast;
+
+/* Redirect if already authenticated */
+AuthService.isAuthenticated().then(auth => {
+  if (auth) window.location.replace('dashboard.html');
+});
+
+function setState(id) {
+  ['state-form','state-loading','state-sent','state-error'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+window.handleSend = async function() {
+  const email = document.getElementById('email').value.trim();
+  if (!email || !isValidEmail(email)) {
+    showToast('Informe um e-mail válido.', 'warn');
+    document.getElementById('email').focus();
+    return;
+  }
+
+  setState('state-loading');
+
+  const result = await AuthService.sendMagicLink(email);
+
+  if (result.ok) {
+    document.getElementById('sent-email').textContent = email;
+    setState('state-sent');
+  } else {
+    document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o link.';
+    setState('state-error');
+  }
+};
+
+window.resetForm = function() {
+  document.getElementById('email').value = '';
+  setState('state-form');
+  setTimeout(() => document.getElementById('email').focus(), 50);
+};
+
+document.getElementById('email')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.handleSend();
+});
+</script>
+
+</body>
+</html>

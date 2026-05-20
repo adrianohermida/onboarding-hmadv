@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dívidas — Hermida Maia Advocacia</title>
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+</head>
+<body>
+
+<div class="portal-shell">
+  <div data-component="sidebar"></div>
+
+  <div class="main-area">
+    <div data-component="header"></div>
+
+    <main class="page-content">
+
+      <div class="page-header page-header-row">
+        <div>
+          <h1>Dívidas</h1>
+          <p>Cadastre e acompanhe suas dívidas por credor.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showAddModal()">+ Adicionar dívida</button>
+      </div>
+
+      <!-- KPI Summary -->
+      <div class="kpi-grid" style="margin-bottom:16px;">
+        <div class="kpi kpi-red">
+          <span class="kpi-label">Total das Dívidas</span>
+          <div class="kpi-value" id="kpi-total-dividas">R$ —</div>
+          <div class="kpi-hint">Valor declarado</div>
+        </div>
+        <div class="kpi kpi-warn">
+          <span class="kpi-label">Credores</span>
+          <div class="kpi-value" id="kpi-n-credores">0</div>
+          <div class="kpi-hint">Cadastrados</div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Maior Dívida</span>
+          <div class="kpi-value" id="kpi-maior-divida">R$ —</div>
+          <div class="kpi-hint" id="kpi-maior-credor">—</div>
+        </div>
+        <div class="kpi kpi-muted">
+          <span class="kpi-label">Renda Comprometida</span>
+          <div class="kpi-value" id="kpi-comprometida">—%</div>
+          <div class="kpi-hint">Sobre renda declarada</div>
+        </div>
+      </div>
+
+      <!-- Debts Table -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">1</div>
+          <h2 class="sec-title">Lista de Credores</h2>
+          <span class="sec-tag" id="dividas-count">0 dívidas</span>
+        </div>
+
+        <div id="dividas-empty" class="empty-state">
+          <div class="empty-state-icon">💳</div>
+          <h3>Nenhuma dívida cadastrada</h3>
+          <p>Adicione suas dívidas para que a equipe possa analisar seu caso.</p>
+          <button class="btn btn-primary" onclick="showAddModal()">+ Adicionar dívida</button>
+        </div>
+
+        <div id="dividas-table-wrap" class="table-wrap" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Credor</th>
+                <th>Tipo</th>
+                <th>Valor Original</th>
+                <th>Situação</th>
+                <th>Negativado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="dividas-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analysis Note -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">2</div>
+          <h2 class="sec-title">Nota sobre Análise</h2>
+        </div>
+        <div class="callout callout-blue" style="margin-bottom:0;">
+          <strong>Análise pericial:</strong> Após o cadastro completo de suas dívidas e documentos,
+          a equipe realizará a análise das taxas praticadas, identificando cobranças abusivas
+          conforme os critérios do STJ e do CDC. Os resultados serão apresentados no portal.
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="portal-page-footer">
+      <span>Portal do Superendividado</span>
+      <span id="footer-total"></span>
+    </footer>
+  </div>
+</div>
+
+<!-- Add Debt Modal -->
+<div class="modal-overlay" id="modal-add-divida" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal" style="text-align:left; max-width:540px;">
+    <h3 style="margin-bottom:4px;">Nova Dívida</h3>
+    <p style="font-size:13px; margin-bottom:20px;">Informe os dados do credor e da dívida.</p>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label required" for="d-credor">Credor / Instituição</label>
+        <input class="form-input" type="text" id="d-credor" placeholder="Ex: Banco do Brasil">
+      </div>
+      <div class="form-group">
+        <label class="form-label required" for="d-tipo">Tipo de dívida</label>
+        <select class="form-select" id="d-tipo">
+          <option value="">— Selecione —</option>
+          <option value="Cartão de crédito">Cartão de crédito</option>
+          <option value="Empréstimo pessoal">Empréstimo pessoal</option>
+          <option value="Cheque especial">Cheque especial</option>
+          <option value="Financiamento">Financiamento</option>
+          <option value="Consignado">Consignado</option>
+          <option value="Crédito consignado">Crédito consignado</option>
+          <option value="Energia / Água">Energia / Água</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label required" for="d-valor">Valor original (R$)</label>
+        <input class="form-input" type="text" id="d-valor" placeholder="R$ 0,00">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="d-situacao">Situação</label>
+        <select class="form-select" id="d-situacao">
+          <option value="Em aberto">Em aberto</option>
+          <option value="Em atraso">Em atraso</option>
+          <option value="Acordo">Em acordo / parcelado</option>
+          <option value="Judicial">Fase judicial</option>
+        </select>
+      </div>
+      <div class="form-group full" style="flex-direction:row; align-items:center; gap:10px;">
+        <input type="checkbox" id="d-negativado" style="width:16px;height:16px;cursor:pointer;">
+        <label for="d-negativado" style="font-size:13px; cursor:pointer; color:var(--ink2);">
+          Nome negativado por esta dívida (SPC / Serasa)
+        </label>
+      </div>
+    </div>
+
+    <div class="btn-group mt-24" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="addDivida()">Salvar dívida</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script type="module" src="../js/app.js"></script>
+<script type="module">
+import { showToast, formatCurrency } from '../utils/helpers.js';
+import { StorageService } from '../services/storage.js';
+
+window.showToast = showToast;
+
+let dividas = StorageService.get('portal_dividas') || [];
+
+function saveDividas() { StorageService.set('portal_dividas', dividas); }
+
+function renderTable() {
+  const tbody  = document.getElementById('dividas-tbody');
+  const empty  = document.getElementById('dividas-empty');
+  const wrap   = document.getElementById('dividas-table-wrap');
+  const count  = document.getElementById('dividas-count');
+
+  count.textContent = dividas.length + ' dívida' + (dividas.length !== 1 ? 's' : '');
+
+  if (dividas.length === 0) {
+    empty.style.display = ''; wrap.style.display = 'none'; return;
+  }
+
+  empty.style.display = 'none'; wrap.style.display = '';
+
+  tbody.innerHTML = dividas.map((d, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i + 1}</td>
+      <td><strong>${d.credor}</strong></td>
+      <td><span class="chip chip-blue">${d.tipo}</span></td>
+      <td style="color:var(--red);font-weight:700">${formatCurrency(d.valor)}</td>
+      <td><span class="chip chip-warn">${d.situacao}</span></td>
+      <td>${d.negativado ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Não</span>'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="removeDivida(${i})" title="Remover">✕</button>
+      </td>
+    </tr>
+  `).join('');
+
+  updateKPIs();
+}
+
+function updateKPIs() {
+  const total = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+  const maior = dividas.reduce((m, d) => (d.valor > m.valor ? d : m), { valor: 0, credor: '—' });
+
+  document.getElementById('kpi-total-dividas').textContent = formatCurrency(total);
+  document.getElementById('kpi-n-credores').textContent    = dividas.length;
+  document.getElementById('kpi-maior-divida').textContent  = maior.valor ? formatCurrency(maior.valor) : 'R$ —';
+  document.getElementById('kpi-maior-credor').textContent  = maior.credor || '—';
+  document.getElementById('footer-total').textContent      = total ? 'Total: ' + formatCurrency(total) : '';
+
+  const caseData = StorageService.getCase();
+  if (caseData?.renda && total) {
+    const pct = ((total / caseData.renda) * 100).toFixed(0);
+    document.getElementById('kpi-comprometida').textContent = pct + '%';
+  }
+}
+
+window.showAddModal  = () => document.getElementById('modal-add-divida').classList.add('show');
+window.closeAddModal = () => document.getElementById('modal-add-divida').classList.remove('show');
+
+window.addDivida = function() {
+  const credor    = document.getElementById('d-credor').value.trim();
+  const tipo      = document.getElementById('d-tipo').value;
+  const valorRaw  = document.getElementById('d-valor').value.replace(/\D/g, '');
+  const situacao  = document.getElementById('d-situacao').value;
+  const negativado = document.getElementById('d-negativado').checked;
+
+  if (!credor)   { showToast('Informe o nome do credor.', 'warn'); return; }
+  if (!tipo)     { showToast('Selecione o tipo de dívida.', 'warn'); return; }
+  if (!valorRaw) { showToast('Informe o valor da dívida.', 'warn'); return; }
+
+  dividas.push({ credor, tipo, valor: Number(valorRaw) / 100, situacao, negativado });
+  saveDividas();
+  renderTable();
+  closeAddModal();
+  showToast('Dívida adicionada.', 'ok');
+
+  ['d-credor','d-valor'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('d-tipo').value = '';
+  document.getElementById('d-negativado').checked = false;
+};
+
+window.removeDivida = function(idx) {
+  dividas.splice(idx, 1);
+  saveDividas();
+  renderTable();
+  showToast('Dívida removida.', 'warn');
+};
+
+renderTable();
+</script>
+
+</body>
+</html>

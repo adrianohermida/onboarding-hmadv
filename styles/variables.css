@@ -1,0 +1,54 @@
+:root {
+  /* Brand Colors */
+  --navy:    #1A3A5C;
+  --blue:    #2E6DA4;
+  --ice:     #EBF3FC;
+
+  /* Semantic Colors */
+  --red:     #C0392B;
+  --red-bg:  #fef2f2;
+  --red-lt:  #ffebee;
+
+  --gold:    #B7860B;
+  --gold-bg: #fef9e7;
+
+  --ok:      #1a7a4a;
+  --ok-bg:   #e8f5ee;
+
+  --warn:    #b45309;
+  --warn-bg: #fef3c7;
+
+  /* Text */
+  --ink:    #0f1923;
+  --ink2:   #3d4f63;
+  --muted:  #94a3b8;
+
+  /* Surfaces */
+  --line:   #e2e8f0;
+  --line2:  #f0f4f8;
+  --bg:     #edf1f7;
+  --white:  #ffffff;
+
+  /* Brand — Hermida Maia */
+  --brand-gold:    #F5A623;
+  --brand-gold-bg: rgba(245,166,35,.12);
+  --brand-gold-lt: rgba(245,166,35,.22);
+
+  /* Typography */
+  --serif: 'Libre Baskerville', Georgia, serif;
+  --sans:  'DM Sans', system-ui, sans-serif;
+
+  /* Radii */
+  --r:    12px;
+  --r-sm:  8px;
+  --r-lg: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(15,25,35,.06);
+  --shadow-md: 0 4px 16px rgba(15,25,35,.10);
+  --shadow-lg: 0 8px 32px rgba(15,25,35,.18);
+
+  /* Layout */
+  --sidebar-w:  260px;
+  --header-h:    64px;
+}

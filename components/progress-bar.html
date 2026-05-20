@@ -1,0 +1,54 @@
+<!--
+  Progress Bar — rastreador de etapas do caso.
+  Etapas: Cadastro → Documentos → Análise → Proposta → Concluído
+  Estado controlado pelo app.js via classes: .done / .active
+-->
+<div class="tracker" id="case-tracker" role="list" aria-label="Progresso do caso">
+  <div class="t-step" id="step-cadastro" role="listitem">
+    <div class="t-dot">1</div>
+    <div>
+      <div class="t-name">Cadastro</div>
+      <div class="t-ts" id="ts-cadastro">Pendente</div>
+    </div>
+  </div>
+
+  <div class="t-connector" id="conn-cadastro"></div>
+
+  <div class="t-step" id="step-docs" role="listitem">
+    <div class="t-dot">2</div>
+    <div>
+      <div class="t-name">Documentos</div>
+      <div class="t-ts" id="ts-docs">Pendente</div>
+    </div>
+  </div>
+
+  <div class="t-connector" id="conn-docs"></div>
+
+  <div class="t-step" id="step-analise" role="listitem">
+    <div class="t-dot">3</div>
+    <div>
+      <div class="t-name">Análise</div>
+      <div class="t-ts" id="ts-analise">Pendente</div>
+    </div>
+  </div>
+
+  <div class="t-connector" id="conn-analise"></div>
+
+  <div class="t-step" id="step-proposta" role="listitem">
+    <div class="t-dot">4</div>
+    <div>
+      <div class="t-name">Proposta</div>
+      <div class="t-ts" id="ts-proposta">Pendente</div>
+    </div>
+  </div>
+
+  <div class="t-connector" id="conn-proposta"></div>
+
+  <div class="t-step" id="step-concluido" role="listitem">
+    <div class="t-dot">5</div>
+    <div>
+      <div class="t-name">Concluído</div>
+      <div class="t-ts" id="ts-concluido">Pendente</div>
+    </div>
+  </div>
+</div>

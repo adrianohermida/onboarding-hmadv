@@ -1,16 +1,17 @@
 {
-  "name": "contaux-laudos",
+  "name": "portal-superendividado",
   "version": "1.0.0",
-  "description": "Contaux - Portal de Laudos Periciais (GitHub Pages)",
+  "description": "Portal Jurídico do Superendividado — frontend modular para acompanhamento de casos de superendividamento",
   "scripts": {
-    "build": "echo Build concluido - site estatico pronto para deploy",
-    "deploy": "git add -A && git commit -m \"deploy: atualizar site\" && git push origin main"
+    "dev":    "npx serve . -l 3000",
+    "build":  "echo 'Site estático — sem build step necessário'",
+    "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/adrianohermida/contaux-laudos.git"
+    "url":  "https://github.com/adrianohermida/onboarding-hmadv.git"
   },
-  "author": "Adriano Hermida",
+  "author":  "Adriano Hermida Maia",
   "license": "UNLICENSED",
   "private": true
 }

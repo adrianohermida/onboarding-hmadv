@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Documentos — Hermida Maia Advocacia</title>
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+</head>
+<body>
+
+<div class="portal-shell">
+  <div data-component="sidebar"></div>
+
+  <div class="main-area">
+    <div data-component="header"></div>
+
+    <main class="page-content">
+
+      <div class="page-header page-header-row">
+        <div>
+          <h1>Documentos</h1>
+          <p>Gerencie os documentos do seu caso.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-upload" onclick="showUploadModal()" disabled title="Upload será habilitado em breve">
+          + Enviar documento
+        </button>
+      </div>
+
+      <!-- Status Summary -->
+      <div class="kpi-grid" style="margin-bottom:16px;">
+        <div class="kpi kpi-warn">
+          <span class="kpi-label">Pendentes</span>
+          <div class="kpi-value" id="kpi-pendentes">7</div>
+          <div class="kpi-hint">Aguardando envio</div>
+        </div>
+        <div class="kpi kpi-ok">
+          <span class="kpi-label">Aprovados</span>
+          <div class="kpi-value" id="kpi-aprovados">0</div>
+          <div class="kpi-hint">Verificados pela equipe</div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Em análise</span>
+          <div class="kpi-value" id="kpi-analise">0</div>
+          <div class="kpi-hint">Aguardando revisão</div>
+        </div>
+        <div class="kpi kpi-muted">
+          <span class="kpi-label">Total necessário</span>
+          <div class="kpi-value" id="kpi-total">7</div>
+          <div class="kpi-hint">Para análise completa</div>
+        </div>
+      </div>
+
+      <div class="callout callout-blue" style="margin-bottom:16px;">
+        <strong>Upload em breve:</strong> O envio de documentos será habilitado após conclusão do seu cadastro.
+        Por enquanto, você pode visualizar a lista de documentos necessários abaixo.
+      </div>
+
+      <!-- Documents Table -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">1</div>
+          <h2 class="sec-title">Lista de Documentos</h2>
+          <span class="sec-tag">7 documentos</span>
+        </div>
+
+        <div class="table-wrap">
+          <table id="docs-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Documento</th>
+                <th>Categoria</th>
+                <th>Obrigatório</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="docs-tbody">
+              <tr>
+                <td style="color:var(--muted)">1</td>
+                <td>RG ou CNH (frente e verso)</td>
+                <td><span class="chip chip-blue">Identidade</span></td>
+                <td><span class="chip chip-red">Sim</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">2</td>
+                <td>CPF</td>
+                <td><span class="chip chip-blue">Identidade</span></td>
+                <td><span class="chip chip-red">Sim</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">3</td>
+                <td>Comprovante de residência</td>
+                <td><span class="chip chip-muted">Residência</span></td>
+                <td><span class="chip chip-red">Sim</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">4</td>
+                <td>Comprovante de renda</td>
+                <td><span class="chip chip-muted">Financeiro</span></td>
+                <td><span class="chip chip-red">Sim</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">5</td>
+                <td>Extratos bancários (3 meses)</td>
+                <td><span class="chip chip-muted">Financeiro</span></td>
+                <td><span class="chip chip-red">Sim</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">6</td>
+                <td>Contratos de dívidas</td>
+                <td><span class="chip chip-gold">Dívidas</span></td>
+                <td><span class="chip chip-muted">Recomendado</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+              <tr>
+                <td style="color:var(--muted)">7</td>
+                <td>Correspondências de cobrança</td>
+                <td><span class="chip chip-gold">Dívidas</span></td>
+                <td><span class="chip chip-muted">Recomendado</span></td>
+                <td><span class="chip chip-warn">Pendente</span></td>
+                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Upload Zone (placeholder) -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">2</div>
+          <h2 class="sec-title">Área de Envio</h2>
+          <span class="sec-tag">Em breve</span>
+        </div>
+
+        <div class="upload-zone" id="upload-zone" style="pointer-events:none; opacity:.55;">
+          <div class="upload-zone-icon">📎</div>
+          <p>Arraste arquivos aqui ou clique para selecionar</p>
+          <small>PDF, JPG, PNG — máximo 10 MB por arquivo</small>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="portal-page-footer">
+      <span>Portal do Superendividado</span>
+      <span>Documentos protegidos por criptografia</span>
+    </footer>
+  </div>
+</div>
+
+<!-- Upload Modal (placeholder) -->
+<div class="modal-overlay" id="modal-upload">
+  <div class="modal">
+    <div class="modal-icon">🚧</div>
+    <h3>Em desenvolvimento</h3>
+    <p>O envio de documentos será habilitado em breve. Complete seu cadastro enquanto isso.</p>
+    <button class="btn btn-primary btn-full" data-modal-close="modal-upload">Entendido</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script type="module" src="../js/app.js"></script>
+<script type="module">
+import { showToast } from '../utils/helpers.js';
+window.showToast = showToast;
+window.showUploadModal = function() {
+  document.getElementById('modal-upload').classList.add('show');
+};
+</script>
+
+</body>
+</html>

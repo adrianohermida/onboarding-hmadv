@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verificando acesso — Hermida Maia Advocacia</title>
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .cb-card {
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--r-lg);
+    padding:48px 44px;
+    max-width:380px;
+    width:100%;
+    text-align:center;
+    box-shadow:var(--shadow-md);
+    animation: fadeUp .4s ease;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .cb-logo {
+    width:52px;height:52px;
+    border-radius:14px;
+    background:linear-gradient(135deg,var(--navy),var(--blue));
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px;
+  }
+  .cb-brand { font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--navy);margin-bottom:6px; }
+  .cb-brand span { color:var(--brand-gold); }
+  .spinner { width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .75s linear infinite;margin:20px auto 10px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .cb-msg { font-size:13px;color:var(--muted); }
+  .cb-error { color:var(--red);font-size:13px;margin-top:16px;display:none; }
+</style>
+</head>
+<body>
+<div class="cb-card">
+  <div class="cb-logo" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
+      <path d="M4 9V5h6M32 5h-6M32 9V5" stroke="#F5A623" stroke-width="2.2" stroke-linecap="square"/>
+      <path d="M4 10v13c0 7 5 11 14 13 9-2 14-6 14-13V10L18 5 4 10z"
+            fill="rgba(245,166,35,.15)" stroke="#F5A623" stroke-width="1.3"/>
+      <path d="M12 9l2 3.5 4-5 4 5 2-3.5v4.5H12V9z" fill="#F5A623"/>
+      <path d="M18 21L3 17l4 5.5-4 3.5L18 24z" fill="#F5A623"/>
+      <path d="M18 21L33 17l-4 5.5 4 3.5L18 24z" fill="#F5A623"/>
+      <ellipse cx="18" cy="27" rx="3.5" ry="4.5" fill="#F5A623"/>
+      <circle cx="18" cy="19" r="3" fill="#F5A623"/>
+    </svg>
+  </div>
+  <div class="cb-brand">HERMIDA<span> MAIA</span></div>
+
+  <div id="state-loading">
+    <div class="spinner"></div>
+    <div class="cb-msg" id="cb-msg">Verificando seu acesso...</div>
+  </div>
+
+  <div id="state-success" style="display:none;">
+    <div style="font-size:40px;margin:16px 0;">✅</div>
+    <div class="cb-msg">Acesso confirmado. Redirecionando...</div>
+  </div>
+
+  <div id="state-error" style="display:none;">
+    <div style="font-size:40px;margin:16px 0;">❌</div>
+    <p class="cb-error" id="error-msg" style="display:block;">Link inválido ou expirado.</p>
+    <a href="login.html" style="display:inline-block;margin-top:16px;font-size:13px;color:var(--blue);">
+      Solicitar novo link
+    </a>
+  </div>
+</div>
+
+<script type="module">
+import { supabase }    from '../services/supabase.js';
+import { AuthService } from '../services/auth.js';
+
+function setState(id) {
+  ['state-loading','state-success','state-error'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+async function handleCallback() {
+  /* Supabase v2 processes the URL hash automatically on client init.
+     We just need to wait for the auth state to be resolved. */
+  try {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) throw error;
+
+    if (data?.session) {
+      setState('state-success');
+      setTimeout(() => { window.location.replace('dashboard.html'); }, 1200);
+      return;
+    }
+
+    /* Hash may still contain tokens — listen for one tick */
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      subscription.unsubscribe();
+      if (session) {
+        setState('state-success');
+        setTimeout(() => { window.location.replace('dashboard.html'); }, 1200);
+      } else {
+        setState('state-error');
+      }
+    });
+
+    /* Fallback timeout */
+    setTimeout(() => setState('state-error'), 8000);
+
+  } catch (err) {
+    document.getElementById('error-msg').textContent = err.message || 'Erro ao verificar acesso.';
+    setState('state-error');
+  }
+}
+
+handleCallback();
+</script>
+</body>
+</html>
