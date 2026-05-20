@@ -2,7 +2,7 @@ import { supabase }      from './supabase.js';
 import { getCallbackUrl } from '../utils/config.js';
 
 export const AuthService = {
-  async sendMagicLink(email) {
+  async sendOTP(email) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: getCallbackUrl() },
@@ -10,6 +10,18 @@ export const AuthService = {
     if (error) return { ok: false, message: error.message };
     return { ok: true };
   },
+
+  async verifyOTP(email, token) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token: token.trim(),
+      type: 'email',
+    });
+    if (error) return { ok: false, message: error.message };
+    return { ok: true, data };
+  },
+
+  async sendMagicLink(email) { return this.sendOTP(email); },
 
   async getSession() {
     const { data: { session }, error } = await supabase.auth.getSession();
