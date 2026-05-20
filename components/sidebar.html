@@ -79,17 +79,15 @@
 
 <script type="module">
 import { AuthService } from '../services/auth.js';
-import { StorageService } from '../services/storage.js';
 
 window.handleLogout = () => AuthService.logout();
 
 document.addEventListener('app:user-loaded', e => {
-  const user = e.detail;
+  const { user, caso } = e.detail || {};
   if (!user) return;
-  const el = document.getElementById('sidebar-user-email');
-  if (el) el.textContent = user.email;
-  const caseData = StorageService.getCase();
+  const emailEl = document.getElementById('sidebar-user-email');
+  if (emailEl) emailEl.textContent = user.email;
   const statusEl = document.getElementById('sidebar-case-status');
-  if (statusEl) statusEl.textContent = caseData?.fase || 'Cadastro';
+  if (statusEl) statusEl.textContent = caso?.fase || 'Cadastro';
 });
 </script>

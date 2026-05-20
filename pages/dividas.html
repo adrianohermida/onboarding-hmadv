@@ -164,26 +164,34 @@
 <script type="module" src="../js/app.js"></script>
 <script type="module">
 import { showToast, formatCurrency } from '../utils/helpers.js';
-import { StorageService } from '../services/storage.js';
+import { DebtService, CaseService } from '../services/database.js';
 
 window.showToast = showToast;
 
-let dividas = StorageService.get('portal_dividas') || [];
+let dividas = [];
+let renda = null;
 
-function saveDividas() { StorageService.set('portal_dividas', dividas); }
+async function init() {
+  const [rows, caso] = await Promise.all([
+    DebtService.list().catch(() => []),
+    CaseService.get().catch(() => null),
+  ]);
+  dividas = rows;
+  renda = caso?.renda || null;
+  renderTable();
+}
 
 function renderTable() {
-  const tbody  = document.getElementById('dividas-tbody');
-  const empty  = document.getElementById('dividas-empty');
-  const wrap   = document.getElementById('dividas-table-wrap');
-  const count  = document.getElementById('dividas-count');
+  const tbody = document.getElementById('dividas-tbody');
+  const empty = document.getElementById('dividas-empty');
+  const wrap  = document.getElementById('dividas-table-wrap');
+  const count = document.getElementById('dividas-count');
 
   count.textContent = dividas.length + ' dívida' + (dividas.length !== 1 ? 's' : '');
 
   if (dividas.length === 0) {
     empty.style.display = ''; wrap.style.display = 'none'; return;
   }
-
   empty.style.display = 'none'; wrap.style.display = '';
 
   tbody.innerHTML = dividas.map((d, i) => `
@@ -195,7 +203,7 @@ function renderTable() {
       <td><span class="chip chip-warn">${d.situacao}</span></td>
       <td>${d.negativado ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Não</span>'}</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="removeDivida(${i})" title="Remover">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDivida('${d.id}')" title="Remover">✕</button>
       </td>
     </tr>
   `).join('');
@@ -205,7 +213,7 @@ function renderTable() {
 
 function updateKPIs() {
   const total = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
-  const maior = dividas.reduce((m, d) => (d.valor > m.valor ? d : m), { valor: 0, credor: '—' });
+  const maior = dividas.reduce((m, d) => (Number(d.valor) > Number(m.valor) ? d : m), { valor: 0, credor: '—' });
 
   document.getElementById('kpi-total-dividas').textContent = formatCurrency(total);
   document.getElementById('kpi-n-credores').textContent    = dividas.length;
@@ -213,9 +221,8 @@ function updateKPIs() {
   document.getElementById('kpi-maior-credor').textContent  = maior.credor || '—';
   document.getElementById('footer-total').textContent      = total ? 'Total: ' + formatCurrency(total) : '';
 
-  const caseData = StorageService.getCase();
-  if (caseData?.renda && total) {
-    const pct = ((total / caseData.renda) * 100).toFixed(0);
+  if (renda && total) {
+    const pct = ((total / renda) * 100).toFixed(0);
     document.getElementById('kpi-comprometida').textContent = pct + '%';
   }
 }
@@ -223,7 +230,7 @@ function updateKPIs() {
 window.showAddModal  = () => document.getElementById('modal-add-divida').classList.add('show');
 window.closeAddModal = () => document.getElementById('modal-add-divida').classList.remove('show');
 
-window.addDivida = function() {
+window.addDivida = async function() {
   const credor    = document.getElementById('d-credor').value.trim();
   const tipo      = document.getElementById('d-tipo').value;
   const valorRaw  = document.getElementById('d-valor').value.replace(/\D/g, '');
@@ -234,25 +241,39 @@ window.addDivida = function() {
   if (!tipo)     { showToast('Selecione o tipo de dívida.', 'warn'); return; }
   if (!valorRaw) { showToast('Informe o valor da dívida.', 'warn'); return; }
 
-  dividas.push({ credor, tipo, valor: Number(valorRaw) / 100, situacao, negativado });
-  saveDividas();
-  renderTable();
-  closeAddModal();
-  showToast('Dívida adicionada.', 'ok');
+  const btn = document.querySelector('[onclick="addDivida()"]');
+  if (btn) btn.disabled = true;
 
-  ['d-credor','d-valor'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('d-tipo').value = '';
-  document.getElementById('d-negativado').checked = false;
+  try {
+    const nova = await DebtService.add({ credor, tipo, valor: Number(valorRaw) / 100, situacao, negativado });
+    dividas.push(nova);
+    renderTable();
+    closeAddModal();
+    showToast('Dívida adicionada.', 'ok');
+    ['d-credor','d-valor'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('d-tipo').value = '';
+    document.getElementById('d-negativado').checked = false;
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao salvar. Tente novamente.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 };
 
-window.removeDivida = function(idx) {
-  dividas.splice(idx, 1);
-  saveDividas();
-  renderTable();
-  showToast('Dívida removida.', 'warn');
+window.removeDivida = async function(id) {
+  try {
+    await DebtService.remove(id);
+    dividas = dividas.filter(d => d.id !== id);
+    renderTable();
+    showToast('Dívida removida.', 'warn');
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao remover. Tente novamente.', 'error');
+  }
 };
 
-renderTable();
+document.addEventListener('app:ready', init);
 </script>
 
 </body>

@@ -79,62 +79,7 @@
               </tr>
             </thead>
             <tbody id="docs-tbody">
-              <tr>
-                <td style="color:var(--muted)">1</td>
-                <td>RG ou CNH (frente e verso)</td>
-                <td><span class="chip chip-blue">Identidade</span></td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">2</td>
-                <td>CPF</td>
-                <td><span class="chip chip-blue">Identidade</span></td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">3</td>
-                <td>Comprovante de residência</td>
-                <td><span class="chip chip-muted">Residência</span></td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">4</td>
-                <td>Comprovante de renda</td>
-                <td><span class="chip chip-muted">Financeiro</span></td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">5</td>
-                <td>Extratos bancários (3 meses)</td>
-                <td><span class="chip chip-muted">Financeiro</span></td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">6</td>
-                <td>Contratos de dívidas</td>
-                <td><span class="chip chip-gold">Dívidas</span></td>
-                <td><span class="chip chip-muted">Recomendado</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
-              <tr>
-                <td style="color:var(--muted)">7</td>
-                <td>Correspondências de cobrança</td>
-                <td><span class="chip chip-gold">Dívidas</span></td>
-                <td><span class="chip chip-muted">Recomendado</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-                <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-              </tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -179,10 +124,76 @@
 <script type="module" src="../js/app.js"></script>
 <script type="module">
 import { showToast } from '../utils/helpers.js';
+import { DocumentService } from '../services/database.js';
+
 window.showToast = showToast;
 window.showUploadModal = function() {
   document.getElementById('modal-upload').classList.add('show');
 };
+
+const CAT_CHIP = {
+  'Identidade': 'chip-blue',
+  'Residência': 'chip-muted',
+  'Financeiro': 'chip-muted',
+  'Dívidas':    'chip-gold',
+};
+
+const STATUS_CHIP = {
+  pendente:    'chip-warn',
+  em_analise:  'chip-blue',
+  aprovado:    'chip-ok',
+  recusado:    'chip-red',
+};
+
+const STATUS_LABEL = {
+  pendente:   'Pendente',
+  em_analise: 'Em análise',
+  aprovado:   'Aprovado',
+  recusado:   'Recusado',
+};
+
+async function init() {
+  const rows = await DocumentService.list().catch(() => []);
+
+  // Merge with TYPES to get label/categoria/obrigatorio metadata
+  const docs = DocumentService.TYPES.map(t => {
+    const row = rows.find(r => r.tipo === t.tipo) || {};
+    return { ...t, ...row };
+  });
+
+  renderTable(docs);
+  updateKPIs(docs);
+}
+
+function renderTable(docs) {
+  const tbody = document.getElementById('docs-tbody');
+  tbody.innerHTML = docs.map((d, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i + 1}</td>
+      <td>${d.label}</td>
+      <td><span class="chip ${CAT_CHIP[d.categoria] || 'chip-muted'}">${d.categoria}</span></td>
+      <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Recomendado</span>'}</td>
+      <td><span class="chip ${STATUS_CHIP[d.status] || 'chip-warn'}">${STATUS_LABEL[d.status] || 'Pendente'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
+    </tr>
+  `).join('');
+}
+
+function updateKPIs(docs) {
+  const pendentes  = docs.filter(d => !d.status || d.status === 'pendente').length;
+  const aprovados  = docs.filter(d => d.status === 'aprovado').length;
+  const emAnalise  = docs.filter(d => d.status === 'em_analise').length;
+
+  document.getElementById('kpi-pendentes').textContent = pendentes;
+  document.getElementById('kpi-aprovados').textContent = aprovados;
+  document.getElementById('kpi-analise').textContent   = emAnalise;
+  document.getElementById('kpi-total').textContent     = docs.length;
+
+  const secTag = document.querySelector('.sec-tag');
+  if (secTag) secTag.textContent = docs.length + ' documentos';
+}
+
+document.addEventListener('app:ready', init);
 </script>
 
 </body>

@@ -1,6 +1,7 @@
 import { Router }      from './router.js';
 import { AuthService }  from '../services/auth.js';
 import { showToast }    from '../utils/helpers.js';
+import { CaseService }  from '../services/database.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
@@ -46,7 +47,11 @@ async function loadComponents() {
 async function loadUser() {
   const user = await AuthService.getUser();
   if (!user) return;
-  document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: user }));
+
+  try { await CaseService.ensureExists(); } catch (_) {}
+  const caso = await CaseService.get().catch(() => null);
+
+  document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: { user, caso } }));
 }
 
 function initRouter() {

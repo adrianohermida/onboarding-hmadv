@@ -132,12 +132,20 @@
 
 <script type="module" src="../js/app.js"></script>
 <script type="module">
-import { StorageService } from '../services/storage.js';
-import { formatCurrency, formatDateTime } from '../utils/helpers.js';
+import { CaseService, DebtService, DocumentService } from '../services/database.js';
+import { formatCurrency } from '../utils/helpers.js';
 
-document.addEventListener('app:ready', () => {
+const FASE_LABEL = {
+  cadastro:    'Cadastro',
+  analise:     'Em Análise',
+  negociacao:  'Negociação',
+  acordo:      'Acordo',
+  encerrado:   'Encerrado',
+};
+
+document.addEventListener('app:ready', async () => {
   loadProgressBar();
-  loadCaseData();
+  await loadDashboardData();
 });
 
 function loadProgressBar() {
@@ -158,18 +166,88 @@ function updateTrackerState(activeStage) {
     const step = document.getElementById('step-' + s);
     const conn = document.getElementById('conn-' + (i < stages.length - 1 ? stages[i] : null));
     if (!step) return;
-    if (i < idx)       { step.className = 't-step done';   if (conn) conn.classList.add('done'); }
+    if (i < idx)        { step.className = 't-step done';   if (conn) conn.classList.add('done'); }
     else if (i === idx) { step.className = 't-step active'; }
-    else               { step.className = 't-step'; }
+    else                { step.className = 't-step'; }
   });
 }
 
-function loadCaseData() {
-  const caseData = StorageService.getCase();
-  if (!caseData) return;
-  if (caseData.divida_total) document.getElementById('kpi-divida').textContent = formatCurrency(caseData.divida_total);
-  if (caseData.credores)     document.getElementById('kpi-credores').textContent = caseData.credores;
-  if (caseData.fase)         document.getElementById('kpi-fase').textContent = caseData.fase;
+async function loadDashboardData() {
+  const [caso, dividas, docs] = await Promise.all([
+    CaseService.get().catch(() => null),
+    DebtService.list().catch(() => []),
+    DocumentService.list().catch(() => []),
+  ]);
+
+  // KPIs
+  if (caso) {
+    const totalDividas = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+    if (totalDividas) document.getElementById('kpi-divida').textContent = formatCurrency(totalDividas);
+    if (dividas.length) document.getElementById('kpi-credores').textContent = dividas.length;
+    document.getElementById('kpi-fase').textContent = FASE_LABEL[caso.fase] || caso.fase;
+    updateTrackerState(caso.fase === 'analise' ? 'analise' : caso.fase === 'negociacao' ? 'proposta' : 'cadastro');
+  }
+
+  // Documents
+  const aprovados = docs.filter(d => d.status === 'aprovado').length;
+  const total     = DocumentService.TYPES.length;
+  document.getElementById('kpi-docs').textContent    = aprovados + ' / ' + total;
+  document.getElementById('sc-docs-ok').textContent  = aprovados;
+  document.getElementById('sc-docs-total').textContent = total;
+
+  // Status cards
+  const pendDocs    = docs.filter(d => d.status === 'pendente').length;
+  const pendTotal   = pendDocs + (caso && !caso.onboarding_done ? 1 : 0);
+  document.getElementById('sc-pendencias').textContent = pendTotal || '—';
+
+  if (caso?.proxima_acao) {
+    document.getElementById('sc-next-action').textContent = caso.proxima_acao;
+    document.getElementById('sc-next-hint').textContent   = '';
+  } else if (caso && !caso.onboarding_done) {
+    document.getElementById('sc-next-action').textContent = 'Completar cadastro';
+    document.getElementById('sc-next-hint').textContent   = 'Acesse a aba Onboarding';
+  }
+
+  // Footer
+  if (caso) {
+    document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
+  }
+
+  // Activity feed
+  buildActivityFeed(caso, dividas, docs);
+}
+
+function buildActivityFeed(caso, dividas, docs) {
+  const items = [];
+
+  if (caso?.onboarding_done) {
+    items.push({ label: 'Cadastro concluído', hint: formatDate(caso.updated_at), type: 'ok' });
+  }
+  dividas.slice(-3).forEach(d => {
+    items.push({ label: 'Dívida cadastrada: ' + d.credor, hint: formatCurrency(d.valor), type: 'warn' });
+  });
+  docs.filter(d => d.status === 'aprovado').forEach(d => {
+    items.push({ label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' });
+  });
+
+  const list = document.getElementById('activity-list');
+  if (items.length === 0) return;
+
+  document.getElementById('activity-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  list.innerHTML = items.map(it => `
+    <div class="activity-item">
+      <div class="activity-dot dot-${it.type}"></div>
+      <div class="activity-body">
+        <div class="activity-label">${it.label}</div>
+        <div class="activity-hint">${it.hint}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('pt-BR');
 }
 </script>
 

@@ -222,17 +222,39 @@
 <script type="module" src="../js/app.js"></script>
 <script type="module">
 import { showToast } from '../utils/helpers.js';
-import { StorageService } from '../services/storage.js';
+import { CaseService } from '../services/database.js';
 
 window.showToast = showToast;
+
+// Pre-populate form when caso data is loaded
+document.addEventListener('app:user-loaded', e => {
+  const { user, caso } = e.detail || {};
+  if (user) {
+    const emailEl = document.getElementById('f-email');
+    if (emailEl) { emailEl.value = user.email; emailEl.readOnly = true; }
+  }
+  if (!caso) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('f-nome',        caso.full_name);
+  set('f-cpf',         caso.cpf);
+  set('f-telefone',    caso.whatsapp);
+  set('f-cidade',      caso.cidade);
+  set('f-estado',      caso.estado);
+  set('f-renda',       caso.renda ? 'R$ ' + Number(caso.renda).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  set('f-divida-total',caso.divida_total_estimada ? 'R$ ' + Number(caso.divida_total_estimada).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  set('f-credores',    caso.n_credores);
+  set('f-dependentes', caso.n_dependentes);
+  set('f-situacao',    caso.situacao_atual);
+  set('f-obs-fin',     caso.observacoes);
+});
 
 window.goStep = function(step) {
   [1, 2, 3].forEach(s => {
     document.getElementById('panel-step-' + s).style.display = s === step ? '' : 'none';
     const el = document.getElementById('ob-step-' + s);
-    if (s < step)       el.className = 't-step done';
+    if (s < step)        el.className = 't-step done';
     else if (s === step) el.className = 't-step active';
-    else                el.className = 't-step';
+    else                 el.className = 't-step';
     const conn = document.getElementById('ob-conn-' + s);
     if (conn) conn.className = 't-connector' + (s < step ? ' done' : '');
   });
@@ -240,10 +262,37 @@ window.goStep = function(step) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.finalizarCadastro = function() {
-  StorageService.setCase({ fase: 'Documentos', cadastro_em: new Date().toISOString() });
-  showToast('Cadastro concluído! Redirecionando...', 'ok');
-  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1800);
+function parseCurrency(str) {
+  const n = parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
+window.finalizarCadastro = async function() {
+  const btn = document.querySelector('[onclick="finalizarCadastro()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+  try {
+    await CaseService.save({
+      full_name:             document.getElementById('f-nome').value.trim()        || null,
+      cpf:                   document.getElementById('f-cpf').value.trim()         || null,
+      whatsapp:              document.getElementById('f-telefone').value.trim()    || null,
+      cidade:                document.getElementById('f-cidade').value.trim()      || null,
+      estado:                document.getElementById('f-estado').value             || null,
+      renda:                 parseCurrency(document.getElementById('f-renda').value),
+      divida_total_estimada: parseCurrency(document.getElementById('f-divida-total').value),
+      n_credores:            parseInt(document.getElementById('f-credores').value) || null,
+      n_dependentes:         parseInt(document.getElementById('f-dependentes').value) ?? null,
+      situacao_atual:        document.getElementById('f-situacao').value           || null,
+      observacoes:           document.getElementById('f-obs-fin').value.trim()     || null,
+      onboarding_done:       true,
+    });
+    showToast('Cadastro salvo! Redirecionando...', 'ok');
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1800);
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao salvar. Tente novamente.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Finalizar cadastro'; }
+  }
 };
 </script>
 
