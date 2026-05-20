@@ -24,7 +24,7 @@
           <h1>Documentos</h1>
           <p>Gerencie os documentos do seu caso.</p>
         </div>
-        <button class="btn btn-primary btn-sm" id="btn-upload" onclick="showUploadModal()" disabled title="Upload será habilitado em breve">
+        <button class="btn btn-primary btn-sm" onclick="showToast('Use o botão Enviar ao lado de cada documento.','ok')">
           + Enviar documento
         </button>
       </div>
@@ -85,18 +85,16 @@
         </div>
       </div>
 
-      <!-- Upload Zone (placeholder) -->
+      <!-- Upload Zone info -->
       <div class="sec">
         <div class="sec-header">
           <div class="sec-num">2</div>
-          <h2 class="sec-title">Área de Envio</h2>
-          <span class="sec-tag">Em breve</span>
+          <h2 class="sec-title">Como enviar</h2>
         </div>
-
-        <div class="upload-zone" id="upload-zone" style="pointer-events:none; opacity:.55;">
-          <div class="upload-zone-icon">📎</div>
-          <p>Arraste arquivos aqui ou clique para selecionar</p>
-          <small>PDF, JPG, PNG — máximo 10 MB por arquivo</small>
+        <div class="callout callout-blue" style="margin-bottom:0;">
+          Use o botão <strong>Enviar</strong> ao lado de cada documento na tabela acima.
+          Formatos aceitos: PDF, JPG, PNG, WebP — máximo <strong>10 MB</strong> por arquivo.
+          Após o envio, o status muda para <em>Em análise</em> e nossa equipe será notificada automaticamente.
         </div>
       </div>
 
@@ -109,88 +107,111 @@
   </div>
 </div>
 
-<!-- Upload Modal (placeholder) -->
-<div class="modal-overlay" id="modal-upload">
-  <div class="modal">
-    <div class="modal-icon">🚧</div>
-    <h3>Em desenvolvimento</h3>
-    <p>O envio de documentos será habilitado em breve. Complete seu cadastro enquanto isso.</p>
-    <button class="btn btn-primary btn-full" data-modal-close="modal-upload">Entendido</button>
-  </div>
-</div>
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
 <script type="module" src="../js/app.js"></script>
 <script type="module">
-import { showToast } from '../utils/helpers.js';
-import { DocumentService } from '../services/database.js';
+import { showToast }                    from '../utils/helpers.js';
+import { DocumentService }              from '../services/database.js';
+import { supabase }                     from '../services/supabase.js';
+import { FUNCTIONS_URL }                from '../utils/config.js';
 
 window.showToast = showToast;
-window.showUploadModal = function() {
-  document.getElementById('modal-upload').classList.add('show');
-};
 
-const CAT_CHIP = {
-  'Identidade': 'chip-blue',
-  'Residência': 'chip-muted',
-  'Financeiro': 'chip-muted',
-  'Dívidas':    'chip-gold',
-};
+const CAT_CHIP    = { 'Identidade':'chip-blue', 'Residência':'chip-muted', 'Financeiro':'chip-muted', 'Dívidas':'chip-gold' };
+const STATUS_CHIP = { pendente:'chip-warn', em_analise:'chip-blue', aprovado:'chip-ok', recusado:'chip-red' };
+const STATUS_LABEL= { pendente:'Pendente', em_analise:'Em análise', aprovado:'Aprovado', recusado:'Recusado' };
 
-const STATUS_CHIP = {
-  pendente:    'chip-warn',
-  em_analise:  'chip-blue',
-  aprovado:    'chip-ok',
-  recusado:    'chip-red',
-};
+let currentUser = null;
+let currentCaso = null;
 
-const STATUS_LABEL = {
-  pendente:   'Pendente',
-  em_analise: 'Em análise',
-  aprovado:   'Aprovado',
-  recusado:   'Recusado',
-};
+document.addEventListener('app:user-loaded', e => {
+  currentUser = e.detail?.user;
+  currentCaso = e.detail?.caso;
+});
 
 async function init() {
   const rows = await DocumentService.list().catch(() => []);
-
-  // Merge with TYPES to get label/categoria/obrigatorio metadata
-  const docs = DocumentService.TYPES.map(t => {
-    const row = rows.find(r => r.tipo === t.tipo) || {};
-    return { ...t, ...row };
-  });
-
+  const docs  = DocumentService.TYPES.map(t => ({ ...t, ...(rows.find(r => r.tipo === t.tipo) || {}) }));
   renderTable(docs);
   updateKPIs(docs);
 }
 
 function renderTable(docs) {
   const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = docs.map((d, i) => `
-    <tr>
-      <td style="color:var(--muted)">${i + 1}</td>
-      <td>${d.label}</td>
-      <td><span class="chip ${CAT_CHIP[d.categoria] || 'chip-muted'}">${d.categoria}</span></td>
-      <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Recomendado</span>'}</td>
-      <td><span class="chip ${STATUS_CHIP[d.status] || 'chip-warn'}">${STATUS_LABEL[d.status] || 'Pendente'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" disabled>Enviar</button></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = docs.map((d, i) => {
+    const canUpload = !d.status || d.status === 'pendente' || d.status === 'recusado';
+    const btn = canUpload
+      ? `<button class="btn btn-ghost btn-sm" data-upload-tipo="${d.tipo}" onclick="triggerUpload('${d.tipo}')">Enviar</button>`
+      : `<button class="btn btn-ghost btn-sm" disabled>${d.status === 'em_analise' ? 'Em análise' : 'Aprovado'}</button>`;
+    return `
+      <tr>
+        <td style="color:var(--muted)">${i + 1}</td>
+        <td>${d.label}${d.nome_arquivo ? `<br><small style="color:var(--muted)">${d.nome_arquivo}</small>` : ''}</td>
+        <td><span class="chip ${CAT_CHIP[d.categoria]||'chip-muted'}">${d.categoria}</span></td>
+        <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Recomendado</span>'}</td>
+        <td><span class="chip ${STATUS_CHIP[d.status]||'chip-warn'}">${STATUS_LABEL[d.status]||'Pendente'}</span></td>
+        <td>${btn}</td>
+      </tr>`;
+  }).join('');
 }
 
 function updateKPIs(docs) {
-  const pendentes  = docs.filter(d => !d.status || d.status === 'pendente').length;
-  const aprovados  = docs.filter(d => d.status === 'aprovado').length;
-  const emAnalise  = docs.filter(d => d.status === 'em_analise').length;
-
-  document.getElementById('kpi-pendentes').textContent = pendentes;
-  document.getElementById('kpi-aprovados').textContent = aprovados;
-  document.getElementById('kpi-analise').textContent   = emAnalise;
+  document.getElementById('kpi-pendentes').textContent = docs.filter(d => !d.status || d.status === 'pendente').length;
+  document.getElementById('kpi-aprovados').textContent = docs.filter(d => d.status === 'aprovado').length;
+  document.getElementById('kpi-analise').textContent   = docs.filter(d => d.status === 'em_analise').length;
   document.getElementById('kpi-total').textContent     = docs.length;
+  const tag = document.querySelector('#docs-tbody')?.closest('.sec')?.querySelector('.sec-tag');
+  if (tag) tag.textContent = docs.length + ' documentos';
+}
 
-  const secTag = document.querySelector('.sec-tag');
-  if (secTag) secTag.textContent = docs.length + ' documentos';
+window.triggerUpload = function(tipo) {
+  let inp = document.getElementById('_fi_' + tipo);
+  if (!inp) {
+    inp = Object.assign(document.createElement('input'), {
+      type: 'file', id: '_fi_' + tipo,
+      accept: '.pdf,.jpg,.jpeg,.png,.webp',
+    });
+    inp.style.display = 'none';
+    inp.addEventListener('change', () => { if (inp.files[0]) handleUpload(tipo, inp.files[0]); inp.value = ''; });
+    document.body.appendChild(inp);
+  }
+  inp.click();
+};
+
+async function handleUpload(tipo, file) {
+  if (file.size > 10 * 1024 * 1024) { showToast('Arquivo muito grande (máx 10 MB).', 'warn'); return; }
+
+  const btn = document.querySelector(`[data-upload-tipo="${tipo}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    await DocumentService.upload(tipo, file);
+
+    // Fire-and-forget email notification
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && currentUser) {
+      const tipoMeta = DocumentService.TYPES.find(t => t.tipo === tipo);
+      fetch(`${FUNCTIONS_URL}/portal-notify`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'document_upload',
+          clientEmail: currentUser.email,
+          clientName:  currentCaso?.full_name || '',
+          payload:     { tipoLabel: tipoMeta?.label || tipo },
+        }),
+      }).catch(console.warn);
+    }
+
+    showToast('Documento enviado! Status: Em análise.', 'ok');
+    await init();
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao enviar. Tente novamente.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar'; }
+  }
 }
 
 document.addEventListener('app:ready', init);

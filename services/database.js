@@ -91,4 +91,24 @@ export const DocumentService = {
     if (error) throw error;
     return data || [];
   },
+
+  async upload(tipo, file) {
+    const uid = await getUserId();
+    const ext = file.name.split('.').pop();
+    const path = `${uid}/${tipo}/${Date.now()}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from('portal-documentos')
+      .upload(path, file, { upsert: true });
+    if (error) throw error;
+
+    const { error: dbErr } = await supabase
+      .from('portal_documentos')
+      .update({ status: 'em_analise', storage_path: data.path, nome_arquivo: file.name })
+      .eq('user_id', uid)
+      .eq('tipo', tipo);
+    if (dbErr) throw dbErr;
+
+    return data;
+  },
 };

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Suporte — Hermida Maia Advocacia</title>
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+</head>
+<body>
+
+<div class="portal-shell">
+  <div data-component="sidebar"></div>
+
+  <div class="main-area">
+    <div data-component="header"></div>
+
+    <main class="page-content">
+
+      <div class="page-header page-header-row">
+        <div>
+          <h1>Suporte</h1>
+          <p>Acompanhe seus chamados e entre em contato com a equipe.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">+ Novo chamado</button>
+      </div>
+
+      <!-- Contact summary bar -->
+      <div id="contact-bar" style="display:none; margin-bottom:16px;"></div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="margin-bottom:16px;">
+        <div class="kpi kpi-warn">
+          <span class="kpi-label">Em aberto</span>
+          <div class="kpi-value" id="kpi-abertos">—</div>
+          <div class="kpi-hint">Aguardando resposta</div>
+        </div>
+        <div class="kpi kpi-ok">
+          <span class="kpi-label">Resolvidos</span>
+          <div class="kpi-value" id="kpi-resolvidos">—</div>
+          <div class="kpi-hint">Concluídos</div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Total</span>
+          <div class="kpi-value" id="kpi-total-tickets">—</div>
+          <div class="kpi-hint">Chamados registrados</div>
+        </div>
+        <div class="kpi kpi-muted">
+          <span class="kpi-label">Portal externo</span>
+          <div class="kpi-value" style="font-size:13px;">Freshdesk</div>
+          <div class="kpi-hint">
+            <a href="https://hmdesk.freshdesk.com/support/tickets" target="_blank" rel="noopener" style="color:var(--blue);">Abrir →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tickets table -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">1</div>
+          <h2 class="sec-title">Meus Chamados</h2>
+          <span class="sec-tag" id="ticket-count">—</span>
+        </div>
+
+        <div id="tickets-empty" class="empty-state" style="display:none;">
+          <div class="empty-state-icon">💬</div>
+          <h3>Nenhum chamado ainda</h3>
+          <p>Abra um chamado para que nossa equipe possa ajudá-lo.</p>
+          <button class="btn btn-primary" onclick="showNewTicketModal()">+ Novo chamado</button>
+        </div>
+
+        <div id="tickets-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Assunto</th>
+                <th>Status</th>
+                <th>Prioridade</th>
+                <th>Aberto em</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Info section -->
+      <div class="sec">
+        <div class="sec-header">
+          <div class="sec-num">2</div>
+          <h2 class="sec-title">Canais de Atendimento</h2>
+        </div>
+        <div class="callout callout-blue" style="margin-bottom:0;">
+          Além do portal, você pode acompanhar seus chamados em
+          <a href="https://hmdesk.freshdesk.com/support/tickets" target="_blank" rel="noopener"><strong>hmdesk.freshdesk.com</strong></a>.
+          As respostas da equipe chegam também por e-mail.
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="portal-page-footer">
+      <span>Portal do Superendividado</span>
+      <span>Atendimento via Freshdesk</span>
+    </footer>
+  </div>
+</div>
+
+<!-- New ticket modal -->
+<div class="modal-overlay" id="modal-new-ticket" onclick="if(event.target===this)closeNewTicketModal()">
+  <div class="modal" style="text-align:left; max-width:520px;">
+    <h3 style="margin-bottom:4px;">Novo Chamado</h3>
+    <p style="font-size:13px; margin-bottom:20px;">Descreva sua dúvida. Nossa equipe responderá em até 1 dia útil.</p>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label required" for="t-subject">Assunto</label>
+        <input class="form-input" type="text" id="t-subject" placeholder="Ex: Dúvida sobre meu processo">
+      </div>
+      <div class="form-group full">
+        <label class="form-label required" for="t-desc">Descrição</label>
+        <textarea class="form-textarea" id="t-desc" rows="4" placeholder="Descreva sua solicitação em detalhes..."></textarea>
+      </div>
+    </div>
+
+    <div class="btn-group mt-24" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeNewTicketModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-submit-ticket" onclick="submitTicket()">Enviar chamado</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script type="module" src="../js/app.js"></script>
+<script type="module">
+import { showToast }        from '../utils/helpers.js';
+import { FreshdeskService } from '../services/freshdesk.js';
+import { supabase }         from '../services/supabase.js';
+import { FUNCTIONS_URL }    from '../utils/config.js';
+
+window.showToast = showToast;
+
+let currentUser = null;
+let currentCaso = null;
+
+document.addEventListener('app:user-loaded', e => {
+  currentUser = e.detail?.user;
+  currentCaso = e.detail?.caso;
+});
+
+async function init() {
+  const [tickets, contact] = await Promise.all([
+    FreshdeskService.listTickets().catch(() => []),
+    FreshdeskService.getContact().catch(() => null),
+  ]);
+  renderContact(contact);
+  renderTickets(tickets);
+  updateKPIs(tickets);
+}
+
+function renderContact(contact) {
+  if (!contact) return;
+  const bar = document.getElementById('contact-bar');
+  bar.style.display = '';
+  bar.className = 'callout callout-blue';
+  bar.innerHTML = `<strong>${contact.name || contact.email}</strong>`
+    + (contact.lifecycle_stage ? ` &mdash; ${contact.lifecycle_stage}` : '')
+    + (contact.tickets_count   ? ` &mdash; ${contact.tickets_count} chamado(s)` : '');
+}
+
+function renderTickets(tickets) {
+  const tbody = document.getElementById('tickets-tbody');
+  const empty = document.getElementById('tickets-empty');
+  const wrap  = document.getElementById('tickets-table-wrap');
+
+  document.getElementById('ticket-count').textContent =
+    tickets.length + ' chamado' + (tickets.length !== 1 ? 's' : '');
+
+  if (tickets.length === 0) {
+    empty.style.display = ''; wrap.style.display = 'none'; return;
+  }
+  empty.style.display = 'none'; wrap.style.display = '';
+
+  const S = FreshdeskService.STATUS;
+  const P = FreshdeskService.PRIORITY;
+
+  tbody.innerHTML = tickets.map(t => {
+    const s = S[t.status]   || { label: '—', cls: 'chip-muted' };
+    const p = P[t.priority] || { label: '—', cls: 'chip-muted' };
+    return `<tr>
+      <td style="color:var(--muted)">#${t.fd_ticket_id}</td>
+      <td><strong>${t.subject || '—'}</strong></td>
+      <td><span class="chip ${s.cls}">${s.label}</span></td>
+      <td><span class="chip ${p.cls}">${p.label}</span></td>
+      <td>${new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
+      <td><a href="${FreshdeskService.ticketUrl(t.fd_ticket_id)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver →</a></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateKPIs(tickets) {
+  document.getElementById('kpi-abertos').textContent    = tickets.filter(t => t.status === 2 || t.status === 3).length;
+  document.getElementById('kpi-resolvidos').textContent = tickets.filter(t => t.status === 4 || t.status === 5).length;
+  document.getElementById('kpi-total-tickets').textContent = tickets.length;
+}
+
+window.showNewTicketModal  = () => document.getElementById('modal-new-ticket').classList.add('show');
+window.closeNewTicketModal = () => document.getElementById('modal-new-ticket').classList.remove('show');
+
+window.submitTicket = async function() {
+  const subject = document.getElementById('t-subject').value.trim();
+  const desc    = document.getElementById('t-desc').value.trim();
+  if (!subject) { showToast('Informe o assunto do chamado.', 'warn'); return; }
+  if (!desc)    { showToast('Descreva sua solicitação.', 'warn'); return; }
+
+  const btn = document.getElementById('btn-submit-ticket');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  try {
+    const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'] });
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && currentUser) {
+      fetch(`${FUNCTIONS_URL}/portal-notify`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type:        'ticket_created',
+          clientEmail: currentUser.email,
+          clientName:  currentCaso?.full_name || '',
+          payload:     { ticketId: ticket.id, subject },
+        }),
+      }).catch(console.warn);
+    }
+
+    closeNewTicketModal();
+    document.getElementById('t-subject').value = '';
+    document.getElementById('t-desc').value    = '';
+    showToast(`Chamado #${ticket.id} criado! Nossa equipe responderá em breve.`, 'ok');
+    await init();
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao criar chamado. Tente novamente.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar chamado';
+  }
+};
+
+document.addEventListener('app:ready', init);
+</script>
+
+</body>
+</html>

@@ -13,6 +13,7 @@ export const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 
 export const SITE_URL      = 'https://portal.hermidamaia.adv.br';
 export const CALLBACK_PATH = '/pages/auth-callback.html';
+export const FUNCTIONS_URL = SUPABASE_URL + '/functions/v1';
 
 export function getCallbackUrl() {
   const origin = window.location.hostname === 'localhost'
