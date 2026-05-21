@@ -393,30 +393,21 @@ function setupSidebarMobile() {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'sidebar-overlay';
-    overlay.style.position = 'fixed';
-    overlay.style.inset = '0';
-    overlay.style.background = 'rgba(0,0,0,.35)';
-    overlay.style.zIndex = '250';
-    overlay.style.opacity = '0';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.transition = 'opacity .2s ease';
     document.body.appendChild(overlay);
   }
 
-  const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+  const isMobile = () => window.matchMedia('(max-width: 1023px)').matches;
 
   const closeSidebar = () => {
     sidebar.classList.remove('sidebar-open');
-    overlay.style.opacity = '0';
-    overlay.style.pointerEvents = 'none';
+    overlay.classList.remove('visible');
     document.body.style.overflow = '';
     toggle.setAttribute('aria-expanded', 'false');
   };
 
   const openSidebar = () => {
     sidebar.classList.add('sidebar-open');
-    overlay.style.opacity = '1';
-    overlay.style.pointerEvents = 'auto';
+    overlay.classList.add('visible');
     document.body.style.overflow = 'hidden';
     toggle.setAttribute('aria-expanded', 'true');
   };
@@ -465,7 +456,18 @@ function setupSidebarMobile() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeSidebar();
   });
-  document.addEventListener('app:route-changed', closeSidebar);
+  document.addEventListener('app:route-changed', () => {
+    if (isMobile()) closeSidebar();
+  });
+
+  // Touch swipe-left to close on mobile
+  let touchStartX = 0;
+  sidebar.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  sidebar.addEventListener('touchend', e => {
+    if (!isMobile()) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (dx < -60) closeSidebar();
+  }, { passive: true });
 
   window.addEventListener('resize', syncForViewport);
   syncForViewport();
