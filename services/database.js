@@ -43,30 +43,49 @@ export const AdminService = {
     // carregamos os casos diretamente para manter o painel admin operacional.
     console.warn('[AdminService.getClients] RPC admin_get_clients failed, using fallback query:', error);
 
-    const { data: casos, error: casosError } = await supabase
-      .from('portal_casos')
-      .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
-      .order('created_at', { ascending: false });
-
-    if (casosError) throw casosError;
-
-    return (casos || []).map((c) => ({
+    const mapCasesToAdminRows = (casos = []) => (casos || []).map((c) => ({
       user_id: c.user_id,
       email: null,
       full_name: c.full_name,
-      cpf: c.cpf,
+      cpf: c.cpf || null,
       fase: c.fase,
       onboarding_done: c.onboarding_done,
-      cnj_step_atual: c.cnj_step_atual,
-      n_credores: c.n_credores,
-      fd_ticket_id: c.fd_ticket_id,
-      workspace_id: c.workspace_id,
+      cnj_step_atual: c.cnj_step_atual || null,
+      n_credores: c.n_credores || 0,
+      fd_ticket_id: c.fd_ticket_id || null,
+      workspace_id: c.workspace_id || null,
       workspace_slug: null,
       total_dividas: 0,
       docs_aprovados: 0,
       docs_pendentes: 0,
       created_at: c.created_at,
     }));
+
+    const { data: casos, error: casosError } = await supabase
+      .from('portal_casos')
+      .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
+      .order('created_at', { ascending: false });
+
+    if (!casosError) {
+      return mapCasesToAdminRows(casos);
+    }
+
+    // Fallback extra: alguns ambientes podem nao ter todas as colunas acima.
+    // Nesse caso, usamos uma selecao minima para manter o dashboard funcional.
+    console.warn('[AdminService.getClients] full fallback query failed, trying minimal query:', casosError);
+
+    const { data: casosMin, error: casosMinError } = await supabase
+      .from('portal_casos')
+      .select('user_id, full_name, fase, onboarding_done, created_at')
+      .order('created_at', { ascending: false });
+
+    if (!casosMinError) {
+      return mapCasesToAdminRows(casosMin);
+    }
+
+    // Ultima protecao: nao quebrar a tela admin por divergencia de ambiente.
+    console.warn('[AdminService.getClients] minimal fallback query failed; returning empty list:', casosMinError);
+    return [];
   },
   async getClientCaso(userId) {
     const { data, error } = await supabase
