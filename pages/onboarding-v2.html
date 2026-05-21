@@ -995,9 +995,12 @@ window.confirmAnexoWebGenerated = async function(stepId) {
 // ANEXO II STEP
 // ═══════════════════════════════════════════════════════════════
 function renderAnexoStep(step, container) {
-  const state  = engine.getState(step.id);
-  const isDone = ['completed','approved','awaiting_review'].includes(state);
-  const idx    = JOURNEY_STEPS.indexOf(step);
+  const state      = engine.getState(step.id);
+  const isDone     = ['completed','approved','awaiting_review'].includes(state);
+  const isApproved = state === 'approved';
+  const isRejected = state === 'rejected';
+  const idx        = JOURNEY_STEPS.indexOf(step);
+  webAnexoGenerated = false; // reset when step re-renders
 
   container.innerHTML = `
     <div class="jcard">
@@ -1007,12 +1010,19 @@ function renderAnexoStep(step, container) {
         ${badgeHtml(state)}
       </div>
       <div class="jcard-body">
-        ${state === 'awaiting_review' ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">Formulario enviado. Aguardando analise do escritorio.</div>` : ''}
-        ${state === 'approved' ? `<div class="done-banner">Formulario aprovado pelo escritorio.</div>` : ''}
-        ${state === 'rejected' ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">Formulario devolvido para correcao. Reenvie abaixo.</div>` : ''}
+        ${state === 'awaiting_review' ? `
+          <div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">
+            Formulário enviado. Aguardando análise do escritório.
+          </div>` : ''}
+        ${isApproved ? `<div class="done-banner">Formulário CNJ Anexo II aprovado pelo escritório. ✓</div>` : ''}
+        ${isRejected ? `
+          <div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">
+            Formulário devolvido para correção. Reenvie abaixo.
+          </div>` : ''}
 
+        ${!isDone ? `
         <div class="glass-info">
-          <div class="glass-info-title">Formulario Oficial CNJ Anexo II</div>
+          <div class="glass-info-title">Formulário Oficial CNJ Anexo II</div>
           <ul>
             <li>Exigido pela Recomendação CNJ 125/2021 para renegociação coletiva</li>
             <li>Deve conter seus dados pessoais, lista completa de credores e valores devidos</li>
@@ -1030,7 +1040,7 @@ function renderAnexoStep(step, container) {
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
             <div class="option-icon">WEB</div>
             <div class="option-title">Online</div>
-            <div class="option-desc">Formulário guiado no portal</div>
+            <div class="option-desc">Gera o Anexo II a partir dos seus dados</div>
           </div>
         </div>
 
@@ -1044,8 +1054,11 @@ function renderAnexoStep(step, container) {
             <div class="pdf-dl-done" id="dl-anexo-done">Baixado</div>
           </div>
 
-          <p style="font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px">Enviar formulário preenchido:</p>
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <p style="font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px">
+            Enviar formulário preenchido:
+          </p>
+          <div class="upload-zone" id="upload-zone"
+               onclick="document.getElementById('file-input').click()">
             <div class="upload-zone-icon">ARQ</div>
             <div class="upload-zone-text">Clique ou arraste o PDF preenchido aqui</div>
             <div class="upload-zone-hint">PDF · máx. 10 MB</div>
@@ -1055,28 +1068,45 @@ function renderAnexoStep(step, container) {
               <span>PDF</span>
               <span id="upload-fname" style="font-weight:600;flex:1">—</span>
               <span id="upload-fsize" style="color:var(--muted)">—</span>
-              <button class="btn btn-sm" style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px" onclick="window.clearUpload()">X</button>
+              <button class="btn btn-sm"
+                style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px"
+                onclick="window.clearUpload()">✕</button>
             </div>
           </div>
-          <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="window.handleFileSelect(this)">
+          <input type="file" id="file-input" accept="application/pdf" style="display:none"
+                 onchange="window.handleFileSelect(this)">
+
+          <div class="jnav" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)">
+            <span class="jnav-info">Etapa ${idx + 1} de ${JOURNEY_STEPS.length}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              ${idx > 0 ? `<button class="btn btn-outline btn-sm" onclick="window.journeyGoTo('${JOURNEY_STEPS[idx-1].id}')">← Anterior</button>` : ''}
+              <button class="btn btn-primary" id="btn-submit-anexo" disabled
+                onclick="window.submitAnexo('${step.id}')">Enviar formulário →</button>
+            </div>
+          </div>
         </div>
 
-        <div id="panel-online" style="display:none">${buildOnlinePanelHtml()}</div>
+        <div id="panel-online" style="display:none">
+          ${buildAnexoWebPanelHtml()}
+        </div>
 
-        <div class="jnav">
+        ` : `
+        <!-- Already submitted / approved — show navigation only -->
+        <div class="jnav" style="margin-top:8px">
           <span class="jnav-info">Etapa ${idx + 1} de ${JOURNEY_STEPS.length}</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
             ${idx > 0 ? `<button class="btn btn-outline btn-sm" onclick="window.journeyGoTo('${JOURNEY_STEPS[idx-1].id}')">← Anterior</button>` : ''}
-            ${state === 'awaiting_review' || state === 'approved'
-              ? `<button class="btn btn-primary" onclick="window.journeyGoTo('${engine.nextStep(step.id)?.id}')">Próximo passo →</button>`
-              : `<button class="btn btn-primary" id="btn-submit-anexo" disabled onclick="window.submitAnexo('${step.id}')">Enviar formulário →</button>`
-            }
+            <button class="btn btn-primary"
+              onclick="window.journeyGoTo('${engine.nextStep(step.id)?.id}')">
+              Próximo passo →
+            </button>
           </div>
         </div>
+        `}
       </div>
     </div>`;
 
-  setupDropZone();
+  if (!isDone) setupDropZone();
 }
 
 window.selectOption = function(opt) {
@@ -1084,6 +1114,11 @@ window.selectOption = function(opt) {
   document.getElementById('opt-online').classList.toggle('selected', opt === 'online');
   document.getElementById('panel-offline').style.display = opt === 'offline' ? '' : 'none';
   document.getElementById('panel-online').style.display  = opt === 'online'  ? '' : 'none';
+  // Re-evaluate PDF submit button — only relevant when offline panel is visible
+  if (opt === 'online' && !uploadedFile) {
+    const btn = document.getElementById('btn-submit-anexo');
+    if (btn) btn.setAttribute('disabled', '');
+  }
 };
 
 window.downloadAnexo = async function() {
