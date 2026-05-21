@@ -16,14 +16,15 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521k';
+const SHELL_VERSION = '20260521l';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
 const SHELL_SERVICE_ERRORS_MAX = 80;
 const FRESHCHAT_SCRIPT_ID = 'freshchat-private-widget';
-const FRESHCHAT_SCRIPT_SRC = 'https://eu.fw-cdn.com/10713913/375987.js';
-const FRESHCHAT_WIDGET_ID = 'ffefb5e9-3f8f-457f-8036-1b33e057e3f2';
+const FRESHCHAT_SCRIPT_SRC = 'https://wchat.freshchat.com/js/widget.js';
+const FRESHCHAT_WIDGET_TOKEN = '252eab20-7dcb-432e-ae72-7a011bfef8de';
+const FRESHCHAT_WIDGET_HOST = 'https://wchat.freshchat.com';
 const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 
@@ -812,7 +813,7 @@ function ensureFreshchatVisible() {
     const style = document.createElement('style');
     style.id = FRESHCHAT_VISIBLE_STYLE_ID;
     style.textContent = `
-      iframe[src*="fw-cdn.com"],
+      iframe[src*="wchat.freshchat.com"],
       iframe[src*="freshchat"],
       iframe[src*="freshworks"],
       #fc_frame,
@@ -838,7 +839,7 @@ function startFreshchatWatchdog(user, caso) {
   freshchatWatchdogTimer = setInterval(() => {
     if (PUBLIC_PAGES.includes(getCurrentPage())) return;
     ensureFreshchatVisible();
-    waitAndApplyFreshchatIdentity(user, caso, 26);
+    initFreshchatWidget(user, caso) || waitAndApplyFreshchatIdentity(user, caso, 26);
   }, FRESHCHAT_WATCHDOG_INTERVAL_MS);
 }
 
@@ -847,12 +848,33 @@ function removeFreshchatWidget() {
     clearInterval(freshchatWatchdogTimer);
     freshchatWatchdogTimer = null;
   }
+  window.__portalFreshchatInitialized = false;
   document.getElementById(FRESHCHAT_SCRIPT_ID)?.remove();
   document.getElementById(FRESHCHAT_VISIBLE_STYLE_ID)?.remove();
-  document.querySelectorAll('iframe[src*="fw-cdn.com"], iframe[src*="freshchat"], iframe[src*="freshworks"]').forEach(el => el.remove());
+  document.querySelectorAll('iframe[src*="wchat.freshchat.com"], iframe[src*="freshchat"], iframe[src*="freshworks"]').forEach(el => el.remove());
   try {
     if (window.fcWidget && typeof window.fcWidget.destroy === 'function') window.fcWidget.destroy();
   } catch (_) {}
+}
+
+function initFreshchatWidget(user, caso) {
+  if (!window.fcWidget || typeof window.fcWidget.init !== 'function') return false;
+
+  try {
+    if (!window.__portalFreshchatInitialized) {
+      window.fcWidget.init({
+        token: FRESHCHAT_WIDGET_TOKEN,
+        host: FRESHCHAT_WIDGET_HOST,
+      });
+      window.__portalFreshchatInitialized = true;
+    }
+    ensureFreshchatVisible();
+    waitAndApplyFreshchatIdentity(user, caso);
+    return true;
+  } catch (error) {
+    console.warn('[Freshchat] Falha ao inicializar widget web', error);
+    return false;
+  }
 }
 
 function mountClientFreshchatWidget({ user, caso } = {}) {
@@ -868,13 +890,10 @@ function mountClientFreshchatWidget({ user, caso } = {}) {
     script.id = FRESHCHAT_SCRIPT_ID;
     script.src = FRESHCHAT_SCRIPT_SRC;
     script.async = true;
-    script.setAttribute('chat', 'true');
-    script.setAttribute('widgetId', FRESHCHAT_WIDGET_ID);
-    script.onload = () => {
-      ensureFreshchatVisible();
-      waitAndApplyFreshchatIdentity(user, caso);
-    };
-    document.body.appendChild(script);
+    script.onload = () => initFreshchatWidget(user, caso);
+    document.head.appendChild(script);
+  } else {
+    initFreshchatWidget(user, caso);
   }
 
   waitAndApplyFreshchatIdentity(user, caso);
