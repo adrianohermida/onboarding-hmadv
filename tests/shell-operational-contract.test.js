@@ -16,6 +16,9 @@ describe('operational legal shell contract', () => {
     expect(header).toContain('data-shell-action="workspace-panel"');
     expect(header).toContain('data-shell-action="notifications-panel"');
     expect(header).toContain('shell-notification-count');
+    expect(header).toContain('data-shell-action="account-menu-toggle"');
+    expect(header).toContain('data-shell-action="open-account-modal"');
+    expect(header).toContain('id="sidebar-toggle"');
   });
 
   it('provides global managers without replacing the shell during route swaps', () => {
@@ -27,6 +30,9 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('function openGlobalSearchPanel');
     expect(app).toContain('function openNotificationsPanel');
     expect(app).toContain('function openWorkspacePanel');
+    expect(app).toContain('function openAccountModal');
+    expect(app).toContain('function renderAccountModal');
+    expect(app).toContain('function renderSidebarToggleButton');
     expect(app).toContain('function renderMobileWorkspaceNav');
     expect(app).toContain("window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer }");
     expect(app).toContain("window.shellModal = { open: openShellModal, close: closeShellModal }");
@@ -39,6 +45,8 @@ describe('operational legal shell contract', () => {
 
     [
       '.shell-action-btn',
+      '.header-user-menu',
+      '.account-modal-grid',
       '.shell-side-panel',
       '.shell-panel-item',
       '.shell-mobile-nav',
