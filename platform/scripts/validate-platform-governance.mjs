@@ -12,6 +12,7 @@ const checks = [
   ['design system component ownership doc', 'docs/design-system/component-ownership.md'],
   ['design system shell governance', 'governance/design/shell-visual-governance.md'],
   ['finops governance', 'governance/finops/finops-governance.md'],
+  ['observability governance', 'governance/observability/logging-standards.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
@@ -32,7 +33,8 @@ const requiredScripts = [
   'diagnostics:platform',
   'validate:events',
   'validate:data-governance',
-  'validate:finops'
+  'validate:finops',
+  'validate:observability'
 ];
 const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
 if (missingScripts.length) {

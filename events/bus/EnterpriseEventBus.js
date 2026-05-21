@@ -26,6 +26,8 @@ export class EnterpriseEventBus extends EventTarget {
     if (!validation.valid) {
       eventTelemetry.markFailed();
       deadLetterQueue.push({ envelope, errors: validation.errors, reason: 'validation_failed' });
+      eventTelemetry.markDeadLetter();
+      eventTelemetry.setQueueDepth(deadLetterQueue.list().length);
       eventLogger.log('publish.failed', eventName, { errors: validation.errors });
       return { ok: false, errors: validation.errors, envelope };
     }
@@ -37,14 +39,29 @@ export class EnterpriseEventBus extends EventTarget {
     this.dispatchEvent(new CustomEvent(eventName, { detail: envelope, bubbles: false }));
     this.dispatchEvent(new CustomEvent('event:*', { detail: envelope, bubbles: false }));
 
-    eventTelemetry.observeLatency(Math.round(performance.now() - start));
+    const publishMs = Math.round(performance.now() - start);
+    eventTelemetry.observeLatency(publishMs);
+    eventTelemetry.observePublishTiming(publishMs);
     return { ok: true, envelope };
   }
 
   subscribe(eventName, handler, options = {}) {
     const wrapped = (ev) => {
-      eventTelemetry.markProcessed();
-      handler(ev.detail, ev);
+      const start = performance.now();
+      try {
+        eventTelemetry.markProcessed();
+        handler(ev.detail, ev);
+      } catch (error) {
+        eventTelemetry.markFailed();
+        const envelope = ev?.detail;
+        deadLetterQueue.push({ envelope, error: String(error), reason: 'subscriber_failed' });
+        eventTelemetry.markDeadLetter();
+        eventTelemetry.setQueueDepth(deadLetterQueue.list().length);
+        eventLogger.log('subscriber.failed', eventName, { error: String(error) });
+        throw error;
+      } finally {
+        eventTelemetry.observeSubscriberTiming(Math.round(performance.now() - start));
+      }
     };
 
     this.addEventListener(eventName, wrapped);

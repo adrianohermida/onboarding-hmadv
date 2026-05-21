@@ -30,6 +30,11 @@ export const EVENT_REGISTRY = {
   'feature.disabled': { domain: 'billing', owner: 'billing', version: '1.0.0', tenantAware: true },
   'invoice.generated': { domain: 'billing', owner: 'billing', version: '1.0.0', tenantAware: true },
   'payment.received': { domain: 'billing', owner: 'billing', version: '1.0.0', tenantAware: true },
+  'payment.failed': { domain: 'billing', owner: 'billing', version: '1.0.0', tenantAware: true },
+  'invoice.failed': { domain: 'billing', owner: 'billing', version: '1.0.0', tenantAware: true },
+  'workflow.failed': { domain: 'workflows', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'onboarding.abandoned': { domain: 'onboarding', owner: 'onboarding', version: '1.0.0', tenantAware: true },
+  'ai.workflow.started': { domain: 'ai', owner: 'platform', version: '1.0.0', tenantAware: true },
 
   // Existing app events kept for backward compatibility
   'journey.step.state_changed': { domain: 'journey', owner: 'journey', version: '1.0.0', tenantAware: true },

@@ -16,11 +16,19 @@ import { loadingLayer }      from '../../shell/layout/GlobalLoadingLayer.js';
 import { obs }               from '../../shell/observability/Observability.js';
 import { shellEventHub }     from '../../shell/events/ShellEventHub.js';
 
+import { observabilityFoundation } from '../../observability/ObservabilityFoundation.js';
 // ── Modal API ──────────────────────────────────────────────────────────────────
 export const modal = {
   open:     (opts)    => globalModal.open(opts),
   close:    (id)      => globalModal.close(id),
   closeAll: ()        => globalModal.closeAll(),
+};
+
+export const observability = {
+  snapshot: () => observabilityFoundation.collectOperationalSnapshot(),
+  metrics: () => observabilityFoundation.telemetryEngine,
+  health: () => observabilityFoundation.healthEngine.snapshot(),
+  diagnostics: () => observabilityFoundation.runtimeDiagnostics.run(),
 };
 
 // ── Slideover API ──────────────────────────────────────────────────────────────
@@ -45,7 +53,7 @@ export const auth = {
   getViewMode: () => store.getViewMode(),
   setViewMode: (mode) => store.setViewMode(mode),
 };
-
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, tenant, shellStore, billing };
 // ── Notifications API ──────────────────────────────────────────────────────────
 export const notify = {
   push: (item) => store.addNotification(item),

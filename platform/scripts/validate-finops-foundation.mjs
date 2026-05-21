@@ -4,6 +4,7 @@ const required = [
   'billing/README.md',
   'billing/plans/PlanCatalog.js',
   'billing/subscriptions/SubscriptionService.js',
+  'billing/subscriptions/BillingLifecycleService.js',
   'billing/usage/UsageTracker.js',
   'billing/quotas/QuotaEngine.js',
   'billing/limits/LimitEngine.js',
@@ -15,6 +16,7 @@ const required = [
   'billing/events/BillingEvents.js',
   'billing/events/BillingUsageSubscribers.js',
   'billing/telemetry/BillingTelemetry.js',
+  'billing/telemetry/BillingTelemetrySubscribers.js',
   'billing/BillingFoundation.js',
   'billing/ShellBillingIntegration.js',
   'shared/contracts/billing/BillingContracts.js',
@@ -36,6 +38,7 @@ const required = [
   'governance/finops/feature-flag-governance.md',
   'governance/finops/operational-monitoring.md',
   'admin/finops/index.html',
+  'admin/finops/tenant-economics.html',
 ];
 
 const missing = required.filter((item) => !existsSync(item));

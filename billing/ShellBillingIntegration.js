@@ -3,6 +3,7 @@ import { bus } from '../modules/events/EventBus.js';
 import { buildTenantBillingSnapshot } from './BillingFoundation.js';
 import { classifyLimitState, buildLimitAlert } from './limits/LimitEngine.js';
 import { mountBillingUsageSubscribers } from './events/BillingUsageSubscribers.js';
+import { mountBillingTelemetrySubscribers } from './telemetry/BillingTelemetrySubscribers.js';
 
 let mounted = false;
 let unsubscribers = [];
@@ -37,6 +38,7 @@ export function mountBillingShellIntegration() {
   if (mounted) return;
   mounted = true;
   mountBillingUsageSubscribers();
+  mountBillingTelemetrySubscribers();
 
   const tenantId = store.get('tenant')?.id || 'hmadv';
   refresh(tenantId);
