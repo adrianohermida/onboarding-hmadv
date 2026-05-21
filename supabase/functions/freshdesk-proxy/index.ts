@@ -11,7 +11,8 @@ const EMAIL_CONFIG_ID = Number(Deno.env.get("FRESHDESK_EMAIL_CONFIG_ID") ?? "0")
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, Authorization, content-type, Content-Type, apikey, x-client-info, x-supabase-authorization",
+  "Access-Control-Max-Age": "86400",
 };
 
 type JsonRecord = Record<string, any>;
@@ -28,19 +29,6 @@ function adminClient() {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-}
-
-function anonClient(req: Request) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const anonFromEnv = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  const anonFromHeader = req.headers.get("apikey") ?? "";
-  const anonKey = anonFromEnv || anonFromHeader;
-
-  if (!supabaseUrl || !anonKey) {
-    return null;
-  }
-
-  return createClient(supabaseUrl, anonKey);
 }
 
 function escapeHtml(value: unknown) {
@@ -75,11 +63,11 @@ function decodeClaims(token: string): JsonRecord {
   }
 }
 
-async function getAuthenticatedUser(req: Request, anon: NonNullable<ReturnType<typeof anonClient>>) {
+async function getAuthenticatedUser(req: Request, admin: ReturnType<typeof adminClient>) {
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { user: null, email: null, token: null, error: "Sessão ausente" };
 
-  const { data, error } = await anon.auth.getUser(token);
+  const { data, error } = await admin.auth.getUser(token);
   const claims = decodeClaims(token);
   const user = data?.user ?? null;
   const email = user?.email ?? claims.email ?? claims.user_metadata?.email ?? null;
@@ -93,14 +81,15 @@ async function getAuthenticatedUser(req: Request, anon: NonNullable<ReturnType<t
 
 async function fetchFreshdesk(path: string, init: RequestInit = {}) {
   if (!FD_KEY) return { ok: false, status: 500, data: { error: "FRESHDESK_API_KEY não configurado" } };
+  const headers = new Headers(init.headers ?? {});
+  headers.set("Authorization", `Basic ${FD_CREDS}`);
+  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const response = await fetch(`${FD_BASE}${path}`, {
     ...init,
-    headers: {
-      "Authorization": `Basic ${FD_CREDS}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
   });
 
   const contentType = response.headers.get("content-type") ?? "";
@@ -111,29 +100,114 @@ async function fetchFreshdesk(path: string, init: RequestInit = {}) {
   return { ok: response.ok, status: response.status, data };
 }
 
+function base64ToBlob(attachment: JsonRecord) {
+  const binary = atob(String(attachment.contentBase64 ?? ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: String(attachment.type ?? "application/octet-stream") });
+}
+
+function appendFreshdeskField(form: FormData, key: string, value: unknown) {
+  if (value === undefined || value === null || value === "") return;
+  form.append(key, String(value));
+}
+
+function buildFreshdeskTicketBody(payload: JsonRecord, attachments: JsonRecord[]) {
+  if (!attachments.length) return JSON.stringify(payload);
+
+  const form = new FormData();
+  appendFreshdeskField(form, "email", payload.email);
+  appendFreshdeskField(form, "name", payload.name);
+  appendFreshdeskField(form, "subject", payload.subject);
+  appendFreshdeskField(form, "description", payload.description);
+  appendFreshdeskField(form, "priority", payload.priority);
+  appendFreshdeskField(form, "status", payload.status);
+  appendFreshdeskField(form, "source", payload.source);
+  appendFreshdeskField(form, "email_config_id", payload.email_config_id);
+  for (const tag of payload.tags ?? []) form.append("tags[]", String(tag));
+  for (const attachment of attachments) {
+    const name = String(attachment.name ?? "anexo");
+    form.append("attachments[]", base64ToBlob(attachment), name);
+  }
+  return form;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
 
   try {
-    const anon = anonClient(req);
-    if (!anon) {
-      return json({ error: "ServerMisconfigured", message: "SUPABASE_URL/SUPABASE_ANON_KEY ausentes" }, 500);
-    }
-
-    const auth = await getAuthenticatedUser(req, anon);
-    if (auth.error || !auth.user || !auth.email) {
-      return json({ error: "Unauthenticated", message: auth.error }, 401);
-    }
-
     if (!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
       return json({ error: "ServerMisconfigured", message: "SUPABASE_SERVICE_ROLE_KEY ausente" }, 500);
     }
 
     const admin = adminClient();
+    const auth = await getAuthenticatedUser(req, admin);
+    if (auth.error || !auth.user || !auth.email) {
+      return json({ error: "Unauthenticated", message: auth.error }, 401);
+    }
 
     const body = await req.json().catch(() => ({})) as JsonRecord;
     const action = String(body.action ?? "");
+
+    const { data: caso } = await admin
+      .from("portal_casos")
+      .select("id,user_id,workspace_id,full_name,email,cpf,fd_contact_id,fd_ticket_id,fase,cnj_json")
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+
+    if (action === "get_contact") {
+      const { data: contact, error } = await admin
+        .from("freshdesk_contacts")
+        .select("name,email,phone,cpf,status,lifecycle_stage,tickets_count,last_synced_at")
+        .eq("email", auth.email)
+        .maybeSingle();
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true, contact });
+    }
+
+    if (action === "list_tickets") {
+      const page = Math.max(Number(body.page ?? 1), 1);
+      const pageSize = Math.min(Math.max(Number(body.pageSize ?? 10), 5), 50);
+      const fromRow = (page - 1) * pageSize;
+      const toRow = fromRow + pageSize - 1;
+      const status = Number(body.status ?? 0) || null;
+      const priority = Number(body.priority ?? 0) || null;
+      const search = String(body.search ?? "").trim().replaceAll("%", "\\%").replaceAll("_", "\\_");
+      const from = String(body.from ?? "").trim();
+      const to = String(body.to ?? "").trim();
+
+      let query = admin
+        .from("freshdesk_tickets")
+        .select("fd_ticket_id,portal_caso_id,subject,status,priority,tags,requester_email,support_email,metadata,created_at,updated_at,last_synced_at", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(fromRow, toRow);
+
+      if (caso?.id) {
+        query = query.or(`requester_email.eq.${auth.email},portal_caso_id.eq.${caso.id}`);
+      } else {
+        query = query.eq("requester_email", auth.email);
+      }
+      if (status) query = query.eq("status", status);
+      if (priority) query = query.eq("priority", priority);
+      if (from) query = query.gte("created_at", `${from}T00:00:00.000Z`);
+      if (to) query = query.lte("created_at", `${to}T23:59:59.999Z`);
+      if (search) query = query.ilike("subject", `%${search}%`);
+
+      const { data, error, count } = await query;
+      if (error) return json({ error: error.message }, 500);
+      const total = count ?? 0;
+      return json({
+        ok: true,
+        data: data ?? [],
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(Math.ceil(total / pageSize), 1),
+      });
+    }
 
     if (action !== "create_ticket") return json({ error: "Unknown action" }, 400);
 
@@ -141,15 +215,12 @@ Deno.serve(async (req: Request) => {
     const description = String(body.description ?? "").trim();
     const priority = Number(body.priority ?? 1) || 1;
     const inputTags = Array.isArray(body.tags) ? body.tags.map(String) : [];
+    const attachments = Array.isArray(body.attachments)
+      ? body.attachments.filter((item: JsonRecord) => item?.contentBase64 && item?.name).slice(0, 5)
+      : [];
 
     if (!subject) return json({ error: "Assunto obrigatório" }, 400);
     if (!description) return json({ error: "Descrição obrigatória" }, 400);
-
-    const { data: caso } = await admin
-      .from("portal_casos")
-      .select("id,user_id,workspace_id,full_name,email,cpf,fd_contact_id,fd_ticket_id,fase,cnj_json")
-      .eq("user_id", auth.user.id)
-      .maybeSingle();
 
     const requesterName = caso?.full_name ?? auth.user.user_metadata?.full_name ?? auth.user.user_metadata?.name ?? auth.email;
     const tags = Array.from(new Set(["portal-cliente", "portal-suporte", ...inputTags].filter(Boolean)));
@@ -174,7 +245,7 @@ Deno.serve(async (req: Request) => {
 
     const fdRes = await fetchFreshdesk("/tickets", {
       method: "POST",
-      body: JSON.stringify(fdPayload),
+      body: buildFreshdeskTicketBody(fdPayload, attachments),
     });
 
     if (!fdRes.ok) return json(fdRes.data, fdRes.status);
@@ -220,6 +291,11 @@ Deno.serve(async (req: Request) => {
         support_email: SUPPORT_EMAIL,
         requester_email: auth.email,
         portal_caso_id: caso?.id ?? null,
+        attachments: attachments.map((attachment: JsonRecord) => ({
+          name: attachment.name,
+          type: attachment.type,
+          size: attachment.size,
+        })),
       },
       created_at: ticket.created_at ?? now,
       updated_at: ticket.updated_at ?? now,

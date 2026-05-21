@@ -1,17 +1,14 @@
 import { Router }                    from './router.js';
 import { getSidebarModules as getCanonicalSidebarModules } from './navigation.js';
 import { installRuntimeIsolation }   from './shell-runtime-isolation.js';
+import { initUiKit }                 from '../components/ui/index.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';
-import { bus }                       from '../modules/events/EventBus.js';
-import { authenticatedShell }        from '../shell/AuthenticatedShell.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
 const PUBLIC_PAGES = ['login', 'auth-callback'];
-const SHELL_RUNTIME_KEY = 'portal:shell-runtime';
-const ENTERPRISE_ROLLOUT_PERCENT_KEY = 'portal:enterprise-rollout-percent';
 const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
@@ -29,9 +26,13 @@ const FRESHCHAT_SCRIPT_SRC = 'https://eu.fw-cdn.com/10713913/375987.js';
 const FRESHCHAT_WIDGET_ID = '2bb07572-34a4-4ea6-9708-4ec2ed23589d';
 const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
+const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
+const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
+const SHELL_MAX_RECENT_ROUTES = 6;
 
 window.__shellVersion = SHELL_VERSION;
 
+const componentHtmlCache = new Map();
 let appUserDetail = null;
 let shellNavInFlight = false;
 let captureModuleListeners = true;
@@ -42,6 +43,7 @@ let shellRouteFailure = null;
 let serviceErrorBannerListenerBound = false;
 let unmountShellModeSelector = null;
 let freshchatWatchdogTimer = null;
+let shellManagersReady = false;
 
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
@@ -209,7 +211,7 @@ function validateShellReady() {
   const main = document.querySelector('main.page-content');
   const navLinks = document.querySelectorAll('#sidebar-nav-links .nav-link[data-page]');
 
-  return Boolean(sidebar && header && main && main.children.length > 0 && navLinks.length >= 7);
+  return Boolean(sidebar && header && main && main.children.length > 0 && navLinks.length >= 6);
 }
 
 function revealAppWhenReady() {
@@ -229,6 +231,11 @@ function escapeShellHtml(value) {
 
 function renderRouteFailureFallback(routeUrl, error) {
   setRouteFailure(routeUrl, error);
+  addShellNotification({
+    title: 'Falha ao abrir módulo',
+    text: error?.message || 'Tente recarregar a rota.',
+    tone: 'warn',
+  });
 
   const main = document.querySelector('main.page-content');
   if (!main) {
@@ -600,6 +607,7 @@ async function navigateModule(url, { pushState = true } = {}) {
     initRouter();
     initToast();
     initModalClose();
+    initUiKit(document);
 
     if (appUserDetail) {
       document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: appUserDetail }));
@@ -635,6 +643,43 @@ function setupShellNavigation() {
       return;
     }
 
+    if (shellAction?.dataset.shellAction === 'global-search') {
+      event.preventDefault();
+      openGlobalSearchPanel();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'workspace-panel') {
+      event.preventDefault();
+      openWorkspacePanel();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'notifications-panel') {
+      event.preventDefault();
+      openNotificationsPanel();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'close-shell-drawer') {
+      event.preventDefault();
+      closeShellDrawer();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'close-shell-modal') {
+      event.preventDefault();
+      closeShellModal();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'clear-notifications') {
+      event.preventDefault();
+      setShellNotifications([]);
+      openNotificationsPanel();
+      return;
+    }
+
     const link = event.target?.closest?.('a[href]');
     if (!link) return;
     if (link.target === '_blank' || link.hasAttribute('download')) return;
@@ -653,15 +698,36 @@ function setupShellNavigation() {
     if (!isEligibleModulePath(window.location.href)) return;
     navigateModule(window.location.href, { pushState: false });
   });
+
+  window.addEventListener('keydown', event => {
+    const wantsSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+    if (wantsSearch) {
+      event.preventDefault();
+      openGlobalSearchPanel();
+    }
+  });
 }
 
 function getNavIcon(moduleKey) {
   const icons = {
     dashboard: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/></svg>',
+    'meu-caso': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 15s-6-3.6-6-8.1A3.3 3.3 0 019 4.7a3.3 3.3 0 016 2.2C15 11.4 9 15 9 15Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 9h2l1-2 1 4 1-2h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    'meus-documentos': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M11 1H4a1 1 0 00-1 1v14a1 1 0 001 1h10a1 1 0 001-1V5l-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 1v4h4M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'minhas-dividas': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 8h16M5 12h3M12 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 2h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>',
+    'meu-plano': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M6 3 2 5v10l4-2 6 2 4-2V3l-4 2-6-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 3v10M12 5v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    ajuda: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    painel: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 5V3.5A1.5 1.5 0 018 2h2a1.5 1.5 0 011.5 1.5V5M2 9h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    clientes: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M7 8a3 3 0 100-6 3 3 0 000 6ZM2 16a5 5 0 0110 0M13 7.5a2.5 2.5 0 100-5M13.5 11c1.4.4 2.5 1.7 2.5 3.2V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     'onboarding-v2': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     'financial-dashboard': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M2 14h14M2 10h4v4H2zM6 7h4v7H6zM10 4h6v10h-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
     documentos: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M11 1H4a1 1 0 00-1 1v14a1 1 0 001 1h10a1 1 0 001-1V5l-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 1v4h4M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     dividas: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 8h16M5 12h3M12 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 2h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>',
+    planos: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 15h12M4 7.5h10M5 7.5V15M9 7.5V15M13 7.5V15M3 5l6-3 6 3v2H3V5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    processos: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2v13M4 5h10M3 15h12M5 5 2.5 10h5L5 5ZM13 5l-2.5 5h5L13 5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    tarefas: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="m5 9 2.2 2.2L13 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    agenda: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1.5v3M13 1.5v3M2 7h14M5 10h2M10 10h3M5 13h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    mensagens: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 3h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0115 13H8l-4 3v-3H3a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 013 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 7h8M5 10h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    financeiro: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 4.5h12A1.5 1.5 0 0116.5 6v8A1.5 1.5 0 0115 15.5H3A1.5 1.5 0 011.5 14V6A1.5 1.5 0 013 4.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M13 3v3M12.5 10h4M4.5 9h4M4.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     onboarding: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="3" y="1" width="12" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 6h6M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     suporte: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
   };
@@ -1012,13 +1078,26 @@ async function guardAuth() {
 async function loadComponent(selector, path) {
   const el = document.querySelector(selector);
   if (!el) return;
+  const url = withShellVersion(path);
+  if (el.dataset.shellComponentLoaded === 'true' && el.dataset.shellComponentUrl === url) {
+    return;
+  }
+
   try {
-    const res = await fetch(withShellVersion(path), {
-      cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-    });
-    if (!res.ok) throw new Error(res.status);
-    el.innerHTML = await res.text();
+    let html = componentHtmlCache.get(url);
+    if (!html) {
+      const res = await fetch(url, {
+        cache: 'force-cache',
+        headers: { 'Cache-Control': 'max-age=300' },
+      });
+      if (!res.ok) throw new Error(res.status);
+      html = await res.text();
+      componentHtmlCache.set(url, html);
+    }
+
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.dataset.shellComponentLoaded = 'true';
+    el.dataset.shellComponentUrl = url;
   } catch (e) {
     console.warn('[APP] Component load failed:', path, e);
   }
@@ -1034,10 +1113,11 @@ async function loadComponents() {
   }
 
   await Promise.all([
-    loadComponent('[data-component="sidebar"]', 'components/sidebar.html'),
-    loadComponent('[data-component="header"]',  'components/header.html'),
+    loadComponent('[data-component="sidebar"]', 'shell/sidebar/sidebar.html'),
+    loadComponent('[data-component="header"]',  'shell/header/header.html'),
   ]);
 
+  ensureShellManagers();
   renderSidebarNavigation(cached?.isAdmin || false);
   initRouter();
 
@@ -1103,6 +1183,8 @@ function initRouter() {
   const router = new Router();
   router.setActiveLink();
   router.updateBreadcrumb();
+  rememberWorkspaceRoute();
+  renderMobileWorkspaceNav();
 
   // Update header title from breadcrumb
   const breadcrumb = document.getElementById('header-breadcrumb');
@@ -1139,107 +1221,7 @@ function initModalClose() {
   });
 }
 
-function getPreferredShellRuntime() {
-  let queryRuntime = null;
-  try {
-    queryRuntime = new URL(window.location.href).searchParams.get('_shell');
-  } catch (_) {}
-
-  if (queryRuntime === 'legacy' || queryRuntime === 'enterprise') {
-    try { localStorage.setItem(SHELL_RUNTIME_KEY, queryRuntime); } catch (_) {}
-    return queryRuntime;
-  }
-
-  try {
-    const storedRuntime = localStorage.getItem(SHELL_RUNTIME_KEY);
-    if (storedRuntime === 'legacy' || storedRuntime === 'enterprise') return storedRuntime;
-  } catch (_) {}
-
-  if (window.__ENABLE_ENTERPRISE_SHELL === true) return 'enterprise';
-
-  const rolloutPercent = getEnterpriseRolloutPercent();
-  if (rolloutPercent > 0 && isEnterpriseCohortUser(rolloutPercent)) {
-    return 'enterprise';
-  }
-
-  return 'legacy';
-}
-
-function getEnterpriseRolloutPercent() {
-  const globalPercent = Number(window.__ENTERPRISE_SHELL_ROLLOUT_PERCENT);
-  if (Number.isFinite(globalPercent) && globalPercent >= 0 && globalPercent <= 100) {
-    return globalPercent;
-  }
-
-  try {
-    const storedPercent = Number(localStorage.getItem(ENTERPRISE_ROLLOUT_PERCENT_KEY));
-    if (Number.isFinite(storedPercent) && storedPercent >= 0 && storedPercent <= 100) {
-      return storedPercent;
-    }
-  } catch (_) {}
-
-  return 0;
-}
-
-function getRolloutIdentity() {
-  try {
-    const cached = JSON.parse(sessionStorage.getItem('portal:user') || 'null');
-    const user = cached?.user;
-    return user?.id || user?.email || '';
-  } catch (_) {
-    return '';
-  }
-}
-
-function stableHash(input = '') {
-  let hash = 0;
-  const value = String(input || 'anonymous');
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash << 5) - hash) + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function isEnterpriseCohortUser(percent) {
-  const identity = getRolloutIdentity();
-  const bucket = stableHash(identity) % 100;
-  return bucket < percent;
-}
-
-function shouldUseEnterpriseShell() {
-  if (!window.location.pathname.includes('/pages/')) return false;
-  const currentPage = getCurrentPage();
-  if (PUBLIC_PAGES.includes(currentPage)) return false;
-  return getPreferredShellRuntime() === 'enterprise';
-}
-
-async function bootEnterpriseShell() {
-  const startedAt = performance.now();
-  const rolloutPercent = getEnterpriseRolloutPercent();
-  bus.emit('shell.runtime.selected', {
-    runtime: 'enterprise',
-    version: SHELL_VERSION,
-    rolloutPercent,
-    selectedBy: getPreferredShellRuntime(),
-  });
-  await authenticatedShell.boot();
-
-  const durationMs = Math.round(performance.now() - startedAt);
-  window.__shellRuntime = {
-    runtime: 'enterprise',
-    version: SHELL_VERSION,
-    durationMs,
-    ts: Date.now(),
-  };
-  bus.emit('shell.runtime.boot.success', {
-    runtime: 'enterprise',
-    version: SHELL_VERSION,
-    durationMs,
-  });
-}
-
-async function bootLegacyShell() {
+async function bootPortalShell() {
   const startedAt = performance.now();
 
   const allowed = await guardAuth();
@@ -1257,62 +1239,355 @@ async function bootLegacyShell() {
   }
   setupServiceErrorBannerListener();
   setupShellNavigation();
+  ensureShellManagers();
 
   initRouter();
   initToast();
   setTimeout(initModalClose, 100);
+  initUiKit(document);
 
   window.showToast = showToast;
   document.dispatchEvent(new CustomEvent('app:ready'));
-
-  // Notify shell subsystems (NotificationCenter, Observability, etc.)
-  bus.emit('shell.ready', { authDetail: appUserDetail });
 
   // Reveal only when shell, sidebar and page content are valid.
   revealAppWhenReady();
 
   const durationMs = Math.round(performance.now() - startedAt);
   window.__shellRuntime = {
-    runtime: 'legacy',
+    runtime: 'portal',
     version: SHELL_VERSION,
     durationMs,
     ts: Date.now(),
   };
-  bus.emit('shell.runtime.boot.success', {
-    runtime: 'legacy',
-    version: SHELL_VERSION,
-    durationMs,
+}
+
+function getShellModules() {
+  const isAdmin = !!appUserDetail?.isAdmin;
+  try {
+    return new Router().getSidebarModules({ isAdmin });
+  } catch (_) {
+    return getCanonicalSidebarModules({ isAdmin });
+  }
+}
+
+function getShellWorkspaceState() {
+  try {
+    return JSON.parse(localStorage.getItem(SHELL_WORKSPACE_KEY) || '{}') || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function setShellWorkspaceState(nextState) {
+  try {
+    localStorage.setItem(SHELL_WORKSPACE_KEY, JSON.stringify(nextState));
+  } catch (_) {}
+}
+
+function rememberWorkspaceRoute() {
+  const current = getCurrentPage();
+  if (PUBLIC_PAGES.includes(current)) return;
+
+  const module = getShellModules().find(item => item.key === current);
+  if (!module) return;
+
+  const state = getShellWorkspaceState();
+  const route = {
+    key: module.key,
+    title: module.menuLabel || module.title,
+    href: `${module.key}.html`,
+    ts: Date.now(),
+  };
+  const recentRoutes = [route, ...(state.recentRoutes || []).filter(item => item.key !== route.key)]
+    .slice(0, SHELL_MAX_RECENT_ROUTES);
+  setShellWorkspaceState({ ...state, currentRoute: route, recentRoutes });
+}
+
+function getShellNotifications() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SHELL_NOTIFICATIONS_KEY) || '[]') || [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function setShellNotifications(items) {
+  try {
+    sessionStorage.setItem(SHELL_NOTIFICATIONS_KEY, JSON.stringify(items.slice(0, 30)));
+  } catch (_) {}
+  renderShellNotificationCount();
+}
+
+function addShellNotification({ title, text = '', tone = 'brand' } = {}) {
+  const item = {
+    id: `ntf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    title: title || 'Atualização do portal',
+    text,
+    tone,
+    ts: Date.now(),
+    read: false,
+  };
+  setShellNotifications([item, ...getShellNotifications()]);
+  return item;
+}
+
+function renderShellNotificationCount() {
+  const badge = document.getElementById('shell-notification-count');
+  if (!badge) return;
+  const count = getShellNotifications().filter(item => !item.read).length;
+  badge.hidden = count === 0;
+  badge.textContent = String(Math.min(count, 9));
+}
+
+function shellTimeAgo(ts) {
+  const diff = Math.max(0, Date.now() - Number(ts || Date.now()));
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  return `${Math.floor(hours / 24)} d`;
+}
+
+function ensureShellManagers() {
+  if (shellManagersReady) {
+    renderShellNotificationCount();
+    renderMobileWorkspaceNav();
+    return;
+  }
+  shellManagersReady = true;
+
+  const drawer = document.createElement('section');
+  drawer.id = 'shell-drawer-root';
+  drawer.className = 'ui-drawer shell-side-panel';
+  drawer.setAttribute('aria-hidden', 'true');
+  drawer.innerHTML = `
+    <div class="ui-drawer-panel shell-side-panel-body" role="dialog" aria-modal="true" aria-labelledby="shell-drawer-title">
+      <header class="ui-drawer-header">
+        <div>
+          <div class="shell-panel-eyebrow" id="shell-drawer-eyebrow">Workspace</div>
+          <h2 class="shell-panel-title" id="shell-drawer-title">Portal jurídico</h2>
+        </div>
+        <button type="button" class="shell-action-btn" data-shell-action="close-shell-drawer" aria-label="Fechar painel">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="ui-drawer-body" id="shell-drawer-content"></div>
+    </div>
+  `;
+  document.body.appendChild(drawer);
+
+  const modal = document.createElement('section');
+  modal.id = 'shell-modal-root';
+  modal.className = 'ui-modal shell-modal';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.innerHTML = `
+    <div class="ui-modal-panel" role="dialog" aria-modal="true" aria-labelledby="shell-modal-title">
+      <header class="ui-modal-header">
+        <h2 class="shell-panel-title" id="shell-modal-title">Portal jurídico</h2>
+        <button type="button" class="shell-action-btn" data-shell-action="close-shell-modal" aria-label="Fechar modal">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="ui-modal-body" id="shell-modal-content"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  renderMobileWorkspaceNav();
+  renderShellNotificationCount();
+
+  window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer };
+  window.shellModal = { open: openShellModal, close: closeShellModal };
+  window.shellNotify = addShellNotification;
+}
+
+function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Workspace', body = '' } = {}) {
+  ensureShellManagers();
+  const drawer = document.getElementById('shell-drawer-root');
+  const titleEl = document.getElementById('shell-drawer-title');
+  const eyebrowEl = document.getElementById('shell-drawer-eyebrow');
+  const contentEl = document.getElementById('shell-drawer-content');
+  if (titleEl) titleEl.textContent = title;
+  if (eyebrowEl) eyebrowEl.textContent = eyebrow;
+  if (contentEl) contentEl.innerHTML = body;
+  drawer?.classList.add('is-open');
+  drawer?.setAttribute('aria-hidden', 'false');
+  initUiKit(drawer || document);
+  drawer?.querySelector('input, button, a')?.focus?.();
+}
+
+function closeShellDrawer() {
+  const drawer = document.getElementById('shell-drawer-root');
+  drawer?.classList.remove('is-open');
+  drawer?.setAttribute('aria-hidden', 'true');
+}
+
+function openShellModal({ title = 'Portal jurídico', body = '' } = {}) {
+  ensureShellManagers();
+  const modal = document.getElementById('shell-modal-root');
+  const titleEl = document.getElementById('shell-modal-title');
+  const contentEl = document.getElementById('shell-modal-content');
+  if (titleEl) titleEl.textContent = title;
+  if (contentEl) contentEl.innerHTML = body;
+  modal?.classList.add('is-open');
+  modal?.setAttribute('aria-hidden', 'false');
+  initUiKit(modal || document);
+  modal?.querySelector('input, button, a')?.focus?.();
+}
+
+function closeShellModal() {
+  const modal = document.getElementById('shell-modal-root');
+  modal?.classList.remove('is-open');
+  modal?.setAttribute('aria-hidden', 'true');
+}
+
+function renderGlobalSearchPanel(query = '') {
+  const normalized = query.trim().toLowerCase();
+  const modules = getShellModules().filter(module => {
+    const haystack = `${module.title} ${module.menuLabel || ''} ${module.key}`.toLowerCase();
+    return !normalized || haystack.includes(normalized);
+  });
+
+  return `
+    <div class="shell-search-panel">
+      <label class="ui-field">
+        <span class="ui-label">Buscar no portal</span>
+        <span class="ui-search">
+          <svg class="ui-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="m13.2 13.2 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input class="ui-input" id="shell-global-search-input" type="search" value="${escapeShellHtml(query)}" placeholder="Documentos, dívidas, jornada, suporte" autocomplete="off">
+        </span>
+      </label>
+      <div class="shell-panel-list" id="shell-global-search-results">
+        ${modules.map(module => `
+          <a class="shell-panel-item" href="${module.key}.html" data-page="${module.key}">
+            <span class="shell-panel-item-icon">${getNavIcon(module.key)}</span>
+            <span>
+              <strong>${escapeShellHtml(module.menuLabel || module.title)}</strong>
+              <small>${escapeShellHtml(module.title)}</small>
+            </span>
+          </a>
+        `).join('') || '<div class="shell-empty-state">Nenhum módulo encontrado.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function openGlobalSearchPanel() {
+  openShellDrawer({
+    eyebrow: 'Busca global',
+    title: 'Encontrar módulo ou tarefa',
+    body: renderGlobalSearchPanel(),
+  });
+  const input = document.getElementById('shell-global-search-input');
+  input?.addEventListener('input', () => {
+    const content = document.getElementById('shell-drawer-content');
+    if (!content) return;
+    content.innerHTML = renderGlobalSearchPanel(input.value);
+    openGlobalSearchPanelBindOnly();
+  });
+  input?.focus?.();
+}
+
+function openGlobalSearchPanelBindOnly() {
+  const input = document.getElementById('shell-global-search-input');
+  input?.addEventListener('input', () => {
+    const content = document.getElementById('shell-drawer-content');
+    if (!content) return;
+    content.innerHTML = renderGlobalSearchPanel(input.value);
+    openGlobalSearchPanelBindOnly();
+  });
+  input?.focus?.();
+}
+
+function openNotificationsPanel() {
+  const notifications = getShellNotifications();
+  setShellNotifications(notifications.map(item => ({ ...item, read: true })));
+  const items = getShellNotifications();
+  openShellDrawer({
+    eyebrow: 'Notificações',
+    title: 'Atualizações do caso',
+    body: `
+      <div class="shell-panel-list">
+        ${items.map(item => `
+          <article class="shell-panel-item shell-notification-item">
+            <span class="ui-badge ui-badge-${item.tone === 'danger' ? 'danger' : item.tone === 'warn' ? 'warn' : 'brand'}">${shellTimeAgo(item.ts)}</span>
+            <span>
+              <strong>${escapeShellHtml(item.title)}</strong>
+              <small>${escapeShellHtml(item.text || 'Sem detalhes adicionais.')}</small>
+            </span>
+          </article>
+        `).join('') || '<div class="shell-empty-state">Sem notificações recentes.</div>'}
+      </div>
+      <div class="shell-panel-actions">
+        <button type="button" class="ui-btn ui-btn-ghost ui-btn-full" data-shell-action="clear-notifications">Limpar notificações</button>
+      </div>
+    `,
+  });
+}
+
+function openWorkspacePanel() {
+  const state = getShellWorkspaceState();
+  const recentRoutes = state.recentRoutes || [];
+  const isAdmin = !!appUserDetail?.isAdmin;
+  openShellDrawer({
+    eyebrow: isAdmin ? 'Advogado' : 'Cliente',
+    title: isAdmin ? 'Workspace jurídico' : 'Meu caso',
+    body: `
+      <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary">
+        <div>
+          <h3>${isAdmin ? 'Produtividade do escritório' : 'Acompanhamento do caso'}</h3>
+          <p>${isAdmin ? 'Acesse módulos recentes, revise pendências e mantenha o fluxo jurídico sem sair do shell.' : 'Continue sua jornada, envie documentos e acompanhe as próximas etapas do seu caso.'}</p>
+        </div>
+        <a class="ui-btn ui-btn-primary ui-btn-full" href="${isAdmin ? 'painel.html' : 'meu-caso.html'}">${isAdmin ? 'Abrir painel' : 'Ver meu caso'}</a>
+      </section>
+      <div class="shell-panel-section-title">Recentes</div>
+      <div class="shell-panel-list">
+        ${recentRoutes.map(route => `
+          <a class="shell-panel-item" href="${route.href}" data-page="${route.key}">
+            <span class="shell-panel-item-icon">${getNavIcon(route.key)}</span>
+            <span>
+              <strong>${escapeShellHtml(route.title)}</strong>
+              <small>Acessado ${shellTimeAgo(route.ts)}</small>
+            </span>
+          </a>
+        `).join('') || '<div class="shell-empty-state">Nenhum módulo recente nesta sessão.</div>'}
+      </div>
+    `,
+  });
+}
+
+function renderMobileWorkspaceNav() {
+  let dock = document.getElementById('shell-mobile-nav');
+  if (!dock) {
+    dock = document.createElement('nav');
+    dock.id = 'shell-mobile-nav';
+    dock.className = 'shell-mobile-nav';
+    dock.setAttribute('aria-label', 'Navegação rápida');
+    document.body.appendChild(dock);
+  }
+
+  const preferred = ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
+  const modules = getShellModules().filter(module => preferred.includes(module.key));
+  dock.innerHTML = modules.map(module => `
+    <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">
+      ${getNavIcon(module.key)}
+      <span>${escapeShellHtml(module.menuLabel || module.title)}</span>
+    </a>
+  `).join('');
+  const current = getCurrentPage();
+  dock.querySelectorAll('.shell-mobile-nav-link').forEach(link => {
+    const active = link.dataset.page === current;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   });
 }
 
 /* ── Init ────────────────────────────────────────── */
 async function init() {
   captureModuleListeners = false;
-
-  if (shouldUseEnterpriseShell()) {
-    try {
-      await bootEnterpriseShell();
-      return;
-    } catch (error) {
-      console.error('[APP] Enterprise shell boot failed; fallback to legacy runtime', error);
-      try {
-        localStorage.setItem(SHELL_RUNTIME_KEY, 'legacy');
-      } catch (_) {}
-
-      bus.emit('shell.runtime.boot.failure', {
-        runtime: 'enterprise',
-        version: SHELL_VERSION,
-        message: error?.message || String(error || 'unknown error'),
-      });
-      bus.emit('shell.runtime.fallback', {
-        from: 'enterprise',
-        to: 'legacy',
-        version: SHELL_VERSION,
-      });
-    }
-  }
-
-  await bootLegacyShell();
+  await bootPortalShell();
 }
 
 nativeDocumentAddEventListener('DOMContentLoaded', init);

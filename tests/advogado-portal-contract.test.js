@@ -1,0 +1,70 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { getRoutes, getSidebarModules } from '../js/navigation.js';
+import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
+
+const root = process.cwd();
+const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+
+function readFile(...parts) {
+  return fs.readFileSync(path.join(root, ...parts), 'utf8');
+}
+
+describe('portal do advogado contract', () => {
+  it('connects the lawyer workspace modules to the canonical admin sidebar', () => {
+    const adminModules = getSidebarModules({ isAdmin: true }).map(module => module.key);
+    const routes = getRoutes();
+
+    expect(adminModules).toEqual(lawyerKeys);
+    lawyerKeys.forEach(key => {
+      expect(routes[key]).toBeTruthy();
+      expect(routes[key].title).toBeTruthy();
+    });
+  });
+
+  it('ships authenticated pages for every new lawyer route', () => {
+    ['painel', 'clientes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
+      const html = readFile('pages', `${key}.html`);
+
+      expect(html).toContain('data-component="sidebar"');
+      expect(html).toContain('data-component="header"');
+      expect(html).toContain('data-advogado-module-host');
+      expect(html).toContain('../js/app.js?v=20260521p');
+      expect(html).toContain(`bootAdvogadoPage('${key}')`);
+    });
+  });
+
+  it('defines operational CRUD configuration for all lawyer CRUD modules', () => {
+    crudKeys.forEach(key => {
+      const config = ADVOGADO_MODULES[key];
+
+      expect(config).toBeTruthy();
+      expect(config.title).toBeTruthy();
+      expect(config.primaryField).toBeTruthy();
+      expect(config.status.length).toBeGreaterThanOrEqual(4);
+      expect(config.fields.length).toBeGreaterThanOrEqual(5);
+      expect(config.fields.some(field => field.required)).toBe(true);
+    });
+  });
+
+  it('keeps CRUD, timeline, filters, pagination and responsive hooks in the page controller', () => {
+    const controller = readFile('modules', 'advogado', 'PortalAdvogadoPage.js');
+    const service = readFile('modules', 'advogado', 'RegistroAdvogadoService.js');
+    const styles = readFile('styles', 'components.css');
+
+    ['saveAdvogadoRecord', 'archiveAdvogadoRecord', 'deleteAdvogadoRecord', 'listAdvogadoTimeline', 'listAdvogadoAudit', 'filterAdvogadoRecords', 'paginateAdvogadoRecords'].forEach(symbol => {
+      expect(`${controller}\n${service}`).toContain(symbol);
+    });
+    expect(service).toContain('portal_operational_records');
+    expect(service).toContain('portal_operational_record_audit');
+    expect(controller).toContain('AdminService.getClients');
+    expect(controller).toContain('data-advogado-filter="query"');
+    expect(controller).toContain('data-advogado-page="next"');
+    expect(controller).toContain('data-action="detail"');
+    expect(styles).toContain('@media (max-width: 680px)');
+    expect(styles).toContain('.advogado-record-card');
+    expect(styles).toContain('.advogado-detail-row');
+  });
+});

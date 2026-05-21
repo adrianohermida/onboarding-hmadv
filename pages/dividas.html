@@ -241,13 +241,13 @@ function renderTable() {
 
   tbody.innerHTML = dividas.map((d, i) => `
     <tr>
-      <td style="color:var(--muted)">${i + 1}</td>
-      <td><strong>${d.credor}</strong></td>
-      <td><span class="chip chip-blue">${d.tipo}</span></td>
-      <td style="color:var(--red);font-weight:700">${formatCurrency(d.valor)}</td>
-      <td><span class="chip chip-warn">${d.situacao}</span></td>
-      <td>${d.negativado ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Não</span>'}</td>
-      <td>
+      <td data-label="#" style="color:var(--muted)">${i + 1}</td>
+      <td data-label="Credor"><strong>${d.credor}</strong></td>
+      <td data-label="Tipo"><span class="chip chip-blue">${d.tipo}</span></td>
+      <td data-label="Valor" style="color:var(--red);font-weight:700">${formatCurrency(d.valor)}</td>
+      <td data-label="Situação"><span class="chip chip-warn">${d.situacao}</span></td>
+      <td data-label="Negativado">${d.negativado ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Não</span>'}</td>
+      <td data-label="Ações">
         <button class="btn btn-ghost btn-sm" onclick="removeDivida('${d.id}')" title="Remover">Remover</button>
       </td>
     </tr>

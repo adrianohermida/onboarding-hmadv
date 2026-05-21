@@ -11,15 +11,15 @@ function readWorkspaceFile(...parts) {
 }
 
 describe('authenticated route shell smoke', () => {
-  it('keeps sidebar fallback connected to the canonical seven modules', () => {
-    const sidebarHtml = readWorkspaceFile('components', 'sidebar.html');
+  it('keeps sidebar fallback connected to the canonical client modules', () => {
+    const sidebarHtml = readWorkspaceFile('shell', 'sidebar', 'sidebar.html');
 
     sidebarKeys.forEach(key => {
       expect(sidebarHtml).toContain(`data-page="${key}"`);
       expect(sidebarHtml).toContain(`href="${key}.html"`);
     });
 
-    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(7);
+    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(6);
   });
 
   it('keeps every authenticated route mounted inside the shared shell', () => {

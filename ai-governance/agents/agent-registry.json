@@ -33,7 +33,7 @@
       "name": "Financial Engine Agent",
       "role": "domain-specialist",
       "ownership": ["financial-engine", "plans", "simulations"],
-      "scope": ["modules/financial", "modules/debt-engine"],
+      "scope": ["modules/financeiro", "modules/dividas"],
       "permissions": ["read", "write", "test"],
       "boundaries": ["no-shell-internal-change"],
       "escalation": "Security Review Agent"
@@ -42,7 +42,7 @@
       "name": "Documents Agent",
       "role": "domain-specialist",
       "ownership": ["documents", "workflow"],
-      "scope": ["modules/documents", "pages/documentos"],
+      "scope": ["modules/documentos", "pages/documentos"],
       "permissions": ["read", "write", "test"],
       "boundaries": ["no-storage-policy-change-without-review"],
       "escalation": "Security Review Agent"

@@ -17,8 +17,8 @@ export class Router {
 
   getCurrentPage() {
     const path = window.location.pathname;
-    const file = path.split('/').pop().replace('.html', '') || 'dashboard';
-    return file === '' ? 'dashboard' : file;
+    const file = path.split('/').pop().replace('.html', '') || 'meu-caso';
+    return file === '' ? 'meu-caso' : file;
   }
 
   setActiveLink() {

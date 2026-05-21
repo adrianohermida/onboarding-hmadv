@@ -22,7 +22,7 @@ export class WorkflowEngine {
     workflowObservability.start(name, {
       ...context,
       workflow_id: workflowId,
-      source_module: context.source_module || 'workflow-engine',
+      source_module: context.source_module || 'tarefas',
     });
     const state = { workflowId, name, context, steps: [] };
     const startedAt = Date.now();

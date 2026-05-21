@@ -20,6 +20,8 @@ async function getUserId() {
 export async function checkIsAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
+  const { data: isAdminRpc, error: rpcError } = await supabase.rpc('is_any_admin');
+  if (!rpcError && typeof isAdminRpc === 'boolean') return isAdminRpc;
   const { data } = await supabase
     .from('admin_users')
     .select('user_id')
@@ -199,10 +201,12 @@ export const DebtService = {
   },
 
   async update(id, fields) {
+    const uid = await getUserId();
     const { data, error } = await supabase
       .from('portal_dividas')
       .update(fields)
       .eq('id', id)
+      .eq('user_id', uid)
       .select()
       .single();
     if (error) throw error;
@@ -210,10 +214,12 @@ export const DebtService = {
   },
 
   async remove(id) {
+    const uid = await getUserId();
     const { error } = await supabase
       .from('portal_dividas')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', uid);
     if (error) throw error;
   },
 };
@@ -314,6 +320,63 @@ export const DocumentService = {
       .limit(20);
     if (error) throw error;
     return data || [];
+  },
+
+  async listComments(documentId, { includeInternal = false } = {}) {
+    let query = supabase
+      .from('portal_document_comments')
+      .select('*')
+      .eq('documento_id', documentId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (!includeInternal) query = query.eq('is_internal', false);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addComment(documentId, body, { isInternal = false, authorRole = 'cliente' } = {}) {
+    const uid = await getUserId().catch(() => null);
+    const { data: doc, error: docError } = await supabase
+      .from('portal_documentos')
+      .select('id, caso_id, workspace_id')
+      .eq('id', documentId)
+      .maybeSingle();
+    if (docError) throw docError;
+    if (!doc?.id) throw new Error('Documento não encontrado');
+
+    const { data, error } = await supabase
+      .from('portal_document_comments')
+      .insert({
+        documento_id: documentId,
+        caso_id: doc.caso_id,
+        workspace_id: doc.workspace_id,
+        author_uid: uid,
+        author_role: authorRole,
+        body,
+        is_internal: isInternal,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    await this.logTimeline({
+      documentId,
+      eventoTipo: 'document.comment',
+      eventoSubtipo: isInternal ? 'internal_comment' : 'comment',
+      payload: { comment_id: data.id, is_internal: isInternal, body },
+    });
+
+    return data;
+  },
+
+  async markViewed(documentId) {
+    const { error } = await supabase
+      .from('portal_documentos')
+      .update({ last_viewed_at: new Date().toISOString() })
+      .eq('id', documentId);
+    if (error) console.warn('[DocumentService] markViewed error:', error.message);
   },
 
   async logTimeline({ documentId, eventoTipo, eventoSubtipo, payload = {} }) {

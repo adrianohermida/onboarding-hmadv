@@ -73,6 +73,7 @@ export async function invokeEdgeFunction(path, {
   retries = DEFAULT_RETRIES,
   backoffMs = DEFAULT_BACKOFF_MS,
   headers = {},
+  includeApiKey = true,
 } = {}) {
   let accessToken = await getFreshAccessToken(path);
   let lastError = null;
@@ -85,7 +86,7 @@ export async function invokeEdgeFunction(path, {
       const response = await fetch(`${FUNCTIONS_URL}/${path}`, {
         method,
         headers: {
-          apikey: SUPABASE_ANON,
+          ...(includeApiKey ? { apikey: SUPABASE_ANON } : {}),
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           ...headers,

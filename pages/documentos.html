@@ -312,6 +312,7 @@
     transition:background .15s;
   }
   .pdf-toolbar-btn:hover { background:var(--line2); }
+  .viewer-zoom-label { font-size:11px; color:var(--muted); font-weight:700; min-width:42px; text-align:center; }
 
   /* Timeline panel */
   .timeline-list { padding:16px 20px; }
@@ -332,6 +333,25 @@
   .tl-event { font-size:12px; font-weight:700; color:var(--ink); }
   .tl-meta  { font-size:11px; color:var(--muted); margin-top:2px; }
   .tl-note  { font-size:11px; color:var(--ink2); margin-top:4px; padding:6px 8px; background:var(--line2); border-radius:6px; }
+
+  /* Comments panel */
+  .doc-comments-panel { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+  .doc-comments-list { display:grid; gap:10px; }
+  .doc-comment-item {
+    border:1px solid var(--line); border-radius:10px; background:#fff; padding:12px;
+  }
+  .doc-comment-item.is-internal { background:#f8fafc; border-color:#cbd5e1; }
+  .doc-comment-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .doc-comment-meta strong { color:var(--navy); font-size:12px; }
+  .doc-comment-meta em { font-style:normal; border:1px solid var(--line); border-radius:999px; padding:1px 7px; }
+  .doc-comment-item p { margin:0; font-size:13px; color:var(--ink2); line-height:1.5; }
+  .doc-comments-empty { padding:18px; text-align:center; color:var(--muted); font-size:13px; }
+  .doc-comment-form { border-top:1px solid var(--line); padding-top:12px; display:grid; gap:8px; }
+  .doc-comment-options { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .doc-ocr-readiness {
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    background:#f8fafc; border:1px solid var(--line); color:var(--muted); font-size:11px;
+  }
 
   /* Admin review panel */
   .drawer-review-form { padding:20px 24px; }
@@ -537,7 +557,7 @@
             <span id="doc-admin-context" style="font-size:13px;opacity:.8;">Modo administrador</span>
             <div style="flex:1;"></div>
             <div id="doc-mode-selector"></div>
-            <button class="btn-ghost-sm" id="btn-back-client" onclick="window.location.href='dashboard.html'" style="display:none;">← Voltar</button>
+            <button class="btn-ghost-sm" id="btn-back-client" onclick="window.location.href='meu-caso.html'" style="display:none;">← Voltar</button>
           </div>
 
           <!-- Hero -->
@@ -675,15 +695,21 @@
     <div class="drawer-tabs" id="drawer-tabs">
       <div class="drawer-tab active" data-tab="view" onclick="switchDrawerTab('view')">Visualizar</div>
       <div class="drawer-tab" data-tab="timeline" onclick="switchDrawerTab('timeline')">Timeline</div>
+      <div class="drawer-tab" data-tab="comments" onclick="switchDrawerTab('comments')">Comentários</div>
       <div class="drawer-tab" data-tab="review" id="drawer-tab-review" onclick="switchDrawerTab('review')" hidden>Avaliar</div>
     </div>
     <!-- View panel -->
     <div class="drawer-panel active" data-tab-panel="view" id="panel-view">
       <div class="pdf-viewer-toolbar" id="viewer-toolbar">
         <span id="viewer-filename" class="viewer-filename"></span>
+        <button class="pdf-toolbar-btn" onclick="changeViewerZoom(-10)">-</button>
+        <span class="viewer-zoom-label" id="viewer-zoom-label">100%</span>
+        <button class="pdf-toolbar-btn" onclick="changeViewerZoom(10)">+</button>
+        <button class="pdf-toolbar-btn" onclick="resetViewerZoom()">Ajustar</button>
         <button class="pdf-toolbar-btn" onclick="openFullscreen()">Tela cheia</button>
         <button class="pdf-toolbar-btn" id="btn-download-doc" onclick="downloadDoc()">Baixar</button>
       </div>
+      <div class="doc-ocr-readiness" id="doc-ocr-readiness">OCR preparado para classificação futura.</div>
       <iframe id="pdf-frame" class="pdf-viewer-frame" src="about:blank"></iframe>
       <div id="no-preview" class="no-preview" hidden>
         <div class="no-preview-icon">
@@ -701,6 +727,23 @@
     <!-- Timeline panel -->
     <div class="drawer-panel" data-tab-panel="timeline" id="panel-timeline">
       <div class="timeline-list" id="timeline-items"></div>
+    </div>
+    <!-- Comments panel -->
+    <div class="drawer-panel" data-tab-panel="comments" id="panel-comments">
+      <div class="doc-comments-panel">
+        <div class="doc-comments-list" id="doc-comments-list"></div>
+        <form class="doc-comment-form" id="doc-comment-form">
+          <label class="field-label" for="doc-comment-body">Comentário</label>
+          <textarea class="field-textarea" id="doc-comment-body" rows="3" placeholder="Escreva uma orientação, dúvida ou observação sobre este documento."></textarea>
+          <div class="doc-comment-options">
+            <label class="doc-internal-comment-option" id="doc-internal-comment-wrap" hidden>
+              <input type="checkbox" id="doc-comment-internal" />
+              Comentário interno
+            </label>
+            <button class="btn-primary-sm" type="submit">Enviar comentário</button>
+          </div>
+        </form>
+      </div>
     </div>
     <!-- Admin review panel -->
     <div class="drawer-panel" data-tab-panel="review" id="panel-review">
@@ -743,35 +786,37 @@ import { DocumentService } from '../services/database.js';
 import { FUNCTIONS_URL }   from '../utils/config.js';
 import { bus }             from '../modules/events/EventBus.js';
 import { Toast }           from '../modules/ui/Toast.js';
-import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documents/DocumentEngine.js';
-import { DocumentModuleController } from '../modules/documents/DocumentModuleController.js';
+import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documentos/DocumentEngine.js';
+import { DocumentModuleController } from '../modules/documentos/DocumentModuleController.js';
 import {
   getDrawerReviewPayload,
   renderDrawerHeader,
+  renderDrawerComments,
   renderDrawerViewer,
   resetDrawerReview,
   selectDrawerWorkflow,
   setDrawerOpen,
   setDrawerReviewVisible,
   setDrawerTab,
-} from '../modules/documents/DocumentDrawer.js';
-import { SignatureService } from '../modules/documents/SignatureService.js';
+} from '../modules/documentos/DocumentDrawer.js';
+import { SignatureService } from '../modules/documentos/SignatureService.js';
 import {
   createDocumentUploader,
   setDocumentCardUploading,
   triggerDocumentUpload,
-} from '../modules/documents/DocumentUploadActions.js';
+} from '../modules/documentos/DocumentUploadActions.js';
 import {
   renderDocumentCard,
   renderDocumentHub,
   renderDocumentRequestsBanner,
   renderDocumentTimeline,
   renderSignaturePendingCards,
-} from '../modules/documents/DocumentUi.js';
-import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/documents/DocumentWorkflowActions.js';
+} from '../modules/documentos/DocumentUi.js';
+import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/documentos/DocumentWorkflowActions.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const controller = new DocumentModuleController({ supabase });
+let viewerZoom = 100;
 
 const byId = (id) => document.getElementById(id);
 const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -1062,6 +1107,7 @@ window.openDrawer = async (docIdOrTipo, adminReview = false) => {
   controller.openDrawer(doc.id);
 
   renderDrawerHeader(doc, DOCUMENT_CATEGORIES, WORKFLOW_STATES);
+  viewerZoom = 100;
 
   // Show/hide review tab
   setDrawerReviewVisible(controller.isAdmin && controller.viewMode === 'admin');
@@ -1073,7 +1119,7 @@ window.openDrawer = async (docIdOrTipo, adminReview = false) => {
   if (doc.storage_path) {
     try {
       controller.setDrawerSignedUrl(await DocumentService.getSignedUrl(doc.storage_path));
-      renderDrawerViewer(doc, controller.drawerSignedUrl);
+      renderDrawerViewer(doc, controller.drawerSignedUrl, { zoom: viewerZoom });
     } catch {
       renderDrawerViewer(doc, null);
     }
@@ -1084,6 +1130,9 @@ window.openDrawer = async (docIdOrTipo, adminReview = false) => {
   // Load timeline
   const timeline = controller.drawerDocId ? await controller.engine.getTimeline(controller.drawerDocId) : [];
   renderTimeline(timeline, doc);
+  await controller.engine.markViewed(doc.id);
+  await renderComments(doc);
+  renderOcrReadiness(doc);
 
   // Open to appropriate tab
   setDrawerTab(adminReview ? 'review' : 'view');
@@ -1111,6 +1160,26 @@ window.switchDrawerTab = (tab) => {
 function renderTimeline(events, doc) {
   const el = document.getElementById('timeline-items');
   if (el) el.innerHTML = renderDocumentTimeline(events, doc, WORKFLOW_STATES);
+}
+
+async function renderComments(doc) {
+  const list = document.getElementById('doc-comments-list');
+  const internalWrap = document.getElementById('doc-internal-comment-wrap');
+  if (internalWrap) internalWrap.hidden = !(controller.isAdmin && controller.viewMode === 'admin');
+  if (!list) return;
+  const comments = await controller.engine.listComments(doc.id, {
+    includeInternal: controller.isAdmin && controller.viewMode === 'admin',
+  });
+  list.innerHTML = renderDrawerComments(comments);
+}
+
+function renderOcrReadiness(doc) {
+  const el = document.getElementById('doc-ocr-readiness');
+  if (!el) return;
+  const status = doc.ocr_status || 'ready';
+  el.textContent = status === 'ready'
+    ? 'OCR preparado para classificação futura. Nenhuma extração automática foi executada ainda.'
+    : `OCR: ${status}`;
 }
 
 // ── Admin Review ──────────────────────────────────────────────────────────────
@@ -1161,6 +1230,34 @@ window.confirmReview = async () => {
   }
 };
 
+document.getElementById('doc-comment-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!controller.drawerDocId) return;
+  const input = document.getElementById('doc-comment-body');
+  const body = input?.value.trim();
+  if (!body) {
+    Toast.warn?.('Escreva um comentário antes de enviar.');
+    return;
+  }
+
+  const isInternal = Boolean(document.getElementById('doc-comment-internal')?.checked);
+  try {
+    await controller.engine.addComment(controller.drawerDocId, body, {
+      isInternal,
+      authorRole: controller.isAdmin && controller.viewMode === 'admin' ? 'admin' : 'cliente',
+    });
+    input.value = '';
+    const doc = controller.engine.getAll().find(d => d.id === controller.drawerDocId);
+    if (doc) {
+      await renderComments(doc);
+      renderTimeline(await controller.engine.getTimeline(controller.drawerDocId), doc);
+    }
+    Toast.success('Comentário registrado.');
+  } catch (e) {
+    Toast.error('Erro ao registrar comentário: ' + (e.message || e));
+  }
+});
+
 // ── Viewer actions ────────────────────────────────────────────────────────────
 window.openFullscreen = () => {
   const frame = document.getElementById('pdf-frame');
@@ -1169,6 +1266,22 @@ window.openFullscreen = () => {
 
 window.downloadDoc = () => {
   if (controller.drawerSignedUrl) window.open(controller.drawerSignedUrl, '_blank');
+};
+
+window.changeViewerZoom = (delta) => {
+  viewerZoom = Math.max(50, Math.min(200, viewerZoom + delta));
+  const label = document.getElementById('viewer-zoom-label');
+  if (label) label.textContent = `${viewerZoom}%`;
+  const doc = controller.engine.getAll().find(d => d.id === controller.drawerDocId);
+  if (doc) renderDrawerViewer(doc, controller.drawerSignedUrl, { zoom: viewerZoom });
+};
+
+window.resetViewerZoom = () => {
+  viewerZoom = 100;
+  const label = document.getElementById('viewer-zoom-label');
+  if (label) label.textContent = '100%';
+  const doc = controller.engine.getAll().find(d => d.id === controller.drawerDocId);
+  if (doc) renderDrawerViewer(doc, controller.drawerSignedUrl, { zoom: viewerZoom });
 };
 
 // ── Signature modal ───────────────────────────────────────────────────────────
