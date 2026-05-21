@@ -12,7 +12,7 @@ Portal exclusivo para acompanhamento de casos de superendividamento.
 ```
 /
 ├── assets/
-│   └── logo-hermidamaia.svg     # Marca da águia (SVG escalável)
+│   └── logo1.webp     # Marca da águia (SVG escalável)
 ├── components/                   # Fragmentos HTML injetados pelo app.js
 │   ├── header.html
 │   ├── sidebar.html
