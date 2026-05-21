@@ -743,10 +743,18 @@ let chartDivTipo = null;
 let offDebtListChanged = null;
 let finDashBooting = false;
 let chartsEnabled = true;
+let finDashUnmounted = false;
 
 const shell = new Shell();
 
 const byId = (id) => document.getElementById(id);
+const safeSetText = (id, value) => {
+  const el = byId(id);
+  if (!el) return null;
+  el.textContent = value;
+  return el;
+};
+const isFinDashMounted = () => !finDashUnmounted && !!byId('fd-main');
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
@@ -789,30 +797,38 @@ async function ensureChartJsLoaded() {
 async function bootstrap() {
   if (finDashBooting) return;
   finDashBooting = true;
+  finDashUnmounted = false;
 
-  // Auth guard
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; finDashBooting = false; return; }
+  try {
+    // Auth guard
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
 
-  chartsEnabled = await ensureChartJsLoaded();
-  if (!chartsEnabled) {
-    console.warn('[FinDash] Chart.js indisponivel; graficos desativados nesta sessao.');
+    chartsEnabled = await ensureChartJsLoaded();
+    if (!chartsEnabled) {
+      console.warn('[FinDash] Chart.js indisponivel; graficos desativados nesta sessao.');
+    }
+
+    if (!isFinDashMounted()) return;
+
+    shell.init();
+    await loadData();
+    if (!isFinDashMounted()) return;
+
+    buildExpenseGrids();
+    renderAll();
+
+    // Listen for debt changes
+    if (offDebtListChanged) offDebtListChanged();
+    offDebtListChanged = bus.on('debt.list.changed', () => {
+      if (!isFinDashMounted()) return;
+      updateDebtSection();
+      refreshDiag();
+      renderCharts();
+    });
+  } finally {
+    finDashBooting = false;
   }
-
-  shell.init();
-  await loadData();
-  buildExpenseGrids();
-  renderAll();
-
-  // Listen for debt changes
-  if (offDebtListChanged) offDebtListChanged();
-  offDebtListChanged = bus.on('debt.list.changed', () => {
-    updateDebtSection();
-    refreshDiag();
-    renderCharts();
-  });
-
-  finDashBooting = false;
 }
 
 async function loadData() {
@@ -837,6 +853,7 @@ async function loadData() {
 
 // ── Render ─────────────────────────────────────────────────────────────
 function renderAll() {
+  if (!isFinDashMounted()) return;
   syncFormValues();
   refreshDiag();
   renderCharts();
@@ -864,13 +881,15 @@ function syncFormValues() {
 }
 
 function refreshDiag() {
+  if (!isFinDashMounted()) return;
   const rendaTotal = rendaPropria + rendaFam;
   const diag = engine.getDiagnostico(rendaTotal, despesas, nDep);
   const score = FinancialCalculator.calcularScore(diag);
 
   // Score badge
-  document.getElementById('fd-score-num').textContent = score;
-  const scoreTag = document.getElementById('fd-score-tag');
+  safeSetText('fd-score-num', score);
+  const scoreTag = byId('fd-score-tag');
+  if (!scoreTag) return;
   scoreTag.textContent = FinancialCalculator.getSeverityLabel(diag.severity);
   const scoreColors = { critical:'#dc2626', high:'#ea580c', medium:'#d97706', low:'#16a34a' };
   const c = scoreColors[diag.severity] || '#6b7280';
@@ -878,19 +897,22 @@ function refreshDiag() {
   scoreTag.style.color = c;
 
   // KPIs
-  document.getElementById('kpi-renda').textContent            = FinancialCalculator.formatBRL(diag.rendaTotal);
-  document.getElementById('kpi-desp-ess').textContent         = FinancialCalculator.formatBRL(diag.despesasEssenciais);
-  document.getElementById('kpi-desp-var').textContent         = FinancialCalculator.formatBRL(diag.despesasVariaveis);
-  document.getElementById('kpi-total-dividas').textContent    = FinancialCalculator.formatBRL(diag.totalDividas);
-  document.getElementById('kpi-n-credores').textContent       = `${engine.getActiveCount()} credores ativos`;
-  document.getElementById('kpi-comprometimento').textContent  = FinancialCalculator.formatPct(diag.comprometimentoPct);
-  document.getElementById('kpi-min-exist').textContent        = FinancialCalculator.formatBRL(diag.minExistencial);
-  document.getElementById('kpi-sobra').textContent            = FinancialCalculator.formatBRL(diag.sobraReal);
+  safeSetText('kpi-renda', FinancialCalculator.formatBRL(diag.rendaTotal));
+  safeSetText('kpi-desp-ess', FinancialCalculator.formatBRL(diag.despesasEssenciais));
+  safeSetText('kpi-desp-var', FinancialCalculator.formatBRL(diag.despesasVariaveis));
+  safeSetText('kpi-total-dividas', FinancialCalculator.formatBRL(diag.totalDividas));
+  safeSetText('kpi-n-credores', `${engine.getActiveCount()} credores ativos`);
+  safeSetText('kpi-comprometimento', FinancialCalculator.formatPct(diag.comprometimentoPct));
+  safeSetText('kpi-min-exist', FinancialCalculator.formatBRL(diag.minExistencial));
+  safeSetText('kpi-sobra', FinancialCalculator.formatBRL(diag.sobraReal));
 
   // Sobra KPI color
-  const sobraCard = document.getElementById('kpi-sobra-card');
-  sobraCard.className = 'fd-kpi ' + (diag.sobraReal < 0 ? 'fd-kpi-red' : 'fd-kpi-green');
-  sobraCard.querySelector('.fd-kpi-icon').textContent = diag.sobraReal < 0 ? 'AL' : 'OK';
+  const sobraCard = byId('kpi-sobra-card');
+  if (sobraCard) {
+    sobraCard.className = 'fd-kpi ' + (diag.sobraReal < 0 ? 'fd-kpi-red' : 'fd-kpi-green');
+    const iconEl = sobraCard.querySelector('.fd-kpi-icon');
+    if (iconEl) iconEl.textContent = diag.sobraReal < 0 ? 'AL' : 'OK';
+  }
 
   // Diagnóstico banner
   renderDiagBanner(diag);
@@ -898,12 +920,14 @@ function refreshDiag() {
   updateDespesasBadges();
 
   // Gauge pct label
-  document.getElementById('gauge-pct-label').textContent = FinancialCalculator.formatPct(diag.comprometimentoPct);
-  document.getElementById('gauge-severity-label').textContent = FinancialCalculator.getSeverityLabel(diag.severity);
+  safeSetText('gauge-pct-label', FinancialCalculator.formatPct(diag.comprometimentoPct));
+  safeSetText('gauge-severity-label', FinancialCalculator.getSeverityLabel(diag.severity));
 }
 
 function renderDiagBanner(diag) {
-  const banner = document.getElementById('fd-diag-banner');
+  if (!isFinDashMounted()) return;
+  const banner = byId('fd-diag-banner');
+  if (!banner) return;
   banner.style.display = 'flex';
   banner.className = `fd-diag-banner fd-diag--${diag.severity}`;
 
@@ -921,9 +945,9 @@ function renderDiagBanner(diag) {
     low:      `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — dentro dos limites. Continue monitorando suas finanças.`,
   };
 
-  document.getElementById('fd-diag-icon').textContent  = icons[diag.severity]  || 'DG';
-  document.getElementById('fd-diag-title').textContent = titles[diag.severity] || '';
-  document.getElementById('fd-diag-text').textContent  = texts[diag.severity]  || '';
+  safeSetText('fd-diag-icon', icons[diag.severity] || 'DG');
+  safeSetText('fd-diag-title', titles[diag.severity] || '');
+  safeSetText('fd-diag-text', texts[diag.severity] || '');
 
   const pills = [];
   if (diag.violaMinExistencial) pills.push('Viola mínimo existencial');
@@ -931,12 +955,16 @@ function renderDiagBanner(diag) {
   if (diag.deficit > 0)         pills.push(`Déficit: ${FinancialCalculator.formatBRL(diag.deficit)}/mês`);
   if (diag.parcelaMensalTotal > 0) pills.push(`Parcelas: ${FinancialCalculator.formatBRL(diag.parcelaMensalTotal)}/mês`);
 
-  document.getElementById('fd-diag-pills').innerHTML = pills
-    .map(t => `<span class="fd-diag-pill">${t}</span>`).join('');
+  const pillsEl = byId('fd-diag-pills');
+  if (pillsEl) {
+    pillsEl.innerHTML = pills.map(t => `<span class="fd-diag-pill">${t}</span>`).join('');
+  }
 }
 
 function renderPlan(diag) {
-  const el = document.getElementById('fd-plan-body');
+  if (!isFinDashMounted()) return;
+  const el = byId('fd-plan-body');
+  if (!el) return;
   if (!diag.planoSugerido) {
     el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);">
       <div style="font-size:20px;margin-bottom:8px;">ATENCAO</div>
@@ -1403,6 +1431,7 @@ document.addEventListener('app:ready', () => bootstrap().catch(err => {
 }));
 
 document.addEventListener('app:route-will-change', () => {
+  finDashUnmounted = true;
   if (offDebtListChanged) {
     offDebtListChanged();
     offDebtListChanged = null;
