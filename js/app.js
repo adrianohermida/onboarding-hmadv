@@ -28,6 +28,7 @@ const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
 const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
+const SHELL_TENANT_CONFIG_KEY = 'portal:tenant-config';
 const SHELL_MAX_RECENT_ROUTES = 6;
 
 window.__shellVersion = SHELL_VERSION;
@@ -1270,9 +1271,38 @@ function getShellModules() {
   }
 }
 
+function getActiveTenantId() {
+  const workspaceId = appUserDetail?.caso?.workspace_id;
+  if (workspaceId) return String(workspaceId);
+
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(SHELL_TENANT_CONFIG_KEY) || 'null');
+    if (stored?.id) return String(stored.id);
+  } catch (_) {}
+
+  return 'hmadv';
+}
+
+function getTenantScopedStorageKey(baseKey) {
+  return `${baseKey}:${getActiveTenantId()}`;
+}
+
+function setRuntimeTenantConfig(detail = {}) {
+  const config = {
+    id: detail?.caso?.workspace_id || 'hmadv',
+    featureFlags: { ...(window.__portalTenantConfig?.featureFlags || {}) },
+  };
+
+  window.__portalTenantConfig = config;
+
+  try {
+    sessionStorage.setItem(SHELL_TENANT_CONFIG_KEY, JSON.stringify(config));
+  } catch (_) {}
+}
+
 function getShellWorkspaceState() {
   try {
-    return JSON.parse(localStorage.getItem(SHELL_WORKSPACE_KEY) || '{}') || {};
+    return JSON.parse(localStorage.getItem(getTenantScopedStorageKey(SHELL_WORKSPACE_KEY)) || '{}') || {};
   } catch (_) {
     return {};
   }
@@ -1280,7 +1310,7 @@ function getShellWorkspaceState() {
 
 function setShellWorkspaceState(nextState) {
   try {
-    localStorage.setItem(SHELL_WORKSPACE_KEY, JSON.stringify(nextState));
+    localStorage.setItem(getTenantScopedStorageKey(SHELL_WORKSPACE_KEY), JSON.stringify(nextState));
   } catch (_) {}
 }
 
@@ -1305,7 +1335,7 @@ function rememberWorkspaceRoute() {
 
 function getShellNotifications() {
   try {
-    return JSON.parse(sessionStorage.getItem(SHELL_NOTIFICATIONS_KEY) || '[]') || [];
+    return JSON.parse(sessionStorage.getItem(getTenantScopedStorageKey(SHELL_NOTIFICATIONS_KEY)) || '[]') || [];
   } catch (_) {
     return [];
   }
@@ -1313,7 +1343,7 @@ function getShellNotifications() {
 
 function setShellNotifications(items) {
   try {
-    sessionStorage.setItem(SHELL_NOTIFICATIONS_KEY, JSON.stringify(items.slice(0, 30)));
+    sessionStorage.setItem(getTenantScopedStorageKey(SHELL_NOTIFICATIONS_KEY), JSON.stringify(items.slice(0, 30)));
   } catch (_) {}
   renderShellNotificationCount();
 }
