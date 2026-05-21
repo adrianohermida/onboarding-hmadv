@@ -20,6 +20,7 @@
  *   clientExperience: { journeys, engagement, notifications, progress, retention, satisfaction, observability, analytics, telemetry, generated_at }
  *   aiOs      : { agents, copilot, retrieval, actions, human_review, telemetry, observability, analytics, generated_at }
  *   compliance: { lgpd, consents, audit, risk, access, incidents, monitoring, telemetry, analytics, generated_at }
+ *   analytics : { metrics, kpis, executive, financial, legal, operations, onboarding, engagement, productivity, sla, tenants, risk, insights, predictions, observability, telemetry, governance, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -174,6 +175,31 @@ const _initialState = () => ({
     governance: null,
     telemetry: { total: 0, consent_events: 0, access_events: 0, audit_events: 0, violations: 0, anomalies: 0, list: [] },
     analytics: null,
+    generated_at: null,
+  },
+  analytics: {
+    domain_entities: [],
+    dashboards: [],
+    metrics: { total: 0, list: [] },
+    kpis: null,
+    executive: null,
+    financial: null,
+    legal: null,
+    operations: null,
+    onboarding: null,
+    engagement: null,
+    productivity: null,
+    sla: null,
+    tenants: null,
+    risk: null,
+    insights: null,
+    predictions: null,
+    client_recovery: null,
+    ai: null,
+    observability: { missing_metrics: 0, broken_pipelines: 0, inconsistent_dashboards: 0, stale_data: 0, analytics_degradation: 0 },
+    telemetry: { total: 0, metrics: 0, dashboards: 0, kpis: 0, insights: 0, stale_data: 0, degraded_data: 0, list: [] },
+    warehouse: null,
+    governance: null,
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -438,6 +464,36 @@ class ShellStore extends EventTarget {
       governance: snapshot.governance || null,
       telemetry: snapshot.telemetry || { total: 0, consent_events: 0, access_events: 0, audit_events: 0, violations: 0, anomalies: 0, list: [] },
       analytics: snapshot.analytics || null,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Analytics ────────────────────────────────────────────────────────────
+  setAnalyticsSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('analytics', {
+      domain_entities: Array.isArray(snapshot.domain_entities) ? snapshot.domain_entities : [],
+      dashboards: Array.isArray(snapshot.dashboards) ? snapshot.dashboards : [],
+      metrics: snapshot.metrics || { total: 0, list: [] },
+      kpis: snapshot.kpis || null,
+      executive: snapshot.executive || null,
+      financial: snapshot.financial || null,
+      legal: snapshot.legal || null,
+      operations: snapshot.operations || null,
+      onboarding: snapshot.onboarding || null,
+      engagement: snapshot.engagement || null,
+      productivity: snapshot.productivity || null,
+      sla: snapshot.sla || null,
+      tenants: snapshot.tenants || null,
+      risk: snapshot.risk || null,
+      insights: snapshot.insights || null,
+      predictions: snapshot.predictions || null,
+      client_recovery: snapshot.client_recovery || null,
+      ai: snapshot.ai || null,
+      observability: snapshot.observability || { missing_metrics: 0, broken_pipelines: 0, inconsistent_dashboards: 0, stale_data: 0, analytics_degradation: 0 },
+      telemetry: snapshot.telemetry || { total: 0, metrics: 0, dashboards: 0, kpis: 0, insights: 0, stale_data: 0, degraded_data: 0, list: [] },
+      warehouse: snapshot.warehouse || null,
+      governance: snapshot.governance || null,
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }
