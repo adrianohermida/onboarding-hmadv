@@ -721,7 +721,7 @@ function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
     if (linkEl) linkEl.textContent = 'Ver formulário →';
     if (linkEl) linkEl.href = 'onboarding.html';
     if (hintEl) { hintEl.textContent = 'Seu caso está em análise para elaboração do plano de pagamento.'; hintEl.style.display = ''; }
-  } else if (wfStatus === 'rejeitado') {
+  } else if (wfStatus === 'rejeitado' || wfStatus === 'pendente_correcao') {
     card.style.borderColor = 'rgba(192,57,43,.3)';
     card.style.background  = 'rgba(192,57,43,.05)';
     if (textEl) textEl.innerHTML = '<span style="color:var(--red)">⚠ Correção solicitada pelo escritório</span>';

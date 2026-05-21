@@ -460,7 +460,8 @@ async function loadData() {
     }
   } catch {}
 
-  // 4. Initialise engine with video progress
+  // 4. Initialise engine with video progress — must come before DB state sync
+  // so _restoreSession() runs first and DB truth can override stale sessionStorage
   engine.init(progressList);
 
   // 5. Load caso state + form doc from DB (overrides stale sessionStorage)
