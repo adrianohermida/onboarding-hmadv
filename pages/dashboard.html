@@ -84,6 +84,8 @@
           </div>
         </div>
 
+        <div id="adm-alert" class="callout callout-warn" style="display:none;margin-bottom:12px;"></div>
+
         <div class="kpi-grid" style="margin-bottom:16px;">
           <div class="kpi">
             <span class="kpi-label">Clientes</span>
@@ -289,6 +291,20 @@ const setText = (id, value) => {
   return el;
 };
 
+function setAdminAlert(message = '', type = 'warn') {
+  const alertEl = byId('adm-alert');
+  if (!alertEl) return;
+  if (!message) {
+    alertEl.style.display = 'none';
+    alertEl.textContent = '';
+    alertEl.className = 'callout callout-warn';
+    return;
+  }
+  alertEl.className = `callout callout-${type}`;
+  alertEl.textContent = message;
+  alertEl.style.display = '';
+}
+
 /* ── Listen for user identity ───────────────────────── */
 document.addEventListener('app:user-loaded', async e => {
   const { isAdmin } = e.detail || {};
@@ -326,6 +342,7 @@ async function loadAdminOverview() {
 
   adminOverviewEl.style.display = '';
   clientViewEl.style.display    = 'none';
+  setAdminAlert('');
 
   try {
     const stats = await AdminService.getStats();
@@ -338,7 +355,9 @@ async function loadAdminOverview() {
     if (kpiDividas) kpiDividas.textContent = formatCurrency(stats.total_dividas ?? 0);
     if (kpiDocs) kpiDocs.textContent = stats.docs_review ?? '—';
     if (kpiOnboarding) kpiOnboarding.textContent = stats.onboarding_done ?? '—';
-  } catch (_) {}
+  } catch (_) {
+    setAdminAlert('Nao foi possivel carregar todas as metricas agora. Exibindo dados parciais.', 'warn');
+  }
 
   try {
     const clients = await AdminService.getClients();
@@ -375,6 +394,12 @@ async function loadAdminOverview() {
     }
   } catch (e) {
     console.error('Admin clients error:', e);
+    setAdminAlert('Nao foi possivel carregar a lista de clientes no momento. Tente novamente em instantes.', 'warn');
+
+    const tbody = byId('adm-clients-tbody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Falha ao carregar clientes. Atualize a pagina para tentar novamente.</td></tr>';
+    }
   }
 }
 
