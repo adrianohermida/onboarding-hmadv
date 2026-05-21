@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -48,6 +47,3 @@ if (missing.length) fail(`missing manifest for modules: ${missing.join(', ')}`);
 if (invalid.length) fail(`invalid manifests: ${invalid.join(' | ')}`);
 
 console.log('[validate-manifests] OK');
-=======
-console.log('validate-manifests: no manifest validation rules registered yet');
->>>>>>> b0f6a91 (feat(platform): add scripts for bootstrap, validation, and diagnostics; update styles and themes)
