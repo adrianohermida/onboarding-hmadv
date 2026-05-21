@@ -26,7 +26,14 @@
       "Bash(git -C \"D:/Github/onboarding-hmadv\" show 7468851 -- services/edge.js)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" show 7468851 -- js/app.js)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" add js/app.js)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" rebase --continue)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" rebase --continue)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/dashboard.html)",
+      "Bash(git -C D:/Github/onboarding-hmadv commit -m ' *)",
+      "Bash(gh pr *)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" fetch origin)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline origin/main -5)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline origin/main..origin/sprint/0.2-shell-wiring-ux)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" merge-base origin/main origin/sprint/0.2-shell-wiring-ux)"
     ]
   }
 }
