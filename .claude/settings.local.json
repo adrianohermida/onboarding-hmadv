@@ -47,7 +47,10 @@
       "Bash(git -C \"D:/Github/onboarding-hmadv\" diff --stat)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/dashboard.html)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" add js/cnj-pdf-generator.js pages/onboarding-v2.html)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" show HEAD:pages/onboarding-v2.html)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show HEAD:pages/onboarding-v2.html)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show d48a98a --stat)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show 4609dde --stat)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show 977672e --stat)"
     ]
   }
 }

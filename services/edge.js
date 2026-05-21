@@ -131,6 +131,10 @@ export async function invokeEdgeFunction(path, {
       return await response.text();
     } catch (error) {
       clearTimeout(timer);
+      if (error && typeof error === 'object' && 'status' in error) {
+        throw error;
+      }
+
       const isAbort = error?.name === 'AbortError' || String(error).includes('timeout');
       const isNetwork = error instanceof TypeError;
       const retryable = isAbort || isNetwork;
