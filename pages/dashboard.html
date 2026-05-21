@@ -629,8 +629,8 @@ async function loadClientData(userId) {
   const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
   renderCNJStepBar(step);
 
-  // Formulário CNJ status card — include Anexo II doc as fallback
-  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online' || d.tipo === 'formulario_cnj_anexo_ii') ?? null;
+  // Prefer online form; fall back to Anexo II only when no online record exists
+  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online') ?? docs.find(d => d.tipo === 'formulario_cnj_anexo_ii') ?? null;
   renderFormStatusCard(
     !!(casoFull?.onboarding_done),
     Number(casoFull?.cnj_step_atual || 0),
@@ -698,54 +698,6 @@ function renderCNJStepBar(step) {
         display:inline-flex;align-items:center;justify-content:center;cursor:default;"
       >${n}</span>`;
     }).join('');
-  }
-}
-
-/* ── Formulário CNJ status card ─────────────────────── */
-function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
-  const card = byId('cnj-form-status-card');
-  if (!card) return;
-  card.style.display = '';
-
-  const textEl = byId('cnj-form-status-text');
-  const linkEl = byId('cnj-form-status-link');
-  const hintEl = byId('cnj-form-status-hint');
-
-  // Determine state from portal_documentos workflow status (if available)
-  const wfStatus = formDoc?.workflow_status || null;
-
-  if (wfStatus === 'aprovado') {
-    card.style.borderColor = 'rgba(21,128,61,.3)';
-    card.style.background  = 'rgba(21,128,61,.05)';
-    if (textEl) textEl.innerHTML = '<span style="color:#15803d">✓ Formulário aprovado pelo escritório</span>';
-    if (linkEl) linkEl.textContent = 'Ver formulário →';
-    if (linkEl) linkEl.href = 'onboarding.html';
-    if (hintEl) { hintEl.textContent = 'Seu caso está em análise para elaboração do plano de pagamento.'; hintEl.style.display = ''; }
-  } else if (wfStatus === 'rejeitado' || wfStatus === 'pendente_correcao') {
-    card.style.borderColor = 'rgba(192,57,43,.3)';
-    card.style.background  = 'rgba(192,57,43,.05)';
-    if (textEl) textEl.innerHTML = '<span style="color:var(--red)">⚠ Correção solicitada pelo escritório</span>';
-    if (linkEl) linkEl.textContent = 'Revisar →';
-    if (linkEl) linkEl.href = 'onboarding.html';
-    const obs = formDoc?.observacao_admin || formDoc?.observacao || '';
-    if (hintEl && obs) { hintEl.textContent = obs; hintEl.style.display = ''; }
-    else if (hintEl) { hintEl.textContent = 'O escritório solicitou correções. Acesse o formulário para revisar.'; hintEl.style.display = ''; }
-  } else if (onboardingDone || wfStatus === 'em_analise') {
-    card.style.borderColor = 'rgba(245,166,35,.3)';
-    card.style.background  = 'rgba(245,166,35,.05)';
-    if (textEl) textEl.innerHTML = '<span style="color:#c07b00">Enviado — aguardando análise do escritório</span>';
-    if (linkEl) linkEl.textContent = 'Ver formulário →';
-    if (linkEl) linkEl.href = 'onboarding.html';
-    if (hintEl) { hintEl.textContent = 'Formulário enviado com sucesso. O escritório irá analisar e entrar em contato.'; hintEl.style.display = ''; }
-  } else if (cnjStepAtual > 0) {
-    if (textEl) textEl.textContent = `Em andamento — passo ${cnjStepAtual} de 7`;
-    if (linkEl) linkEl.textContent = 'Continuar →';
-    if (linkEl) linkEl.href = 'onboarding.html';
-    if (hintEl) { hintEl.textContent = `Continue de onde parou. ${7 - cnjStepAtual} passo(s) restante(s).`; hintEl.style.display = ''; }
-  } else {
-    if (textEl) textEl.textContent = 'Não iniciado';
-    if (linkEl) linkEl.textContent = 'Iniciar →';
-    if (linkEl) linkEl.href = 'onboarding.html';
   }
 }
 

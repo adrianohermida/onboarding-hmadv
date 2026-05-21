@@ -47,11 +47,9 @@ export function mountBillingShellIntegration() {
     bus.on('tenant.ready', ({ tenant }) => refresh(tenant?.id || 'hmadv')),
     bus.on('subscription.updated', () => refresh(store.get('tenant')?.id || 'hmadv')),
     bus.on('subscription.created', () => refresh(store.get('tenant')?.id || 'hmadv')),
-    bus.on('quota.exceeded', () => refresh(store.get('tenant')?.id || 'hmadv')),
     bus.on('upload.completed', () => refresh(store.get('tenant')?.id || 'hmadv')),
     bus.on('signature.requested', () => refresh(store.get('tenant')?.id || 'hmadv')),
     bus.on('journey.step.completed', () => refresh(store.get('tenant')?.id || 'hmadv')),
-    bus.on('notification.created', () => refresh(store.get('tenant')?.id || 'hmadv')),
   ];
 }
 
