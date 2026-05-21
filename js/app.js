@@ -9,6 +9,8 @@ const PUBLIC_PAGES = ['login', 'auth-callback'];
 const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
+const VIEW_MODE_KEY = 'portal:view-mode';
+const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_VERSION = '20260521f';
 const SHELL_TELEMETRY_MAX = 100;
@@ -22,6 +24,105 @@ let captureModuleListeners = true;
 let runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 const capturedModuleListeners = [];
 let activeModuleToken = 0;
+const portalViewModeSubscribers = new Set();
+
+function normalizeViewMode(mode) {
+  return mode === 'admin' ? 'admin' : 'cliente';
+}
+
+function getStoredViewMode() {
+  try {
+    return normalizeViewMode(sessionStorage.getItem(VIEW_MODE_KEY) || 'cliente');
+  } catch (_) {
+    return 'cliente';
+  }
+}
+
+function setStoredViewMode(mode) {
+  try {
+    sessionStorage.setItem(VIEW_MODE_KEY, normalizeViewMode(mode));
+  } catch (_) {}
+}
+
+function notifyViewModeSubscribers(mode, meta = {}) {
+  portalViewModeSubscribers.forEach(cb => {
+    try { cb(mode, meta); } catch (_) {}
+  });
+}
+
+function setPortalViewMode(mode, { source = 'app', persist = true, emit = true } = {}) {
+  const next = normalizeViewMode(mode);
+  const prev = getStoredViewMode();
+  if (persist) setStoredViewMode(next);
+  if (!emit && prev === next) return next;
+
+  const detail = { mode: next, source, prevMode: prev };
+  notifyViewModeSubscribers(next, detail);
+  try {
+    window.dispatchEvent(new CustomEvent(VIEW_MODE_EVENT, { detail }));
+  } catch (_) {}
+  return next;
+}
+
+function mountPortalViewModeSelector(containerOrId, options = {}) {
+  const container = typeof containerOrId === 'string'
+    ? document.getElementById(containerOrId)
+    : containerOrId;
+  if (!container) return () => {};
+
+  const {
+    label = 'Modo de visualizacao:',
+    adminLabel = 'Administrador',
+    clientLabel = 'Cliente',
+    onChange = null,
+  } = options;
+
+  container.innerHTML = `
+    <div class="portal-mode-switch">
+      <span class="portal-mode-switch-label">${label}</span>
+      <div class="portal-mode-switch-btns" role="tablist" aria-label="Modo de visualizacao">
+        <button type="button" class="portal-mode-btn" data-mode="admin" role="tab">${adminLabel}</button>
+        <button type="button" class="portal-mode-btn" data-mode="cliente" role="tab">${clientLabel}</button>
+      </div>
+    </div>
+  `;
+
+  const buttons = [...container.querySelectorAll('.portal-mode-btn')];
+
+  const apply = (mode) => {
+    const normalized = normalizeViewMode(mode);
+    buttons.forEach(btn => {
+      const active = btn.dataset.mode === normalized;
+      btn.classList.toggle('portal-mode-btn-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (typeof onChange === 'function') onChange(normalized);
+  };
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setPortalViewMode(btn.dataset.mode || 'cliente', { source: 'selector-click' });
+    });
+  });
+
+  const subscriber = (mode) => apply(mode);
+  portalViewModeSubscribers.add(subscriber);
+  apply(getStoredViewMode());
+
+  return () => {
+    portalViewModeSubscribers.delete(subscriber);
+  };
+}
+
+window.getPortalViewMode = () => getStoredViewMode();
+window.setPortalViewMode = (mode, options = {}) => setPortalViewMode(mode, options);
+window.onPortalViewModeChange = (cb) => {
+  if (typeof cb !== 'function') return () => {};
+  portalViewModeSubscribers.add(cb);
+  return () => portalViewModeSubscribers.delete(cb);
+};
+window.mountPortalViewModeSelector = (containerOrId, options = {}) =>
+  mountPortalViewModeSelector(containerOrId, options);
 
 const nativeDocumentAddEventListener = document.addEventListener.bind(document);
 const nativeDocumentRemoveEventListener = document.removeEventListener.bind(document);

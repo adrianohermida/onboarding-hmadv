@@ -318,6 +318,45 @@ body.app-loaded .sk { display: none !important; }
   gap: 12px;
 }
 
+/* ── Shared View Mode Selector ───────────────────── */
+.portal-mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.portal-mode-switch-label {
+  font-size: 12px;
+  opacity: .72;
+}
+
+.portal-mode-switch-btns {
+  display: flex;
+  gap: 2px;
+  background: rgba(0,0,0,.25);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.portal-mode-btn {
+  padding: 4px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: rgba(255,255,255,.55);
+  transition: background .2s, color .2s;
+}
+
+.portal-mode-btn-active {
+  background: rgba(255,255,255,.92);
+  color: var(--navy);
+  font-weight: 700;
+}
+
 .header-user {
   display: flex;
   align-items: center;
