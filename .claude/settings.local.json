@@ -22,7 +22,9 @@
       "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline -5)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" show HEAD:js/app.js)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline origin/main..HEAD)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" status --short)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" status --short)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show 7468851 -- services/edge.js)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show 7468851 -- js/app.js)"
     ]
   }
 }
