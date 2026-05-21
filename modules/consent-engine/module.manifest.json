@@ -1,0 +1,19 @@
+{
+  "module": "consent-engine",
+  "key": "consent-engine",
+  "title": "Consent Engine",
+  "menuLabel": "Consentimentos",
+  "route": "/pages/onboarding.html",
+  "icon": "shield-check",
+  "permissions": ["cliente", "lawyer", "admin", "superadmin"],
+  "feature": "consentEngine",
+  "lazy": true,
+  "order": 95,
+  "visible": false,
+  "contract": {
+    "events": {
+      "emits": ["consent.recorded", "consent.revoked"],
+      "listens": ["auth.changed", "tenant.changed"]
+    }
+  }
+}
