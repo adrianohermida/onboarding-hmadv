@@ -4,6 +4,13 @@ const checks = [
   ['design-system root', 'design-system/README.md'],
   ['design governance checklist', 'governance/design/design-review-checklist.md'],
   ['design system docs', 'docs/design-system/README.md'],
+  ['design system tokens bridge', 'design-system/tokens/core.css'],
+  ['design system component registry', 'design-system/components/registry.json'],
+  ['design system theme foundation', 'design-system/themes/light.css'],
+  ['design system responsive foundation', 'design-system/responsive/mobile-first.css'],
+  ['design system accessibility foundation', 'design-system/accessibility/accessibility-foundation.md'],
+  ['design system component ownership doc', 'docs/design-system/component-ownership.md'],
+  ['design system shell governance', 'governance/design/shell-visual-governance.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
