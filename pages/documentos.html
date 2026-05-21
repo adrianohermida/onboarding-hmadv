@@ -651,20 +651,33 @@ let activeFilter   = 'all';
 let drawerDocId    = null;
 let reviewWorkflow = null;
 let drawerSignedUrl = null;
+let docsBooting = false;
+let offDocListChanged = null;
+let offUploadStarted = null;
+
+const byId = (id) => document.getElementById(id);
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('app:ready', () => bootstrap().catch(handleError));
 if (document.readyState === 'complete') {
   setTimeout(() => {
-    if (document.getElementById('doc-loading').style.display !== 'none') {
+    const loadingEl = byId('doc-loading');
+    if (loadingEl && loadingEl.style.display !== 'none') {
       bootstrap().catch(handleError);
     }
   }, 1500);
 }
 
 async function bootstrap() {
+  if (docsBooting) return;
+  docsBooting = true;
+
+  const loadingEl = byId('doc-loading');
+  const mainEl = byId('doc-main');
+  if (!loadingEl || !mainEl) { docsBooting = false; return; }
+
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
+  if (!session) { window.location.href = 'login.html'; docsBooting = false; return; }
 
   currentUser = session.user;
   shell.init();
@@ -680,10 +693,13 @@ async function bootstrap() {
 
   if (isAdmin) {
     viewMode = viewingUid ? 'admin' : 'admin';
-    document.getElementById('doc-admin-bar').style.display = 'flex';
+    const adminBar = byId('doc-admin-bar');
+    if (adminBar) adminBar.style.display = 'flex';
     if (viewingUid) {
-      document.getElementById('btn-back-client').style.display = '';
-      document.getElementById('doc-admin-context').textContent = `Revisando documentos do cliente`;
+      const backBtn = byId('btn-back-client');
+      const contextEl = byId('doc-admin-context');
+      if (backBtn) backBtn.style.display = '';
+      if (contextEl) contextEl.textContent = `Revisando documentos do cliente`;
     }
   }
 
@@ -702,7 +718,7 @@ async function bootstrap() {
   await engine.loadRequests();
 
   // Init upload engine
-  const dropZone = document.getElementById('drop-zone-global');
+  const dropZone = byId('drop-zone-global');
   uploader = new UploadEngine(dropZone, {
     onUpload:   (file, tipo) => engine.upload(tipo, file),
     onProgress: (pct, tipo)  => updateProgress(tipo, pct),
@@ -713,12 +729,15 @@ async function bootstrap() {
   uploader.mount();
 
   // Listen for list changes
-  bus.on('document.list.changed', () => renderAll());
-  bus.on('upload.started', ({ tipo }) => setCardUploading(tipo, true));
+  if (offDocListChanged) offDocListChanged();
+  if (offUploadStarted) offUploadStarted();
+  offDocListChanged = bus.on('document.list.changed', () => renderAll());
+  offUploadStarted = bus.on('upload.started', ({ tipo }) => setCardUploading(tipo, true));
 
   renderAll();
-  document.getElementById('doc-loading').style.display = 'none';
-  document.getElementById('doc-main').style.display    = 'block';
+  loadingEl.style.display = 'none';
+  mainEl.style.display    = 'block';
+  docsBooting = false;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -732,24 +751,36 @@ function renderAll() {
 }
 
 function renderKPIs(stats) {
-  document.getElementById('kpi-pendentes').textContent  = stats.pending;
-  document.getElementById('kpi-analise').textContent    = stats.inReview;
-  document.getElementById('kpi-aprovados').textContent  = stats.approved;
+  const pendEl = byId('kpi-pendentes');
+  const analiseEl = byId('kpi-analise');
+  const aprovEl = byId('kpi-aprovados');
+  const rejeEl = byId('kpi-rejeitados');
+  const sigEl = byId('kpi-assinatura');
+  if (!pendEl || !analiseEl || !aprovEl || !rejeEl || !sigEl) return;
+
+  pendEl.textContent  = stats.pending;
+  analiseEl.textContent    = stats.inReview;
+  aprovEl.textContent  = stats.approved;
   const rejected = engine.getByStatus('rejeitado').length;
-  document.getElementById('kpi-rejeitados').textContent = rejected;
-  document.getElementById('kpi-assinatura').textContent = stats.sigPend;
+  rejeEl.textContent = rejected;
+  sigEl.textContent = stats.sigPend;
 }
 
 function renderProgress(stats) {
+  const fillEl = byId('hero-progress-fill');
+  const labelEl = byId('hero-progress-label');
+  if (!fillEl || !labelEl) return;
+
   const pct = stats.progress;
-  document.getElementById('hero-progress-fill').style.width = `${pct}%`;
-  document.getElementById('hero-progress-label').textContent =
+  fillEl.style.width = `${pct}%`;
+  labelEl.textContent =
     `${stats.approved} de ${stats.total} aprovados (${pct}%)`;
 }
 
 function renderRequestsBanner() {
   const requests = engine.getRequests();
-  const el = document.getElementById('requests-banner');
+  const el = byId('requests-banner');
+  if (!el) return;
   if (!requests.length) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.innerHTML = `
@@ -1198,14 +1229,23 @@ function fmtSize(bytes) {
 }
 
 function handleError(err) {
+  docsBooting = false;
   console.error('[Documentos] bootstrap error:', err);
   Toast.error('Erro ao carregar documentos. Tente recarregar.');
-  document.getElementById('doc-loading').innerHTML =
+  const loadingEl = byId('doc-loading');
+  if (!loadingEl) return;
+  loadingEl.innerHTML =
     `<div style="text-align:center;color:var(--red);">
       <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
       <div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div>
     </div>`;
 }
+
+document.addEventListener('app:route-will-change', () => {
+  if (offDocListChanged) { offDocListChanged(); offDocListChanged = null; }
+  if (offUploadStarted) { offUploadStarted(); offUploadStarted = null; }
+  docsBooting = false;
+});
 </script>
 
 </body>
