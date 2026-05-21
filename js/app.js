@@ -20,6 +20,9 @@ const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
 const SHELL_SERVICE_ERRORS_MAX = 80;
+const FRESHCHAT_SCRIPT_ID = 'freshchat-private-widget';
+const FRESHCHAT_SCRIPT_SRC = 'https://eu.fw-cdn.com/10713913/375987.js';
+const FRESHCHAT_WIDGET_ID = '2bb07572-34a4-4ea6-9708-4ec2ed23589d';
 
 window.__shellVersion = SHELL_VERSION;
 
@@ -733,6 +736,100 @@ function updateShellModeSelector(isAdmin = false) {
   });
 }
 
+function splitFullName(fullName = '') {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function getFreshchatIdentity(user, caso) {
+  const metadata = user?.user_metadata || {};
+  const fullName = caso?.full_name || metadata.full_name || metadata.name || user?.email || '';
+  const { firstName, lastName } = splitFullName(fullName);
+  const email = user?.email || caso?.email || '';
+
+  return {
+    externalId: user?.id || email,
+    firstName: firstName || email,
+    lastName,
+    email,
+    properties: {
+      cf_plan: 'Portal HMADV',
+      cf_status: caso?.fase || (caso?.onboarding_done ? 'ativo' : 'cadastro'),
+      cf_portal_user_id: user?.id || null,
+      cf_portal_caso_id: caso?.id || null,
+      cf_cpf: caso?.cpf || null,
+      cf_onboarding_done: !!caso?.onboarding_done,
+    },
+  };
+}
+
+function applyFreshchatIdentity(user, caso) {
+  if (!window.fcWidget || !window.fcWidget.user) return false;
+
+  const identity = getFreshchatIdentity(user, caso);
+  try {
+    if (identity.externalId && typeof window.fcWidget.setExternalId === 'function') {
+      window.fcWidget.setExternalId(String(identity.externalId));
+    }
+    if (identity.firstName && typeof window.fcWidget.user.setFirstName === 'function') {
+      window.fcWidget.user.setFirstName(String(identity.firstName));
+    }
+    if (identity.lastName && typeof window.fcWidget.user.setLastName === 'function') {
+      window.fcWidget.user.setLastName(String(identity.lastName));
+    }
+    if (identity.email && typeof window.fcWidget.user.setEmail === 'function') {
+      window.fcWidget.user.setEmail(String(identity.email));
+    }
+    if (typeof window.fcWidget.user.setProperties === 'function') {
+      const properties = Object.fromEntries(
+        Object.entries(identity.properties).filter(([, value]) => value !== null && value !== undefined && value !== '')
+      );
+      window.fcWidget.user.setProperties(properties);
+    }
+    return true;
+  } catch (error) {
+    console.warn('[Freshchat] Falha ao identificar usuario no widget', error);
+    return false;
+  }
+}
+
+function waitAndApplyFreshchatIdentity(user, caso, attempt = 0) {
+  if (applyFreshchatIdentity(user, caso)) return;
+  if (attempt >= 30) return;
+  setTimeout(() => waitAndApplyFreshchatIdentity(user, caso, attempt + 1), 500);
+}
+
+function removeFreshchatWidget() {
+  document.getElementById(FRESHCHAT_SCRIPT_ID)?.remove();
+  document.querySelectorAll('iframe[src*="fw-cdn.com"], iframe[src*="freshchat"], iframe[src*="freshworks"]').forEach(el => el.remove());
+  try {
+    if (window.fcWidget && typeof window.fcWidget.destroy === 'function') window.fcWidget.destroy();
+  } catch (_) {}
+}
+
+function mountClientFreshchatWidget({ user, caso, isAdmin } = {}) {
+  if (!user || isAdmin || PUBLIC_PAGES.includes(getCurrentPage())) {
+    removeFreshchatWidget();
+    return;
+  }
+
+  if (!document.getElementById(FRESHCHAT_SCRIPT_ID)) {
+    const script = document.createElement('script');
+    script.id = FRESHCHAT_SCRIPT_ID;
+    script.src = FRESHCHAT_SCRIPT_SRC;
+    script.async = true;
+    script.setAttribute('chat', 'true');
+    script.setAttribute('widgetId', FRESHCHAT_WIDGET_ID);
+    script.onload = () => waitAndApplyFreshchatIdentity(user, caso);
+    document.body.appendChild(script);
+  }
+
+  waitAndApplyFreshchatIdentity(user, caso);
+}
+
 function setupSidebarMobile() {
   const toggle = document.getElementById('sidebar-toggle');
   const shell = document.querySelector('.portal-shell');
@@ -876,6 +973,7 @@ async function loadComponents() {
   // Wire up interactions (scripts in injected HTML don't execute via innerHTML)
   window.handleLogout = () => {
     try { sessionStorage.removeItem('portal:user'); } catch (_) {}
+    removeFreshchatWidget();
     AuthService.logout();
   };
 
@@ -921,6 +1019,7 @@ async function loadUser() {
   updateSidebarUser(user, caso, isAdmin);
   updateHeaderUser(user);
   updateShellModeSelector(isAdmin);
+  mountClientFreshchatWidget(detail);
 
   // Cache for next navigation (instant pre-population)
   setCached(detail);
