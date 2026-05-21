@@ -431,6 +431,29 @@ body.app-loaded .sk { display: none !important; }
   flex-wrap: wrap;
 }
 
+.shell-service-banner {
+  border: 1px solid #f5d08a;
+  background: #fff6e7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.shell-service-banner-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: #8a5a00;
+  margin-bottom: 3px;
+}
+
+.shell-service-banner-text {
+  font-size: 12px;
+  color: #6b4a0a;
+  line-height: 1.35;
+}
+
 /* ── PAGE FOOTER ──────────────────────────────── */
 .portal-page-footer {
   background: var(--white);
