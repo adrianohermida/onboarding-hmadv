@@ -36,17 +36,28 @@ jobs:
           }
           trap cleanup EXIT
 
-          {
-            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
-            printf 'FRESHDESK_API_KEY=%s\n' "$FRESHDESK_API_KEY"
-            printf 'FRESHDESK_DOMAIN=%s\n' "$FRESHDESK_DOMAIN"
-            printf 'FRESHDESK_SUPPORT_EMAIL=%s\n' 'suporte@hermidamaia.adv.br'
-            printf 'FROM_EMAIL=%s\n' 'Portal Hermida Maia <contato@hermidamaia.adv.br>'
-            printf 'OFFICE_EMAIL=%s\n' 'contato@hermidamaia.adv.br'
-            printf 'DIRECTDATA_TOKEN=%s\n' "$DIRECTDATA_TOKEN"
-            printf 'AUTENTIQUE_WEBHOOK_SECRET_DOC=%s\n' "$AUTENTIQUE_WEBHOOK_SECRET_DOC"
-            printf 'AUTENTIQUE_WEBHOOK_SECRET_SIGN=%s\n' "$AUTENTIQUE_WEBHOOK_SECRET_SIGN"
-          } > "$secrets_file"
+          add_secret() {
+            local key="$1"
+            local value="$2"
+            if [ -n "${value}" ]; then
+              printf '%s=%s\n' "$key" "$value" >> "$secrets_file"
+            fi
+          }
+
+          add_secret RESEND_API_KEY "$RESEND_API_KEY"
+          add_secret FRESHDESK_API_KEY "$FRESHDESK_API_KEY"
+          add_secret FRESHDESK_DOMAIN "$FRESHDESK_DOMAIN"
+          add_secret FRESHDESK_SUPPORT_EMAIL 'suporte@hermidamaia.adv.br'
+          add_secret FROM_EMAIL 'Portal Hermida Maia <contato@hermidamaia.adv.br>'
+          add_secret OFFICE_EMAIL 'contato@hermidamaia.adv.br'
+          add_secret DIRECTDATA_TOKEN "$DIRECTDATA_TOKEN"
+          add_secret AUTENTIQUE_WEBHOOK_SECRET_DOC "$AUTENTIQUE_WEBHOOK_SECRET_DOC"
+          add_secret AUTENTIQUE_WEBHOOK_SECRET_SIGN "$AUTENTIQUE_WEBHOOK_SECRET_SIGN"
+
+          if [ ! -s "$secrets_file" ]; then
+            echo "No Supabase secrets to set."
+            exit 0
+          fi
 
           supabase secrets set --env-file "$secrets_file" --project-ref sspvizogbcyigquqycsz
 
@@ -62,6 +73,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy freshdesk-proxy \
+            --no-verify-jwt \
             --project-ref sspvizogbcyigquqycsz
 
       - name: Deploy directdata-proxy
