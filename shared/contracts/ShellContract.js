@@ -21,6 +21,7 @@ import { workflowAutomationFoundation } from '../../workflow-engine/WorkflowAuto
 import { documentIntelligenceFoundation } from '../../document-intelligence/DocumentIntelligenceFoundation.js';
 import { financialIntelligenceFoundation } from '../../financial-intelligence/FinancialIntelligenceFoundation.js';
 import { legalOperationsFoundation } from '../../legal-operations/LegalOperationsFoundation.js';
+import { clientExperienceFoundation } from '../../client-experience/ClientExperienceFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -137,6 +138,20 @@ export const legalOperations = {
   refresh: () => legalOperationsFoundation.snapshot(),
 };
 
+// ── Client Experience API ─────────────────────────────────────────────────
+export const clientExperience = {
+  getSnapshot: () => store.get('clientExperience') || {},
+  getJourneys: () => store.get('clientExperience')?.journeys || { total: 0, list: [] },
+  getEngagement: () => store.get('clientExperience')?.engagement || { total: 0, list: [] },
+  getNotifications: () => store.get('clientExperience')?.notifications || { total: 0, list: [] },
+  getProgress: () => store.get('clientExperience')?.progress || { total: 0, completed: 0, list: [] },
+  getRetention: () => store.get('clientExperience')?.retention || { total: 0, high_risk: 0, list: [] },
+  getSatisfaction: () => store.get('clientExperience')?.satisfaction || {},
+  getObservability: () => store.get('clientExperience')?.observability || {},
+  getTelemetry: () => store.get('clientExperience')?.telemetry || {},
+  refresh: () => clientExperienceFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -159,4 +174,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, tenant, shellStore, billing };

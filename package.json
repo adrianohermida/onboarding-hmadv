@@ -19,7 +19,8 @@
     "validate:workflows": "node platform/scripts/validate-workflows-foundation.mjs",
     "validate:knowledge": "node platform/scripts/validate-document-intelligence-foundation.mjs",
     "validate:financial-intelligence": "node platform/scripts/validate-financial-intelligence-foundation.mjs",
-    "validate:legal-operations": "node platform/scripts/validate-legal-operations-foundation.mjs"
+    "validate:legal-operations": "node platform/scripts/validate-legal-operations-foundation.mjs",
+    "validate:client-experience": "node platform/scripts/validate-client-experience-foundation.mjs"
   },
   "repository": {
     "type": "git",
