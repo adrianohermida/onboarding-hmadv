@@ -1,0 +1,115 @@
+{
+  "version": "0.12.0",
+  "providers": [
+    {
+      "name": "freshdesk",
+      "owner": "support",
+      "health_status": "healthy",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 60 },
+      "observability": true,
+      "sla": "99.5%",
+      "tenant_awareness": true,
+      "secret_mapping": ["FRESHDESK_API_KEY", "FRESHDESK_DOMAIN"]
+    },
+    {
+      "name": "resend",
+      "owner": "notifications",
+      "health_status": "healthy",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 120 },
+      "observability": true,
+      "sla": "99.9%",
+      "tenant_awareness": true,
+      "secret_mapping": ["RESEND_API_KEY", "FROM_EMAIL", "OFFICE_EMAIL"]
+    },
+    {
+      "name": "autentique",
+      "owner": "documents",
+      "health_status": "healthy",
+      "retry_policy": { "max": 3, "base_delay_ms": 300, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 40 },
+      "observability": true,
+      "sla": "99.0%",
+      "tenant_awareness": true,
+      "secret_mapping": ["AUTENTIQUE_API_KEY", "AUTENTIQUE_WEBHOOK_SECRET"]
+    },
+    {
+      "name": "supabase",
+      "owner": "platform",
+      "health_status": "healthy",
+      "retry_policy": { "max": 2, "base_delay_ms": 150, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 300 },
+      "observability": true,
+      "sla": "99.9%",
+      "tenant_awareness": true,
+      "secret_mapping": ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+    },
+    {
+      "name": "youtube_embeds",
+      "owner": "content",
+      "health_status": "healthy",
+      "retry_policy": { "max": 1, "base_delay_ms": 100, "strategy": "fixed" },
+      "rate_limit": { "per_minute": 120 },
+      "observability": true,
+      "sla": "best_effort",
+      "tenant_awareness": true,
+      "secret_mapping": []
+    },
+    {
+      "name": "ocr_provider_future",
+      "owner": "platform",
+      "health_status": "planned",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 30 },
+      "observability": true,
+      "sla": "planned",
+      "tenant_awareness": true,
+      "secret_mapping": ["OCR_API_KEY"]
+    },
+    {
+      "name": "whatsapp_provider_future",
+      "owner": "notifications",
+      "health_status": "planned",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 30 },
+      "observability": true,
+      "sla": "planned",
+      "tenant_awareness": true,
+      "secret_mapping": ["WHATSAPP_TOKEN"]
+    },
+    {
+      "name": "stripe_future",
+      "owner": "finops",
+      "health_status": "planned",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 60 },
+      "observability": true,
+      "sla": "planned",
+      "tenant_awareness": true,
+      "secret_mapping": ["STRIPE_SECRET_KEY"]
+    },
+    {
+      "name": "hubspot_future",
+      "owner": "crm",
+      "health_status": "planned",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 60 },
+      "observability": true,
+      "sla": "planned",
+      "tenant_awareness": true,
+      "secret_mapping": ["HUBSPOT_TOKEN"]
+    },
+    {
+      "name": "google_drive_future",
+      "owner": "documents",
+      "health_status": "planned",
+      "retry_policy": { "max": 3, "base_delay_ms": 250, "strategy": "exponential_backoff" },
+      "rate_limit": { "per_minute": 60 },
+      "observability": true,
+      "sla": "planned",
+      "tenant_awareness": true,
+      "secret_mapping": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+    }
+  ]
+}
