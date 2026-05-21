@@ -41,6 +41,8 @@ import { mountLegalOperationsFoundation } from '../legal-operations/LegalOperati
 import { mountLegalOperationsShellVisibility } from '../legal-operations/ShellLegalOperationsVisibility.js';
 import { mountClientExperienceFoundation } from '../client-experience/ClientExperienceFoundation.js';
 import { mountClientExperienceShellVisibility } from '../client-experience/ShellClientExperienceVisibility.js';
+import { mountAiOsFoundation } from '../ai-os/AIOSFoundation.js';
+import { mountAiOsShellVisibility } from '../ai-os/ShellAiOsVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -90,6 +92,8 @@ export class AuthenticatedShell {
       mountLegalOperationsShellVisibility();
       mountClientExperienceFoundation();
       mountClientExperienceShellVisibility();
+      mountAiOsFoundation();
+      mountAiOsShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
