@@ -107,6 +107,56 @@
       border-radius: 999px;
       padding: 5px 9px;
     }
+    .cnj-progress-req {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      margin-top: 2px;
+      transition: all .2s ease;
+    }
+    .cnj-progress-req-ok {
+      color: #0f5132;
+      background: #eaf7ef;
+      border: 1px solid #b7e4c9;
+    }
+    .cnj-progress-req-warn {
+      color: #8a5a00;
+      background: #fff4de;
+      border: 1px solid #f1d39a;
+    }
+
+    .step-validation-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin: -8px 0 16px;
+      padding: 9px 11px;
+      border-radius: 8px;
+      border: 1px solid #f1d39a;
+      background: #fff7e8;
+      color: #6b4a0a;
+      font-size: 12px;
+      line-height: 1.3;
+      animation: validationReveal .2s ease;
+    }
+    .step-validation-bar.show { display: flex; }
+    .step-validation-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #d08a00;
+      flex-shrink: 0;
+    }
+
+    @keyframes validationReveal {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     /* ── Step panels ──────────────────────────────── */
     .cnj-panel { display: none; }
@@ -115,6 +165,49 @@
     @keyframes panelIn {
       from { opacity: .2; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cnj-step-dot,
+    .btn,
+    .dyn-card,
+    .form-control {
+      transition: all .2s ease;
+    }
+    .cnj-step:not(.active):hover .cnj-step-dot {
+      transform: translateY(-1px);
+      border-color: #9fb8d4;
+    }
+    .btn:active {
+      transform: translateY(1px);
+    }
+    .dyn-card:hover {
+      border-color: #d0dde9;
+      box-shadow: 0 2px 10px rgba(26, 58, 92, .06);
+    }
+
+    .field-invalid {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, .12) !important;
+      background: #fff8f8;
+      animation: fieldPulse .18s ease;
+    }
+    .field-invalid-label {
+      border-radius: 6px;
+      background: rgba(220, 38, 38, .08);
+      outline: 1px solid rgba(220, 38, 38, .28);
+      padding: 4px 6px;
+    }
+    .field-invalid-ring {
+      border: 1px dashed rgba(220, 38, 38, .45);
+      border-radius: var(--r-sm);
+      padding: 8px;
+    }
+
+    @keyframes fieldPulse {
+      from { transform: translateX(0); }
+      30% { transform: translateX(1px); }
+      60% { transform: translateX(-1px); }
+      to { transform: translateX(0); }
     }
 
     /* ── Dynamic cards ────────────────────────────── */
@@ -291,6 +384,7 @@
       .cnj-step-label { display: none; }
       .analise-grid { grid-template-columns: 1fr 1fr; }
       .cnj-progress-meta { margin-top: -14px; padding: 9px 10px; }
+      .cnj-progress-req { font-size: 9px; }
       .step-nav { gap: 8px; }
       .step-nav .btn { flex: 1; justify-content: center; }
     }
@@ -302,6 +396,7 @@
       .cnj-progress-meta { margin: -14px 0 14px; }
       .cnj-progress-title { font-size: 11px; }
       .cnj-progress-desc { font-size: 10px; }
+      .step-validation-bar { margin-top: -7px; font-size: 11px; }
       #autosave-status { padding: 5px 8px; font-size: 10px; }
       .step-nav-info { display: none; }
     }
@@ -311,6 +406,7 @@
       .cnj-step-dot { width: 26px; height: 26px; }
       .cnj-progress-pct { min-width: 42px; padding: 4px 7px; }
       .cnj-progress-desc { display: none; }
+      .cnj-progress-req { padding: 3px 7px; }
     }
   </style>
 </head>
@@ -396,8 +492,14 @@
         <div class="cnj-progress-copy">
           <span class="cnj-progress-title" id="cnj-progress-title">Etapa 1 de 7</span>
           <span class="cnj-progress-desc" id="cnj-progress-desc">Identificação do requerente</span>
+          <span class="cnj-progress-req cnj-progress-req-ok" id="cnj-progress-req">Pronto para avancar</span>
         </div>
         <div class="cnj-progress-pct" id="cnj-progress-pct">14%</div>
+      </div>
+
+      <div class="step-validation-bar" id="step-validation-bar" aria-live="polite">
+        <span class="step-validation-dot"></span>
+        <span id="step-validation-text">Campos obrigatorios pendentes.</span>
       </div>
 
       <!-- ════════════════════════════════════════════
@@ -976,6 +1078,7 @@ const STEP_LABELS = {
   6: 'Analise e plano de pagamento',
   7: 'Documentacao e finalizacao',
 };
+const REQUIRED_DOC_IDS = ['doc_rg_cnh', 'doc_cpf_doc', 'doc_residencia', 'doc_renda_doc', 'doc_extratos'];
 
 /* ── Ícones ─────────────────────────── */
 const TRASH = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
@@ -1623,9 +1726,147 @@ function updateProgressMeta(step) {
   const titleEl = document.getElementById('cnj-progress-title');
   const descEl = document.getElementById('cnj-progress-desc');
   const pctEl = document.getElementById('cnj-progress-pct');
+  const reqEl = document.getElementById('cnj-progress-req');
   if (titleEl) titleEl.textContent = `Etapa ${safeStep} de 7`;
   if (descEl) descEl.textContent = STEP_LABELS[safeStep] || 'Preenchimento';
   if (pctEl) pctEl.textContent = `${Math.round((safeStep / 7) * 100)}%`;
+  if (reqEl) {
+    const pending = getStepValidationIssues(safeStep).length;
+    reqEl.textContent = pending ? `${pending} pendencia(s) obrigatoria(s)` : 'Pronto para avancar';
+    reqEl.classList.toggle('cnj-progress-req-warn', pending > 0);
+    reqEl.classList.toggle('cnj-progress-req-ok', pending === 0);
+  }
+}
+
+function getStepValidationIssues(step) {
+  const issues = [];
+  const currentStep = Number(step) || 1;
+
+  if (currentStep === 1) {
+    const cpf = (document.getElementById('cpf')?.value || '').replace(/\D/g, '');
+    const fullName = (document.getElementById('full_name')?.value || '').trim();
+    if (cpf.length !== 11) issues.push({ id: 'cpf', text: 'Informe um CPF valido.' });
+    if (fullName.length < 5) issues.push({ id: 'full_name', text: 'Informe o nome completo.' });
+  }
+
+  if (currentStep === 2) {
+    const situacao = document.getElementById('situacao_profissional')?.value || '';
+    const rendaFamiliar = parseBRL(document.getElementById('renda_familiar')?.value || '');
+    if (!situacao) issues.push({ id: 'situacao_profissional', text: 'Selecione a situacao profissional.' });
+    if (!rendaFamiliar) issues.push({ id: 'renda_familiar', text: 'Informe a renda familiar mensal.' });
+  }
+
+  if (currentStep === 5) {
+    const credores = Array.from(document.getElementById('credores-list')?.children || []);
+    if (!credores.length) {
+      issues.push({ id: 'credores-list', text: 'Adicione ao menos um credor para continuar.' });
+    } else {
+      credores.forEach(card => {
+        const idx = card.id.replace('credor-card-', '');
+        const nome = (document.getElementById(`cr_nome_${idx}`)?.value || '').trim();
+        const valor = parseBRL(document.getElementById(`cr_valor_${idx}`)?.value || '');
+        if (!nome) issues.push({ id: `cr_nome_${idx}`, text: 'Preencha o nome do credor.' });
+        if (!valor) issues.push({ id: `cr_valor_${idx}`, text: 'Preencha o saldo devedor declarado.' });
+      });
+    }
+  }
+
+  if (currentStep === 6) {
+    const prazo = +(document.getElementById('plano_prazo')?.value || 0);
+    const rendaDisp = parseBRL(document.getElementById('plano_renda_disp')?.value || '');
+    if (prazo < 1 || prazo > 60) issues.push({ id: 'plano_prazo', text: 'O prazo do plano deve estar entre 1 e 60 meses.' });
+    if (!rendaDisp) issues.push({ id: 'plano_renda_disp', text: 'Informe a renda disponivel para o plano.' });
+  }
+
+  if (currentStep === 7) {
+    REQUIRED_DOC_IDS.forEach(id => {
+      if (!document.getElementById(id)?.checked) {
+        issues.push({ id, text: 'Confirme os documentos obrigatorios.' });
+      }
+    });
+  }
+
+  return issues;
+}
+
+function clearStepValidationStyles() {
+  document.querySelectorAll('.field-invalid').forEach(el => el.classList.remove('field-invalid'));
+  document.querySelectorAll('.field-invalid-label').forEach(el => el.classList.remove('field-invalid-label'));
+  document.querySelectorAll('.field-invalid-ring').forEach(el => el.classList.remove('field-invalid-ring'));
+}
+
+function hideStepValidationBar() {
+  document.getElementById('step-validation-bar')?.classList.remove('show');
+}
+
+function showStepValidationBar(message) {
+  const bar = document.getElementById('step-validation-bar');
+  const text = document.getElementById('step-validation-text');
+  if (!bar || !text) return;
+  text.textContent = message;
+  bar.classList.add('show');
+}
+
+function validateStepRequired(step, { focusFirst = true, notify = false } = {}) {
+  const issues = getStepValidationIssues(step);
+  clearStepValidationStyles();
+
+  if (!issues.length) {
+    hideStepValidationBar();
+    updateProgressMeta(step);
+    return [];
+  }
+
+  issues.forEach(issue => {
+    const el = document.getElementById(issue.id);
+    if (!el) return;
+
+    if (el.classList.contains('form-control') || (el.matches('input, textarea, select') && el.type !== 'checkbox')) {
+      el.classList.add('field-invalid');
+    }
+
+    if (el.type === 'checkbox') {
+      el.closest('.toggle-label')?.classList.add('field-invalid-label');
+    }
+
+    if (issue.id.startsWith('cr_')) {
+      document.getElementById('credores-list')?.classList.add('field-invalid-ring');
+    }
+
+    if (issue.id === 'credores-list') {
+      el.classList.add('field-invalid-ring');
+    }
+  });
+
+  const message = issues.length === 1
+    ? issues[0].text
+    : `Existem ${issues.length} pendencias obrigatorias nesta etapa.`;
+
+  showStepValidationBar(message);
+  updateProgressMeta(step);
+
+  if (notify) showToast(message, 'warn');
+
+  if (focusFirst) {
+    const first = document.getElementById(issues[0].id);
+    if (first) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof first.focus === 'function') first.focus({ preventScroll: true });
+    }
+  }
+
+  return issues;
+}
+
+function clearValidationOnInteraction(target) {
+  if (!target) return;
+  target.classList?.remove('field-invalid');
+  if (target.type === 'checkbox') {
+    target.closest('.toggle-label')?.classList.remove('field-invalid-label');
+  }
+  if (String(target.id || '').startsWith('cr_')) {
+    document.getElementById('credores-list')?.classList.remove('field-invalid-ring');
+  }
 }
 
 async function doAutosave() {
@@ -1650,7 +1891,15 @@ async function doAutosave() {
 ════════════════════════════════════════════ */
 window.goStep = function(target) {
   target = Math.max(1, Math.min(7, Number(target) || 1));
+
+  if (target > _currentStep) {
+    const issues = validateStepRequired(_currentStep, { focusFirst: true, notify: true });
+    if (issues.length) return;
+  }
+
   scheduleAutosave();
+  hideStepValidationBar();
+  clearStepValidationStyles();
 
   for (let s = 1; s <= 7; s++) {
     const dot = document.getElementById('step-dot-'+s);
@@ -1692,6 +1941,9 @@ window.gerarPrevia = function() {
 ════════════════════════════════════════════ */
 window.finalizarCadastro = async function() {
   const btn = document.getElementById('btn-finalizar');
+  const issues = validateStepRequired(7, { focusFirst: true, notify: true });
+  if (issues.length) return;
+
   btn.disabled = true;
   btn.textContent = 'Enviando...';
 
@@ -1896,6 +2148,14 @@ window._cnjCalcCredor = _calcCredorFn;
 /* Autosave ao modificar campos */
 document.addEventListener('input',  scheduleAutosave);
 document.addEventListener('change', scheduleAutosave);
+document.addEventListener('input', event => {
+  clearValidationOnInteraction(event.target);
+  updateProgressMeta(_currentStep);
+});
+document.addEventListener('change', event => {
+  clearValidationOnInteraction(event.target);
+  updateProgressMeta(_currentStep);
+});
 updateProgressMeta(1);
 </script>
 </body>
