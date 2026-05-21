@@ -11,6 +11,10 @@ export class ShellAnalytics {
       bus.on('shell.ready', detail => this.track('shell.ready', detail)),
       bus.on('tenant.changed', detail => this.track('tenant.changed', detail)),
       bus.on('auth.changed', detail => this.track('auth.changed', detail)),
+      bus.on('shell.runtime.selected', detail => this.track('shell.runtime.selected', detail)),
+      bus.on('shell.runtime.boot.success', detail => this.track('shell.runtime.boot.success', detail)),
+      bus.on('shell.runtime.boot.failure', detail => this.track('shell.runtime.boot.failure', detail)),
+      bus.on('shell.runtime.fallback', detail => this.track('shell.runtime.fallback', detail)),
     ];
     return this;
   }

@@ -54,15 +54,8 @@ export class AuthenticatedShell {
     loadingLayer.start();
 
     try {
-      await shellProviders.init();
+      const { auth: authDetail } = await shellProviders.init();
       await this._loadComponents();
-
-      const authDetail = store.get('auth')?.user
-        ? {
-            user: store.get('auth').user,
-            isAdmin: !!store.get('auth').isAdmin,
-          }
-        : null;
 
       if (!authDetail) {
         const page = this._getCurrentPage();

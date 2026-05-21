@@ -5,10 +5,13 @@ import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';
 import { bus }                       from '../modules/events/EventBus.js';
+import { authenticatedShell }        from '../shell/AuthenticatedShell.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
 const PUBLIC_PAGES = ['login', 'auth-callback'];
+const SHELL_RUNTIME_KEY = 'portal:shell-runtime';
+const ENTERPRISE_ROLLOUT_PERCENT_KEY = 'portal:enterprise-rollout-percent';
 const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
@@ -1136,9 +1139,108 @@ function initModalClose() {
   });
 }
 
-/* ── Init ────────────────────────────────────────── */
-async function init() {
-  captureModuleListeners = false;
+function getPreferredShellRuntime() {
+  let queryRuntime = null;
+  try {
+    queryRuntime = new URL(window.location.href).searchParams.get('_shell');
+  } catch (_) {}
+
+  if (queryRuntime === 'legacy' || queryRuntime === 'enterprise') {
+    try { localStorage.setItem(SHELL_RUNTIME_KEY, queryRuntime); } catch (_) {}
+    return queryRuntime;
+  }
+
+  try {
+    const storedRuntime = localStorage.getItem(SHELL_RUNTIME_KEY);
+    if (storedRuntime === 'legacy' || storedRuntime === 'enterprise') return storedRuntime;
+  } catch (_) {}
+
+  if (window.__ENABLE_ENTERPRISE_SHELL === true) return 'enterprise';
+
+  const rolloutPercent = getEnterpriseRolloutPercent();
+  if (rolloutPercent > 0 && isEnterpriseCohortUser(rolloutPercent)) {
+    return 'enterprise';
+  }
+
+  return 'legacy';
+}
+
+function getEnterpriseRolloutPercent() {
+  const globalPercent = Number(window.__ENTERPRISE_SHELL_ROLLOUT_PERCENT);
+  if (Number.isFinite(globalPercent) && globalPercent >= 0 && globalPercent <= 100) {
+    return globalPercent;
+  }
+
+  try {
+    const storedPercent = Number(localStorage.getItem(ENTERPRISE_ROLLOUT_PERCENT_KEY));
+    if (Number.isFinite(storedPercent) && storedPercent >= 0 && storedPercent <= 100) {
+      return storedPercent;
+    }
+  } catch (_) {}
+
+  return 0;
+}
+
+function getRolloutIdentity() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem('portal:user') || 'null');
+    const user = cached?.user;
+    return user?.id || user?.email || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function stableHash(input = '') {
+  let hash = 0;
+  const value = String(input || 'anonymous');
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function isEnterpriseCohortUser(percent) {
+  const identity = getRolloutIdentity();
+  const bucket = stableHash(identity) % 100;
+  return bucket < percent;
+}
+
+function shouldUseEnterpriseShell() {
+  if (!window.location.pathname.includes('/pages/')) return false;
+  const currentPage = getCurrentPage();
+  if (PUBLIC_PAGES.includes(currentPage)) return false;
+  return getPreferredShellRuntime() === 'enterprise';
+}
+
+async function bootEnterpriseShell() {
+  const startedAt = performance.now();
+  const rolloutPercent = getEnterpriseRolloutPercent();
+  bus.emit('shell.runtime.selected', {
+    runtime: 'enterprise',
+    version: SHELL_VERSION,
+    rolloutPercent,
+    selectedBy: getPreferredShellRuntime(),
+  });
+  await authenticatedShell.boot();
+
+  const durationMs = Math.round(performance.now() - startedAt);
+  window.__shellRuntime = {
+    runtime: 'enterprise',
+    version: SHELL_VERSION,
+    durationMs,
+    ts: Date.now(),
+  };
+  bus.emit('shell.runtime.boot.success', {
+    runtime: 'enterprise',
+    version: SHELL_VERSION,
+    durationMs,
+  });
+}
+
+async function bootLegacyShell() {
+  const startedAt = performance.now();
 
   const allowed = await guardAuth();
   if (!allowed) return;
@@ -1168,6 +1270,49 @@ async function init() {
 
   // Reveal only when shell, sidebar and page content are valid.
   revealAppWhenReady();
+
+  const durationMs = Math.round(performance.now() - startedAt);
+  window.__shellRuntime = {
+    runtime: 'legacy',
+    version: SHELL_VERSION,
+    durationMs,
+    ts: Date.now(),
+  };
+  bus.emit('shell.runtime.boot.success', {
+    runtime: 'legacy',
+    version: SHELL_VERSION,
+    durationMs,
+  });
+}
+
+/* ── Init ────────────────────────────────────────── */
+async function init() {
+  captureModuleListeners = false;
+
+  if (shouldUseEnterpriseShell()) {
+    try {
+      await bootEnterpriseShell();
+      return;
+    } catch (error) {
+      console.error('[APP] Enterprise shell boot failed; fallback to legacy runtime', error);
+      try {
+        localStorage.setItem(SHELL_RUNTIME_KEY, 'legacy');
+      } catch (_) {}
+
+      bus.emit('shell.runtime.boot.failure', {
+        runtime: 'enterprise',
+        version: SHELL_VERSION,
+        message: error?.message || String(error || 'unknown error'),
+      });
+      bus.emit('shell.runtime.fallback', {
+        from: 'enterprise',
+        to: 'legacy',
+        version: SHELL_VERSION,
+      });
+    }
+  }
+
+  await bootLegacyShell();
 }
 
 nativeDocumentAddEventListener('DOMContentLoaded', init);
