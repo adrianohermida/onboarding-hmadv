@@ -8,9 +8,10 @@
  * - Feature flag gating
  * - Lazy loading
  */
-import { PORTAL_MODULES, FEATURE_FLAGS } from '../../js/navigation.js';
+import { PORTAL_MODULES } from '../../js/navigation.js';
 import { store }          from '../state/ShellStore.js';
 import { tenantProvider } from '../tenant/TenantProvider.js';
+import { moduleLoader }   from '../module-loader/ModuleLoader.js';
 
 export class ModuleRegistry {
   constructor() {
@@ -22,20 +23,34 @@ export class ModuleRegistry {
   init() {
     // Seed from navigation.js PORTAL_MODULES (backwards compat)
     PORTAL_MODULES.forEach(m => this.register(m));
+    this.refreshFromManifests();
     this._loaded = true;
+    return this;
+  }
+
+  async refreshFromManifests() {
+    try {
+      const manifests = await moduleLoader.loadAllManifests();
+      manifests.forEach(manifest => this.register(manifest));
+    } catch (_) {}
     return this;
   }
 
   // ── Register ──────────────────────────────────────────────────────────────
   register(manifest) {
-    if (!manifest?.key) throw new Error('[ModuleRegistry] manifest.key required');
-    this._modules.set(manifest.key, {
-      key:        manifest.key,
-      title:      manifest.title       || manifest.key,
-      menuLabel:  manifest.menuLabel   || manifest.title,
-      route:      manifest.route       || `/pages/${manifest.key}.html`,
+    const key = manifest?.key || manifest?.module;
+    if (!key) throw new Error('[ModuleRegistry] manifest.key required');
+
+    const normalizedRoles = (manifest.roles || manifest.permissions || ['cliente', 'admin'])
+      .map(role => role === 'client' ? 'cliente' : role);
+
+    this._modules.set(key, {
+      key,
+      title:      manifest.title       || key,
+      menuLabel:  manifest.menuLabel   || manifest.title || key,
+      route:      manifest.route       || `/pages/${key}.html`,
       icon:       manifest.icon        || 'file',
-      roles:      manifest.roles       || ['cliente', 'admin'],
+      roles:      normalizedRoles,
       feature:    manifest.feature     || null,
       visible:    manifest.visible     !== false,
       lazy:       manifest.lazy        !== false,
@@ -49,6 +64,16 @@ export class ModuleRegistry {
   getAll() { return [...this._modules.values()]; }
 
   get(key) { return this._modules.get(key) || null; }
+
+  getByRoute(routeOrUrl = '') {
+    try {
+      const url = new URL(routeOrUrl, window.location.href);
+      const path = url.pathname;
+      return this.getAll().find(module => module.route === path || module.route === url.pathname) || null;
+    } catch (_) {
+      return this.getAll().find(module => module.route === routeOrUrl) || null;
+    }
+  }
 
   getForRole(role = 'cliente') {
     const flags  = tenantProvider.getFeatureFlags();
@@ -73,6 +98,12 @@ export class ModuleRegistry {
     const flags = tenantProvider.getFeatureFlags();
     if (mod.feature && !flags[mod.feature]) return false;
     return true;
+  }
+
+  async preload(key) {
+    const module = this.get(key);
+    if (!module) return false;
+    return moduleLoader.preload(module);
   }
 }
 

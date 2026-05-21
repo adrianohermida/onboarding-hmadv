@@ -18,13 +18,18 @@
  */
 import { store }               from './state/ShellStore.js';
 import { authProvider }        from './auth/AuthProvider.js';
-import { tenantProvider }      from './tenant/TenantProvider.js';
 import { moduleRegistry }      from './module-registry/ModuleRegistry.js';
 import { globalModal }         from './modals/GlobalModalRoot.js';
 import { globalSlideover }     from './slideovers/SlideoverRoot.js';
 import { notificationCenter }  from './notifications/NotificationCenter.js';
 import { loadingLayer }        from './layout/GlobalLoadingLayer.js';
+import { globalErrorBoundary } from './layout/GlobalErrorBoundary.js';
+import { SuspenseBoundary }    from './layout/SuspenseBoundary.js';
 import { obs }                 from './observability/Observability.js';
+import { shellProviders }      from './providers/ShellProviders.js';
+import { routeGuards }         from './guards/RouteGuards.js';
+import { responsiveService }   from './responsive/ResponsiveService.js';
+import { shellAnalytics }      from './analytics/ShellAnalytics.js';
 import { bus }                 from '../modules/events/EventBus.js';
 
 export class AuthenticatedShell {
@@ -34,6 +39,7 @@ export class AuthenticatedShell {
       componentBase:opts.componentBase || (window.location.pathname.includes('/pages/') ? '../' : './'),
     };
     this._booted = false;
+    this._suspenseBoundary = null;
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
@@ -42,14 +48,21 @@ export class AuthenticatedShell {
     this._booted = true;
 
     obs.init();
+    globalErrorBoundary.mount();
+    shellAnalytics.init();
     loadingLayer.mount();
     loadingLayer.start();
 
     try {
-      await tenantProvider.init();
+      await shellProviders.init();
       await this._loadComponents();
 
-      const authDetail = await authProvider.init();
+      const authDetail = store.get('auth')?.user
+        ? {
+            user: store.get('auth').user,
+            isAdmin: !!store.get('auth').isAdmin,
+          }
+        : null;
 
       if (!authDetail) {
         const page = this._getCurrentPage();
@@ -68,6 +81,7 @@ export class AuthenticatedShell {
 
       // Sidebar collapse state
       this._initSidebar();
+      responsiveService.bind();
 
       // Shell navigation (intercept clicks, history)
       this._bindShellNavigation();
@@ -190,8 +204,21 @@ export class AuthenticatedShell {
   }
 
   async _navigate(url, pushState = true) {
+    if (!routeGuards.canAccessRoute(url)) {
+      obs.authFailure('route_access_denied');
+      return;
+    }
+
+    const module = moduleRegistry.getByRoute(url);
+    if (module?.lazy) {
+      await moduleRegistry.preload(module.key);
+    }
+
     obs.routeStart(url);
+    store.setRouteLoading(true);
     loadingLayer.start();
+    this._suspenseBoundary = this._suspenseBoundary || new SuspenseBoundary(document.querySelector('.portal-shell'));
+    this._suspenseBoundary.show();
 
     try {
       const fetchUrl = new URL(url, window.location.href);
@@ -246,6 +273,7 @@ export class AuthenticatedShell {
       store.setCurrentRoute(url);
       obs.routeEnd(url);
       loadingLayer.finish();
+      this._suspenseBoundary?.hide();
 
       if (store.get('auth')) {
         document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: store.get('auth') }));
@@ -256,7 +284,10 @@ export class AuthenticatedShell {
     } catch (err) {
       obs.error('Navigation failed', { url, err: String(err) });
       loadingLayer.error();
+      this._suspenseBoundary?.hide();
       window.location.href = url;
+    } finally {
+      store.setRouteLoading(false);
     }
   }
 

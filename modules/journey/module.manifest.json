@@ -1,0 +1,12 @@
+{
+  "module": "onboarding-v2",
+  "title": "Jornada",
+  "menuLabel": "Jornada",
+  "route": "/pages/onboarding-v2.html",
+  "permissions": ["client", "admin"],
+  "roles": ["cliente", "admin"],
+  "icon": "Compass",
+  "lazy": true,
+  "order": 2,
+  "feature": "onboardingV2"
+}

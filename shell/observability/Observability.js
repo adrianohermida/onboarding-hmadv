@@ -57,6 +57,7 @@ export class Observability {
 
   // ── Errors ──────────────────────────────────────────────────────────────────
   error(message, context = {}) { this._log('error', { message, ...context }, 'error'); }
+  log(event, data = {}, level = 'info') { this._log(event, data, level); }
 
   // ── Internal ─────────────────────────────────────────────────────────────────
   _log(event, data = {}, level = 'info') {

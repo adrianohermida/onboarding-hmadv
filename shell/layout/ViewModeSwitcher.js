@@ -26,7 +26,7 @@ export class ViewModeSwitcher {
    */
   constructor(container, opts = {}) {
     this._container = container;
-    this._modes     = opts.modes || ['cliente', 'admin'];
+    this._modes     = opts.modes || ['cliente', 'advogado', 'admin'];
     this._onChange  = opts.onChange || null;
     this._el        = null;
   }

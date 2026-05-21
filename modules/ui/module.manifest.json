@@ -1,0 +1,12 @@
+{
+  "module": "suporte",
+  "title": "Suporte",
+  "menuLabel": "Suporte",
+  "route": "/pages/suporte.html",
+  "permissions": ["client", "admin"],
+  "roles": ["cliente", "admin"],
+  "icon": "LifeBuoy",
+  "lazy": true,
+  "order": 6,
+  "feature": "suporte"
+}

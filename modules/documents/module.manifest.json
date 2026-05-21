@@ -1,0 +1,12 @@
+{
+  "module": "documentos",
+  "title": "Documentos",
+  "menuLabel": "Documentos",
+  "route": "/pages/documentos.html",
+  "permissions": ["client", "admin"],
+  "roles": ["cliente", "admin"],
+  "icon": "FileText",
+  "lazy": true,
+  "order": 4,
+  "feature": "documentos"
+}

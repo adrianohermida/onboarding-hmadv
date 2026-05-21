@@ -55,6 +55,7 @@ export class TenantProvider {
     });
 
     bus.emit('tenant.ready', { tenant: this._config });
+    bus.emit('tenant.changed', { tenant: this._config });
     return this._config;
   }
 

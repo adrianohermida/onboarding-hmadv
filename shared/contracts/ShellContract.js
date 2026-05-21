@@ -13,9 +13,8 @@ import { globalModal }       from '../../shell/modals/GlobalModalRoot.js';
 import { globalSlideover }   from '../../shell/slideovers/SlideoverRoot.js';
 import { store }             from '../../shell/state/ShellStore.js';
 import { loadingLayer }      from '../../shell/layout/GlobalLoadingLayer.js';
-import { notificationCenter } from '../../shell/notifications/NotificationCenter.js';
 import { obs }               from '../../shell/observability/Observability.js';
-import { bus }               from '../../modules/events/EventBus.js';
+import { shellEventHub }     from '../../shell/events/ShellEventHub.js';
 
 // ── Modal API ──────────────────────────────────────────────────────────────────
 export const modal = {
@@ -54,14 +53,14 @@ export const notify = {
 
 // ── Events API ─────────────────────────────────────────────────────────────────
 export const events = {
-  emit: (name, data)    => bus.emit(name, data),
-  on:   (name, handler) => bus.on(name, handler),
-  off:  (name, handler) => bus.off(name, handler),
+  emit: (name, data)    => shellEventHub.emit(name, data),
+  on:   (name, handler) => shellEventHub.on(name, handler),
+  off:  (name, handler) => shellEventHub.off(name, handler),
 };
 
 // ── Observability API ──────────────────────────────────────────────────────────
 export const telemetry = {
-  log:   (event, data)  => obs._log(event, data),
+  log:   (event, data, level)  => obs.log(event, data, level),
   error: (msg, ctx)     => obs.error(msg, ctx),
 };
 

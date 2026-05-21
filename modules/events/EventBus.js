@@ -14,6 +14,11 @@
  *   minimum.existential.updated { value, nDeps }
  */
 export class EventBus extends EventTarget {
+  constructor() {
+    super();
+    this._listenerMap = new Map();
+  }
+
   /** Emite evento com payload */
   emit(event, detail = {}) {
     this.dispatchEvent(new CustomEvent(event, { detail, bubbles: false }));
@@ -22,8 +27,19 @@ export class EventBus extends EventTarget {
   /** Assina evento. Retorna função de unsubscribe. */
   on(event, handler) {
     const wrapper = (e) => handler(e.detail, e);
+    const eventMap = this._listenerMap.get(event) || new WeakMap();
+    eventMap.set(handler, wrapper);
+    this._listenerMap.set(event, eventMap);
     this.addEventListener(event, wrapper);
     return () => this.removeEventListener(event, wrapper);
+  }
+
+  /** Remove listener registered by handler reference */
+  off(event, handler) {
+    const eventMap = this._listenerMap.get(event);
+    const wrapper = eventMap?.get(handler) || handler;
+    this.removeEventListener(event, wrapper);
+    eventMap?.delete(handler);
   }
 
   /** Assina uma única vez */
