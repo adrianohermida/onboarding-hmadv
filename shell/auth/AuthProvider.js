@@ -16,6 +16,7 @@ import { checkIsAdmin, CaseService } from '../../services/database.js';
 export class AuthProvider {
   constructor() {
     this._unsubscribe = null;
+    this._impersonation = null;
   }
 
   // ── Boot ───────────────────────────────────────────────────────────────────
@@ -29,10 +30,17 @@ export class AuthProvider {
     }
 
     // 2. Verify with Supabase (fresh token check)
+    const detail = await this._hydrateFromSupabase();
+    this._bindAuthStateListener();
+    return detail;
+  }
+
+  async _hydrateFromSupabase(event = 'INIT') {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         store.setAuth({ user: null, isAdmin: false });
+        bus.emit('auth.changed', { user: null, isAdmin: false, event });
         bus.emit('auth.unauthenticated', {});
         return null;
       }
@@ -50,7 +58,7 @@ export class AuthProvider {
       if (isAdmin) store.setViewMode('admin');
 
       this._writeCache(detail);
-      bus.emit('auth.changed', detail);
+      bus.emit('auth.changed', { ...detail, event });
       bus.emit('auth.ready',   detail);
 
       document.dispatchEvent(new CustomEvent('app:user-loaded', { detail }));
@@ -61,6 +69,31 @@ export class AuthProvider {
       bus.emit('auth.error', { err });
       return null;
     }
+  }
+
+  _bindAuthStateListener() {
+    if (this._unsubscribe) return;
+
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        store.setAuth({ user: null, isAdmin: false });
+        sessionStorage.removeItem('portal:user');
+        bus.emit('auth.changed', { user: null, isAdmin: false, event });
+        bus.emit('auth.unauthenticated', { event });
+        return;
+      }
+
+      await this._hydrateFromSupabase(event);
+
+      if (event === 'TOKEN_REFRESHED') {
+        bus.emit('auth.token.refreshed', { ts: Date.now() });
+      }
+    });
+
+    const subscription = data?.subscription;
+    this._unsubscribe = typeof subscription?.unsubscribe === 'function'
+      ? () => subscription.unsubscribe()
+      : null;
   }
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -93,6 +126,40 @@ export class AuthProvider {
         ? 'login.html'
         : 'pages/login.html';
     }
+  }
+
+  async refreshSession() {
+    const { error } = await supabase.auth.refreshSession();
+    if (error) {
+      bus.emit('auth.refresh.failed', { message: error.message || String(error) });
+      return false;
+    }
+    return true;
+  }
+
+  beginImpersonation(targetUserId, meta = {}) {
+    this._impersonation = {
+      active: true,
+      targetUserId,
+      meta,
+      startedAt: Date.now(),
+    };
+    bus.emit('auth.impersonation.started', { ...this._impersonation });
+    return this._impersonation;
+  }
+
+  endImpersonation() {
+    if (!this._impersonation?.active) return;
+    const ended = { ...this._impersonation, endedAt: Date.now() };
+    this._impersonation = null;
+    bus.emit('auth.impersonation.ended', ended);
+  }
+
+  destroy() {
+    if (typeof this._unsubscribe === 'function') {
+      this._unsubscribe();
+    }
+    this._unsubscribe = null;
   }
 
   // ── Session cache ──────────────────────────────────────────────────────────
