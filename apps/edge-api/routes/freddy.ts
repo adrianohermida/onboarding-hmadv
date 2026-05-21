@@ -11,10 +11,10 @@ function makeContext(request: Request, env: Env) {
 }
 
 const FREDDY_ROUTES: Record<string, string> = {
-  '/api/freddy-get-contact-360': '../../../../functions/api/freddy-get-contact-360.js',
-  '/api/freddy-save-memory':     '../../../../functions/api/freddy-save-memory.js',
-  '/api/freddy-save-outcome':    '../../../../functions/api/freddy-save-outcome.js',
-  '/api/freddy-search-memory':   '../../../../functions/api/freddy-search-memory.js',
+  '/api/freddy-get-contact-360': '../../../functions/api/freddy-get-contact-360.js',
+  '/api/freddy-save-memory':     '../../../functions/api/freddy-save-memory.js',
+  '/api/freddy-save-outcome':    '../../../functions/api/freddy-save-outcome.js',
+  '/api/freddy-search-memory':   '../../../functions/api/freddy-search-memory.js',
 };
 
 export async function handleFreddy(

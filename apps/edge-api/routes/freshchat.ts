@@ -19,13 +19,13 @@ export async function handleFreshchat(
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
 
   if (pathname === '/api/freshchat-jwt') {
-    const { onRequestPost } = await import('../../../../functions/api/freshchat-jwt.js');
+    const { onRequestPost } = await import('../../../functions/api/freshchat-jwt.js');
     if (method !== 'POST') return methodNotAllowed(method);
     return onRequestPost(makeContext(request, env));
   }
 
   if (pathname === '/api/freshchat-widget-event') {
-    const { onRequestPost } = await import('../../../../functions/api/freshchat-widget-event.js');
+    const { onRequestPost } = await import('../../../functions/api/freshchat-widget-event.js');
     if (method !== 'POST') return methodNotAllowed(method);
     return onRequestPost(makeContext(request, env));
   }

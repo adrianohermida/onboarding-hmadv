@@ -280,6 +280,9 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Keep sprint module backup directories (lowercase — distinct from VS build artifacts)
+!platform-os/backup/
+!platform-os/recovery/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

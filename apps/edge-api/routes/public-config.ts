@@ -28,7 +28,7 @@ export async function handlePublicConfig(
   // ── GET /api/public-chat-config ──────────────────────────────────────────
   if (pathname === '/api/public-chat-config') {
     try {
-      const { onRequestGet } = await import('../../../../functions/api/public-chat-config.js');
+      const { onRequestGet } = await import('../../../functions/api/public-chat-config.js');
       return onRequestGet(makeContext(request, env));
     } catch (err: any) {
       return jsonError(err?.message || 'Falha ao montar configuração pública do Freshchat.', 500);

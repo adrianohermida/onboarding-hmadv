@@ -21,6 +21,6 @@ export async function handleFreshdesk(request: Request, env: Env): Promise<Respo
   if (!env.FRESHDESK_BASIC_TOKEN) missing.push('FRESHDESK_BASIC_TOKEN');
   if (missing.length) return missingEnvResponse(missing, '/api/freshdesk-ticket');
 
-  const { onRequestPost } = await import('../../../../functions/api/freshdesk-ticket.js');
+  const { onRequestPost } = await import('../../../functions/api/freshdesk-ticket.js');
   return onRequestPost(makeContext(request, env));
 }

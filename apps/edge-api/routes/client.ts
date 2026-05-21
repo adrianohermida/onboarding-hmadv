@@ -12,16 +12,16 @@ function makeContext(request: Request, env: Env) {
 }
 
 const CLIENT_ROUTES: Record<string, string> = {
-  '/api/client-consultas':    '../../../../functions/api/client-consultas.js',
-  '/api/client-documentos':   '../../../../functions/api/client-documentos.js',
-  '/api/client-financeiro':   '../../../../functions/api/client-financeiro.js',
-  '/api/client-jobs':         '../../../../functions/api/client-jobs.js',
-  '/api/client-processo':     '../../../../functions/api/client-processo.js',
-  '/api/client-processos':    '../../../../functions/api/client-processos.js',
-  '/api/client-profile':      '../../../../functions/api/client-profile.js',
-  '/api/client-publicacoes':  '../../../../functions/api/client-publicacoes.js',
-  '/api/client-summary':      '../../../../functions/api/client-summary.js',
-  '/api/client-tickets':      '../../../../functions/api/client-tickets.js',
+  '/api/client-consultas':    '../../../functions/api/client-consultas.js',
+  '/api/client-documentos':   '../../../functions/api/client-documentos.js',
+  '/api/client-financeiro':   '../../../functions/api/client-financeiro.js',
+  '/api/client-jobs':         '../../../functions/api/client-jobs.js',
+  '/api/client-processo':     '../../../functions/api/client-processo.js',
+  '/api/client-processos':    '../../../functions/api/client-processos.js',
+  '/api/client-profile':      '../../../functions/api/client-profile.js',
+  '/api/client-publicacoes':  '../../../functions/api/client-publicacoes.js',
+  '/api/client-summary':      '../../../functions/api/client-summary.js',
+  '/api/client-tickets':      '../../../functions/api/client-tickets.js',
 };
 
 export async function handleClient(

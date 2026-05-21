@@ -19,7 +19,7 @@ export async function handleFreshsales(
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
 
   if (pathname === '/api/freshsales-fields-catalog') {
-    const mod = await import('../../../../functions/api/freshsales-fields-catalog.js');
+    const mod = await import('../../../functions/api/freshsales-fields-catalog.js');
     const ctx = makeContext(request, env);
     if (method === 'GET' && mod.onRequestGet) return mod.onRequestGet(ctx);
     if (mod.onRequest) return mod.onRequest(ctx);
@@ -27,7 +27,7 @@ export async function handleFreshsales(
   }
 
   if (pathname === '/api/admin-freshsales-catalog') {
-    const mod = await import('../../../../functions/api/admin-freshsales-catalog.js');
+    const mod = await import('../../../functions/api/admin-freshsales-catalog.js');
     const ctx = makeContext(request, env);
     if (method === 'GET' && mod.onRequestGet) return mod.onRequestGet(ctx);
     if (mod.onRequest) return mod.onRequest(ctx);
@@ -35,7 +35,7 @@ export async function handleFreshsales(
   }
 
   if (pathname === '/api/admin-freshsales-deal-fields') {
-    const mod = await import('../../../../functions/api/admin-freshsales-deal-fields.js');
+    const mod = await import('../../../functions/api/admin-freshsales-deal-fields.js');
     const ctx = makeContext(request, env);
     if (method === 'GET' && mod.onRequestGet) return mod.onRequestGet(ctx);
     if (mod.onRequest) return mod.onRequest(ctx);

@@ -15,6 +15,6 @@ export async function handleSlack(request: Request, env: Env): Promise<Response>
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
   if (method !== 'POST') return methodNotAllowed(method);
 
-  const { onRequestPost } = await import('../../../../functions/api/slack-events.js');
+  const { onRequestPost } = await import('../../../functions/api/slack-events.js');
   return onRequestPost(makeContext(request, env));
 }
