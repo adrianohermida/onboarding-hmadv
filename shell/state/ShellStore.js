@@ -11,6 +11,7 @@
  *   modals    : { stack: [] }
  *   slideovers: { stack: [] }
  *   notifications: { items: [], unreadCount: 0 }
+ *   billing   : { subscription, usage, quotas, entitlements, cost, economics }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -35,6 +36,14 @@ const _initialState = () => ({
   modals:    { stack: [] },
   slideovers:{ stack: [] },
   notifications: { items: [], unreadCount: 0 },
+  billing: {
+    subscription: null,
+    usage: {},
+    quotas: {},
+    entitlements: null,
+    cost: null,
+    economics: null,
+  },
   route: { current: null, previous: null, loading: false },
   viewMode: 'cliente',
 });
@@ -121,6 +130,20 @@ class ShellStore extends EventTarget {
   markNotificationsRead() {
     const items = this._state.notifications.items.map(n => ({ ...n, read: true }));
     this._set('notifications', { items, unreadCount: 0 });
+  }
+
+  // ── Billing ─────────────────────────────────────────────────────────────────
+  setBillingSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('billing', {
+      subscription: snapshot.subscription || null,
+      usage: snapshot.usage || {},
+      quotas: snapshot.quotas || {},
+      entitlements: snapshot.entitlements || null,
+      cost: snapshot.cost || null,
+      economics: snapshot.economics || null,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
   }
 
   // ── Subscribe ────────────────────────────────────────────────────────────────

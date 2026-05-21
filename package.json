@@ -10,7 +10,10 @@
     "bootstrap:dev": "node platform/scripts/bootstrap-dev.mjs",
     "validate:env": "node platform/scripts/validate-platform-governance.mjs",
     "validate:platform": "node platform/scripts/validate-platform-governance.mjs",
-    "diagnostics:platform": "node platform/scripts/diagnostics.mjs"
+    "diagnostics:platform": "node platform/scripts/diagnostics.mjs",
+    "validate:events": "node platform/scripts/validate-events-foundation.mjs",
+    "validate:data-governance": "node platform/scripts/validate-data-governance-foundation.mjs",
+    "validate:finops": "node platform/scripts/validate-finops-foundation.mjs"
   },
   "repository": {
     "type": "git",

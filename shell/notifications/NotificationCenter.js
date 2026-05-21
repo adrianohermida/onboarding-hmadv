@@ -74,10 +74,22 @@ export class NotificationCenter {
     evt('document.approved',   '✓', d => `Documento aprovado`);
     evt('document.rejected',   '✗', d => `Documento rejeitado — verifique o motivo`);
     evt('document.created',    '↑', d => `Documento enviado com sucesso`);
+    evt('document.uploaded',   '↑', d => `Upload de documento recebido`);
     evt('signature.requested', '✍', d => `Assinatura solicitada`);
     evt('signature.completed', '✓', d => `Documento assinado`);
     evt('debt.created',        '+', d => `Nova dívida cadastrada`);
     evt('debt.updated',        '~', d => `Dívida atualizada`);
+    evt('onboarding.completed','✓', d => `Onboarding concluido`);
+
+    bus.on('notification.created', data => {
+      const message = data?.message || 'Nova notificacao';
+      store.addNotification({
+        type: 'notification.created',
+        icon: data?.icon || '•',
+        message,
+        ts: new Date().toISOString(),
+      });
+    });
   }
 
   // ── Panel ──────────────────────────────────────────────────────────────────

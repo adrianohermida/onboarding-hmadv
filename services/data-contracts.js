@@ -1,13 +1,10 @@
-function toNumber(value, fallback = 0) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
+import { toFiniteNumber } from '../data-governance/normalizers/CommonNormalizers.js';
 
 export function normalizeCaseData(caso) {
   if (!caso) return null;
-  const rendaMensal = toNumber(caso.renda_mensal ?? caso.renda, 0);
-  const rendaFamiliar = toNumber(caso.renda_familiar, 0);
-  const numeroDependentes = toNumber(caso.numero_dependentes ?? caso.n_dependentes, 0);
+  const rendaMensal = toFiniteNumber(caso.renda_mensal ?? caso.renda, 0);
+  const rendaFamiliar = toFiniteNumber(caso.renda_familiar, 0);
+  const numeroDependentes = toFiniteNumber(caso.numero_dependentes ?? caso.n_dependentes, 0);
   const despesasJson = caso.despesas_json ?? caso.despesas ?? {};
 
   return {
@@ -34,13 +31,13 @@ function normalizeAdminClientRow(row) {
     fase: row.fase || 'cadastro',
     onboarding_done: !!row.onboarding_done,
     cnj_step_atual: row.cnj_step_atual ?? null,
-    n_credores: toNumber(row.n_credores, 0),
+    n_credores: toFiniteNumber(row.n_credores, 0),
     fd_ticket_id: row.fd_ticket_id || null,
     workspace_id: row.workspace_id || null,
     workspace_slug: row.workspace_slug || null,
-    total_dividas: toNumber(row.total_dividas, 0),
-    docs_aprovados: toNumber(row.docs_aprovados, 0),
-    docs_pendentes: toNumber(row.docs_pendentes, 0),
+    total_dividas: toFiniteNumber(row.total_dividas, 0),
+    docs_aprovados: toFiniteNumber(row.docs_aprovados, 0),
+    docs_pendentes: toFiniteNumber(row.docs_pendentes, 0),
     created_at: row.created_at || null,
   };
 }

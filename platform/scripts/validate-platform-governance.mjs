@@ -11,6 +11,7 @@ const checks = [
   ['design system accessibility foundation', 'design-system/accessibility/accessibility-foundation.md'],
   ['design system component ownership doc', 'docs/design-system/component-ownership.md'],
   ['design system shell governance', 'governance/design/shell-visual-governance.md'],
+  ['finops governance', 'governance/finops/finops-governance.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
@@ -24,7 +25,15 @@ if (missing.length) {
 }
 
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
-const requiredScripts = ['bootstrap:dev', 'validate:env', 'validate:platform', 'diagnostics:platform'];
+const requiredScripts = [
+  'bootstrap:dev',
+  'validate:env',
+  'validate:platform',
+  'diagnostics:platform',
+  'validate:events',
+  'validate:data-governance',
+  'validate:finops'
+];
 const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
 if (missingScripts.length) {
   console.error('validate:platform failed. Missing package scripts:');

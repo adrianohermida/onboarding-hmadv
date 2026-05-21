@@ -26,6 +26,8 @@ import { notificationCenter }  from './notifications/NotificationCenter.js';
 import { loadingLayer }        from './layout/GlobalLoadingLayer.js';
 import { obs }                 from './observability/Observability.js';
 import { bus }                 from '../modules/events/EventBus.js';
+import { mountEventOrchestration } from '../events/orchestrators/bootstrap.js';
+import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -60,6 +62,8 @@ export class AuthenticatedShell {
       }
 
       moduleRegistry.init();
+      mountEventOrchestration();
+      mountBillingShellIntegration();
 
       // Mount shell subsystems
       globalModal.mount();

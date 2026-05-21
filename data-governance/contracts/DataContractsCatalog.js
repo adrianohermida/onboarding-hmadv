@@ -1,0 +1,16 @@
+export const DataContractsCatalog = {
+  api: 'shared/contracts/api/ApiContracts.js',
+  apiErrors: 'shared/contracts/api/ErrorContracts.js',
+  apiStandardization: 'shared/contracts/api/StandardizationContracts.js',
+  events: 'shared/contracts/events/EventContracts.js',
+  entities: 'shared/contracts/entities/EntityContracts.js',
+  forms: 'shared/contracts/forms/FormContracts.js',
+  formsOnboarding: 'shared/contracts/forms/OnboardingFormContracts.js',
+  formsDebtFinancialDocument: 'shared/contracts/forms/DebtFormContracts.js',
+  uploads: 'shared/contracts/uploads/UploadContracts.js',
+  notifications: 'shared/contracts/notifications/NotificationContracts.js',
+  financial: 'shared/contracts/financial/FinancialContracts.js',
+  billing: 'shared/contracts/billing/BillingContracts.js',
+  documents: 'shared/contracts/documents/DocumentsContracts.js',
+  security: 'shared/contracts/security/SecurityContracts.js',
+};

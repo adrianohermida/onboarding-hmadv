@@ -77,5 +77,14 @@ export const shellStore = {
   subscribe: (slice, handler) => store.subscribe(slice, handler),
 };
 
+// ── Billing API (read-only for modules) ──────────────────────────────────────
+export const billing = {
+  getSnapshot: () => store.get('billing') || {},
+  getUsage: () => store.get('billing')?.usage || {},
+  getQuotas: () => store.get('billing')?.quotas || {},
+  getSubscription: () => store.get('billing')?.subscription || null,
+  isFeatureEnabled: (featureKey) => !!store.get('billing')?.entitlements?.features?.[featureKey],
+};
+
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, tenant, shellStore };
+export default { modal, slideover, loading, auth, notify, events, telemetry, tenant, shellStore, billing };
