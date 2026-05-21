@@ -656,6 +656,8 @@ function renderClientKPIs({ caso, dividas, docs }) {
   const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
   setText('sc-pendencias', pendTotal || '—');
   if (caso) setText('footer-case-id', 'ID: ' + caso.id.slice(0, 8).toUpperCase());
+  const adminFormDoc = docs.find(d => d.tipo === 'formulario_cnj_online');
+  renderFormStatusCard(caso?.onboarding_done, caso?.cnj_step_atual, adminFormDoc);
   buildActivityFeedLegacy(caso, dividas, docs);
 }
 
@@ -697,6 +699,49 @@ function renderFDTicketCard(ticketId) {
   if (ticketInfo) ticketInfo.textContent = `Chamado #${ticketId} — Em análise pela equipe`;
   const link = byId('fd-ticket-link');
   if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
+}
+
+/* ── CNJ Form Status Card ───────────────────────────── */
+function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
+  const card   = byId('cnj-form-status-card');
+  const textEl = byId('cnj-form-status-text');
+  const hintEl = byId('cnj-form-status-hint');
+  const linkEl = byId('cnj-form-status-link');
+  if (!card || !textEl) return;
+
+  const wf = formDoc?.workflow_status || null;
+  let text = '', hint = '', bg = '#fafbfc', border = '1px solid var(--line)';
+
+  if (wf === 'aprovado') {
+    text = 'Formulário aprovado ✓';
+    hint = 'Plano de pagamento em elaboração.';
+    bg   = 'rgba(21,128,61,.05)'; border = '1px solid rgba(21,128,61,.3)';
+    if (linkEl) linkEl.textContent = 'Ver formulário →';
+  } else if (wf === 'rejeitado' || wf === 'pendente_correcao') {
+    text = wf === 'rejeitado' ? 'Correção necessária' : 'Correção solicitada';
+    hint = formDoc?.admin_notes || 'Verifique as instruções do advogado.';
+    bg   = 'rgba(192,57,43,.04)'; border = '1px solid rgba(192,57,43,.3)';
+    if (linkEl) { linkEl.textContent = 'Corrigir →'; linkEl.href = 'onboarding.html?source=journey'; }
+  } else if (wf === 'em_analise' || onboardingDone) {
+    text = 'Formulário em análise';
+    hint = 'O escritório irá analisar e entrar em contato.';
+    bg   = 'rgba(245,166,35,.05)'; border = '1px solid rgba(245,166,35,.3)';
+    if (linkEl) linkEl.textContent = 'Ver formulário →';
+  } else if ((cnjStepAtual || 0) > 0) {
+    text = `Formulário em andamento — passo ${cnjStepAtual}/7`;
+    hint = 'Continue de onde parou.';
+    if (linkEl) { linkEl.textContent = 'Continuar →'; linkEl.href = 'onboarding.html?source=journey'; }
+  } else {
+    text = 'Formulário não iniciado';
+    hint = 'Acesse a Jornada para iniciar.';
+    if (linkEl) { linkEl.textContent = 'Iniciar →'; linkEl.href = 'onboarding-v2.html'; }
+  }
+
+  card.style.display = '';
+  card.style.background = bg;
+  card.style.border = border;
+  textEl.textContent = text;
+  if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
 }
 
 /* ── Timeline real (portal_cnj_timeline) ────────────── */
