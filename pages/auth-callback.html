@@ -84,7 +84,7 @@ async function handleCallback() {
 
     if (data?.session) {
       setState('state-success');
-      setTimeout(() => { window.location.replace('dashboard.html'); }, 1200);
+      setTimeout(() => { window.location.replace('meu-caso.html'); }, 1200);
       return;
     }
 
@@ -93,7 +93,7 @@ async function handleCallback() {
       subscription.unsubscribe();
       if (session) {
         setState('state-success');
-        setTimeout(() => { window.location.replace('dashboard.html'); }, 1200);
+        setTimeout(() => { window.location.replace('meu-caso.html'); }, 1200);
       } else {
         setState('state-error');
       }

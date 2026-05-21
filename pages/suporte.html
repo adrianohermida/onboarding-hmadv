@@ -38,7 +38,7 @@
       <div class="next-action-bar">
         <div class="next-action-copy">
           <div class="next-action-label">Próxima ação</div>
-          <div class="next-action-text">Abra um chamado com assunto objetivo e acompanhe resposta na tabela.</div>
+          <div class="next-action-text">Abra um chamado com assunto objetivo, anexe evidências e acompanhe a sincronização.</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">Novo chamado</button>
       </div>
@@ -194,6 +194,11 @@
         <label class="form-label required" for="t-desc">Descrição</label>
         <textarea class="form-textarea" id="t-desc" rows="4" placeholder="Descreva sua solicitação em detalhes..."></textarea>
       </div>
+      <div class="form-group full">
+        <label class="form-label" for="t-attachments">Anexos</label>
+        <input class="form-input" type="file" id="t-attachments" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt">
+        <small style="color:var(--muted);font-size:12px;">Até 5 arquivos, 15MB por arquivo.</small>
+      </div>
     </div>
 
     <div class="btn-group mt-24" style="justify-content:flex-end;">
@@ -340,14 +345,15 @@ function renderTickets(tickets) {
     const s = S[t.status] || { label: `Status ${t.status || '—'}`, cls: 'chip-muted' };
     const p = P[t.priority] || { label: '—', cls: 'chip-muted' };
     const ticketId = t.fd_ticket_id || t.id;
+    const attachments = Array.isArray(t.metadata?.attachments) ? t.metadata.attachments.length : 0;
     return `<tr>
-      <td style="color:var(--muted)">#${esc(ticketId)}</td>
-      <td><strong>${esc(t.subject || '—')}</strong></td>
-      <td><span class="chip ${s.cls}">${s.label}</span></td>
-      <td><span class="chip ${p.cls}">${p.label}</span></td>
-      <td>${fmtDate(t.created_at)}</td>
-      <td>${fmtDate(t.updated_at || t.last_synced_at)}</td>
-      <td><a href="${FreshdeskService.ticketUrl(ticketId)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Abrir →</a></td>
+      <td data-label="#" style="color:var(--muted)">#${esc(ticketId)}</td>
+      <td data-label="Assunto"><strong>${esc(t.subject || '—')}</strong>${attachments ? `<br><small style="color:var(--muted);">${attachments} anexo(s)</small>` : ''}</td>
+      <td data-label="Status"><span class="chip ${s.cls}">${s.label}</span></td>
+      <td data-label="Prioridade"><span class="chip ${p.cls}">${p.label}</span></td>
+      <td data-label="Aberto em">${fmtDate(t.created_at)}</td>
+      <td data-label="Sincronizado">${fmtDate(t.last_synced_at || t.updated_at)}</td>
+      <td data-label="Ações"><a href="${FreshdeskService.ticketUrl(ticketId)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Abrir</a></td>
     </tr>`;
   }).join('');
 }
@@ -394,14 +400,16 @@ window.closeNewTicketModal = () => document.getElementById('modal-new-ticket').c
 window.submitTicket = async function() {
   const subject = document.getElementById('t-subject').value.trim();
   const desc    = document.getElementById('t-desc').value.trim();
+  const files   = document.getElementById('t-attachments')?.files || [];
   if (!subject) { showToast('Informe o assunto do chamado.', 'warn'); return; }
   if (!desc)    { showToast('Descreva sua solicitação.', 'warn'); return; }
+  if (files.length > 5) { showToast('Envie no máximo 5 anexos por chamado.', 'warn'); return; }
 
   const btn = document.getElementById('btn-submit-ticket');
   btn.disabled = true; btn.textContent = 'Enviando...';
 
   try {
-    const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'] });
+    const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'], attachments: files });
 
     if (currentUser) {
       invokeEdgeFunction('portal-notify', {
@@ -420,6 +428,8 @@ window.submitTicket = async function() {
     closeNewTicketModal();
     document.getElementById('t-subject').value = '';
     document.getElementById('t-desc').value    = '';
+    const attachmentInput = document.getElementById('t-attachments');
+    if (attachmentInput) attachmentInput.value = '';
 
     const ticketId = ticket.fd_ticket_id || ticket.id;
     showToast(`Chamado #${ticketId} criado! Nossa equipe responderá em breve.`, 'ok');

@@ -2103,7 +2103,7 @@ window.finalizarCadastro = async function() {
     setTimeout(() => {
       window.location.href = _fromJourney
         ? 'onboarding-v2.html?formulario=concluido'
-        : 'dashboard.html';
+        : 'meu-caso.html';
     }, 2800);
   } catch (e) {
     showToast(toFriendlyMessage(e, 'Erro ao salvar seus dados. Tente novamente.'), 'error');

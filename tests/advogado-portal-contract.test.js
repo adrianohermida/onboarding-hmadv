@@ -6,7 +6,7 @@ import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js
 
 const root = process.cwd();
 const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
-const crudKeys = ['clientes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -54,13 +54,17 @@ describe('portal do advogado contract', () => {
     const service = readFile('modules', 'advogado', 'RegistroAdvogadoService.js');
     const styles = readFile('styles', 'components.css');
 
-    ['saveAdvogadoRecord', 'archiveAdvogadoRecord', 'deleteAdvogadoRecord', 'listAdvogadoTimeline', 'filterAdvogadoRecords', 'paginateAdvogadoRecords'].forEach(symbol => {
+    ['saveAdvogadoRecord', 'archiveAdvogadoRecord', 'deleteAdvogadoRecord', 'listAdvogadoTimeline', 'listAdvogadoAudit', 'filterAdvogadoRecords', 'paginateAdvogadoRecords'].forEach(symbol => {
       expect(`${controller}\n${service}`).toContain(symbol);
     });
+    expect(service).toContain('portal_operational_records');
+    expect(service).toContain('portal_operational_record_audit');
     expect(controller).toContain('AdminService.getClients');
     expect(controller).toContain('data-advogado-filter="query"');
     expect(controller).toContain('data-advogado-page="next"');
+    expect(controller).toContain('data-action="detail"');
     expect(styles).toContain('@media (max-width: 680px)');
     expect(styles).toContain('.advogado-record-card');
+    expect(styles).toContain('.advogado-detail-row');
   });
 });

@@ -256,7 +256,7 @@ window.showToast = showToast;
 let currentEmail = '';
 
 AuthService.isAuthenticated().then(auth => {
-  if (auth) window.location.replace('dashboard.html');
+  if (auth) window.location.replace('meu-caso.html');
 });
 
 function setState(id) {
@@ -318,7 +318,7 @@ window.handleVerify = async function() {
   }
 
   if (result.ok) {
-    window.location.replace('dashboard.html');
+    window.location.replace('meu-caso.html');
   } else {
     document.getElementById('error-msg').textContent = result.message || 'Código inválido ou expirado.';
     setState('state-error');

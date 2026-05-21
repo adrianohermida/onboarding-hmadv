@@ -9,8 +9,8 @@
  *   - Capacidade de pagamento: renda disponível - mínimo existencial
  */
 
-// Salário mínimo federal vigente (2024)
-const SALARIO_MINIMO_2024 = 1_412.00;
+// Salario minimo federal vigente em 2026 (Decreto 12.797/2025).
+const SALARIO_MINIMO_2026 = 1_621.00;
 
 // Limite de comprometimento para configurar superendividamento (art. 54-A CDC)
 const LIMITE_SUPERENDIVIDAMENTO = 0.70; // 70%
@@ -53,7 +53,7 @@ export class FinancialCalculator {
    * @param {number} nDependentes
    * @param {number} [salarioMinimo] - usa valor corrente se omitido
    */
-  static calcularMinExistencial(nDependentes = 0, salarioMinimo = SALARIO_MINIMO_2024) {
+  static calcularMinExistencial(nDependentes = 0, salarioMinimo = SALARIO_MINIMO_2026) {
     return salarioMinimo + (nDependentes * salarioMinimo * 0.30);
   }
 
@@ -225,4 +225,5 @@ export class FinancialCalculator {
   }
 }
 
-export { SALARIO_MINIMO_2024 };
+export { SALARIO_MINIMO_2026 };
+export const SALARIO_MINIMO_2024 = SALARIO_MINIMO_2026;

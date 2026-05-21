@@ -337,7 +337,6 @@ let diagnostico   = null;  // financial diagnosis
 let casoState     = null;  // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let isAdminUser = false;
 let unmountModeSelector = null;
-let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let formDoc   = null;   // portal_documentos row for formulario_cnj_online
 let anexoDoc  = null;   // portal_documentos row for formulario_cnj_anexo_ii
 let webAnexoGenerated = false; // true after user generates the Annex II via WEB path
@@ -1287,7 +1286,7 @@ function renderCompletion() {
         <div class="complete-title">Parabéns — Jornada Concluída!</div>
         <p class="complete-body">Você completou todas as etapas. O escritório Hermida Maia Advocacia irá revisar seu processo e entrar em contato em breve.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a href="dashboard.html" class="btn btn-primary">Ir para o Painel →</a>
+          <a href="meu-caso.html" class="btn btn-primary">Ir para Meu caso →</a>
           <a href="documentos.html" class="btn btn-outline">Ver Documentos</a>
         </div>
       </div>

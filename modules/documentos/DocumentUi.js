@@ -86,6 +86,7 @@ export function renderDocumentCard(doc, {
     : '';
 
   const version = doc.version > 1 ? `<span>v${doc.version}</span>` : '';
+  const ocrReady = doc.ocr_status ? `<span>OCR: ${esc(doc.ocr_status === 'ready' ? 'preparado' : doc.ocr_status)}</span>` : '';
   const category = cats[doc.category] || {};
 
   let actions = '';
@@ -123,7 +124,7 @@ export function renderDocumentCard(doc, {
         </div>
       </div>
       ${noteHtml}${adminNoteHtml}
-      ${metaDate || version ? `<div class="doc-card-meta">${metaDate}${version}</div>` : ''}
+      ${metaDate || version || ocrReady ? `<div class="doc-card-meta">${metaDate}${version}${ocrReady}</div>` : ''}
       <div class="doc-upload-progress" id="prog-${esc(doc.tipo)}">
         <div class="doc-upload-fill" id="prog-fill-${esc(doc.tipo)}"></div>
       </div>
@@ -152,6 +153,8 @@ export function renderDocumentTimeline(events, doc, workflowStates = {}) {
     'document.arquivado': 'ARQ',
     'signature.requested': 'SIG',
     'signature.completed': 'DONE',
+    'document.comment': 'COM',
+    'document.viewed': 'VIS',
   };
 
   return rows.map(event => `

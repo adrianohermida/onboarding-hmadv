@@ -37,7 +37,7 @@ export function resetDrawerReview(doc) {
   if (signerWrap) signerWrap.hidden = true;
 }
 
-export function renderDrawerViewer(doc, signedUrl) {
+export function renderDrawerViewer(doc, signedUrl, { zoom = 100 } = {}) {
   const frame = byId('pdf-frame');
   const noPreview = byId('no-preview');
   const filename = byId('viewer-filename');
@@ -57,10 +57,35 @@ export function renderDrawerViewer(doc, signedUrl) {
   frame.hidden = false;
   frame.src = doc.mime_type?.startsWith('image/')
     ? signedUrl
-    : `${signedUrl}#toolbar=1&navpanes=0&view=FitH`;
+    : `${signedUrl}#toolbar=1&navpanes=0&view=FitH&zoom=${zoom}`;
+  frame.style.transform = doc.mime_type?.startsWith('image/') ? `scale(${zoom / 100})` : '';
+  frame.style.transformOrigin = 'top center';
   noPreview.hidden = true;
   noPreview.style.display = 'none';
   frame.style.display = 'block';
+}
+
+export function renderDrawerComments(comments = []) {
+  if (!comments.length) {
+    return '<div class="doc-comments-empty">Nenhum comentário registrado.</div>';
+  }
+
+  return comments.map(comment => `
+    <div class="doc-comment-item ${comment.is_internal ? 'is-internal' : ''}">
+      <div class="doc-comment-meta">
+        <strong>${comment.author_role === 'admin' ? 'Escritório' : 'Cliente'}</strong>
+        <span>${new Date(comment.created_at).toLocaleString('pt-BR')}</span>
+        ${comment.is_internal ? '<em>Interno</em>' : ''}
+      </div>
+      <p>${String(comment.body || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[char])}</p>
+    </div>
+  `).join('');
 }
 
 export function setDrawerTab(tab) {

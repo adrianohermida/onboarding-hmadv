@@ -32,6 +32,7 @@ const SHELL_MAX_RECENT_ROUTES = 6;
 
 window.__shellVersion = SHELL_VERSION;
 
+const componentHtmlCache = new Map();
 let appUserDetail = null;
 let shellNavInFlight = false;
 let captureModuleListeners = true;
@@ -210,7 +211,7 @@ function validateShellReady() {
   const main = document.querySelector('main.page-content');
   const navLinks = document.querySelectorAll('#sidebar-nav-links .nav-link[data-page]');
 
-  return Boolean(sidebar && header && main && main.children.length > 0 && navLinks.length >= 7);
+  return Boolean(sidebar && header && main && main.children.length > 0 && navLinks.length >= 6);
 }
 
 function revealAppWhenReady() {
@@ -710,6 +711,11 @@ function setupShellNavigation() {
 function getNavIcon(moduleKey) {
   const icons = {
     dashboard: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/></svg>',
+    'meu-caso': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 15s-6-3.6-6-8.1A3.3 3.3 0 019 4.7a3.3 3.3 0 016 2.2C15 11.4 9 15 9 15Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 9h2l1-2 1 4 1-2h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    'meus-documentos': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M11 1H4a1 1 0 00-1 1v14a1 1 0 001 1h10a1 1 0 001-1V5l-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 1v4h4M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'minhas-dividas': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 8h16M5 12h3M12 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 2h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>',
+    'meu-plano': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M6 3 2 5v10l4-2 6 2 4-2V3l-4 2-6-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 3v10M12 5v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    ajuda: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     painel: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="5" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 5V3.5A1.5 1.5 0 018 2h2a1.5 1.5 0 011.5 1.5V5M2 9h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     clientes: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M7 8a3 3 0 100-6 3 3 0 000 6ZM2 16a5 5 0 0110 0M13 7.5a2.5 2.5 0 100-5M13.5 11c1.4.4 2.5 1.7 2.5 3.2V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     'onboarding-v2': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1072,13 +1078,26 @@ async function guardAuth() {
 async function loadComponent(selector, path) {
   const el = document.querySelector(selector);
   if (!el) return;
+  const url = withShellVersion(path);
+  if (el.dataset.shellComponentLoaded === 'true' && el.dataset.shellComponentUrl === url) {
+    return;
+  }
+
   try {
-    const res = await fetch(withShellVersion(path), {
-      cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-    });
-    if (!res.ok) throw new Error(res.status);
-    el.innerHTML = await res.text();
+    let html = componentHtmlCache.get(url);
+    if (!html) {
+      const res = await fetch(url, {
+        cache: 'force-cache',
+        headers: { 'Cache-Control': 'max-age=300' },
+      });
+      if (!res.ok) throw new Error(res.status);
+      html = await res.text();
+      componentHtmlCache.set(url, html);
+    }
+
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.dataset.shellComponentLoaded = 'true';
+    el.dataset.shellComponentUrl = url;
   } catch (e) {
     console.warn('[APP] Component load failed:', path, e);
   }
@@ -1520,7 +1539,7 @@ function openWorkspacePanel() {
           <h3>${isAdmin ? 'Produtividade do escritório' : 'Acompanhamento do caso'}</h3>
           <p>${isAdmin ? 'Acesse módulos recentes, revise pendências e mantenha o fluxo jurídico sem sair do shell.' : 'Continue sua jornada, envie documentos e acompanhe as próximas etapas do seu caso.'}</p>
         </div>
-        <a class="ui-btn ui-btn-primary ui-btn-full" href="${isAdmin ? 'dashboard.html' : 'onboarding-v2.html'}">${isAdmin ? 'Abrir painel' : 'Continuar jornada'}</a>
+        <a class="ui-btn ui-btn-primary ui-btn-full" href="${isAdmin ? 'painel.html' : 'meu-caso.html'}">${isAdmin ? 'Abrir painel' : 'Ver meu caso'}</a>
       </section>
       <div class="shell-panel-section-title">Recentes</div>
       <div class="shell-panel-list">
@@ -1548,7 +1567,7 @@ function renderMobileWorkspaceNav() {
     document.body.appendChild(dock);
   }
 
-  const preferred = ['dashboard', 'onboarding-v2', 'documentos', 'suporte'];
+  const preferred = ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
   const modules = getShellModules().filter(module => preferred.includes(module.key));
   dock.innerHTML = modules.map(module => `
     <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">

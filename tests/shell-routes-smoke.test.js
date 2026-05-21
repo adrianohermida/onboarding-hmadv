@@ -11,7 +11,7 @@ function readWorkspaceFile(...parts) {
 }
 
 describe('authenticated route shell smoke', () => {
-  it('keeps sidebar fallback connected to the canonical seven modules', () => {
+  it('keeps sidebar fallback connected to the canonical client modules', () => {
     const sidebarHtml = readWorkspaceFile('shell', 'sidebar', 'sidebar.html');
 
     sidebarKeys.forEach(key => {
@@ -19,7 +19,7 @@ describe('authenticated route shell smoke', () => {
       expect(sidebarHtml).toContain(`href="${key}.html"`);
     });
 
-    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(7);
+    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(6);
   });
 
   it('keeps every authenticated route mounted inside the shared shell', () => {

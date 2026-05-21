@@ -99,6 +99,10 @@ export class DocumentEngine {
           mime_type:        row.mime_type        || null,
           direction:        row.direction        || 'client_to_office',
           tags:             row.tags             || [],
+          ocr_status:       row.ocr_status       || 'ready',
+          ocr_metadata:     row.ocr_metadata     || {},
+          preview_metadata: row.preview_metadata || {},
+          last_viewed_at:   row.last_viewed_at   || null,
           updated_at:       row.updated_at       || null,
           uploaded_by:      row.uploaded_by      || null,
         };
@@ -130,6 +134,10 @@ export class DocumentEngine {
           mime_type:        r.mime_type,
           direction:        r.direction || 'client_to_office',
           tags:             r.tags || [],
+          ocr_status:       r.ocr_status || 'ready',
+          ocr_metadata:     r.ocr_metadata || {},
+          preview_metadata: r.preview_metadata || {},
+          last_viewed_at:   r.last_viewed_at || null,
           updated_at:       r.updated_at,
           uploaded_by:      r.uploaded_by,
         }));
@@ -253,6 +261,30 @@ export class DocumentEngine {
     try {
       return await this._service.getDocTimeline?.(documentId) || [];
     } catch { return []; }
+  }
+
+  async listComments(documentId, { includeInternal = false } = {}) {
+    try {
+      return await this._service.listComments?.(documentId, { includeInternal }) || [];
+    } catch (e) {
+      console.warn('[DocumentEngine] comments load error:', e.message);
+      return [];
+    }
+  }
+
+  async addComment(documentId, body, { isInternal = false, authorRole = 'cliente' } = {}) {
+    const comment = await this._service.addComment?.(documentId, body, { isInternal, authorRole });
+    bus.emit('document.comment.created', { documentId, comment });
+    return comment;
+  }
+
+  async markViewed(documentId) {
+    try {
+      await this._service.markViewed?.(documentId);
+      await this._logTimeline(documentId, 'document.viewed', 'preview', {});
+    } catch (e) {
+      console.warn('[DocumentEngine] view audit error:', e.message);
+    }
   }
 
   // ── Requests ──────────────────────────────────────────────────────────────────

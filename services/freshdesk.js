@@ -1,4 +1,3 @@
-import { supabase } from './supabase.js';
 import { invokeEdgeFunction, toFriendlyMessage } from './edge.js';
 
 export const FD_STATUS = {
@@ -17,11 +16,6 @@ export const FD_PRIORITY = {
 
 export const TICKET_URL = 'https://hmdesk.freshdesk.com/support/tickets';
 
-async function currentEmail() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email || null;
-}
-
 function normalizeTicketResponse(response) {
   if (!response) return null;
   const ticket = response.ticket || response;
@@ -33,6 +27,51 @@ function normalizeTicketResponse(response) {
     requester_email: response.requester_email || ticket.requester_email,
     support_email: response.support_email || ticket.support_email,
   };
+}
+
+function normalizeTicketListResponse(response, params) {
+  const normalized = normalizeListParams(params);
+  const data = Array.isArray(response?.data) ? response.data : [];
+  const total = Number(response?.total ?? data.length);
+  const page = Number(response?.page ?? normalized.page);
+  const pageSize = Number(response?.pageSize ?? normalized.pageSize);
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(Number(response?.totalPages ?? Math.ceil(total / pageSize)), 1),
+  };
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      resolve(result.includes(',') ? result.split(',').pop() : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Falha ao ler anexo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function normalizeAttachments(files = []) {
+  const list = Array.from(files || []).filter(Boolean);
+  if (!list.length) return [];
+
+  const maxSize = 15 * 1024 * 1024;
+  return Promise.all(list.map(async file => {
+    if (file.size > maxSize) {
+      throw new Error(`O anexo ${file.name} excede 15MB.`);
+    }
+    return {
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      contentBase64: await fileToBase64(file),
+    };
+  }));
 }
 
 function normalizeListParams(params = {}) {
@@ -54,57 +93,39 @@ export const FreshdeskService = {
   PRIORITY: FD_PRIORITY,
 
   async listTickets(params = {}) {
-    const { page, pageSize, status, priority, search, from, to } = normalizeListParams(params);
-    const fromRow = (page - 1) * pageSize;
-    const toRow = fromRow + pageSize - 1;
-
-    let query = supabase
-      .from('freshdesk_tickets')
-      .select('fd_ticket_id, portal_caso_id, subject, status, priority, tags, requester_email, support_email, created_at, updated_at, last_synced_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(fromRow, toRow);
-
-    if (status) query = query.eq('status', status);
-    if (priority) query = query.eq('priority', priority);
-    if (from) query = query.gte('created_at', `${from}T00:00:00.000Z`);
-    if (to) query = query.lte('created_at', `${to}T23:59:59.999Z`);
-    if (search) query = query.ilike('subject', `%${search.replace(/[%_]/g, '\\$&')}%`);
-
-    const { data, error, count } = await query;
-    if (error) throw error;
-
-    const total = count || 0;
-    return {
-      data: data || [],
-      total,
-      page,
-      pageSize,
-      totalPages: Math.max(Math.ceil(total / pageSize), 1),
-    };
+    const filters = normalizeListParams(params);
+    const response = await invokeEdgeFunction('freshdesk-proxy', {
+      method: 'POST',
+      body: { action: 'list_tickets', ...filters },
+      includeApiKey: false,
+      timeoutMs: 18000,
+      retries: 1,
+    });
+    return normalizeTicketListResponse(response, filters);
   },
 
   async getContact() {
-    const email = await currentEmail();
-    if (!email) return null;
-
-    const { data, error } = await supabase
-      .from('freshdesk_contacts')
-      .select('name, email, phone, cpf, status, lifecycle_stage, tickets_count')
-      .eq('email', email)
-      .maybeSingle();
-    if (error) throw error;
-    return data;
+    const response = await invokeEdgeFunction('freshdesk-proxy', {
+      method: 'POST',
+      body: { action: 'get_contact' },
+      includeApiKey: false,
+      timeoutMs: 12000,
+      retries: 1,
+    });
+    return response?.contact || null;
   },
 
-  async createTicket({ subject, description, tags = [] }) {
+  async createTicket({ subject, description, tags = [], priority = 1, attachments = [] }) {
     if (!subject?.trim()) throw new Error('Assunto obrigatório');
     if (!description?.trim()) throw new Error('Descrição obrigatória');
 
     try {
+      const normalizedAttachments = await normalizeAttachments(attachments);
       const response = await invokeEdgeFunction('freshdesk-proxy', {
         method: 'POST',
-        body: { action: 'create_ticket', subject, description, tags },
-        timeoutMs: 20000,
+        body: { action: 'create_ticket', subject, description, priority, tags, attachments: normalizedAttachments },
+        includeApiKey: false,
+        timeoutMs: normalizedAttachments.length ? 45000 : 20000,
         retries: 1,
       });
       return normalizeTicketResponse(response);
