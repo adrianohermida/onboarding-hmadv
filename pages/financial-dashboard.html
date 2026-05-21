@@ -1110,8 +1110,13 @@ function renderGauge(diag) {
   const colors = { critical:'#dc2626', high:'#ea580c', medium:'#d97706', low:'#16a34a' };
   const color  = colors[diag.severity] || '#2E6DA4';
 
-  const ctx = document.getElementById('chart-gauge').getContext('2d');
-  if (chartGauge) chartGauge.destroy();
+  const canvas = byId('chart-gauge');
+  if (!canvas) return;
+  const stale = typeof window.Chart?.getChart === 'function' ? window.Chart.getChart(canvas) : null;
+  if (stale) stale.destroy();
+  if (chartGauge && chartGauge !== stale) chartGauge.destroy();
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   chartGauge = new Chart(ctx, {
     type: 'doughnut',
     data: {
@@ -1133,8 +1138,13 @@ function renderGauge(diag) {
 }
 
 function renderBreakdown(diag) {
-  const ctx = document.getElementById('chart-breakdown').getContext('2d');
-  if (chartBreak) chartBreak.destroy();
+  const canvas = byId('chart-breakdown');
+  if (!canvas) return;
+  const stale = typeof window.Chart?.getChart === 'function' ? window.Chart.getChart(canvas) : null;
+  if (stale) stale.destroy();
+  if (chartBreak && chartBreak !== stale) chartBreak.destroy();
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   chartBreak = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -1177,9 +1187,15 @@ function renderDespesasPie(diag) {
     if (v > 0) { labels.push(DESPESAS_CONFIG[k].label); data.push(v); }
   }
 
-  const ctx = document.getElementById('chart-despesas').getContext('2d');
-  if (chartDesp) chartDesp.destroy();
+  const canvas = byId('chart-despesas');
+  if (!canvas) return;
+  const stale = typeof window.Chart?.getChart === 'function' ? window.Chart.getChart(canvas) : null;
+  if (stale) stale.destroy();
+  if (chartDesp && chartDesp !== stale) chartDesp.destroy();
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   if (!data.length) {
+    chartDesp = null;
     ctx.clearRect(0, 0, 400, 200);
     ctx.font = '13px DM Sans, system-ui, sans-serif';
     ctx.fillStyle = '#94a3b8';
@@ -1213,9 +1229,15 @@ function renderDividasTipo() {
     bgs.push(palette[ci++ % palette.length]);
   }
 
-  const ctx = document.getElementById('chart-dividas-tipo').getContext('2d');
-  if (chartDivTipo) chartDivTipo.destroy();
+  const canvas = byId('chart-dividas-tipo');
+  if (!canvas) return;
+  const stale = typeof window.Chart?.getChart === 'function' ? window.Chart.getChart(canvas) : null;
+  if (stale) stale.destroy();
+  if (chartDivTipo && chartDivTipo !== stale) chartDivTipo.destroy();
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   if (!data.length) {
+    chartDivTipo = null;
     ctx.clearRect(0, 0, 400, 200);
     ctx.font = '13px DM Sans, system-ui, sans-serif';
     ctx.fillStyle = '#94a3b8';
