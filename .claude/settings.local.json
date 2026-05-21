@@ -20,7 +20,8 @@
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__list_migrations",
       "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_tables",
       "Bash(xargs git log --oneline -1)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "Bash(git merge *)"
     ]
   }
 }
