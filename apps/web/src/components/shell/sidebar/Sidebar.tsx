@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
-  Settings, LogOut, ChevronLeft, ChevronRight, Scale, Bell,
+  Settings, LogOut, ChevronLeft, ChevronRight, Scale,
+  DollarSign, Calendar, CheckSquare, MessageSquare, Gavel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -26,6 +27,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/documentos', label: 'Documentos', icon: FileText },
   { href: '/dividas', label: 'Dívidas', icon: TrendingDown },
   { href: '/planos', label: 'Plano de Pagamento', icon: CreditCard },
+  { href: '/financeiro', label: 'Financeiro', icon: DollarSign, adminOnly: true },
+  { href: '/agenda', label: 'Agenda', icon: Calendar },
+  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, adminOnly: true },
+  { href: '/mensagens', label: 'Mensagens', icon: MessageSquare },
+  { href: '/processos', label: 'Processos', icon: Gavel },
 ];
 
 export default function Sidebar() {

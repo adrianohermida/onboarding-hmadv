@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LayoutDashboard, Users, FileText, CreditCard, TrendingDown, Scale, LogOut } from 'lucide-react';
+import {
+  Menu, X, LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
+  Scale, LogOut, DollarSign, Calendar, CheckSquare, MessageSquare, Gavel,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
 import { createClient } from '@/lib/supabase/client';
@@ -17,6 +20,11 @@ const NAV = [
   { href: '/documentos', label: 'Documentos', icon: FileText },
   { href: '/dividas', label: 'Dívidas', icon: TrendingDown },
   { href: '/planos', label: 'Plano', icon: CreditCard },
+  { href: '/financeiro', label: 'Financeiro', icon: DollarSign, adminOnly: true },
+  { href: '/agenda', label: 'Agenda', icon: Calendar },
+  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, adminOnly: true },
+  { href: '/mensagens', label: 'Mensagens', icon: MessageSquare },
+  { href: '/processos', label: 'Processos', icon: Gavel },
 ];
 
 export default function MobileNav() {

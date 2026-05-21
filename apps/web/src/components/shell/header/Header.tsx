@@ -1,10 +1,10 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { Bell, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 import { getInitials } from '@/lib/utils';
+import NotificationBell from '../notifications/NotificationBell';
 
 const TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -13,6 +13,11 @@ const TITLES: Record<string, string> = {
   '/documentos': 'Documentos',
   '/dividas': 'Dívidas',
   '/planos': 'Plano de Pagamento',
+  '/financeiro': 'Financeiro',
+  '/agenda': 'Agenda',
+  '/tarefas': 'Tarefas',
+  '/mensagens': 'Mensagens',
+  '/processos': 'Processos',
   '/configuracoes': 'Configurações',
 };
 
@@ -41,9 +46,7 @@ export default function Header() {
       </button>
 
       {/* Notifications */}
-      <button className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-        <Bell className="h-4 w-4" />
-      </button>
+      <NotificationBell />
 
       {/* Avatar */}
       <button className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs text-primary-foreground font-bold flex-shrink-0">

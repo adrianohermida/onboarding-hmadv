@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import Sidebar from '@/components/shell/Sidebar';
-import MobileNav from '@/components/shell/MobileNav';
-import Header from '@/components/shell/Header';
-import WorkspaceBootstrap from './workspace-bootstrap';
+import Sidebar from '@/components/shell/sidebar/Sidebar';
+import MobileNav from '@/components/shell/mobile/MobileNav';
+import Header from '@/components/shell/header/Header';
+import WorkspaceBootstrap from '@/components/shell/workspace/WorkspaceBootstrap';
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
