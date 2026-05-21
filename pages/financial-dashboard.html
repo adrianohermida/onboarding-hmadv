@@ -399,7 +399,7 @@
           <!-- ── Hero ─────────────────────────────────────────────── -->
           <div class="fd-hero">
             <div class="fd-hero-left">
-              <div class="fd-hero-label">💎 Diagnóstico Financeiro</div>
+              <div class="fd-hero-label">Diagnóstico Financeiro</div>
               <div class="fd-hero-title">Painel de Recuperação Financeira</div>
               <div class="fd-hero-sub">Análise baseada na Lei 14.181/2021 — Mínimo existencial, comprometimento de renda e capacidade de pagamento calculados automaticamente.</div>
             </div>
@@ -412,7 +412,7 @@
 
           <!-- ── Diagnóstico Banner ──────────────────────────────── -->
           <div id="fd-diag-banner" class="fd-diag-banner fd-diag--low" style="display:none;">
-            <div class="fd-diag-icon" id="fd-diag-icon">✅</div>
+            <div class="fd-diag-icon" id="fd-diag-icon">OK</div>
             <div style="flex:1;">
               <div class="fd-diag-title" id="fd-diag-title">Situação controlada</div>
               <div class="fd-diag-text" id="fd-diag-text">Seu comprometimento de renda está dentro dos limites legais.</div>
@@ -423,43 +423,43 @@
           <!-- ── KPI Grid ───────────────────────────────────────── -->
           <div class="fd-kpi-grid">
             <div class="fd-kpi fd-kpi-navy">
-              <div class="fd-kpi-icon">💰</div>
+              <div class="fd-kpi-icon">RT</div>
               <div class="fd-kpi-label">Renda Total</div>
               <div class="fd-kpi-value" id="kpi-renda">R$ —</div>
               <div class="fd-kpi-hint">Bruta declarada</div>
             </div>
             <div class="fd-kpi fd-kpi-blue">
-              <div class="fd-kpi-icon">🏠</div>
+              <div class="fd-kpi-icon">DE</div>
               <div class="fd-kpi-label">Despesas Essenciais</div>
               <div class="fd-kpi-value" id="kpi-desp-ess">R$ —</div>
               <div class="fd-kpi-hint">Moradia, alimentação…</div>
             </div>
             <div class="fd-kpi">
-              <div class="fd-kpi-icon">📱</div>
+              <div class="fd-kpi-icon">DV</div>
               <div class="fd-kpi-label">Despesas Variáveis</div>
               <div class="fd-kpi-value" id="kpi-desp-var">R$ —</div>
               <div class="fd-kpi-hint">Internet, lazer…</div>
             </div>
             <div class="fd-kpi fd-kpi-red">
-              <div class="fd-kpi-icon">💳</div>
+              <div class="fd-kpi-icon">TD</div>
               <div class="fd-kpi-label">Total Dívidas</div>
               <div class="fd-kpi-value" id="kpi-total-dividas">R$ —</div>
               <div class="fd-kpi-hint" id="kpi-n-credores">0 credores</div>
             </div>
             <div class="fd-kpi fd-kpi-warn">
-              <div class="fd-kpi-icon">📊</div>
+              <div class="fd-kpi-icon">CP</div>
               <div class="fd-kpi-label">Comprometimento</div>
               <div class="fd-kpi-value" id="kpi-comprometimento">—%</div>
               <div class="fd-kpi-hint">Das parcelas / renda</div>
             </div>
             <div class="fd-kpi fd-kpi-gold">
-              <div class="fd-kpi-icon">⚖️</div>
+              <div class="fd-kpi-icon">ME</div>
               <div class="fd-kpi-label">Mínimo Existencial</div>
               <div class="fd-kpi-value" id="kpi-min-exist">R$ —</div>
               <div class="fd-kpi-hint">Lei 14.181/2021</div>
             </div>
             <div class="fd-kpi fd-kpi-green" id="kpi-sobra-card">
-              <div class="fd-kpi-icon">✨</div>
+              <div class="fd-kpi-icon">SM</div>
               <div class="fd-kpi-label">Sobra Mensal</div>
               <div class="fd-kpi-value" id="kpi-sobra">R$ —</div>
               <div class="fd-kpi-hint">Após dívidas e mínimo</div>
@@ -470,7 +470,7 @@
           <div class="fd-charts-grid">
             <!-- Comprometimento gauge -->
             <div class="fd-card">
-              <div class="fd-card-title"><span>📊</span> Comprometimento de Renda</div>
+              <div class="fd-card-title">Comprometimento de Renda</div>
               <div class="gauge-wrap" style="height:200px;">
                 <canvas id="chart-gauge" style="max-width:220px;max-height:200px;"></canvas>
                 <div class="gauge-center">
@@ -485,7 +485,7 @@
 
             <!-- Bar chart: Renda breakdown -->
             <div class="fd-card">
-              <div class="fd-card-title"><span>💹</span> Composição da Renda</div>
+              <div class="fd-card-title">Composição da Renda</div>
               <canvas id="chart-breakdown" style="max-height:220px;"></canvas>
             </div>
           </div>
@@ -493,11 +493,11 @@
           <!-- Despesas pie + Dívidas by type -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
             <div class="fd-card">
-              <div class="fd-card-title"><span>🍩</span> Distribuição de Despesas</div>
+              <div class="fd-card-title">Distribuição de Despesas</div>
               <canvas id="chart-despesas" style="max-height:200px;"></canvas>
             </div>
             <div class="fd-card">
-              <div class="fd-card-title"><span>💳</span> Dívidas por Tipo</div>
+              <div class="fd-card-title">Dívidas por Tipo</div>
               <canvas id="chart-dividas-tipo" style="max-height:200px;"></canvas>
             </div>
           </div>
@@ -515,7 +515,7 @@
           <!-- ── Renda e Dependentes ────────────────────────────── -->
           <div class="fd-section" id="section-renda">
             <div class="fd-section-header open" onclick="toggleSection('renda')">
-              <div class="fd-section-icon">💰</div>
+              <div class="fd-section-icon">R</div>
               <div class="fd-section-title">Renda Mensal</div>
               <div class="fd-section-badge" id="badge-renda">Não informado</div>
               <div class="fd-section-chevron">▼</div>
@@ -523,14 +523,14 @@
             <div class="fd-section-body open" id="body-renda">
               <div class="fd-renda-row">
                 <div class="fd-field">
-                  <label class="fd-label" for="inp-renda-propria">💼 Renda própria (salário/pró-labore)</label>
+                  <label class="fd-label" for="inp-renda-propria">Renda própria (salário/pró-labore)</label>
                   <div class="expense-wrap">
                     <span class="expense-prefix">R$</span>
                     <input class="expense-input fd-input" id="inp-renda-propria" type="number" min="0" step="0.01" placeholder="0,00" oninput="onInputChange()" />
                   </div>
                 </div>
                 <div class="fd-field">
-                  <label class="fd-label" for="inp-renda-familiar">👨‍👩‍👧 Renda familiar (cônjuge / outros)</label>
+                  <label class="fd-label" for="inp-renda-familiar">Renda familiar (cônjuge / outros)</label>
                   <div class="expense-wrap">
                     <span class="expense-prefix">R$</span>
                     <input class="expense-input fd-input" id="inp-renda-familiar" type="number" min="0" step="0.01" placeholder="0,00" oninput="onInputChange()" />
@@ -538,7 +538,7 @@
                 </div>
               </div>
               <div class="fd-field">
-                <label class="fd-label">👨‍👧 Número de dependentes</label>
+                <label class="fd-label">Número de dependentes</label>
                 <div class="dep-stepper">
                   <button class="dep-btn" onclick="changeDep(-1)">−</button>
                   <div class="dep-count" id="dep-count-display">0</div>
@@ -552,7 +552,7 @@
           <!-- ── Despesas Essenciais ─────────────────────────────── -->
           <div class="fd-section" id="section-ess">
             <div class="fd-section-header" onclick="toggleSection('ess')">
-              <div class="fd-section-icon">🏠</div>
+              <div class="fd-section-icon">E</div>
               <div class="fd-section-title">Despesas Essenciais</div>
               <div class="fd-section-badge" id="badge-ess">R$ —</div>
               <div class="fd-section-chevron">▼</div>
@@ -568,7 +568,7 @@
           <!-- ── Despesas Variáveis ─────────────────────────────── -->
           <div class="fd-section" id="section-var">
             <div class="fd-section-header" onclick="toggleSection('var')">
-              <div class="fd-section-icon">📱</div>
+              <div class="fd-section-icon">V</div>
               <div class="fd-section-title">Despesas Variáveis</div>
               <div class="fd-section-badge" id="badge-var">R$ —</div>
               <div class="fd-section-chevron">▼</div>
@@ -584,7 +584,7 @@
           <!-- ── Dívidas ─────────────────────────────────────────── -->
           <div class="fd-section" id="section-dividas">
             <div class="fd-section-header open" onclick="toggleSection('dividas')">
-              <div class="fd-section-icon">💳</div>
+              <div class="fd-section-icon">D</div>
               <div class="fd-section-title">Dívidas Cadastradas</div>
               <div class="fd-section-badge" id="badge-dividas">0 dívidas</div>
               <div class="fd-section-chevron">▼</div>
@@ -603,7 +603,7 @@
 
           <!-- ── Plano de Pagamento Sugerido ────────────────────── -->
           <div class="fd-card" id="fd-plan-card" style="margin-bottom:24px;">
-            <div class="fd-card-title"><span>📋</span> Plano de Pagamento Sugerido — Lei 14.181/2021</div>
+            <div class="fd-card-title">Plano de Pagamento Sugerido — Lei 14.181/2021</div>
             <div id="fd-plan-body"><!-- rendered by JS --></div>
           </div>
 
@@ -616,7 +616,7 @@
 <!-- ── Save bar ────────────────────────────────────────────────────────── -->
 <div class="fd-save-bar" id="fd-save-bar">
   <div style="font-size:13px;color:var(--ink2);">
-    <strong>💾 Alterações não salvas</strong>
+    <strong>Alterações não salvas</strong>
     <span style="color:var(--muted);"> — atualize o diagnóstico para salvar.</span>
   </div>
   <div style="display:flex;gap:10px;">
@@ -630,7 +630,7 @@
   <div class="fd-modal">
     <div class="fd-modal-header">
       <div class="fd-modal-title" id="modal-title">Nova Dívida</div>
-      <button class="fd-modal-close" onclick="closeDebtModal()">✕</button>
+      <button class="fd-modal-close" onclick="closeDebtModal()">X</button>
     </div>
     <div class="fd-modal-body">
       <input type="hidden" id="modal-debt-id" />
@@ -693,7 +693,7 @@
       <div class="fd-field">
         <label class="fd-toggle">
           <input type="checkbox" id="m-negativado" />
-          <span class="fd-toggle-label">🚨 Negativado (SPC/Serasa)</span>
+          <span class="fd-toggle-label">Negativado (SPC/Serasa)</span>
         </label>
       </div>
 
@@ -847,7 +847,7 @@ function refreshDiag() {
   // Sobra KPI color
   const sobraCard = document.getElementById('kpi-sobra-card');
   sobraCard.className = 'fd-kpi ' + (diag.sobraReal < 0 ? 'fd-kpi-red' : 'fd-kpi-green');
-  sobraCard.querySelector('.fd-kpi-icon').textContent = diag.sobraReal < 0 ? '⚠️' : '✨';
+  sobraCard.querySelector('.fd-kpi-icon').textContent = diag.sobraReal < 0 ? 'AL' : 'OK';
 
   // Diagnóstico banner
   renderDiagBanner(diag);
@@ -864,7 +864,7 @@ function renderDiagBanner(diag) {
   banner.style.display = 'flex';
   banner.className = `fd-diag-banner fd-diag--${diag.severity}`;
 
-  const icons   = { critical:'🚨', high:'⚠️', medium:'⚡', low:'✅' };
+  const icons   = { critical:'AL', high:'AT', medium:'MD', low:'OK' };
   const titles  = {
     critical: 'Superendividamento crítico — ação urgente necessária',
     high:     'Superendividamento confirmado — Lei 14.181/2021 aplicável',
@@ -878,13 +878,13 @@ function renderDiagBanner(diag) {
     low:      `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — dentro dos limites. Continue monitorando suas finanças.`,
   };
 
-  document.getElementById('fd-diag-icon').textContent  = icons[diag.severity]  || '📊';
+  document.getElementById('fd-diag-icon').textContent  = icons[diag.severity]  || 'DG';
   document.getElementById('fd-diag-title').textContent = titles[diag.severity] || '';
   document.getElementById('fd-diag-text').textContent  = texts[diag.severity]  || '';
 
   const pills = [];
-  if (diag.violaMinExistencial) pills.push('⚠️ Viola mínimo existencial');
-  if (diag.isSuperendividado)   pills.push('📋 Enquadra Lei 14.181/2021');
+  if (diag.violaMinExistencial) pills.push('Viola mínimo existencial');
+  if (diag.isSuperendividado)   pills.push('Enquadra Lei 14.181/2021');
   if (diag.deficit > 0)         pills.push(`Déficit: ${FinancialCalculator.formatBRL(diag.deficit)}/mês`);
   if (diag.parcelaMensalTotal > 0) pills.push(`Parcelas: ${FinancialCalculator.formatBRL(diag.parcelaMensalTotal)}/mês`);
 
@@ -896,19 +896,19 @@ function renderPlan(diag) {
   const el = document.getElementById('fd-plan-body');
   if (!diag.planoSugerido) {
     el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);">
-      <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:20px;margin-bottom:8px;">ATENCAO</div>
       <div>Preencha sua renda e despesas para calcular o plano sugerido.</div>
     </div>`;
     return;
   }
   const p = diag.planoSugerido;
   const rows = [
-    ['💰 Capacidade de pagamento mensal', FinancialCalculator.formatBRL(diag.capacidadePagamento)],
-    ['📋 Parcela mensal sugerida',         FinancialCalculator.formatBRL(p.parcelaSugerida)],
-    ['📅 Prazo estimado para quitação',    p.prazoMesesEstimado ? `${p.prazoMesesEstimado} meses (${Math.ceil(p.prazoMesesEstimado/12).toFixed(1)} anos)` : '—'],
-    ['💳 Total das dívidas',               FinancialCalculator.formatBRL(diag.totalDividas)],
-    ['⚖️ Mínimo existencial preservado',   FinancialCalculator.formatBRL(diag.minExistencial)],
-    ['✨ Sobra após plano',                FinancialCalculator.formatBRL(diag.sobraReal)],
+    ['Capacidade de pagamento mensal', FinancialCalculator.formatBRL(diag.capacidadePagamento)],
+    ['Parcela mensal sugerida',         FinancialCalculator.formatBRL(p.parcelaSugerida)],
+    ['Prazo estimado para quitação',    p.prazoMesesEstimado ? `${p.prazoMesesEstimado} meses (${Math.ceil(p.prazoMesesEstimado/12).toFixed(1)} anos)` : '—'],
+    ['Total das dívidas',               FinancialCalculator.formatBRL(diag.totalDividas)],
+    ['Mínimo existencial preservado',   FinancialCalculator.formatBRL(diag.minExistencial)],
+    ['Sobra após plano',                FinancialCalculator.formatBRL(diag.sobraReal)],
   ];
   el.innerHTML = rows.map(([l, v]) => `
     <div class="fd-plan-row">
@@ -917,7 +917,7 @@ function renderPlan(diag) {
     </div>
   `).join('') + `
     <div style="margin-top:16px;padding:14px;background:var(--ice);border-radius:8px;font-size:12px;color:var(--ink2);line-height:1.6;">
-      <strong>⚖️ Base legal:</strong> Art. 54-E do CDC (Lei 14.181/2021) — O plano de pagamento não pode comprometer o mínimo existencial
+      <strong>Base legal:</strong> Art. 54-E do CDC (Lei 14.181/2021) — O plano de pagamento não pode comprometer o mínimo existencial
       (1 salário mínimo + 30% por dependente = <strong>${FinancialCalculator.formatBRL(diag.minExistencial)}</strong>).
     </div>
   `;
@@ -937,7 +937,7 @@ function buildGrid(containerId, keys, essential) {
     return `
       <div class="expense-item">
         <label class="expense-label" for="exp-${k}">
-          ${cfg.icon} ${cfg.label}
+          ${cfg.label}
           <span class="${essential ? 'expense-badge-ess' : 'expense-badge-var'}">${essential ? 'Essencial' : 'Variável'}</span>
         </label>
         <div class="expense-wrap">
@@ -970,7 +970,7 @@ function updateDebtSection() {
   const el = listEl;
   if (!debts.length) {
     el.innerHTML = `<div class="fd-debt-empty">
-      <div class="fd-debt-empty-icon">💳</div>
+      <div class="fd-debt-empty-icon">DIV</div>
       <div>Nenhuma dívida cadastrada ainda.</div>
     </div>`;
     return;
@@ -984,7 +984,7 @@ function updateDebtSection() {
     const parcela = d.parcela_mensal ? ` · ${FinancialCalculator.formatBRL(d.parcela_mensal)}/mês` : '';
     return `
       <div class="fd-debt-row" style="cursor:pointer;" onclick="window._fdEditDebt('${d.id}')">
-        <div class="fd-debt-icon">${d.negativado ? '🚨' : '💳'}</div>
+        <div class="fd-debt-icon">${d.negativado ? 'AL' : 'DIV'}</div>
         <div class="fd-debt-info">
           <div class="fd-debt-credor">${esc(d.credor)}</div>
           <div class="fd-debt-tipo">${ctMeta?.label || d.tipo || '—'}${d.negativado ? ' · Negativado' : ''}</div>
@@ -1354,7 +1354,7 @@ document.addEventListener('app:ready', () => bootstrap().catch(err => {
   Toast.error('Erro ao inicializar o painel. Tente recarregar a página.');
   const loadingEl = byId('fd-loading');
   if (loadingEl) loadingEl.innerHTML =
-    '<div style="text-align:center;color:var(--red);"><div style="font-size:32px;margin-bottom:8px;">⚠️</div><div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div></div>';
+    '<div style="text-align:center;color:var(--red);"><div style="font-size:20px;margin-bottom:8px;">ERRO</div><div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div></div>';
 }));
 
 document.addEventListener('app:route-will-change', () => {
