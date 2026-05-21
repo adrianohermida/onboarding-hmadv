@@ -470,6 +470,7 @@
         <button class="btn btn-primary btn-sm" onclick="if (typeof window.goStep === 'function') { const active = document.querySelector('.cnj-step.active'); const step = Number(active?.id?.replace('step-dot-', '') || 1); window.goStep(step); }">Continuar etapa atual</button>
       </div>
 
+<<<<<<< HEAD
       <!-- Already-submitted / correction banner (shown when onboarding_done=true) -->
       <div id="form-submitted-banner" style="display:none;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -478,6 +479,18 @@
         </div>
         <p id="form-banner-body" style="font-size:13px;color:var(--ink2);margin:6px 0 0 28px;line-height:1.5;"></p>
         <a id="form-back-journey-link" href="onboarding-v2.html" style="display:none;margin-top:10px;margin-left:28px;font-size:13px;color:var(--navy);font-weight:600;">← Voltar à jornada</a>
+=======
+      <!-- Formulário já enviado — banner -->
+      <div id="form-submitted-banner" style="display:none;background:rgba(21,128,61,.08);border:1px solid rgba(21,128,61,.25);border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><polyline points="2 10 7 15 18 4"/></svg>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:4px">Formulário já enviado</div>
+            <div id="form-submitted-detail" style="font-size:12px;color:#166534;">Seu formulário foi enviado ao escritório Hermida Maia Advocacia. Você pode revisar suas respostas abaixo.</div>
+          </div>
+          <a id="form-back-journey-link" href="onboarding-v2.html" style="display:none;font-size:12px;color:var(--blue);white-space:nowrap;align-self:center;">← Voltar à jornada</a>
+        </div>
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
       </div>
 
       <!-- Progress tracker -->
@@ -1083,7 +1096,11 @@ import {
   saveDraft, loadDraft, clearDraft,
 } from '../js/cnj-engine.js';
 
+<<<<<<< HEAD
 /* ── URL context ────────────────────── */
+=======
+/* ── URL params ──────────────────────── */
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
 const _urlParams   = new URLSearchParams(window.location.search);
 const _fromJourney = _urlParams.get('source') === 'journey';
 
@@ -2061,6 +2078,27 @@ window.finalizarCadastro = async function() {
 
     clearDraft(_userId);
 
+    // Registra formulário online em portal_documentos para workflow de aprovação
+    try {
+      const { data: casoDoc } = await supabase
+        .from('portal_casos')
+        .select('id, workspace_id')
+        .eq('user_id', _userId)
+        .maybeSingle();
+      await supabase.from('portal_documentos').upsert({
+        user_id:         _userId,
+        tipo:            'formulario_cnj_online',
+        nome_arquivo:    'Formulário CNJ Online',
+        workflow_status: 'em_analise',
+        direction:       'client_to_office',
+        caso_id:         casoDoc?.id  ?? null,
+        workspace_id:    casoDoc?.workspace_id ?? null,
+        updated_at:      new Date().toISOString(),
+      }, { onConflict: 'user_id,tipo' });
+    } catch (docErr) {
+      console.warn('[onboarding] portal_documentos upsert failed:', docErr);
+    }
+
     // Chama portal-cnj-complete: cria ticket Freshdesk + e-mails + timeline
     let fdTicketId = null;
     try {
@@ -2080,9 +2118,13 @@ window.finalizarCadastro = async function() {
     showToast(`Formulário enviado com sucesso!${ticketMsg} Nossa equipe irá analisar seu caso.`, 'success');
     document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: { ...payload, fd_ticket_id: fdTicketId } }));
     setTimeout(() => {
+<<<<<<< HEAD
       window.location.href = _fromJourney
         ? 'onboarding-v2.html?formulario=concluido'
         : 'dashboard.html';
+=======
+      window.location.href = _fromJourney ? 'onboarding-v2.html?formulario=concluido' : 'dashboard.html';
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
     }, 2800);
   } catch (e) {
     showToast(toFriendlyMessage(e, 'Erro ao salvar seus dados. Tente novamente.'), 'error');
@@ -2097,6 +2139,19 @@ window.finalizarCadastro = async function() {
 document.addEventListener('app:user-loaded', ({ detail }) => {
   const { user, caso } = detail;
   _userId = user?.id;
+
+  // Show already-submitted banner if form was previously completed
+  if (caso?.onboarding_done) {
+    const banner = document.getElementById('form-submitted-banner');
+    const detail2 = document.getElementById('form-submitted-detail');
+    const backLink = document.getElementById('form-back-journey-link');
+    if (banner) banner.style.display = '';
+    if (detail2) detail2.textContent = 'Seu formulário foi enviado ao escritório Hermida Maia Advocacia. Você pode revisar suas respostas abaixo.';
+    if (backLink && _fromJourney) backLink.style.display = '';
+    // Disable the submit button to prevent re-submission
+    const btn = document.getElementById('btn-finalizar');
+    if (btn) { btn.textContent = 'Formulário já enviado'; btn.disabled = true; }
+  }
 
   const emailEl = document.getElementById('email');
   if (emailEl) emailEl.value = user?.email || '';

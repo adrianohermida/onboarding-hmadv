@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -55,3 +56,6 @@ if (missing.length) fail(`missing manifest for modules: ${missing.join(', ')}`);
 if (invalid.length) fail(`invalid manifests: ${invalid.join(' | ')}`);
 
 console.log('[validate-manifests] OK');
+=======
+console.log('validate-manifests: no manifest validation rules registered yet');
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980

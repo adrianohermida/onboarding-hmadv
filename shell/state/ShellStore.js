@@ -21,10 +21,13 @@
  *   aiOs      : { agents, copilot, retrieval, actions, human_review, telemetry, observability, analytics, generated_at }
  *   compliance: { lgpd, consents, audit, risk, access, incidents, monitoring, telemetry, analytics, generated_at }
  *   analytics : { metrics, kpis, executive, financial, legal, operations, onboarding, engagement, productivity, sla, tenants, risk, insights, predictions, observability, telemetry, governance, generated_at }
+<<<<<<< HEAD
  *   platformOs: { runtime, deployments, scaling, performance, queues, workers, resilience, monitoring, telemetry, analytics, governance, observability, generated_at }
  *   uiOs      : { tokens, theme, typography, layouts, navigation, workspace, command_center, modals, drawers, tables, forms, cards, timelines, states, feedback, animations, mobile, accessibility, branding, telemetry, observability, governance, generated_at }
  *   workspaceOs: { command_center, search, context, copilot, activities, panels, workspace, navigation, actions, shortcuts, assistant, notifications, streams, inspector, quick_actions, dock, mobile, analytics, telemetry, observability, governance, generated_at }
  *   billingOs : { plans, subscriptions, checkout, customers, payments, invoices, usage, quotas, credits, wallet, commerce, catalog, pricing, discounts, coupons, entitlements, metering, analytics, insights, telemetry, observability, governance, generated_at }
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -206,6 +209,7 @@ const _initialState = () => ({
     governance: null,
     generated_at: null,
   },
+<<<<<<< HEAD
   platformOs: {
     domain_entities: [],
     runtime: null,
@@ -316,6 +320,8 @@ const _initialState = () => ({
     legacy_billing_bridge: null,
     generated_at: null,
   },
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   route: { current: null, previous: null, loading: false },
   viewMode: 'cliente',
 });
@@ -612,6 +618,7 @@ class ShellStore extends EventTarget {
     });
   }
 
+<<<<<<< HEAD
   // ── Platform OS ─────────────────────────────────────────────────────────
   setPlatformOsSnapshot(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return;
@@ -742,6 +749,8 @@ class ShellStore extends EventTarget {
     });
   }
 
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   // ── Subscribe ────────────────────────────────────────────────────────────────
   subscribe(sliceOrAll, handler) {
     const event = sliceOrAll === '*' ? 'change' : `change:${sliceOrAll}`;

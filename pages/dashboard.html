@@ -261,8 +261,12 @@
             <div class="empty-state">
               <div class="empty-state-icon">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".45">
+<<<<<<< HEAD
                   <circle cx="12" cy="12" r="9"/>
                   <path d="M12 7v5l3 3"/>
+=======
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
                 </svg>
               </div>
               <h3>Nenhuma atividade ainda</h3>
@@ -629,7 +633,11 @@ async function loadClientData(userId) {
   const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
   renderCNJStepBar(step);
 
+<<<<<<< HEAD
   // Formulário CNJ status card — include Anexo II doc as fallback
+=======
+  // Formulário CNJ status card
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online' || d.tipo === 'formulario_cnj_anexo_ii') ?? null;
   renderFormStatusCard(
     !!(casoFull?.onboarding_done),
@@ -667,6 +675,10 @@ function renderClientKPIs({ caso, dividas, docs }) {
   const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
   setText('sc-pendencias', pendTotal || '—');
   if (caso) setText('footer-case-id', 'ID: ' + caso.id.slice(0, 8).toUpperCase());
+<<<<<<< HEAD
+=======
+  // Formulário status card
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online' || d.tipo === 'formulario_cnj_anexo_ii') ?? null;
   renderFormStatusCard(!!(caso?.onboarding_done), Number(caso?.cnj_step_atual || 0), formDoc);
   buildActivityFeedLegacy(caso, dividas, docs);
@@ -721,7 +733,11 @@ function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
     if (linkEl) linkEl.textContent = 'Ver formulário →';
     if (linkEl) linkEl.href = 'onboarding.html';
     if (hintEl) { hintEl.textContent = 'Seu caso está em análise para elaboração do plano de pagamento.'; hintEl.style.display = ''; }
+<<<<<<< HEAD
   } else if (wfStatus === 'rejeitado' || wfStatus === 'pendente_correcao') {
+=======
+  } else if (wfStatus === 'rejeitado') {
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
     card.style.borderColor = 'rgba(192,57,43,.3)';
     card.style.background  = 'rgba(192,57,43,.05)';
     if (textEl) textEl.innerHTML = '<span style="color:var(--red)">⚠ Correção solicitada pelo escritório</span>';
@@ -760,6 +776,7 @@ function renderFDTicketCard(ticketId) {
   if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
 }
 
+<<<<<<< HEAD
 /* ── CNJ Form Status Card ───────────────────────────── */
 function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
   const card   = byId('cnj-form-status-card');
@@ -803,6 +820,8 @@ function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
   if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
 }
 
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
 /* ── Activity SVG icons ─────────────────────────────── */
 const _SVG = {
   check:    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 7 5.5 10.5 12 3.5"/></svg>',

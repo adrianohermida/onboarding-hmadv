@@ -25,10 +25,13 @@ import { clientExperienceFoundation } from '../../client-experience/ClientExperi
 import { aiOsFoundation } from '../../ai-os/AIOSFoundation.js';
 import { complianceOsFoundation } from '../../compliance-os/ComplianceOSFoundation.js';
 import { analyticsOsFoundation } from '../../analytics-os/AnalyticsOSFoundation.js';
+<<<<<<< HEAD
 import { platformOsFoundation } from '../../platform-os/PlatformOSFoundation.js';
 import { uiOsFoundation } from '../../ui-os/UIOSFoundation.js';
 import { workspaceOsFoundation } from '../../workspace-os/WorkspaceOSFoundation.js';
 import { billingOsFoundation } from '../../billing-os/BillingOSFoundation.js';
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -211,6 +214,7 @@ export const analytics = {
   refresh: () => analyticsOsFoundation.snapshot(),
 };
 
+<<<<<<< HEAD
 // ── Platform OS API ───────────────────────────────────────────────────────
 export const platformOs = {
   getSnapshot: () => store.get('platformOs') || {},
@@ -312,6 +316,8 @@ export const billingOs = {
   refresh: () => billingOsFoundation.snapshot(),
 };
 
+=======
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -334,4 +340,8 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
+<<<<<<< HEAD
 export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, analytics, platformOs, uiOs, workspaceOs, billingOs, tenant, shellStore, billing };
+=======
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, analytics, tenant, shellStore, billing };
+>>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
