@@ -1,0 +1,13 @@
+{
+  "module": "dashboard",
+  "key": "dashboard",
+  "title": "Início",
+  "menuLabel": "Início",
+  "route": "/pages/dashboard.html",
+  "icon": "layout-dashboard",
+  "permissions": ["cliente", "admin"],
+  "feature": "dashboard",
+  "lazy": true,
+  "order": 10,
+  "visible": true
+}

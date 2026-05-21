@@ -1,0 +1,19 @@
+{
+  "module": "documentos",
+  "key": "documentos",
+  "title": "Documentos",
+  "menuLabel": "Documentos",
+  "route": "/pages/documentos.html",
+  "icon": "file-text",
+  "permissions": ["cliente", "admin"],
+  "feature": "documentos",
+  "lazy": true,
+  "order": 40,
+  "visible": true,
+  "contract": {
+    "events": {
+      "emits": ["document.created", "document.updated", "document.approved", "document.rejected", "signature.requested", "signature.completed"],
+      "listens": ["auth.changed", "shell:viewmode-changed"]
+    }
+  }
+}

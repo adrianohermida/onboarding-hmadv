@@ -1,0 +1,19 @@
+{
+  "module": "dividas",
+  "key": "dividas",
+  "title": "Dívidas",
+  "menuLabel": "Dívidas",
+  "route": "/pages/dividas.html",
+  "icon": "credit-card",
+  "permissions": ["cliente", "admin"],
+  "feature": "dividas",
+  "lazy": true,
+  "order": 50,
+  "visible": true,
+  "contract": {
+    "events": {
+      "emits": ["debt.created", "debt.updated", "debt.deleted"],
+      "listens": ["auth.changed", "shell:viewmode-changed"]
+    }
+  }
+}
