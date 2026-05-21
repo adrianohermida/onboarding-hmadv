@@ -4,8 +4,11 @@ export class Router {
       'login':      { title: 'Acesso',          parent: null },
       'dashboard':  { title: 'Dashboard',        parent: null },
       'onboarding': { title: 'Onboarding',       parent: 'Dashboard' },
+      'onboarding-v2': { title: 'Jornada CNJ',  parent: 'Dashboard' },
       'documentos': { title: 'Documentos',        parent: 'Dashboard' },
       'dividas':    { title: 'Dívidas',           parent: 'Dashboard' },
+      'suporte':    { title: 'Suporte',           parent: 'Dashboard' },
+      'financial-dashboard': { title: 'Diagnóstico Financeiro', parent: 'Dashboard' },
     };
   }
 
