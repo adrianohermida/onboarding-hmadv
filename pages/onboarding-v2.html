@@ -337,6 +337,7 @@ let isAdminUser = false;
 let unmountModeSelector = null;
 let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let formDoc   = null;   // portal_documentos row for formulario_cnj_online
+const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 document.addEventListener('app:user-loaded', (e) => {
   isAdminUser = !!e.detail?.isAdmin;
@@ -871,7 +872,7 @@ function buildOnlinePanelHtml() {
   }
   if (rejected) {
     return `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
-      Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${formDoc.admin_notes}` : ''} Acesse o formulário para corrigir.
+      Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${escHtml(formDoc.admin_notes)}` : ''} Acesse o formulário para corrigir.
     </div>
     <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
       Corrigir formulário →

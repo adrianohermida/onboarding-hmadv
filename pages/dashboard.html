@@ -716,7 +716,7 @@ function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
     text = 'Formulário aprovado ✓';
     hint = 'Plano de pagamento em elaboração.';
     bg   = 'rgba(21,128,61,.05)'; border = '1px solid rgba(21,128,61,.3)';
-    if (linkEl) linkEl.textContent = 'Ver formulário →';
+    if (linkEl) { linkEl.textContent = 'Ver formulário →'; linkEl.href = 'documentos.html'; }
   } else if (wf === 'rejeitado' || wf === 'pendente_correcao') {
     text = wf === 'rejeitado' ? 'Correção necessária' : 'Correção solicitada';
     hint = formDoc?.admin_notes || 'Verifique as instruções do advogado.';
@@ -726,7 +726,7 @@ function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
     text = 'Formulário em análise';
     hint = 'O escritório irá analisar e entrar em contato.';
     bg   = 'rgba(245,166,35,.05)'; border = '1px solid rgba(245,166,35,.3)';
-    if (linkEl) linkEl.textContent = 'Ver formulário →';
+    if (linkEl) { linkEl.textContent = 'Ver formulário →'; linkEl.href = 'documentos.html'; }
   } else if ((cnjStepAtual || 0) > 0) {
     text = `Formulário em andamento — passo ${cnjStepAtual}/7`;
     hint = 'Continue de onde parou.';
