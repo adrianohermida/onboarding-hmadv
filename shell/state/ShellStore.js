@@ -17,6 +17,7 @@
  *   knowledge: { metadata, lifecycle, classifications, timeline, knowledge, generated_at }
  *   financial: { debts, expenses, income, commitment, diagnosis, alerts, telemetry, generated_at }
  *   legalOperations: { lifecycle, timeline, sla, risk, productivity, monitoring, analytics, telemetry, generated_at }
+ *   clientExperience: { journeys, engagement, notifications, progress, retention, satisfaction, observability, analytics, telemetry, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -118,6 +119,28 @@ const _initialState = () => ({
     monitoring: { critical_cases: 0, onboarding_stalled: 0, negotiation_stalled: 0, pending_documents: 0, pending_agreements: 0, overdue_deadlines: 0, open_tasks: 0 },
     analytics: null,
     telemetry: { total: 0, transitions: 0, uploads: 0, revisions: 0, negotiations: 0, approvals: 0, tasks: 0, sla: 0, list: [] },
+    generated_at: null,
+  },
+  clientExperience: {
+    journeys: { total: 0, list: [] },
+    engagement: { total: 0, list: [] },
+    communications: { total: 0, list: [] },
+    notifications: { total: 0, list: [] },
+    emotional_ux: null,
+    education: { total: 0, list: [] },
+    guidance: { total: 0, list: [] },
+    assistants: [],
+    personalization: { total: 0, list: [] },
+    progress: { total: 0, completed: 0, list: [] },
+    gamification: null,
+    success: null,
+    feedback: { total: 0, list: [] },
+    satisfaction: null,
+    retention: { total: 0, high_risk: 0, list: [] },
+    vulnerability: { total: 0, high: 0, list: [] },
+    observability: { onboarding_abandonment: 0, upload_friction: 0, ux_bottlenecks: 0, client_delays: 0 },
+    analytics: null,
+    telemetry: { total: 0, onboarding: 0, notifications: 0, uploads: 0, progress: 0, feedbacks: 0, list: [] },
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -314,6 +337,33 @@ class ShellStore extends EventTarget {
       monitoring: snapshot.monitoring || { critical_cases: 0, onboarding_stalled: 0, negotiation_stalled: 0, pending_documents: 0, pending_agreements: 0, overdue_deadlines: 0, open_tasks: 0 },
       analytics: snapshot.analytics || null,
       telemetry: snapshot.telemetry || { total: 0, transitions: 0, uploads: 0, revisions: 0, negotiations: 0, approvals: 0, tasks: 0, sla: 0, list: [] },
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Client Experience ────────────────────────────────────────────────────
+  setClientExperienceSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('clientExperience', {
+      journeys: snapshot.journeys || { total: 0, list: [] },
+      engagement: snapshot.engagement || { total: 0, list: [] },
+      communications: snapshot.communications || { total: 0, list: [] },
+      notifications: snapshot.notifications || { total: 0, list: [] },
+      emotional_ux: snapshot.emotional_ux || null,
+      education: snapshot.education || { total: 0, list: [] },
+      guidance: snapshot.guidance || { total: 0, list: [] },
+      assistants: Array.isArray(snapshot.assistants) ? snapshot.assistants : [],
+      personalization: snapshot.personalization || { total: 0, list: [] },
+      progress: snapshot.progress || { total: 0, completed: 0, list: [] },
+      gamification: snapshot.gamification || null,
+      success: snapshot.success || null,
+      feedback: snapshot.feedback || { total: 0, list: [] },
+      satisfaction: snapshot.satisfaction || null,
+      retention: snapshot.retention || { total: 0, high_risk: 0, list: [] },
+      vulnerability: snapshot.vulnerability || { total: 0, high: 0, list: [] },
+      observability: snapshot.observability || { onboarding_abandonment: 0, upload_friction: 0, ux_bottlenecks: 0, client_delays: 0 },
+      analytics: snapshot.analytics || null,
+      telemetry: snapshot.telemetry || { total: 0, onboarding: 0, notifications: 0, uploads: 0, progress: 0, feedbacks: 0, list: [] },
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }
