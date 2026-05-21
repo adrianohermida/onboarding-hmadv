@@ -41,17 +41,10 @@ describe('shell runtime isolation', () => {
 
     document.addEventListener = originalDocumentAddEventListener;
     window.addEventListener = originalWindowAddEventListener;
-<<<<<<< HEAD
     window.setTimeout = originalSetTimeout || REAL_SET_TIMEOUT;
     window.setInterval = originalSetInterval || REAL_SET_INTERVAL;
     window.clearTimeout = originalClearTimeout || REAL_CLEAR_TIMEOUT;
     window.clearInterval = originalClearInterval || REAL_CLEAR_INTERVAL;
-=======
-    window.setTimeout = originalSetTimeout;
-    window.setInterval = originalSetInterval;
-    window.clearTimeout = originalClearTimeout;
-    window.clearInterval = originalClearInterval;
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   });
 
   it('prevents listeners from a previous route token from firing after route swap', () => {

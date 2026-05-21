@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -36,6 +35,3 @@ for (const page of requiredPages) {
 }
 
 console.log('[validate-shell-compatibility] OK');
-=======
-console.log('validate-shell-compatibility: shell compatibility foundation is documentation-first in this sprint');
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980

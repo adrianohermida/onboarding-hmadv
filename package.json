@@ -8,13 +8,8 @@
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
     "test":   "vitest run",
     "bootstrap:dev": "node platform/scripts/bootstrap-dev.mjs",
-<<<<<<< HEAD
     "validate:env": "node platform/scripts/validate-env.mjs",
     "validate:platform": "node platform/scripts/validate-manifests.mjs && node platform/scripts/validate-shell-compatibility.mjs && node platform/scripts/validate-tenant-awareness.mjs && node platform/scripts/validate-platform-governance.mjs",
-=======
-    "validate:env": "node platform/scripts/validate-platform-governance.mjs",
-    "validate:platform": "node platform/scripts/validate-platform-governance.mjs",
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
     "diagnostics:platform": "node platform/scripts/diagnostics.mjs",
     "validate:events": "node platform/scripts/validate-events-foundation.mjs",
     "validate:data-governance": "node platform/scripts/validate-data-governance-foundation.mjs",
@@ -28,15 +23,11 @@
     "validate:client-experience": "node platform/scripts/validate-client-experience-foundation.mjs",
     "validate:ai-os": "node platform/scripts/validate-ai-os-foundation.mjs",
     "validate:compliance-os": "node platform/scripts/validate-compliance-os-foundation.mjs",
-<<<<<<< HEAD
     "validate:analytics-os": "node platform/scripts/validate-analytics-os-foundation.mjs",
     "validate:platform-os": "node platform/scripts/validate-platform-os-foundation.mjs",
     "validate:ui-os": "node platform/scripts/validate-ui-os-foundation.mjs",
     "validate:workspace-os": "node platform/scripts/validate-workspace-os-foundation.mjs",
     "validate:billing-os": "node platform/scripts/validate-billing-os-foundation.mjs"
-=======
-    "validate:analytics-os": "node platform/scripts/validate-analytics-os-foundation.mjs"
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
   },
   "repository": {
     "type": "git",

@@ -1079,11 +1079,7 @@ function renderAnexoStep(step, container) {
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
             <div class="option-icon">WEB</div>
             <div class="option-title">Online</div>
-<<<<<<< HEAD
             <div class="option-desc">Gera o Anexo II a partir dos seus dados</div>
-=======
-            <div class="option-desc">Formulário guiado no portal</div>
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
           </div>
         </div>
 
@@ -1130,29 +1126,7 @@ function renderAnexoStep(step, container) {
         </div>
 
         <div id="panel-online" style="display:none">
-<<<<<<< HEAD
           ${buildAnexoWebPanelHtml()}
-=======
-          ${casoState?.onboarding_done
-            ? `<div class="done-banner">Formulário online preenchido e enviado ao escritório. Acompanhe o status no Painel.</div>`
-            : `<div class="glass-info">
-                <div class="glass-info-title">Formulário online guiado</div>
-                <ul>
-                  <li>Preencha o formulário de superendividamento diretamente no portal, sem baixar PDF</li>
-                  <li>Seus dados são salvos automaticamente a cada passo</li>
-                  <li>Tempo estimado: 15–25 minutos</li>
-                </ul>
-                <div style="margin-top:14px">
-                  <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 2 12 7 5 12"/></svg>
-                    ${casoState?.cnj_step_atual > 0
-                      ? `Continuar formulário (passo ${casoState.cnj_step_atual}/7)`
-                      : 'Iniciar formulário online'}
-                  </a>
-                </div>
-              </div>`
-          }
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
         </div>
 
         ` : `
@@ -1301,32 +1275,11 @@ function renderCnjFormStep(step, container) {
         </div>` : ''}
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-<<<<<<< HEAD
           ${!isDone ? `<div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Respostas salvas automaticamente.</div>` : ''}
           <a href="onboarding.html?source=journey" class="btn ${isDone ? 'btn-outline' : 'btn-primary'}" style="display:inline-flex;align-items:center;gap:8px">
             ${btnLabel}
           </a>
           ${isRejected ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Corrija os pontos indicados e reenvie o formulário.</div>` : ''}
-=======
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">Formulário CNJ — Portal</div>
-          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">
-            ${casoState?.onboarding_done
-              ? 'Formulário enviado com sucesso. Aguardando revisão do escritório.'
-              : casoState?.cnj_step_atual > 0
-              ? `Formulário em andamento — passo ${casoState.cnj_step_atual} de 7. Continue de onde parou.`
-              : 'Preencha os 7 passos do formulário. Suas respostas são salvas automaticamente.'}
-          </div>
-          ${casoState?.onboarding_done
-            ? `<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(21,128,61,.1);color:var(--ok);border:1px solid rgba(21,128,61,.25);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 8 6 12 14 4"/></svg>
-                Enviado — aguardando análise
-              </div>`
-            : `<a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 2 12 7 5 12"/></svg>
-                ${casoState?.cnj_step_atual > 0 ? `Continuar (passo ${casoState.cnj_step_atual}/7)` : 'Iniciar Formulário'}
-              </a>`
-          }
->>>>>>> c274e1dce2d6e6ff268d5687f962db62d5191980
         </div>
 
         <div class="jnav">
