@@ -545,7 +545,7 @@
         <div class="section-divider">§2g-h — Patrimônio</div>
 
         <div class="dyn-card">
-          <div class="dyn-card-header"><span class="dyn-card-title">🏠 Imóvel</span></div>
+          <div class="dyn-card-header"><span class="dyn-card-title">Imovel</span></div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Situação</label>
@@ -570,7 +570,7 @@
         </div>
 
         <div class="dyn-card">
-          <div class="dyn-card-header"><span class="dyn-card-title">🚗 Veículo</span></div>
+          <div class="dyn-card-header"><span class="dyn-card-title">Veiculo</span></div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Situação</label>
@@ -831,7 +831,7 @@
           <button class="btn btn-ghost" onclick="goStep(6)">← Voltar</button>
           <span class="step-nav-info">Passo 7 de 7</span>
           <button class="btn btn-primary" id="btn-finalizar" onclick="finalizarCadastro()">
-            ✓ Enviar formulário ao escritório
+            Enviar formulario ao escritorio
           </button>
         </div>
       </div>
@@ -1259,7 +1259,7 @@ window.updateCredorCalc = function(i) {
     html += ' → <strong>Corrigido: ' + fmtBRL(r.saldoCorrigido) + '</strong>';
   }
   if (r.capAplicado) {
-    html += '<br><span style="color:#dc2626">⚠ Cap 200% cartão — excedente: ' + fmtBRL(r.excedenteCartao) + '</span>';
+    html += '<br><span style="color:#dc2626">Cap 200% cartao - excedente: ' + fmtBRL(r.excedenteCartao) + '</span>';
   }
   html += '</div>';
   r.alertas.forEach(a => { html += '<div class="credor-alerta">' + esc(a) + '</div>'; });
@@ -1451,7 +1451,7 @@ window.recalcularPlano = function() {
   };
   set('plano-parcela-nec',  fmtBRL(p.parcelaNecessaria));
   set('plano-parcela-poss', fmtBRL(p.parcelaPossivel));
-  set('plano-viavel',  p.viavel ? '✓ Viável' : '✗ Insuficiente', p.viavel ? 'ok' : 'danger');
+  set('plano-viavel',  p.viavel ? 'Viavel' : 'Insuficiente', p.viavel ? 'ok' : 'danger');
   set('plano-prazo-real', p.prazoNecessario <= 60
       ? p.prazoNecessario + ' meses'
       : p.prazoNecessario + ' meses (excede 60)');
@@ -1482,7 +1482,7 @@ window.handleCPFLookup = async function() {
     if (d.sexo) { const el = document.getElementById('sexo'); if (el) el.value = d.sexo === 'M' ? 'M' : 'F'; }
     (d.telefones || []).forEach(t => addPhone(t));
     (d.enderecos  || []).forEach(e => addAddress(e));
-    hint.textContent = '✓ Dados preenchidos automaticamente.';
+    hint.textContent = 'Dados preenchidos automaticamente.';
     hint.style.color = 'var(--green)';
     showToast('Dados do CPF preenchidos!', 'success');
   } catch (_) {
@@ -1609,7 +1609,7 @@ window.finalizarCadastro = async function() {
   } catch (e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
     btn.disabled = false;
-    btn.textContent = '✓ Enviar formulário ao escritório';
+    btn.textContent = 'Enviar formulario ao escritorio';
   }
 };
 
