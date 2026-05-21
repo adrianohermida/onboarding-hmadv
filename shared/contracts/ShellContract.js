@@ -24,6 +24,7 @@ import { legalOperationsFoundation } from '../../legal-operations/LegalOperation
 import { clientExperienceFoundation } from '../../client-experience/ClientExperienceFoundation.js';
 import { aiOsFoundation } from '../../ai-os/AIOSFoundation.js';
 import { complianceOsFoundation } from '../../compliance-os/ComplianceOSFoundation.js';
+import { analyticsOsFoundation } from '../../analytics-os/AnalyticsOSFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -183,6 +184,29 @@ export const compliance = {
   refresh: () => complianceOsFoundation.snapshot(),
 };
 
+// ── Analytics API ─────────────────────────────────────────────────────────
+export const analytics = {
+  getSnapshot: () => store.get('analytics') || {},
+  getMetrics: () => store.get('analytics')?.metrics || { total: 0, list: [] },
+  getKpis: () => store.get('analytics')?.kpis || {},
+  getExecutive: () => store.get('analytics')?.executive || {},
+  getFinancial: () => store.get('analytics')?.financial || {},
+  getLegal: () => store.get('analytics')?.legal || {},
+  getOperations: () => store.get('analytics')?.operations || {},
+  getOnboarding: () => store.get('analytics')?.onboarding || {},
+  getEngagement: () => store.get('analytics')?.engagement || {},
+  getProductivity: () => store.get('analytics')?.productivity || {},
+  getSla: () => store.get('analytics')?.sla || {},
+  getTenants: () => store.get('analytics')?.tenants || {},
+  getRisk: () => store.get('analytics')?.risk || {},
+  getInsights: () => store.get('analytics')?.insights || {},
+  getPredictions: () => store.get('analytics')?.predictions || {},
+  getObservability: () => store.get('analytics')?.observability || {},
+  getTelemetry: () => store.get('analytics')?.telemetry || {},
+  getGovernance: () => store.get('analytics')?.governance || {},
+  refresh: () => analyticsOsFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -205,4 +229,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, analytics, tenant, shellStore, billing };

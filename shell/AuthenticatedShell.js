@@ -45,6 +45,8 @@ import { mountAiOsFoundation } from '../ai-os/AIOSFoundation.js';
 import { mountAiOsShellVisibility } from '../ai-os/ShellAiOsVisibility.js';
 import { mountComplianceOSFoundation } from '../compliance-os/ComplianceOSFoundation.js';
 import { mountComplianceShellVisibility } from '../compliance-os/ShellComplianceVisibility.js';
+import { mountAnalyticsOSFoundation } from '../analytics-os/AnalyticsOSFoundation.js';
+import { mountAnalyticsShellVisibility } from '../analytics-os/ShellAnalyticsVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -98,6 +100,8 @@ export class AuthenticatedShell {
       mountAiOsShellVisibility();
       mountComplianceOSFoundation();
       mountComplianceShellVisibility();
+      mountAnalyticsOSFoundation();
+      mountAnalyticsShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
