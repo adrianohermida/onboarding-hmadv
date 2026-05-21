@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { FASE_LABELS } from '@/types';
 import StatusBadge from '../ui/StatusBadge';
-import toast from 'sonner';
+import { toast } from 'sonner';
 
 const FASES = Object.keys(FASE_LABELS) as (keyof typeof FASE_LABELS)[];
 

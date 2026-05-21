@@ -5,7 +5,7 @@ import { useWorkspaceStore } from '@/store/workspace';
 import { createClient } from '@/lib/supabase/client';
 import { Moon, Sun, Monitor, LogOut, Shield, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import toast from 'sonner';
+import { toast } from 'sonner';
 
 interface Props {
   userId: string;

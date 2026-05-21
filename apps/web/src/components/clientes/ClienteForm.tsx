@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import toast from 'sonner';
+import { toast } from 'sonner';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),

@@ -8,7 +8,7 @@ import type { Tables } from '@/types/database';
 import { WORKFLOW_STATUS_LABELS } from '@/types';
 import StatusBadge from '../ui/StatusBadge';
 import { createClient } from '@/lib/supabase/client';
-import toast from 'sonner';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 type Doc = Tables<'portal_documentos'>;

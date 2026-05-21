@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 import type { Tables } from '@/types/database';
-import toast from 'sonner';
+import { toast } from 'sonner';
 
 type Caso = Tables<'portal_casos'>;
 
