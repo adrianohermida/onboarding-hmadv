@@ -37,15 +37,27 @@ function inferModuleFromStack(stack = '') {
   return 'unknown';
 }
 
+function routeKeyFromModule(moduleName = '') {
+  if (!moduleName || moduleName === 'unknown') return 'unknown';
+  const normalized = String(moduleName).toLowerCase();
+  const pageMatch = normalized.match(/pages\/([\w-]+)\.html/);
+  if (pageMatch?.[1]) return pageMatch[1];
+  const jsMatch = normalized.match(/js\/([\w-]+)\.js/);
+  if (jsMatch?.[1]) return jsMatch[1];
+  return normalized;
+}
+
 function reportSuppressedCallback(kind, error, source = 'listener') {
   const message = error?.message || String(error || 'unknown error');
   const stack = error?.stack || '';
   const module = inferModuleFromStack(stack);
+  const route = routeKeyFromModule(module);
   const detail = {
     kind,
     source,
     message,
     module,
+    route,
     ts: Date.now(),
   };
 
@@ -53,10 +65,15 @@ function reportSuppressedCallback(kind, error, source = 'listener') {
     if (!Array.isArray(window.__shellSuppressedCallbacks)) {
       window.__shellSuppressedCallbacks = [];
     }
+    if (!window.__shellSuppressedByRoute || typeof window.__shellSuppressedByRoute !== 'object') {
+      window.__shellSuppressedByRoute = {};
+    }
     window.__shellSuppressedCallbacks.push(detail);
     if (window.__shellSuppressedCallbacks.length > 20) {
       window.__shellSuppressedCallbacks.shift();
     }
+    window.__shellSuppressedByRoute[route] = (window.__shellSuppressedByRoute[route] || 0) + 1;
+    detail.countsByRoute = { ...window.__shellSuppressedByRoute };
     window.dispatchEvent(new CustomEvent(SHELL_SUPPRESSED_EVENT, { detail }));
   } catch (_) {}
 }

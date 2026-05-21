@@ -326,11 +326,25 @@ function setAdminDiagBanner(detail) {
   const ts = detail.ts ? new Date(detail.ts) : new Date();
   const hhmmss = ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const module = escapeHtml(detail.module || 'unknown');
+  const route = escapeHtml(detail.route || 'unknown');
   const kind = escapeHtml(detail.kind || 'callback');
   const source = escapeHtml(detail.source || 'runtime');
   const msg = escapeHtml(detail.message || 'erro sem mensagem');
+  const countsByRoute = detail.countsByRoute && typeof detail.countsByRoute === 'object'
+    ? detail.countsByRoute
+    : (window.__shellSuppressedByRoute || {});
 
-  el.innerHTML = `Diagnostico shell: callback suprimido (${kind}/${source}) em <strong>${module}</strong> as ${hhmmss}. ${msg}`;
+  const routeSummary = Object.entries(countsByRoute)
+    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+    .slice(0, 5)
+    .map(([name, count]) => `${escapeHtml(name)}: ${Number(count || 0)}`)
+    .join(' | ');
+
+  const counterText = routeSummary
+    ? ` Contador por rota: ${routeSummary}.`
+    : '';
+
+  el.innerHTML = `Diagnostico shell: callback suprimido (${kind}/${source}) em <strong>${module}</strong> [rota: ${route}] as ${hhmmss}. ${msg}.${counterText}`;
   el.style.display = '';
 }
 
