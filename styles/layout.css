@@ -795,6 +795,23 @@ body.app-loaded .sk { display: none !important; }
 }
 
 @media (max-width: 480px) {
+  .portal-header {
+    gap: 8px;
+  }
+
+  .header-breadcrumb {
+    min-width: 0;
+  }
+
+  .header-breadcrumb strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 40vw;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+
   .page-header-row {
     flex-direction: column;
     align-items: stretch;
@@ -823,29 +840,40 @@ body.app-loaded .sk { display: none !important; }
 @media (max-width: 375px) {
   .portal-header { height: auto; min-height: 48px; padding: 6px 10px; }
   .header-breadcrumb { font-size: 12px; gap: 4px; }
+  .header-breadcrumb strong { max-width: 32vw; }
+  .header-actions { min-width: 0; }
   .header-actions { gap: 8px; }
   .header-user { font-size: 12px; }
+  .header-user-name { display: none; }
   .header-avatar { width: 28px; height: 28px; font-size: 11px; }
+  .shell-mode-selector { min-width: 0; }
+  .shell-mode-selector .portal-mode-switch-btns { max-width: 100%; overflow: hidden; }
   .page-content { padding: 10px; }
   .page-header { margin-bottom: 14px; }
   .page-header h1 { font-size: 19px; }
   .page-header p { font-size: 12px; }
-  .admin-bar { padding: 8px 10px; gap: 8px; }
+  .admin-bar { padding: 8px 10px; gap: 8px; align-items: flex-start; }
+  .admin-bar .portal-mode-switch { width: 100%; justify-content: space-between; }
+  .admin-bar .portal-mode-switch-btns { margin-left: auto; }
   .portal-mode-switch-label { font-size: 11px; }
   .portal-mode-btn { padding: 4px 11px; font-size: 11px; }
-  .portal-page-footer { padding: 8px 10px; font-size: 10px; }
+  .portal-page-footer { padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); font-size: 10px; }
 }
 
 @media (max-width: 320px) {
   .portal-header { height: auto; min-height: 46px; padding: 6px 8px; }
   .header-breadcrumb { font-size: 11px; }
+  .header-breadcrumb strong { max-width: 28vw; }
+  .header-breadcrumb span { display: none; }
   .shell-mode-selector .portal-mode-btn { padding: 3px 7px; font-size: 10px; }
   .sidebar { width: min(86vw, 260px); }
   .page-content { padding: 8px; }
   .page-header h1 { font-size: 18px; }
   .admin-bar { padding: 8px; }
-  .portal-mode-switch { gap: 6px; }
-  .portal-mode-btn { padding: 3px 8px; font-size: 10px; }
+  .portal-mode-switch { gap: 4px; }
+  .portal-mode-switch-label { font-size: 10px; }
+  .portal-mode-btn { padding: 3px 7px; font-size: 10px; }
+  .portal-page-footer { line-height: 1.35; }
 }
 
 /* ── SIDEBAR DRAWER OVERLAY ───────────────────── */
