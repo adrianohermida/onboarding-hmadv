@@ -18,6 +18,7 @@ body.app-loaded .sk { display: none !important; }
   display: flex;
   height: 100dvh;
   overflow: hidden;
+  font-family: "Lucida Sans", "Lucida Sans Unicode", Arial, "Segoe UI", sans-serif;
 }
 
 .portal-shell.sidebar-collapsed {
@@ -27,7 +28,7 @@ body.app-loaded .sk { display: none !important; }
 /* ── SIDEBAR ──────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  background: var(--navy);
+  background: #132e4a;
   flex-shrink: 0;
   height: 100dvh;
   overflow-y: auto;
@@ -292,6 +293,7 @@ body.app-loaded .sk { display: none !important; }
   padding: 0 32px;
   z-index: 50;
   gap: 12px;
+  font-family: "Lucida Sans", "Lucida Sans Unicode", Arial, "Segoe UI", sans-serif;
 }
 
 .header-breadcrumb {
@@ -465,6 +467,10 @@ body.app-loaded .sk { display: none !important; }
   .sidebar-toggle { display: flex; }
 
   .main-area {
+    width: 100%;
+  }
+
+  .main-wrap {
     width: 100%;
   }
 
