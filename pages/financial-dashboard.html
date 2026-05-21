@@ -37,7 +37,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <!-- App shell -->
-  <script type="module" src="../js/app.js?v=20260521c"></script>
+  <script type="module" src="../js/app.js?v=20260521d"></script>
 
   <style>
   /* ── Shell ──────────────────────────────────────────────────────── */
@@ -882,6 +882,22 @@ function syncFormValues() {
 
 function refreshDiag() {
   if (!isFinDashMounted()) return;
+  const requiredIds = [
+    'fd-score-num',
+    'fd-score-tag',
+    'kpi-renda',
+    'kpi-desp-ess',
+    'kpi-desp-var',
+    'kpi-total-dividas',
+    'kpi-n-credores',
+    'kpi-comprometimento',
+    'kpi-min-exist',
+    'kpi-sobra',
+    'gauge-pct-label',
+    'gauge-severity-label',
+  ];
+  if (requiredIds.some(id => !byId(id))) return;
+
   const rendaTotal = rendaPropria + rendaFam;
   const diag = engine.getDiagnostico(rendaTotal, despesas, nDep);
   const score = FinancialCalculator.calcularScore(diag);
@@ -1240,7 +1256,7 @@ function openDebtModal(debtId = null) {
   }
 
   if (debtId) {
-    document.getElementById('modal-title').textContent = 'Editar Dívida';
+    safeSetText('modal-title', 'Editar Dívida');
     delBtn.style.display = 'block';
     const d = engine.getAll().find(x => x.id === debtId);
     if (d) {
@@ -1258,7 +1274,7 @@ function openDebtModal(debtId = null) {
       document.getElementById('m-obs').value       = d.observacoes || '';
     }
   } else {
-    document.getElementById('modal-title').textContent = 'Nova Dívida';
+    safeSetText('modal-title', 'Nova Dívida');
     delBtn.style.display = 'none';
     document.getElementById('modal-debt-id').value = '';
     ['m-credor','m-valor','m-parcela','m-meses','m-juros','m-banco','m-vencimento','m-obs'].forEach(id => {
@@ -1332,18 +1348,20 @@ window._fdEditDebt = (id) => openDebtModal(id);
 
 // ── Income / Expenses input handlers ──────────────────────────────────
 window.onInputChange = function() {
+  if (!isFinDashMounted()) return;
   rendaPropria = parseFloat(document.getElementById('inp-renda-propria').value)  || 0;
   rendaFam     = parseFloat(document.getElementById('inp-renda-familiar').value) || 0;
   const total  = rendaPropria + rendaFam;
-  document.getElementById('badge-renda').textContent = total > 0
+  safeSetText('badge-renda', total > 0
     ? FinancialCalculator.formatBRL(total)
-    : 'Não informado';
+    : 'Não informado');
   markDirty();
   refreshDiag();
   renderCharts();
 };
 
 window._fdOnExpenseChange = function(key, val) {
+  if (!isFinDashMounted()) return;
   despesas[key] = parseFloat(val) || 0;
   markDirty();
   refreshDiag();
@@ -1351,8 +1369,9 @@ window._fdOnExpenseChange = function(key, val) {
 };
 
 window.changeDep = function(delta) {
+  if (!isFinDashMounted()) return;
   nDep = Math.max(0, nDep + delta);
-  document.getElementById('dep-count-display').textContent = nDep;
+  safeSetText('dep-count-display', nDep);
   markDirty();
   refreshDiag();
   renderCharts();
