@@ -1,0 +1,57 @@
+name: CD Platform Delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run test and platform validations
+        run: |
+          npm test
+          node platform/scripts/validate-manifests.mjs
+          node platform/scripts/validate-shell-compatibility.mjs
+          node platform/scripts/validate-tenant-awareness.mjs
+          node platform/scripts/validate-platform-governance.mjs
+
+  deploy-staging:
+    needs: preflight
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Staging deploy gate
+        run: echo "Staging deploy approved by pipeline governance"
+
+  deploy-production:
+    needs: [preflight, deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Production deploy gate
+        run: echo "Production deploy requires environment approval and completed staging"
