@@ -18,6 +18,7 @@ import { bus } from '../../modules/events/EventBus.js';
 import { observabilityFoundation } from '../../observability/ObservabilityFoundation.js';
 import { integrationHub } from '../../integrations/IntegrationHub.js';
 import { workflowAutomationFoundation } from '../../workflow-engine/WorkflowAutomationFoundation.js';
+import { documentIntelligenceFoundation } from '../../document-intelligence/DocumentIntelligenceFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -96,6 +97,19 @@ export const workflows = {
   refresh: () => workflowAutomationFoundation.snapshot(),
 };
 
+// ── Knowledge API ───────────────────────────────────────────────────────────
+export const knowledge = {
+  getSnapshot: () => store.get('knowledge') || {},
+  getLifecycle: () => store.get('knowledge')?.lifecycle || {},
+  getMetadata: () => store.get('knowledge')?.metadata || {},
+  getTelemetry: () => store.get('knowledge')?.knowledge?.telemetry || {},
+  getTimeline: () => store.get('knowledge')?.timeline || {},
+  getRecentDocuments: () => (store.get('knowledge')?.metadata?.list || []).slice(0, 5),
+  getKnowledgeCards: () => store.get('knowledge')?.knowledge?.domains || [],
+  getOnboardingProgress: () => store.get('knowledge')?.knowledge?.journey || {},
+  refresh: () => documentIntelligenceFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -118,4 +132,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, tenant, shellStore, billing };

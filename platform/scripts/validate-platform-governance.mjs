@@ -15,6 +15,7 @@ const checks = [
   ['observability governance', 'governance/observability/logging-standards.md'],
   ['integration governance', 'governance/integrations/naming-standards.md'],
   ['workflow governance', 'governance/workflows/module-requirements.md'],
+  ['document governance', 'governance/documents/module-requirements.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
@@ -38,7 +39,8 @@ const requiredScripts = [
   'validate:finops',
   'validate:observability',
   'validate:integrations',
-  'validate:workflows'
+  'validate:workflows',
+  'validate:knowledge'
 ];
 const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
 if (missingScripts.length) {
