@@ -15,6 +15,7 @@
  *   integrations: { providers, health, telemetry, queue_depth, generated_at }
  *   workflows: { definitions, lifecycle, telemetry, sla, tasks, approvals, escalations, queue, generated_at }
  *   knowledge: { metadata, lifecycle, classifications, timeline, knowledge, generated_at }
+ *   financial: { debts, expenses, income, commitment, diagnosis, alerts, telemetry, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -80,6 +81,30 @@ const _initialState = () => ({
       telemetry: { total: 0, videos_watched: 0, onboarding_progress_events: 0, documents_accessed: 0, template_used: 0, onboarding_abandonment: 0, list: [] },
     },
     search: { metadata_query_all: 0 },
+    generated_at: null,
+  },
+  financial: {
+    debts: [],
+    expenses: [],
+    income: [],
+    commitment: {
+      income_total: 0,
+      debt_total: 0,
+      essential_total: 0,
+      expense_total: 0,
+      commitment_income: 0,
+      commitment_essential: 0,
+      commitment_net: 0,
+      commitment_after_minimum: 0,
+      payment_capacity: 0,
+    },
+    minimum_existential: null,
+    diagnosis: null,
+    monitoring: null,
+    alerts: { total: 0, alerts: [] },
+    timeline: { total: 0, list: [] },
+    telemetry: { total: 0, updates: 0, renegotiations: 0, payments: 0, simulations: 0, plans: 0, list: [] },
+    analytics: null,
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -230,6 +255,35 @@ class ShellStore extends EventTarget {
         telemetry: { total: 0, videos_watched: 0, onboarding_progress_events: 0, documents_accessed: 0, template_used: 0, onboarding_abandonment: 0, list: [] },
       },
       search: snapshot.search || { metadata_query_all: 0 },
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Financial ─────────────────────────────────────────────────────────────
+  setFinancialSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('financial', {
+      debts: Array.isArray(snapshot.debts) ? snapshot.debts : [],
+      expenses: Array.isArray(snapshot.expenses) ? snapshot.expenses : [],
+      income: Array.isArray(snapshot.income) ? snapshot.income : [],
+      commitment: snapshot.commitment || {
+        income_total: 0,
+        debt_total: 0,
+        essential_total: 0,
+        expense_total: 0,
+        commitment_income: 0,
+        commitment_essential: 0,
+        commitment_net: 0,
+        commitment_after_minimum: 0,
+        payment_capacity: 0,
+      },
+      minimum_existential: snapshot.minimum_existential || null,
+      diagnosis: snapshot.diagnosis || null,
+      monitoring: snapshot.monitoring || null,
+      alerts: snapshot.alerts || { total: 0, alerts: [] },
+      timeline: snapshot.timeline || { total: 0, list: [] },
+      telemetry: snapshot.telemetry || { total: 0, updates: 0, renegotiations: 0, payments: 0, simulations: 0, plans: 0, list: [] },
+      analytics: snapshot.analytics || null,
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }

@@ -28,6 +28,8 @@ const required = [
   'financial-intelligence/telemetry/FinancialTelemetry.js',
   'financial-intelligence/calculations/FinancialCalculations.js',
   'financial-intelligence/governance/FinancialGovernanceEngine.js',
+  'financial-intelligence/docs/financial-intelligence-foundation.md',
+  'financial-intelligence/governance/financial-intelligence-governance.md',
   'shared/contracts/financial/FinancialContracts.js',
   'docs/financial/README.md',
   'docs/financial/calculations.md',

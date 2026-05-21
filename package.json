@@ -17,7 +17,8 @@
     "validate:observability": "node platform/scripts/validate-observability-foundation.mjs",
     "validate:integrations": "node platform/scripts/validate-integrations-foundation.mjs",
     "validate:workflows": "node platform/scripts/validate-workflows-foundation.mjs",
-    "validate:knowledge": "node platform/scripts/validate-document-intelligence-foundation.mjs"
+    "validate:knowledge": "node platform/scripts/validate-document-intelligence-foundation.mjs",
+    "validate:financial-intelligence": "node platform/scripts/validate-financial-intelligence-foundation.mjs"
   },
   "repository": {
     "type": "git",

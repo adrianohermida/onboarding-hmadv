@@ -35,6 +35,8 @@ import { mountWorkflowAutomationFoundation } from '../workflow-engine/WorkflowAu
 import { mountWorkflowShellVisibility } from '../workflow-engine/ShellWorkflowVisibility.js';
 import { mountDocumentIntelligenceFoundation } from '../document-intelligence/DocumentIntelligenceFoundation.js';
 import { mountKnowledgeShellVisibility } from '../document-intelligence/ShellKnowledgeVisibility.js';
+import { mountFinancialIntelligenceFoundation } from '../financial-intelligence/FinancialIntelligenceFoundation.js';
+import { mountFinancialShellVisibility } from '../financial-intelligence/ShellFinancialVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -78,6 +80,8 @@ export class AuthenticatedShell {
       mountWorkflowShellVisibility();
       mountDocumentIntelligenceFoundation();
       mountKnowledgeShellVisibility();
+      mountFinancialIntelligenceFoundation();
+      mountFinancialShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
