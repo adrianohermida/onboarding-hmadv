@@ -154,6 +154,13 @@ function syncMainContent(parsedDoc) {
     currentFooter.replaceWith(nextFooter.cloneNode(true));
   }
 
+  document.querySelectorAll('.fd-save-bar, .fd-modal-backdrop').forEach(node => node.remove());
+  parsedDoc.querySelectorAll('.fd-save-bar, .fd-modal-backdrop').forEach(node => {
+    const clone = node.cloneNode(true);
+    clone.setAttribute('data-shell-dynamic', '1');
+    document.body.appendChild(clone);
+  });
+
   parsedDoc.querySelectorAll('.modal-overlay, .toast').forEach(node => {
     const clone = node.cloneNode(true);
     clone.setAttribute('data-shell-dynamic', '1');
@@ -216,6 +223,8 @@ async function navigateModule(url, { pushState = true } = {}) {
   const absolute = toAbsoluteUrl(url);
 
   try {
+    document.dispatchEvent(new CustomEvent('app:route-will-change'));
+
     const res = await fetch(absolute, { credentials: 'same-origin' });
     if (!res.ok) {
       window.location.href = absolute;

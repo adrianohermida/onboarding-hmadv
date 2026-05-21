@@ -740,14 +740,21 @@ let chartGauge   = null;
 let chartBreak   = null;
 let chartDesp    = null;
 let chartDivTipo = null;
+let offDebtListChanged = null;
+let finDashBooting = false;
 
 const shell = new Shell();
 
+const byId = (id) => document.getElementById(id);
+
 // ── Bootstrap ──────────────────────────────────────────────────────────
 async function bootstrap() {
+  if (finDashBooting) return;
+  finDashBooting = true;
+
   // Auth guard
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
+  if (!session) { window.location.href = 'login.html'; finDashBooting = false; return; }
 
   shell.init();
   await loadData();
@@ -755,11 +762,14 @@ async function bootstrap() {
   renderAll();
 
   // Listen for debt changes
-  bus.on('debt.list.changed', () => {
+  if (offDebtListChanged) offDebtListChanged();
+  offDebtListChanged = bus.on('debt.list.changed', () => {
     updateDebtSection();
     refreshDiag();
     renderCharts();
   });
+
+  finDashBooting = false;
 }
 
 async function loadData() {
@@ -772,8 +782,10 @@ async function loadData() {
       try { despesas = JSON.parse(caso.despesas_json || '{}'); } catch { despesas = {}; }
     }
     await engine.init(DebtService);
-    document.getElementById('fd-loading').style.display = 'none';
-    document.getElementById('fd-main').style.display    = 'block';
+    const loadingEl = byId('fd-loading');
+    const mainEl = byId('fd-main');
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (mainEl) mainEl.style.display = 'block';
   } catch (e) {
     console.error('[FinDash] loadData error:', e);
     Toast.error('Erro ao carregar dados financeiros.');
@@ -789,10 +801,14 @@ function renderAll() {
 }
 
 function syncFormValues() {
-  document.getElementById('inp-renda-propria').value  = rendaPropria || '';
-  document.getElementById('inp-renda-familiar').value = rendaFam     || '';
-  document.getElementById('dep-count-display').textContent = nDep;
-  document.getElementById('badge-renda').textContent = rendaPropria
+  const rendaEl = byId('inp-renda-propria');
+  const famEl = byId('inp-renda-familiar');
+  const depEl = byId('dep-count-display');
+  const badgeEl = byId('badge-renda');
+  if (rendaEl) rendaEl.value = rendaPropria || '';
+  if (famEl) famEl.value = rendaFam || '';
+  if (depEl) depEl.textContent = nDep;
+  if (badgeEl) badgeEl.textContent = rendaPropria
     ? FinancialCalculator.formatBRL(rendaPropria + rendaFam)
     : 'Não informado';
 
@@ -936,16 +952,22 @@ function buildGrid(containerId, keys, essential) {
 function updateDespesasBadges() {
   const totEss = FinancialCalculator.somarDespesasEssenciais(despesas);
   const totVar = FinancialCalculator.somarDespesasVariaveis(despesas);
-  document.getElementById('badge-ess').textContent = totEss > 0 ? FinancialCalculator.formatBRL(totEss) : 'R$ —';
-  document.getElementById('badge-var').textContent = totVar > 0 ? FinancialCalculator.formatBRL(totVar) : 'R$ —';
+  const essEl = byId('badge-ess');
+  const varEl = byId('badge-var');
+  if (essEl) essEl.textContent = totEss > 0 ? FinancialCalculator.formatBRL(totEss) : 'R$ —';
+  if (varEl) varEl.textContent = totVar > 0 ? FinancialCalculator.formatBRL(totVar) : 'R$ —';
 }
 
 // ── Debt Section ───────────────────────────────────────────────────────
 function updateDebtSection() {
   const debts = engine.getAll();
-  document.getElementById('badge-dividas').textContent = `${debts.length} dívida${debts.length !== 1 ? 's' : ''}`;
+  const badgeEl = byId('badge-dividas');
+  const listEl = byId('fd-debts-list');
+  if (!badgeEl || !listEl) return;
 
-  const el = document.getElementById('fd-debts-list');
+  badgeEl.textContent = `${debts.length} dívida${debts.length !== 1 ? 's' : ''}`;
+
+  const el = listEl;
   if (!debts.length) {
     el.innerHTML = `<div class="fd-debt-empty">
       <div class="fd-debt-empty-icon">💳</div>
@@ -1267,13 +1289,13 @@ window.changeDep = function(delta) {
 function markDirty() {
   if (!dirty) {
     dirty = true;
-    document.getElementById('fd-save-bar').classList.add('visible');
+    byId('fd-save-bar')?.classList.add('visible');
   }
 }
 
 window.discardChanges = async function() {
   dirty = false;
-  document.getElementById('fd-save-bar').classList.remove('visible');
+  byId('fd-save-bar')?.classList.remove('visible');
   await loadData();
   syncFormValues();
   refreshDiag();
@@ -1282,7 +1304,8 @@ window.discardChanges = async function() {
 };
 
 window.saveFinancial = async function() {
-  const btn = document.getElementById('fd-save-btn');
+  const btn = byId('fd-save-btn');
+  if (!btn) return;
   btn.textContent = 'Salvando…';
   btn.disabled    = true;
   try {
@@ -1293,7 +1316,7 @@ window.saveFinancial = async function() {
       despesas_json:       JSON.stringify(despesas),
     });
     dirty = false;
-    document.getElementById('fd-save-bar').classList.remove('visible');
+    byId('fd-save-bar')?.classList.remove('visible');
     Toast.success('Diagnóstico financeiro salvo!');
 
     // Emit event for other pages
@@ -1329,14 +1352,28 @@ function esc(str) {
 document.addEventListener('app:ready', () => bootstrap().catch(err => {
   console.error('[FinDash] bootstrap error:', err);
   Toast.error('Erro ao inicializar o painel. Tente recarregar a página.');
-  document.getElementById('fd-loading').innerHTML =
+  const loadingEl = byId('fd-loading');
+  if (loadingEl) loadingEl.innerHTML =
     '<div style="text-align:center;color:var(--red);"><div style="font-size:32px;margin-bottom:8px;">⚠️</div><div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div></div>';
 }));
+
+document.addEventListener('app:route-will-change', () => {
+  if (offDebtListChanged) {
+    offDebtListChanged();
+    offDebtListChanged = null;
+  }
+  if (chartGauge) { chartGauge.destroy(); chartGauge = null; }
+  if (chartBreak) { chartBreak.destroy(); chartBreak = null; }
+  if (chartDesp) { chartDesp.destroy(); chartDesp = null; }
+  if (chartDivTipo) { chartDivTipo.destroy(); chartDivTipo = null; }
+  finDashBooting = false;
+});
 
 // Fallback para race condition
 if (document.readyState === 'complete') {
   setTimeout(() => {
-    if (document.getElementById('fd-loading').style.display !== 'none') {
+    const loadingEl = byId('fd-loading');
+    if (loadingEl && loadingEl.style.display !== 'none') {
       bootstrap().catch(console.error);
     }
   }, 1500);
