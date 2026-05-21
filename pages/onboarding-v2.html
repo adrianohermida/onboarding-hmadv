@@ -321,6 +321,7 @@ import { FinancialCalculator } from '../modules/financial/calculator.js';
 import { VideoPlayer }      from '../modules/videos/VideoPlayer.js';
 import { Toast }            from '../modules/ui/Toast.js';
 import { Shell }            from '../modules/ui/Shell.js';
+import { openCnjAnexoIIPrint } from '../js/cnj-pdf-generator.js';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -337,6 +338,7 @@ let isAdminUser = false;
 let unmountModeSelector = null;
 let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let formDoc   = null;   // portal_documentos row for formulario_cnj_online
+let webAnexoGenerated = false; // true after user generates the Annex II via WEB path
 const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 document.addEventListener('app:user-loaded', (e) => {
