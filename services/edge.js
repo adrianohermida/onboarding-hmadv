@@ -106,7 +106,7 @@ export async function invokeEdgeFunction(path, {
         if (response.status === 401 && attempt < retries) {
           try {
             const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session?.access_token && refreshed.session.access_token !== accessToken) {
+            if (refreshed?.session?.access_token) {
               accessToken = refreshed.session.access_token;
               lastError = err;
               await delay(backoffMs * (attempt + 1));
