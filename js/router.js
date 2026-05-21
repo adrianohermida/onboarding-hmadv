@@ -1,8 +1,8 @@
-import { FEATURE_FLAGS, PORTAL_MODULES, getModule, getRoutes, getSidebarModules } from './navigation.js';
+import { FEATURE_FLAGS, PORTAL_MODULES, getModule, getRoutes, getSidebarModules, resolveFeatureFlags } from './navigation.js';
 
 export class Router {
   constructor() {
-    this.featureFlags = { ...FEATURE_FLAGS };
+    this.featureFlags = resolveFeatureFlags(FEATURE_FLAGS);
     this.modules = PORTAL_MODULES;
     this.routes = getRoutes();
   }

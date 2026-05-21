@@ -2,15 +2,33 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Platform OS | HMADV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Platform OS | Hermida Maia Advocacia</title>
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
 </head>
 <body>
-  <main class="page-content">
-    <section class="page-header">
-      <h1>Platform Operating System</h1>
-      <p>Escalabilidade, resiliencia e operacao cloud-native para a plataforma juridica enterprise.</p>
-    </section>
-  </main>
+  <div class="portal-shell">
+    <div data-component="sidebar"></div>
+    <div class="main-area">
+      <div data-component="header"></div>
+      <main class="page-content">
+        <div class="page-header page-header-row">
+          <div>
+            <h1>Platform OS</h1>
+            <p>Escalabilidade, resiliência, filas, workers e operação cloud-native para a plataforma jurídica.</p>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Runtime</span><div class="kpi-value">Healthy</div><div class="kpi-hint">Observabilidade ativa</div></div>
+          <div class="kpi"><span class="kpi-label">Filas</span><div class="kpi-value">0</div><div class="kpi-hint">Dead letters</div></div>
+          <div class="kpi kpi-ok"><span class="kpi-label">Workers</span><div class="kpi-value">Online</div><div class="kpi-hint">Execução resiliente</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="../js/app.js?v=20260521p"></script>
 </body>
 </html>

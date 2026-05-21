@@ -5,7 +5,7 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
 const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
@@ -33,6 +33,17 @@ describe('portal do advogado contract', () => {
       expect(html).toContain('data-advogado-module-host');
       expect(html).toContain('../js/app.js?v=20260521p');
       expect(html).toContain(`bootAdvogadoPage('${key}')`);
+    });
+  });
+
+  it('ships shell-mounted enterprise pages for the new operating system modules', () => {
+    ['analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'].forEach(key => {
+      const html = readFile('pages', `${key}.html`);
+
+      expect(html).toContain('data-component="sidebar"');
+      expect(html).toContain('data-component="header"');
+      expect(html).toContain('main class="page-content"');
+      expect(html).toContain('../js/app.js?v=20260521p');
     });
   });
 

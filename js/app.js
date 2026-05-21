@@ -28,6 +28,7 @@ const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
 const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
+const SHELL_TENANT_CONFIG_KEY = 'portal:tenant-config';
 const SHELL_MAX_RECENT_ROUTES = 6;
 
 window.__shellVersion = SHELL_VERSION;
@@ -728,6 +729,16 @@ function getNavIcon(moduleKey) {
     agenda: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1.5v3M13 1.5v3M2 7h14M5 10h2M10 10h3M5 13h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     mensagens: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 3h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0115 13H8l-4 3v-3H3a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 013 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 7h8M5 10h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     financeiro: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 4.5h12A1.5 1.5 0 0116.5 6v8A1.5 1.5 0 0115 15.5H3A1.5 1.5 0 011.5 14V6A1.5 1.5 0 013 4.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M13 3v3M12.5 10h4M4.5 9h4M4.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    analytics: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 14h12M5 11l2-2 2 1 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="11" r="1" fill="currentColor"/><circle cx="7" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="13" cy="6" r="1" fill="currentColor"/></svg>',
+    'ai-copilot': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2.5 10.5 6 14 7.5l-3.5 1.5L9 12.5 7.5 9 4 7.5 7.5 6 9 2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 12.5 14 14l1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5Z" fill="currentColor"/></svg>',
+    'experiencia-cliente': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 15s-5-3.1-5-7a2.7 2.7 0 0 1 5-1.5A2.7 2.7 0 0 1 14 8c0 3.9-5 7-5 7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    'financeiro-inteligencia': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2.5a4 4 0 0 0-4 4c0 1 .4 1.9 1 2.6V11a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V9.1a4 4 0 0 0 1-2.6 4 4 0 0 0-4-4Z" stroke="currentColor" stroke-width="1.5"/><path d="M7 14h4M7.5 16h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'operacoes-juridicas': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2v12M4 5h10M3 14h12M5 5 3 9h4L5 5Zm8 0-2 4h4l-2-4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    compliance: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2.5 14 4.5v4c0 3.3-2.1 5.8-5 7-2.9-1.2-5-3.7-5-7v-4l5-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m6.8 9 1.6 1.6L11.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    'platform-os': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="11" width="14" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M5 7v4M9 7v4M13 7v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'ui-os': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7h14M6 11h2M10 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'workspace-os': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 3v12M7 8h9" stroke="currentColor" stroke-width="1.5"/></svg>',
+    'billing-os': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M4 4.5h10A1.5 1.5 0 0 1 15.5 6v6A1.5 1.5 0 0 1 14 13.5H4A1.5 1.5 0 0 1 2.5 12V6A1.5 1.5 0 0 1 4 4.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M11 9h2.5M5 8.5h2M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     onboarding: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="3" y="1" width="12" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 6h6M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     suporte: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
   };
@@ -1164,6 +1175,7 @@ async function loadUser() {
 
   const detail = { user, caso, isAdmin };
   appUserDetail = detail;
+  setRuntimeTenantConfig(detail);
 
   // Update UI immediately
   renderSidebarNavigation(isAdmin);
@@ -1270,9 +1282,38 @@ function getShellModules() {
   }
 }
 
+function getActiveTenantId() {
+  const workspaceId = appUserDetail?.caso?.workspace_id;
+  if (workspaceId) return String(workspaceId);
+
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(SHELL_TENANT_CONFIG_KEY) || 'null');
+    if (stored?.id) return String(stored.id);
+  } catch (_) {}
+
+  return 'hmadv';
+}
+
+function getTenantScopedStorageKey(baseKey) {
+  return `${baseKey}:${getActiveTenantId()}`;
+}
+
+function setRuntimeTenantConfig(detail = {}) {
+  const config = {
+    id: detail?.caso?.workspace_id || 'hmadv',
+    featureFlags: { ...(window.__portalTenantConfig?.featureFlags || {}) },
+  };
+
+  window.__portalTenantConfig = config;
+
+  try {
+    sessionStorage.setItem(SHELL_TENANT_CONFIG_KEY, JSON.stringify(config));
+  } catch (_) {}
+}
+
 function getShellWorkspaceState() {
   try {
-    return JSON.parse(localStorage.getItem(SHELL_WORKSPACE_KEY) || '{}') || {};
+    return JSON.parse(localStorage.getItem(getTenantScopedStorageKey(SHELL_WORKSPACE_KEY)) || '{}') || {};
   } catch (_) {
     return {};
   }
@@ -1280,7 +1321,7 @@ function getShellWorkspaceState() {
 
 function setShellWorkspaceState(nextState) {
   try {
-    localStorage.setItem(SHELL_WORKSPACE_KEY, JSON.stringify(nextState));
+    localStorage.setItem(getTenantScopedStorageKey(SHELL_WORKSPACE_KEY), JSON.stringify(nextState));
   } catch (_) {}
 }
 
@@ -1305,7 +1346,7 @@ function rememberWorkspaceRoute() {
 
 function getShellNotifications() {
   try {
-    return JSON.parse(sessionStorage.getItem(SHELL_NOTIFICATIONS_KEY) || '[]') || [];
+    return JSON.parse(sessionStorage.getItem(getTenantScopedStorageKey(SHELL_NOTIFICATIONS_KEY)) || '[]') || [];
   } catch (_) {
     return [];
   }
@@ -1313,7 +1354,7 @@ function getShellNotifications() {
 
 function setShellNotifications(items) {
   try {
-    sessionStorage.setItem(SHELL_NOTIFICATIONS_KEY, JSON.stringify(items.slice(0, 30)));
+    sessionStorage.setItem(getTenantScopedStorageKey(SHELL_NOTIFICATIONS_KEY), JSON.stringify(items.slice(0, 30)));
   } catch (_) {}
   renderShellNotificationCount();
 }
@@ -1567,7 +1608,9 @@ function renderMobileWorkspaceNav() {
     document.body.appendChild(dock);
   }
 
-  const preferred = ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
+  const preferred = !!appUserDetail?.isAdmin
+    ? ['painel', 'documentos', 'processos', 'analytics']
+    : ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
   const modules = getShellModules().filter(module => preferred.includes(module.key));
   dock.innerHTML = modules.map(module => `
     <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">
