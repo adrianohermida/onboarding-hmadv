@@ -1,4 +1,5 @@
 import { Router }                    from './router.js';
+import { getSidebarModules as getCanonicalSidebarModules } from './navigation.js';
 import { installRuntimeIsolation }   from './shell-runtime-isolation.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
@@ -14,7 +15,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521g';
+const SHELL_VERSION = '20260521h';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -30,6 +31,7 @@ let activeModuleToken = 0;
 const portalViewModeSubscribers = new Set();
 let shellRouteFailure = null;
 let serviceErrorBannerListenerBound = false;
+let unmountShellModeSelector = null;
 
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
@@ -286,6 +288,12 @@ function setCached(detail) {
       isAdmin: detail.isAdmin,
     }));
   } catch (_) {}
+}
+
+function withShellVersion(path) {
+  const url = new URL(BASE + path, window.location.href);
+  url.searchParams.set('v', SHELL_VERSION);
+  return url.toString();
 }
 
 function toAbsoluteUrl(pathOrUrl) {
@@ -584,14 +592,7 @@ function renderSidebarNavigation(isAdmin = false) {
   }
 
   if (!modules.length) {
-    modules = [
-      { key: 'dashboard', menuLabel: 'Inicio' },
-      { key: 'onboarding-v2', menuLabel: 'Jornada' },
-      { key: 'financial-dashboard', menuLabel: 'Financas' },
-      { key: 'documentos', menuLabel: 'Documentos' },
-      { key: 'dividas', menuLabel: 'Dividas' },
-      { key: 'suporte', menuLabel: 'Suporte' },
-    ];
+    modules = getCanonicalSidebarModules({ isAdmin });
   }
 
   navRoot.innerHTML = modules.map(module => {
@@ -624,6 +625,29 @@ function updateHeaderUser(user) {
   const initials = email.substring(0, 2).toUpperCase();
   if (nameEl)   { nameEl.textContent = display; nameEl.style.display = ''; }
   if (avatarEl)   avatarEl.textContent = initials;
+}
+
+function updateShellModeSelector(isAdmin = false) {
+  const host = document.getElementById('shell-mode-selector');
+  if (!host) return;
+
+  if (typeof unmountShellModeSelector === 'function') {
+    unmountShellModeSelector();
+    unmountShellModeSelector = null;
+  }
+
+  if (!isAdmin) {
+    host.innerHTML = '';
+    host.hidden = true;
+    return;
+  }
+
+  host.hidden = false;
+  unmountShellModeSelector = mountPortalViewModeSelector(host, {
+    label: '',
+    adminLabel: 'Admin',
+    clientLabel: 'Cliente',
+  });
 }
 
 function setupSidebarMobile() {
@@ -738,7 +762,10 @@ async function loadComponent(selector, path) {
   const el = document.querySelector(selector);
   if (!el) return;
   try {
-    const res = await fetch(BASE + path);
+    const res = await fetch(withShellVersion(path), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+    });
     if (!res.ok) throw new Error(res.status);
     el.innerHTML = await res.text();
   } catch (e) {
@@ -752,6 +779,7 @@ async function loadComponents() {
   if (cached?.user) {
     updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
     updateHeaderUser(cached.user);
+    updateShellModeSelector(cached.isAdmin);
   }
 
   await Promise.all([
@@ -774,6 +802,7 @@ async function loadComponents() {
   if (cached?.user) {
     updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
     updateHeaderUser(cached.user);
+    updateShellModeSelector(cached.isAdmin);
   }
 }
 
@@ -808,6 +837,7 @@ async function loadUser() {
   renderSidebarNavigation(isAdmin);
   updateSidebarUser(user, caso, isAdmin);
   updateHeaderUser(user);
+  updateShellModeSelector(isAdmin);
 
   // Cache for next navigation (instant pre-population)
   setCached(detail);
@@ -871,6 +901,7 @@ async function init() {
   } catch (error) {
     console.warn('[APP] User load failed; preserving shell navigation', error);
     renderSidebarNavigation(false);
+    updateShellModeSelector(false);
   }
   setupServiceErrorBannerListener();
   setupShellNavigation();

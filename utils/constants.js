@@ -1,3 +1,5 @@
+import { getSidebarModules } from '../js/navigation.js';
+
 export const APP_NAME    = 'Portal do Superendividado';
 export const APP_TAGLINE = 'Assessoria Jurídica ao Consumidor';
 export const APP_VERSION = '1.0.0';
@@ -11,12 +13,11 @@ export const ROUTES = {
   DIVIDAS:    '/pages/dividas.html',
 };
 
-export const NAV_LINKS = [
-  { href: 'dashboard.html',  label: 'Dashboard',   icon: 'home'   },
-  { href: 'onboarding.html', label: 'Onboarding',  icon: 'user'   },
-  { href: 'documentos.html', label: 'Documentos',  icon: 'file'   },
-  { href: 'dividas.html',    label: 'Dívidas',     icon: 'list'   },
-];
+export const NAV_LINKS = getSidebarModules().map(module => ({
+  href: `${module.key}.html`,
+  label: module.menuLabel || module.title,
+  icon: module.icon || 'circle',
+}));
 
 export const CASE_STAGES = [
   { key: 'intake',    label: 'Cadastro'      },

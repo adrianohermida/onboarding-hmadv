@@ -318,6 +318,39 @@ body.app-loaded .sk { display: none !important; }
   gap: 12px;
 }
 
+.shell-mode-selector {
+  display: flex;
+  align-items: center;
+}
+
+.shell-mode-selector[hidden] {
+  display: none;
+}
+
+.shell-mode-selector .portal-mode-switch {
+  gap: 0;
+}
+
+.shell-mode-selector .portal-mode-switch-label {
+  display: none;
+}
+
+.shell-mode-selector .portal-mode-switch-btns {
+  background: rgba(26, 58, 92, .08);
+  border: 1px solid rgba(26, 58, 92, .12);
+}
+
+.shell-mode-selector .portal-mode-btn {
+  padding: 4px 10px;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+
+.shell-mode-selector .portal-mode-btn-active {
+  background: var(--navy);
+  color: #fff;
+}
+
 /* ── Shared View Mode Selector ───────────────────── */
 .portal-mode-switch {
   display: flex;
@@ -621,8 +654,9 @@ body.app-loaded .sk { display: none !important; }
 }
 
 @media (max-width: 375px) {
-  .portal-header { height: 48px; padding: 0 10px; }
+  .portal-header { height: auto; min-height: 48px; padding: 6px 10px; }
   .header-breadcrumb { font-size: 12px; gap: 4px; }
+  .header-actions { gap: 8px; }
   .header-user { font-size: 12px; }
   .header-avatar { width: 28px; height: 28px; font-size: 11px; }
   .page-content { padding: 10px; }
@@ -636,8 +670,9 @@ body.app-loaded .sk { display: none !important; }
 }
 
 @media (max-width: 320px) {
-  .portal-header { height: 46px; padding: 0 8px; }
+  .portal-header { height: auto; min-height: 46px; padding: 6px 8px; }
   .header-breadcrumb { font-size: 11px; }
+  .shell-mode-selector .portal-mode-btn { padding: 3px 7px; font-size: 10px; }
   .sidebar { width: min(86vw, 260px); }
   .page-content { padding: 8px; }
   .page-header h1 { font-size: 18px; }
