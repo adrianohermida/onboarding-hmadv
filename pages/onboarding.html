@@ -1,961 +1,1689 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Onboarding — Hermida Maia Advocacia</title>
-<link rel="stylesheet" href="../styles/variables.css">
-<link rel="stylesheet" href="../styles/main.css">
-<link rel="stylesheet" href="../styles/layout.css">
-<link rel="stylesheet" href="../styles/components.css">
-<style>
-  .dyn-card {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: var(--r-sm);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .dyn-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .dyn-card-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .btn-remove {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--muted);
-    padding: 4px 6px;
-    border-radius: 4px;
-    line-height: 1;
-    transition: color .15s, background .15s;
-  }
-  .btn-remove:hover { color: var(--red); background: rgba(220,53,69,.07); }
-  .section-subheading {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--ink);
-    margin: 0 0 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line);
-  }
-  .toggle-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--ink2);
-    user-select: none;
-  }
-  .toggle-label input[type="checkbox"] {
-    width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue);
-  }
-  .cpf-lookup-bar {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-  }
-  .cpf-lookup-bar .form-input { flex: 1; min-width: 0; }
-  .lookup-status {
-    font-size: 11px;
-    margin-top: 4px;
-    min-height: 16px;
-    color: var(--muted);
-  }
-  .tracker { overflow-x: auto; }
-  @media (max-width: 640px) {
-    .t-name { font-size: 9px; }
-    .t-dot  { width: 24px; height: 24px; font-size: 11px; }
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formulário CNJ · Portal HMADV</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <script type="module" src="../js/app.js"></script>
+  <style>
+    /* ── Step tracker ─────────────────────────────── */
+    .cnj-tracker {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .cnj-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 72px;
+      position: relative;
+      cursor: default;
+    }
+    .cnj-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      right: -50%;
+      height: 2px;
+      background: var(--line);
+      z-index: 0;
+    }
+    .cnj-step.done:not(:last-child)::after { background: var(--green); }
+    .cnj-step-dot {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 2px solid var(--line);
+      background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--muted);
+      z-index: 1;
+      transition: all .2s;
+    }
+    .cnj-step.done   .cnj-step-dot { background: var(--green); border-color: var(--green); color: #fff; }
+    .cnj-step.active .cnj-step-dot { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .cnj-step-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      margin-top: 5px;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .cnj-step.active .cnj-step-label { color: var(--navy); }
+    .cnj-step.done   .cnj-step-label { color: var(--green); }
+
+    /* ── Step panels ──────────────────────────────── */
+    .cnj-panel { display: none; }
+    .cnj-panel.active { display: block; }
+
+    /* ── Dynamic cards ────────────────────────────── */
+    .dyn-card {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .dyn-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .dyn-card-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+    .btn-remove {
+      background: none; border: none;
+      cursor: pointer; color: var(--muted);
+      padding: 4px 6px; border-radius: 4px;
+      transition: all .15s;
+    }
+    .btn-remove:hover { color: var(--red); background: rgba(220,53,69,.07); }
+
+    /* ── CPF lookup bar ───────────────────────────── */
+    .cpf-lookup-bar { display: flex; gap: 8px; align-items: stretch; }
+    .cpf-lookup-bar input { flex: 1; }
+
+    /* ── Causa chips ──────────────────────────────── */
+    .causa-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .causa-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--line);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      background: var(--white);
+      color: var(--ink2);
+    }
+    .causa-chip.selected {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: #fff;
+    }
+
+    /* ── Análise cards ────────────────────────────── */
+    .analise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .analise-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+    }
+    .analise-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .analise-card-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .analise-card-value.warn   { color: #f59e0b; }
+    .analise-card-value.danger { color: var(--red); }
+    .analise-card-value.ok     { color: var(--green); }
+    .analise-card-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Credor badges ────────────────────────────── */
+    .credor-alerta {
+      font-size: 11px;
+      background: rgba(239,68,68,.08);
+      color: #dc2626;
+      border: 1px solid rgba(239,68,68,.2);
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-top: 8px;
+    }
+    .credor-calc {
+      background: rgba(16,185,129,.07);
+      border: 1px solid rgba(16,185,129,.2);
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--ink2);
+    }
+    .credor-calc strong { color: var(--ink); }
+
+    /* ── JSON preview ─────────────────────────────── */
+    .json-preview {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: var(--r-sm);
+      padding: 16px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+
+    /* ── Navigation bar ───────────────────────────── */
+    .step-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .step-nav-info { font-size: 12px; color: var(--muted); }
+
+    /* ── CNJ badge ────────────────────────────────── */
+    .cnj-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(30,64,175,.08);
+      color: #1e40af;
+      border: 1px solid rgba(30,64,175,.15);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    /* ── Autosave indicator ───────────────────────── */
+    #autosave-status {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 4px;
+    }
+    #autosave-status.saving { color: var(--blue); }
+    #autosave-status.saved  { color: var(--green); }
+
+    /* ── Empty state ──────────────────────────────── */
+    .dyn-empty {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed var(--line);
+      border-radius: var(--r-sm);
+      margin-bottom: 10px;
+    }
+
+    /* ── Section divider ──────────────────────────── */
+    .section-divider {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+      margin: 20px 0 14px;
+    }
+
+    @media (max-width: 600px) {
+      .cnj-step-label { display: none; }
+      .analise-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
-
 <div class="portal-shell">
-  <div data-component="sidebar"></div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div data-component="sidebar"></div>
+  </aside>
 
+  <!-- Main -->
   <div class="main-area">
-    <div data-component="header"></div>
+    <header class="portal-header">
+      <div data-component="header"></div>
+    </header>
 
     <main class="page-content">
-
-      <div class="page-header page-header-row">
+      <!-- Page header -->
+      <div class="page-header-row page-header">
         <div>
-          <h1>Onboarding</h1>
-          <p>Complete seu cadastro para iniciarmos seu atendimento jurídico.</p>
+          <h1>Formulário de Superendividamento
+            <span class="cnj-badge" style="vertical-align:middle;margin-left:8px;">CNJ 125/2021</span>
+          </h1>
+          <p>Preencha todas as seções do formulário-padrão. Seus dados são salvos automaticamente.</p>
         </div>
-        <span class="chip chip-blue" id="step-label">Etapa 1 de 5</span>
+        <div id="autosave-status">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          <span id="autosave-txt">Rascunho salvo</span>
+        </div>
       </div>
 
-      <!-- ── Step Tracker ── -->
-      <div class="tracker" style="margin-bottom:24px;">
-        <div class="t-step active" id="ob-step-1">
-          <div class="t-dot">1</div>
-          <div><div class="t-name">Qualificação</div></div>
+      <!-- Progress tracker -->
+      <div class="cnj-tracker">
+        <div class="cnj-step active" id="step-dot-1">
+          <div class="cnj-step-dot">1</div>
+          <div class="cnj-step-label">Identificação</div>
         </div>
-        <div class="t-connector" id="ob-conn-1"></div>
-        <div class="t-step" id="ob-step-2">
-          <div class="t-dot">2</div>
-          <div><div class="t-name">Contatos</div></div>
+        <div class="cnj-step" id="step-dot-2">
+          <div class="cnj-step-dot">2</div>
+          <div class="cnj-step-label">Socioeconômico</div>
         </div>
-        <div class="t-connector" id="ob-conn-2"></div>
-        <div class="t-step" id="ob-step-3">
-          <div class="t-dot">3</div>
-          <div><div class="t-name">Família</div></div>
+        <div class="cnj-step" id="step-dot-3">
+          <div class="cnj-step-dot">3</div>
+          <div class="cnj-step-label">Despesas</div>
         </div>
-        <div class="t-connector" id="ob-conn-3"></div>
-        <div class="t-step" id="ob-step-4">
-          <div class="t-dot">4</div>
-          <div><div class="t-name">Financeiro</div></div>
+        <div class="cnj-step" id="step-dot-4">
+          <div class="cnj-step-dot">4</div>
+          <div class="cnj-step-label">Endividamento</div>
         </div>
-        <div class="t-connector" id="ob-conn-4"></div>
-        <div class="t-step" id="ob-step-5">
-          <div class="t-dot">5</div>
-          <div><div class="t-name">Documentos</div></div>
+        <div class="cnj-step" id="step-dot-5">
+          <div class="cnj-step-dot">5</div>
+          <div class="cnj-step-label">Credores</div>
+        </div>
+        <div class="cnj-step" id="step-dot-6">
+          <div class="cnj-step-dot">6</div>
+          <div class="cnj-step-label">Plano</div>
+        </div>
+        <div class="cnj-step" id="step-dot-7">
+          <div class="cnj-step-dot">7</div>
+          <div class="cnj-step-label">Documentos</div>
         </div>
       </div>
 
       <!-- ════════════════════════════════════════════
-           STEP 1 — Qualificação Pessoal
-      ════════════════════════════════════════════ -->
-      <div class="sec" id="panel-step-1">
-        <div class="sec-header">
-          <div class="sec-num">1</div>
-          <h2 class="sec-title">Qualificação Pessoal</h2>
-        </div>
+           STEP 1 — IDENTIFICAÇÃO (CNJ §1)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel active card" id="panel-1">
+        <div class="section-divider">§1 — Identificação do Requerente</div>
 
-        <!-- CPF + lookup -->
-        <div style="max-width:480px;margin-bottom:20px;">
-          <div class="form-group">
-            <label class="form-label required" for="f-cpf">CPF</label>
-            <div class="cpf-lookup-bar">
-              <input class="form-input" type="text" id="f-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
-              <button class="btn btn-ghost" type="button" id="btn-cpf-lookup" onclick="handleCPFLookup()" style="white-space:nowrap;flex-shrink:0;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                Consultar
-              </button>
-            </div>
-            <div class="lookup-status" id="cpf-lookup-status"></div>
+        <div class="form-group">
+          <label class="form-label">CPF <span class="required">*</span></label>
+          <div class="cpf-lookup-bar">
+            <input type="text" id="cpf" class="form-control" placeholder="000.000.000-00"
+                   maxlength="14" oninput="applyMaskCPF(this)" />
+            <button class="btn btn-secondary" type="button" onclick="handleCPFLookup()" id="btn-cpf-lookup">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              Buscar
+            </button>
           </div>
+          <p class="form-hint" id="cpf-hint">Digite o CPF e clique em Buscar para preencher automaticamente.</p>
         </div>
 
         <div class="form-grid">
-          <div class="form-group full">
-            <label class="form-label required" for="f-nome">Nome completo</label>
-            <input class="form-input" type="text" id="f-nome" placeholder="Seu nome completo conforme documentos">
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Nome completo <span class="required">*</span></label>
+            <input type="text" id="full_name" class="form-control" placeholder="Nome conforme documento oficial" />
           </div>
           <div class="form-group">
-            <label class="form-label required" for="f-email">E-mail</label>
-            <input class="form-input" type="email" id="f-email" readonly style="background:var(--bg);cursor:default;" tabindex="-1">
+            <label class="form-label">E-mail</label>
+            <input type="email" id="email" class="form-control" readonly />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-data-nasc">Data de nascimento</label>
-            <input class="form-input" type="date" id="f-data-nasc">
+            <label class="form-label">Data de nascimento</label>
+            <input type="date" id="data_nascimento" class="form-control" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-sexo">Sexo</label>
-            <select class="form-select" id="f-sexo">
-              <option value="">— Selecione —</option>
+            <label class="form-label">Sexo</label>
+            <select id="sexo" class="form-control">
+              <option value="">Selecione</option>
               <option value="M">Masculino</option>
               <option value="F">Feminino</option>
+              <option value="outro">Outro / Não informado</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-estado-civil">Estado civil</label>
-            <select class="form-select" id="f-estado-civil">
-              <option value="">— Selecione —</option>
+            <label class="form-label">Estado civil</label>
+            <select id="estado_civil" class="form-control">
+              <option value="">Selecione</option>
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
-              <option value="uniao_estavel">União Estável</option>
+              <option value="uniao_estavel">União estável</option>
               <option value="divorciado">Divorciado(a)</option>
-              <option value="separado">Separado(a) judicialmente</option>
               <option value="viuvo">Viúvo(a)</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-profissao">Profissão</label>
-            <input class="form-input" type="text" id="f-profissao" placeholder="Ex: Autônomo, Comerciante, CLT">
+            <label class="form-label">Profissão</label>
+            <input type="text" id="profissao" class="form-control" placeholder="Ex.: Comerciante" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-nome-mae">Nome da mãe</label>
-            <input class="form-input" type="text" id="f-nome-mae" placeholder="Nome completo da mãe">
+            <label class="form-label">Nome da mãe</label>
+            <input type="text" id="nome_mae" class="form-control" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-naturalidade">Naturalidade</label>
-            <input class="form-input" type="text" id="f-naturalidade" placeholder="Cidade / Estado de nascimento">
+            <label class="form-label">Naturalidade</label>
+            <input type="text" id="naturalidade" class="form-control" placeholder="Cidade/UF" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-nacionalidade">Nacionalidade</label>
-            <input class="form-input" type="text" id="f-nacionalidade" value="Brasileira" placeholder="Ex: Brasileira">
+            <label class="form-label">Nacionalidade</label>
+            <input type="text" id="nacionalidade" class="form-control" value="Brasileiro(a)" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-rg">RG</label>
-            <input class="form-input" type="text" id="f-rg" placeholder="Número do RG">
+            <label class="form-label">RG / Identidade</label>
+            <input type="text" id="rg" class="form-control" placeholder="Nº do documento" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-rg-emissor">Órgão emissor / UF</label>
-            <input class="form-input" type="text" id="f-rg-emissor" placeholder="Ex: SSP/SP">
+            <label class="form-label">Órgão emissor</label>
+            <input type="text" id="rg_emissor" class="form-control" placeholder="Ex.: SSP/SP" />
           </div>
         </div>
 
-        <div class="btn-group mt-24">
+        <div class="section-divider">Telefones</div>
+        <div id="phones-list"></div>
+        <div class="dyn-empty" id="phones-empty">Nenhum telefone cadastrado.</div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addPhone()">+ Adicionar telefone</button>
+
+        <div class="section-divider">Endereços</div>
+        <div id="addrs-list"></div>
+        <div class="dyn-empty" id="addrs-empty">Nenhum endereço cadastrado.</div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addAddress()">+ Adicionar endereço</button>
+
+        <div class="step-nav">
+          <span class="step-nav-info">Passo 1 de 7</span>
           <button class="btn btn-primary" onclick="goStep(2)">Próximo →</button>
         </div>
       </div>
 
       <!-- ════════════════════════════════════════════
-           STEP 2 — Telefones e Endereços
-      ════════════════════════════════════════════ -->
-      <div class="sec" id="panel-step-2" style="display:none;">
-        <div class="sec-header">
-          <div class="sec-num">2</div>
-          <h2 class="sec-title">Telefones e Endereços</h2>
+           STEP 2 — SOCIOECONÔMICO (CNJ §2a–f)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-2">
+        <div class="section-divider">§2a–f — Dados Socioeconômicos</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Situação profissional</label>
+            <select id="situacao_profissional" class="form-control">
+              <option value="">Selecione</option>
+              <option value="empregado_formal">Empregado formal (CLT)</option>
+              <option value="servidor_publico">Servidor público</option>
+              <option value="autonomo">Autônomo / MEI</option>
+              <option value="profissional_liberal">Profissional liberal</option>
+              <option value="aposentado">Aposentado(a)</option>
+              <option value="pensionista">Pensionista</option>
+              <option value="desempregado">Desempregado(a)</option>
+              <option value="do_lar">Do lar</option>
+              <option value="outros">Outros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Renda individual mensal bruta</label>
+            <input type="text" id="renda" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Renda familiar mensal bruta</label>
+            <input type="text" id="renda_familiar" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+            <p class="form-hint">Inclua a renda de todos que contribuem para o sustento.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nº de dependentes</label>
+            <input type="number" id="n_dependentes" class="form-control" min="0" max="20" value="0" />
+          </div>
         </div>
 
-        <!-- Phones -->
-        <div style="margin-bottom:28px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h3 class="section-subheading" style="margin:0;border:none;padding:0;">Telefones</h3>
-            <button class="btn btn-ghost" type="button" onclick="addPhone()" style="font-size:12px;padding:6px 14px;">
-              + Adicionar telefone
-            </button>
-          </div>
-          <div id="phones-list"></div>
-          <div id="phones-empty" style="font-size:13px;color:var(--muted);padding:12px 0;">
-            Nenhum telefone adicionado. Clique em "+ Adicionar telefone".
+        <div class="section-divider">Cônjuge / Companheiro(a)</div>
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="tem_conjugue" onchange="toggleConjugue()" />
+            <span>Possui cônjuge ou companheiro(a)</span>
+          </label>
+        </div>
+        <div id="conjugue-section" style="display:none">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nome do cônjuge</label>
+              <input type="text" id="conj_nome" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">CPF do cônjuge</label>
+              <input type="text" id="conj_cpf" class="form-control" placeholder="000.000.000-00" oninput="applyMaskCPF(this)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data de nascimento</label>
+              <input type="date" id="conj_data_nascimento" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">RG do cônjuge</label>
+              <input type="text" id="conj_rg" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Profissão</label>
+              <input type="text" id="conj_profissao" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Renda do cônjuge</label>
+              <input type="text" id="conj_renda" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+            </div>
           </div>
         </div>
 
-        <!-- Addresses -->
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h3 class="section-subheading" style="margin:0;border:none;padding:0;">Endereços</h3>
-            <button class="btn btn-ghost" type="button" onclick="addAddress()" style="font-size:12px;padding:6px 14px;">
-              + Adicionar endereço
-            </button>
-          </div>
-          <div id="addresses-list"></div>
-          <div id="addresses-empty" style="font-size:13px;color:var(--muted);padding:12px 0;">
-            Nenhum endereço adicionado. Clique em "+ Adicionar endereço".
-          </div>
-        </div>
+        <div class="section-divider">Dependentes</div>
+        <div id="deps-list"></div>
+        <div class="dyn-empty" id="deps-empty">Nenhum dependente cadastrado.</div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addDependent()">+ Adicionar dependente</button>
 
-        <div class="btn-group mt-24">
+        <div class="step-nav">
           <button class="btn btn-ghost" onclick="goStep(1)">← Voltar</button>
+          <span class="step-nav-info">Passo 2 de 7</span>
           <button class="btn btn-primary" onclick="goStep(3)">Próximo →</button>
         </div>
       </div>
 
       <!-- ════════════════════════════════════════════
-           STEP 3 — Cônjuge / Dependentes
-      ════════════════════════════════════════════ -->
-      <div class="sec" id="panel-step-3" style="display:none;">
-        <div class="sec-header">
-          <div class="sec-num">3</div>
-          <h2 class="sec-title">Cônjuge / Dependentes</h2>
+           STEP 3 — DESPESAS E PATRIMÔNIO (CNJ §2d–i)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-3">
+        <div class="section-divider">§2d — Despesas Mensais Essenciais</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Energia elétrica</label>
+            <input type="text" id="desp_luz" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Aluguel</label>
+            <input type="text" id="desp_aluguel" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Condomínio</label>
+            <input type="text" id="desp_condominio" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Água / Saneamento</label>
+            <input type="text" id="desp_agua" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Internet / Telefone</label>
+            <input type="text" id="desp_internet" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Alimentação</label>
+            <input type="text" id="desp_alimentacao" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pensão alimentícia</label>
+            <input type="text" id="desp_pensao" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Educação (escola / faculdade)</label>
+            <input type="text" id="desp_educacao" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Plano de saúde</label>
+            <input type="text" id="desp_plano_saude" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Medicamentos</label>
+            <input type="text" id="desp_medicamentos" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Impostos / IPTU / IPVA</label>
+            <input type="text" id="desp_impostos" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Outras despesas</label>
+            <input type="text" id="desp_outras" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+          </div>
         </div>
 
-        <!-- Spouse -->
-        <div style="margin-bottom:28px;">
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
-            <h3 class="section-subheading" style="margin:0;border:none;padding:0;">Cônjuge / Companheiro(a)</h3>
-            <label class="toggle-label">
-              <input type="checkbox" id="toggle-conjugue" onchange="toggleConjugue(this.checked)">
-              Informar dados do(a) cônjuge
-            </label>
-          </div>
-          <div id="conjugue-form" style="display:none;">
-            <div class="form-grid">
-              <div class="form-group full">
-                <label class="form-label" for="c-nome">Nome completo</label>
-                <input class="form-input" type="text" id="c-nome" placeholder="Nome completo do(a) cônjuge">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="c-cpf">CPF</label>
-                <input class="form-input" type="text" id="c-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="c-data-nasc">Data de nascimento</label>
-                <input class="form-input" type="date" id="c-data-nasc">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="c-rg">RG</label>
-                <input class="form-input" type="text" id="c-rg" placeholder="Número do RG">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="c-profissao">Profissão</label>
-                <input class="form-input" type="text" id="c-profissao" placeholder="Profissão">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="c-renda">Renda mensal</label>
-                <input class="form-input" type="text" id="c-renda" placeholder="R$ 0,00" oninput="maskCurrency(this)">
-              </div>
+        <div class="analise-card" style="margin-top:4px;margin-bottom:20px;background:var(--bg)">
+          <div class="analise-card-label">Total de despesas mensais</div>
+          <div class="analise-card-value" id="total-despesas-display">R$ 0,00</div>
+        </div>
+
+        <div class="section-divider">§2g-h — Patrimônio</div>
+
+        <div class="dyn-card">
+          <div class="dyn-card-header"><span class="dyn-card-title">🏠 Imóvel</span></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Situação</label>
+              <select id="imovel_situacao" class="form-control">
+                <option value="">Não possui imóvel</option>
+                <option value="proprio_quitado">Próprio quitado</option>
+                <option value="proprio_financiado">Próprio financiado</option>
+                <option value="alugado">Alugado</option>
+                <option value="cedido">Cedido</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+            <div class="form-group" id="imovel-parcela-group" style="display:none">
+              <label class="form-label">Parcela mensal do financiamento</label>
+              <input type="text" id="imovel_parcela" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+            </div>
+            <div class="form-group" id="imovel-vencimento-group" style="display:none">
+              <label class="form-label">Vencimento do financiamento</label>
+              <input type="date" id="imovel_vencimento" class="form-control" />
             </div>
           </div>
         </div>
 
-        <!-- Dependents -->
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h3 class="section-subheading" style="margin:0;border:none;padding:0;">Dependentes</h3>
-            <button class="btn btn-ghost" type="button" onclick="addDependent()" style="font-size:12px;padding:6px 14px;">
-              + Adicionar dependente
-            </button>
-          </div>
-          <div id="dependents-list"></div>
-          <div id="dependents-empty" style="font-size:13px;color:var(--muted);padding:12px 0;">
-            Nenhum dependente adicionado.
+        <div class="dyn-card">
+          <div class="dyn-card-header"><span class="dyn-card-title">🚗 Veículo</span></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Situação</label>
+              <select id="veiculo_situacao" class="form-control">
+                <option value="">Não possui veículo</option>
+                <option value="proprio_quitado">Próprio quitado</option>
+                <option value="financiado">Financiado (alienação fiduciária)</option>
+                <option value="arrendado">Arrendado (leasing)</option>
+              </select>
+            </div>
+            <div class="form-group" id="veiculo-parcela-group" style="display:none">
+              <label class="form-label">Parcela mensal</label>
+              <input type="text" id="veiculo_parcela" class="form-control" placeholder="R$ 0,00" oninput="maskCurrency(this)" />
+            </div>
+            <div class="form-group" id="veiculo-vencimento-group" style="display:none">
+              <label class="form-label">Vencimento</label>
+              <input type="date" id="veiculo_vencimento" class="form-control" />
+            </div>
           </div>
         </div>
 
-        <div class="btn-group mt-24">
+        <div class="step-nav">
           <button class="btn btn-ghost" onclick="goStep(2)">← Voltar</button>
+          <span class="step-nav-info">Passo 3 de 7</span>
           <button class="btn btn-primary" onclick="goStep(4)">Próximo →</button>
         </div>
       </div>
 
       <!-- ════════════════════════════════════════════
-           STEP 4 — Perfil Financeiro
-      ════════════════════════════════════════════ -->
-      <div class="sec" id="panel-step-4" style="display:none;">
-        <div class="sec-header">
-          <div class="sec-num">4</div>
-          <h2 class="sec-title">Perfil Financeiro</h2>
+           STEP 4 — ENDIVIDAMENTO (CNJ §2j–o)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-4">
+        <div class="section-divider">§2j — Causas do Endividamento</div>
+        <p class="form-hint" style="margin-bottom:10px">Selecione todas as causas que se aplicam:</p>
+        <div class="causa-chips">
+          <div class="causa-chip" data-causa="desemprego"     onclick="this.classList.toggle('selected')">Desemprego</div>
+          <div class="causa-chip" data-causa="doenca"         onclick="this.classList.toggle('selected')">Doença / Problema de saúde</div>
+          <div class="causa-chip" data-causa="separacao"      onclick="this.classList.toggle('selected')">Separação / Divórcio</div>
+          <div class="causa-chip" data-causa="reducao_renda"  onclick="this.classList.toggle('selected')">Redução de renda</div>
+          <div class="causa-chip" data-causa="morte_familiar" onclick="this.classList.toggle('selected')">Morte de familiar provedor</div>
+          <div class="causa-chip" data-causa="desastre"       onclick="this.classList.toggle('selected')">Desastre natural / Perda material</div>
+          <div class="causa-chip" data-causa="superconsumo"   onclick="this.classList.toggle('selected')">Superconsumo / Impulso</div>
+          <div class="causa-chip" data-causa="outros"         onclick="this.classList.toggle('selected')">Outros</div>
         </div>
 
+        <div class="form-group" style="margin-top:14px">
+          <label class="form-label">Descrição complementar das causas</label>
+          <textarea id="causas_descricao" class="form-control" rows="2"
+                    placeholder="Descreva brevemente as circunstâncias..."></textarea>
+        </div>
+
+        <div class="section-divider">§2m–o — Cadastros Negativos e Protestos</div>
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label required" for="f-renda">Renda mensal bruta</label>
-            <input class="form-input" type="text" id="f-renda" placeholder="R$ 0,00" oninput="maskCurrency(this)">
+            <label class="toggle-label"><input type="checkbox" id="neg_serasa" /><span>Consta no Serasa</span></label>
           </div>
           <div class="form-group">
-            <label class="form-label required" for="f-divida-total">Dívida total estimada</label>
-            <input class="form-input" type="text" id="f-divida-total" placeholder="R$ 0,00" oninput="maskCurrency(this)">
+            <label class="toggle-label"><input type="checkbox" id="neg_spc" /><span>Consta no SPC</span></label>
           </div>
           <div class="form-group">
-            <label class="form-label required" for="f-credores">Número de credores</label>
-            <input class="form-input" type="number" id="f-credores" placeholder="Ex: 5" min="1">
+            <label class="toggle-label"><input type="checkbox" id="neg_protestos" /><span>Protestos em cartório</span></label>
           </div>
-          <div class="form-group full">
-            <label class="form-label required" for="f-situacao">Situação atual</label>
-            <select class="form-select" id="f-situacao">
-              <option value="">— Selecione —</option>
-              <option value="negativado">Nome negativado (SPC/Serasa)</option>
-              <option value="acao_judicial">Ação judicial em andamento</option>
-              <option value="penhora">Penhora / bloqueio judicial</option>
-              <option value="parcelamento">Em parcelamento com credor</option>
-              <option value="apenas_dividas">Apenas dívidas em aberto</option>
-            </select>
+          <div class="form-group">
+            <label class="toggle-label"><input type="checkbox" id="neg_acoes_judiciais" /><span>Ações judiciais em curso</span></label>
           </div>
-          <div class="form-group full">
-            <label class="form-label" for="f-obs-fin">Observações adicionais</label>
-            <textarea class="form-textarea" id="f-obs-fin" placeholder="Descreva brevemente sua situação financeira..." rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Observações sobre negativações / processos</label>
+          <textarea id="neg_observacoes" class="form-control" rows="2"
+                    placeholder="Números de processos, comarcas, etc."></textarea>
+        </div>
+
+        <div class="section-divider">§2n — Como soube do(s) crédito(s)</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="toggle-label"><input type="checkbox" id="cred_oferta_ativa" /><span>Oferta ativa (ligação, SMS, e-mail do credor)</span></label>
+          </div>
+          <div class="form-group">
+            <label class="toggle-label"><input type="checkbox" id="cred_correspondente" /><span>Correspondente bancário</span></label>
+          </div>
+          <div class="form-group">
+            <label class="toggle-label"><input type="checkbox" id="cred_indicacao" /><span>Indicação de terceiro</span></label>
+          </div>
+          <div class="form-group">
+            <label class="toggle-label"><input type="checkbox" id="cred_procurou" /><span>Procurou o credor diretamente</span></label>
           </div>
         </div>
 
-        <div class="btn-group mt-24">
+        <div class="step-nav">
           <button class="btn btn-ghost" onclick="goStep(3)">← Voltar</button>
+          <span class="step-nav-info">Passo 4 de 7</span>
           <button class="btn btn-primary" onclick="goStep(5)">Próximo →</button>
         </div>
       </div>
 
       <!-- ════════════════════════════════════════════
-           STEP 5 — Documentação
-      ════════════════════════════════════════════ -->
-      <div class="sec" id="panel-step-5" style="display:none;">
-        <div class="sec-header">
-          <div class="sec-num">5</div>
-          <h2 class="sec-title">Documentos Necessários</h2>
-        </div>
+           STEP 5 — MAPA DE CREDORES (CNJ §3)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-5">
+        <div class="section-divider">§3 — Mapa de Credores</div>
+        <p class="form-hint" style="margin-bottom:14px">
+          Preencha <strong>todos</strong> os credores. Os cálculos de SELIC e cap de cartão são aplicados automaticamente.
+        </p>
 
-        <div class="callout callout-ok" style="margin-bottom:20px;">
-          <strong>Cadastro quase concluído!</strong> Após finalizar, você será direcionado para
-          a aba <strong>Documentos</strong> onde poderá fazer o upload de cada arquivo.
-        </div>
+        <div id="credores-list"></div>
+        <div class="dyn-empty" id="credores-empty">Nenhum credor. Clique em "+ Adicionar credor" para começar.</div>
+        <button class="btn btn-secondary" type="button" onclick="addCredor()" style="margin-top:4px">+ Adicionar credor</button>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Documento</th>
-                <th>Obrigatório</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>RG ou CNH (frente e verso)</td><td><span class="chip chip-red">Sim</span></td></tr>
-              <tr><td>CPF</td><td><span class="chip chip-red">Sim</span></td></tr>
-              <tr><td>Comprovante de residência (últimos 90 dias)</td><td><span class="chip chip-red">Sim</span></td></tr>
-              <tr><td>Comprovante de renda (holerite, extrato, etc.)</td><td><span class="chip chip-red">Sim</span></td></tr>
-              <tr><td>Extratos bancários (últimos 3 meses)</td><td><span class="chip chip-red">Sim</span></td></tr>
-              <tr><td>Contratos de dívidas (quando disponíveis)</td><td><span class="chip chip-muted">Recomendado</span></td></tr>
-              <tr><td>Correspondências de cobrança</td><td><span class="chip chip-muted">Recomendado</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="btn-group mt-24">
+        <div class="step-nav">
           <button class="btn btn-ghost" onclick="goStep(4)">← Voltar</button>
-          <button class="btn btn-ok" id="btn-finalizar" onclick="finalizarCadastro()">Finalizar e enviar documentos →</button>
+          <span class="step-nav-info">Passo 5 de 7</span>
+          <button class="btn btn-primary" onclick="goStep(6)">Próximo → Calcular plano</button>
         </div>
       </div>
 
+      <!-- ════════════════════════════════════════════
+           STEP 6 — ANÁLISE E PLANO (art. 104-A)
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-6">
+        <div class="section-divider">Análise Financeira — Lei 14.181/2021</div>
+
+        <div class="analise-grid">
+          <div class="analise-card">
+            <div class="analise-card-label">Renda familiar</div>
+            <div class="analise-card-value" id="an-renda">—</div>
+          </div>
+          <div class="analise-card">
+            <div class="analise-card-label">Total despesas</div>
+            <div class="analise-card-value" id="an-despesas">—</div>
+          </div>
+          <div class="analise-card">
+            <div class="analise-card-label">Mínimo existencial</div>
+            <div class="analise-card-value" id="an-minimo">—</div>
+            <div class="analise-card-sub">25% SM — Decreto 11.150/2022</div>
+          </div>
+          <div class="analise-card">
+            <div class="analise-card-label">Renda disponível</div>
+            <div class="analise-card-value" id="an-disponivel">—</div>
+            <div class="analise-card-sub">Para o plano de pagamento</div>
+          </div>
+          <div class="analise-card">
+            <div class="analise-card-label">Total dívidas corrigidas</div>
+            <div class="analise-card-value" id="an-dividas">—</div>
+            <div class="analise-card-sub">SELIC + caps aplicados</div>
+          </div>
+          <div class="analise-card">
+            <div class="analise-card-label">Comprometimento</div>
+            <div class="analise-card-value" id="an-comprometimento">—</div>
+            <div class="analise-card-sub">% da renda comprometida</div>
+          </div>
+        </div>
+
+        <div id="analise-alertas"></div>
+
+        <div class="section-divider">Plano de Pagamento — art. 104-A CDC (máx. 60 meses)</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Prazo proposto (meses)</label>
+            <input type="number" id="plano_prazo" class="form-control" min="1" max="60" value="60" oninput="recalcularPlano()" />
+            <p class="form-hint">Máximo legal: 60 meses (art. 104-A CDC)</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Carência inicial (meses)</label>
+            <input type="number" id="plano_carencia" class="form-control" min="0" max="12" value="0" oninput="recalcularPlano()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Renda disponível para o plano</label>
+            <input type="text" id="plano_renda_disp" class="form-control" placeholder="R$ 0,00"
+                   oninput="maskCurrency(this); recalcularPlano()" />
+          </div>
+        </div>
+
+        <div class="dyn-card" style="border-color:var(--navy);background:rgba(30,58,138,.03)">
+          <div class="dyn-card-header"><span class="dyn-card-title">Resultado do Plano (art. 104-A)</span></div>
+          <div class="analise-grid" style="margin-bottom:0">
+            <div>
+              <div class="analise-card-label">Parcela necessária</div>
+              <div class="analise-card-value" id="plano-parcela-nec">—</div>
+            </div>
+            <div>
+              <div class="analise-card-label">Parcela possível</div>
+              <div class="analise-card-value" id="plano-parcela-poss">—</div>
+            </div>
+            <div>
+              <div class="analise-card-label">Viabilidade</div>
+              <div class="analise-card-value" id="plano-viavel">—</div>
+            </div>
+            <div>
+              <div class="analise-card-label">Prazo necessário real</div>
+              <div class="analise-card-value" id="plano-prazo-real">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Observações sobre o plano</label>
+          <textarea id="plano_observacoes" class="form-control" rows="2"
+                    placeholder="Condições especiais, proposta do devedor, etc."></textarea>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="goStep(5)">← Voltar</button>
+          <span class="step-nav-info">Passo 6 de 7</span>
+          <button class="btn btn-primary" onclick="goStep(7)">Próximo →</button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           STEP 7 — DOCUMENTAÇÃO E FINALIZAÇÃO
+      ═════════════════════════════════════════════ -->
+      <div class="cnj-panel card" id="panel-7">
+        <div class="section-divider">Checklist de Documentos</div>
+        <p class="form-hint" style="margin-bottom:14px">
+          Confirme quais documentos você possui disponíveis para apresentação no processo.
+        </p>
+
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_rg_cnh" />
+          <span>RG ou CNH (frente e verso) <span class="badge badge-danger">Obrigatório</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_cpf_doc" />
+          <span>Comprovante de CPF <span class="badge badge-danger">Obrigatório</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_residencia" />
+          <span>Comprovante de residência <span class="badge badge-danger">Obrigatório</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_renda_doc" />
+          <span>Comprovante de renda (holerite / extrato / declaração) <span class="badge badge-danger">Obrigatório</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_extratos" />
+          <span>Extratos bancários (últimos 3 meses) <span class="badge badge-danger">Obrigatório</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_contratos" />
+          <span>Contratos de dívidas / Carnês <span class="badge">Recomendado</span></span>
+        </label>
+        <label class="toggle-label" style="margin-bottom:10px">
+          <input type="checkbox" id="doc_cobrancas" />
+          <span>Cobranças recebidas (Serasa, SMS, e-mails, cartas) <span class="badge">Recomendado</span></span>
+        </label>
+
+        <div class="section-divider">Prévia do Formulário CNJ Estruturado</div>
+        <p class="form-hint" style="margin-bottom:8px">JSON que será vinculado ao caso para instrução processual.</p>
+        <div class="json-preview" id="json-preview">Clique em "Gerar prévia" para visualizar.</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="gerarPrevia()">↻ Gerar prévia</button>
+
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Observações finais</label>
+          <textarea id="observacoes" class="form-control" rows="3"
+                    placeholder="Informações adicionais para o advogado..."></textarea>
+        </div>
+
+        <div class="step-nav">
+          <button class="btn btn-ghost" onclick="goStep(6)">← Voltar</button>
+          <span class="step-nav-info">Passo 7 de 7</span>
+          <button class="btn btn-primary" id="btn-finalizar" onclick="finalizarCadastro()">
+            ✓ Enviar formulário ao escritório
+          </button>
+        </div>
+      </div>
     </main>
 
     <footer class="portal-page-footer">
-      <span>Portal do Superendividado</span>
-      <span>Suas informações são protegidas pela LGPD</span>
+      <span>Portal HMADV &copy; 2026 &mdash; Hermida Maia Advocacia</span>
+      <span>Lei 14.181/2021 · Recomendação CNJ 125/2021</span>
     </footer>
   </div>
 </div>
 
-<div class="toast" id="toast"><span id="toast-msg"></span></div>
-
-<script type="module" src="../js/app.js"></script>
+<!-- ── Scripts ─────────────────────────────────────────────────── -->
 <script type="module">
-import { showToast }   from '../utils/helpers.js';
-import { CaseService } from '../services/database.js';
-import { lookupCPF, lookupCEP } from '../services/directdata.js';
+import { showToast }                      from '../utils/helpers.js';
+import { CaseService }                    from '../services/database.js';
+import { lookupCPF, lookupCEP }           from '../services/directdata.js';
+import {
+  calcAnaliseGlobal, calcPlanoPagamento,
+  buildCNJJson, fmtBRL, parseBRL,
+  saveDraft, loadDraft, clearDraft,
+} from '../js/cnj-engine.js';
 
-window.showToast = showToast;
+/* ── Índices dinâmicos ──────────────── */
+let phoneIdx  = 0;
+let addrIdx   = 0;
+let depIdx    = 0;
+let credorIdx = 0;
+let _userId   = null;
+let _currentStep = 1;
 
-/* ── Counters for dynamic list IDs ── */
-let phoneIdx = 0, addrIdx = 0, depIdx = 0;
+/* ── Ícones ─────────────────────────── */
+const TRASH = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+const SEARCH_ICO = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>`;
 
-/* ══════════════════════════════════════
-   MASKS
-══════════════════════════════════════ */
-function applyMaskCPF(v) {
-  v = v.replace(/\D/g, '').slice(0, 11);
-  if (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
-  else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
-  else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
-  return v;
-}
-function applyMaskPhone(v) {
-  v = v.replace(/\D/g, '').slice(0, 11);
-  if (v.length > 6) v = '('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7);
-  else if (v.length > 2) v = '('+v.slice(0,2)+') '+v.slice(2);
-  else if (v.length > 0) v = '('+v;
-  return v;
-}
-function applyMaskCEP(v) {
-  v = v.replace(/\D/g, '').slice(0, 8);
-  if (v.length > 5) v = v.slice(0,5)+'-'+v.slice(5);
-  return v;
+/* ── Escape HTML ─────────────────────── */
+function esc(v) {
+  return (v||'').toString()
+    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-window.maskCurrency = function(el) {
-  let v = el.value.replace(/[^\d]/g, '');
-  if (!v) { el.value = ''; return; }
-  const n = parseInt(v, 10) / 100;
-  el.value = 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/* ── Masks ───────────────────────────── */
+window.applyMaskCPF = function(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,11);
+  if (v.length > 9)      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/,'$1.$2.$3-$4');
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{0,3})/,'$1.$2.$3');
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/,'$1.$2');
+  el.value = v;
 };
 
-/* CPF inputs mask on input */
-document.addEventListener('DOMContentLoaded', () => {
-  ['f-cpf','c-cpf'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', () => { el.value = applyMaskCPF(el.value); });
-  });
+window.applyMaskPhone = function(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,11);
+  if (v.length > 10)     v = v.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  else if (v.length > 6) v = v.replace(/(\d{2})(\d{4,5})(\d{0,4})/,'($1) $2-$3');
+  else if (v.length > 2) v = v.replace(/(\d{2})(\d{0,5})/,'($1) $2');
+  el.value = v;
+};
+
+window.applyMaskCEP = function(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,8);
+  if (v.length > 5) v = v.replace(/(\d{5})(\d{0,3})/,'$1-$2');
+  el.value = v;
+  if (v.replace(/\D/g,'').length === 8) {
+    const m = el.id.match(/addr_cep_(\d+)/);
+    if (m) doLookupCEP(+m[1]);
+  }
+};
+
+window.maskCurrency = function(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (!v) { el.value = ''; return; }
+  el.value = (parseInt(v,10)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  if (el.id.startsWith('desp_')) updateTotalDespesas();
+};
+
+/* ── Total despesas (step 3) ─────────── */
+function updateTotalDespesas() {
+  const ids = ['desp_luz','desp_aluguel','desp_condominio','desp_agua','desp_internet',
+               'desp_alimentacao','desp_pensao','desp_educacao','desp_plano_saude',
+               'desp_medicamentos','desp_impostos','desp_outras'];
+  const total = ids.reduce((s,id) => s + parseBRL(document.getElementById(id)?.value||''),0);
+  const el = document.getElementById('total-despesas-display');
+  if (el) el.textContent = fmtBRL(total);
+}
+
+/* ── Patrimônio toggles ──────────────── */
+document.getElementById('imovel_situacao').addEventListener('change', function() {
+  const fin = this.value === 'proprio_financiado';
+  document.getElementById('imovel-parcela-group').style.display   = fin ? '' : 'none';
+  document.getElementById('imovel-vencimento-group').style.display = fin ? '' : 'none';
+});
+document.getElementById('veiculo_situacao').addEventListener('change', function() {
+  const fin = ['financiado','arrendado'].includes(this.value);
+  document.getElementById('veiculo-parcela-group').style.display   = fin ? '' : 'none';
+  document.getElementById('veiculo-vencimento-group').style.display = fin ? '' : 'none';
 });
 
-/* ══════════════════════════════════════
-   ICON HELPERS (inline SVG strings)
-══════════════════════════════════════ */
-const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
-const ICON_SEARCH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+/* ── Cônjuge toggle ──────────────────── */
+window.toggleConjugue = function() {
+  document.getElementById('conjugue-section').style.display =
+    document.getElementById('tem_conjugue').checked ? '' : 'none';
+};
 
-/* ══════════════════════════════════════
-   EMPTY STATE helpers
-══════════════════════════════════════ */
+/* ── syncEmpty ───────────────────────── */
 function syncEmpty(listId, emptyId) {
   const list  = document.getElementById(listId);
   const empty = document.getElementById(emptyId);
-  if (!list || !empty) return;
-  empty.style.display = list.children.length === 0 ? '' : 'none';
+  if (list && empty) empty.style.display = list.children.length === 0 ? '' : 'none';
 }
 
-/* ══════════════════════════════════════
-   DYNAMIC PHONES
-══════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   STEP 1 — Telefones
+════════════════════════════════════════════ */
 window.addPhone = function(data) {
   data = data || {};
-  phoneIdx++;
-  const i = phoneIdx;
+  const i   = phoneIdx++;
+  const cnt = document.getElementById('phones-list').children.length + 1;
   const div = document.createElement('div');
-  div.id = 'phone-item-' + i;
   div.className = 'dyn-card';
-
-  const sel = function(val, opt) { return val === opt ? ' selected' : ''; };
-
+  div.id = 'phone-card-' + i;
   div.innerHTML =
     '<div class="dyn-card-header">' +
-      '<span class="dyn-card-title">Telefone ' + i + '</span>' +
-      '<button type="button" class="btn-remove" title="Remover" onclick="removePhone(' + i + ')">' + ICON_TRASH + '</button>' +
+      '<span class="dyn-card-title">Telefone ' + cnt + '</span>' +
+      '<button type="button" class="btn-remove" onclick="removePhone(' + i + ')">' + TRASH + '</button>' +
     '</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">' +
-      '<div class="form-group" style="min-width:120px;flex:0 0 130px;">' +
-        '<label class="form-label" for="phone-tipo-' + i + '">Tipo</label>' +
-        '<select class="form-select" id="phone-tipo-' + i + '">' +
-          '<option value="Celular"' + sel(data.tipo,'Celular') + '>Celular</option>' +
-          '<option value="Fixo"' + sel(data.tipo,'Fixo') + '>Fixo</option>' +
-          '<option value="Comercial"' + sel(data.tipo,'Comercial') + '>Comercial</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="form-group" style="flex:1;min-width:160px;">' +
-        '<label class="form-label" for="phone-num-' + i + '">Número</label>' +
-        '<input class="form-input" type="tel" id="phone-num-' + i + '" placeholder="(00) 00000-0000" inputmode="numeric" value="' + (data.numero||'') + '" oninput="this.value=applyMaskPhone(this.value)">' +
-      '</div>' +
-      '<div class="form-group" style="flex:0 0 auto;padding-bottom:2px;">' +
-        '<label class="toggle-label" style="padding-top:24px;">' +
-          '<input type="checkbox" id="phone-wa-' + i + '"' + (data.whatsapp?' checked':'') + ' style="accent-color:var(--blue);">' +
-          ' WhatsApp' +
-        '</label>' +
-      '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Tipo</label>' +
+        '<select id="phone_tipo_' + i + '" class="form-control">' +
+          '<option value="Celular"'   + (data.tipo==='Celular'?' selected':'') + '>Celular</option>' +
+          '<option value="Fixo"'      + (data.tipo==='Fixo'?' selected':'') + '>Fixo</option>' +
+          '<option value="Comercial"' + (data.tipo==='Comercial'?' selected':'') + '>Comercial</option>' +
+        '</select></div>' +
+      '<div class="form-group"><label class="form-label">Número</label>' +
+        '<input type="text" id="phone_num_' + i + '" class="form-control" placeholder="(00) 00000-0000"' +
+          ' value="' + esc(data.numero||'') + '" oninput="applyMaskPhone(this)" /></div>' +
+      '<div class="form-group"><label class="toggle-label">' +
+        '<input type="checkbox" id="phone_wa_' + i + '"' + (data.whatsapp?' checked':'') + ' />' +
+        '<span>WhatsApp</span></label></div>' +
     '</div>';
-
   document.getElementById('phones-list').appendChild(div);
-  syncEmpty('phones-list', 'phones-empty');
-
-  /* expose applyMaskPhone to inline handler */
-  window.applyMaskPhone = applyMaskPhone;
+  syncEmpty('phones-list','phones-empty');
 };
 
 window.removePhone = function(i) {
-  document.getElementById('phone-item-' + i)?.remove();
-  syncEmpty('phones-list', 'phones-empty');
+  document.getElementById('phone-card-'+i)?.remove();
+  syncEmpty('phones-list','phones-empty');
 };
 
-/* ══════════════════════════════════════
-   DYNAMIC ADDRESSES
-══════════════════════════════════════ */
-window.addAddress = function(data) {
-  data = data || {};
-  addrIdx++;
-  const i = addrIdx;
-  const div = document.createElement('div');
-  div.id = 'addr-item-' + i;
-  div.className = 'dyn-card';
-
-  const sel = function(val, opt) { return val === opt ? ' selected' : ''; };
-  const tipo = data.tipo || 'Residencial';
-
-  div.innerHTML =
-    '<div class="dyn-card-header">' +
-      '<select class="form-select" id="addr-tipo-' + i + '" style="width:160px;">' +
-        '<option value="Residencial"' + sel(tipo,'Residencial') + '>Residencial</option>' +
-        '<option value="Comercial"'   + sel(tipo,'Comercial')   + '>Comercial</option>' +
-        '<option value="Correspondência"' + sel(tipo,'Correspondência') + '>Correspondência</option>' +
-      '</select>' +
-      '<button type="button" class="btn-remove" title="Remover" onclick="removeAddress(' + i + ')">' + ICON_TRASH + '</button>' +
-    '</div>' +
-    '<div class="form-grid" style="gap:10px;">' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="addr-cep-' + i + '">CEP</label>' +
-        '<div style="display:flex;gap:6px;">' +
-          '<input class="form-input" type="text" id="addr-cep-' + i + '" placeholder="00000-000" maxlength="9" inputmode="numeric" value="' + (data.cep||'') + '" oninput="handleCEPInput(this,' + i + ')" style="flex:1;min-width:0;">' +
-          '<button type="button" class="btn btn-ghost" onclick="doLookupCEP(' + i + ')" style="padding:6px 10px;flex-shrink:0;font-size:12px;">Buscar</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="form-group full">' +
-        '<label class="form-label" for="addr-lograd-' + i + '">Logradouro</label>' +
-        '<input class="form-input" type="text" id="addr-lograd-' + i + '" placeholder="Rua, Avenida, Travessa..." value="' + esc(data.logradouro) + '">' +
-      '</div>' +
-      '<div class="form-group" style="max-width:100px;">' +
-        '<label class="form-label" for="addr-num-' + i + '">Número</label>' +
-        '<input class="form-input" type="text" id="addr-num-' + i + '" placeholder="Nº" value="' + esc(data.numero) + '">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="addr-compl-' + i + '">Complemento</label>' +
-        '<input class="form-input" type="text" id="addr-compl-' + i + '" placeholder="Apto, Bloco..." value="' + esc(data.complemento) + '">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="addr-bairro-' + i + '">Bairro</label>' +
-        '<input class="form-input" type="text" id="addr-bairro-' + i + '" placeholder="Bairro" value="' + esc(data.bairro) + '">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="addr-cidade-' + i + '">Cidade</label>' +
-        '<input class="form-input" type="text" id="addr-cidade-' + i + '" placeholder="Cidade" value="' + esc(data.cidade) + '">' +
-      '</div>' +
-      '<div class="form-group" style="max-width:80px;">' +
-        '<label class="form-label" for="addr-uf-' + i + '">UF</label>' +
-        '<input class="form-input" type="text" id="addr-uf-' + i + '" placeholder="UF" maxlength="2" style="text-transform:uppercase;" value="' + esc(data.uf) + '">' +
-      '</div>' +
-    '</div>';
-
-  document.getElementById('addresses-list').appendChild(div);
-  syncEmpty('addresses-list', 'addresses-empty');
-};
-
-window.removeAddress = function(i) {
-  document.getElementById('addr-item-' + i)?.remove();
-  syncEmpty('addresses-list', 'addresses-empty');
-};
-
-/* ── CEP input mask + auto-lookup ── */
-window.handleCEPInput = function(el, i) {
-  el.value = applyMaskCEP(el.value);
-  if (el.value.replace(/\D/g,'').length === 8) doLookupCEP(i);
-};
-
-window.doLookupCEP = async function(i) {
-  const cepEl = document.getElementById('addr-cep-' + i);
-  if (!cepEl) return;
-  const cep = cepEl.value.replace(/\D/g,'');
-  if (cep.length !== 8) return;
-  const result = await lookupCEP(cep);
-  if (!result) { showToast('CEP não encontrado.', 'error'); return; }
-  const setF = (field, val) => {
-    const el = document.getElementById('addr-' + field + '-' + i);
-    if (el && val) el.value = val;
-  };
-  setF('lograd',  result.logradouro);
-  setF('bairro',  result.bairro);
-  setF('cidade',  result.cidade);
-  setF('uf',      result.uf);
-};
-
-/* ══════════════════════════════════════
-   DYNAMIC DEPENDENTS
-══════════════════════════════════════ */
-window.addDependent = function(data) {
-  data = data || {};
-  depIdx++;
-  const i = depIdx;
-  const div = document.createElement('div');
-  div.id = 'dep-item-' + i;
-  div.className = 'dyn-card';
-
-  const sel = function(val, opt) { return val === opt ? ' selected' : ''; };
-
-  div.innerHTML =
-    '<div class="dyn-card-header">' +
-      '<span class="dyn-card-title">Dependente ' + i + '</span>' +
-      '<button type="button" class="btn-remove" title="Remover" onclick="removeDependent(' + i + ')">' + ICON_TRASH + '</button>' +
-    '</div>' +
-    '<div class="form-grid" style="gap:10px;">' +
-      '<div class="form-group full">' +
-        '<label class="form-label" for="dep-nome-' + i + '">Nome completo</label>' +
-        '<input class="form-input" type="text" id="dep-nome-' + i + '" placeholder="Nome" value="' + esc(data.nome) + '">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="dep-cpf-' + i + '">CPF</label>' +
-        '<input class="form-input" type="text" id="dep-cpf-' + i + '" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" value="' + esc(data.cpf) + '" oninput="this.value=applyMaskCPF(this.value)">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="dep-nasc-' + i + '">Data de nascimento</label>' +
-        '<input class="form-input" type="date" id="dep-nasc-' + i + '" value="' + esc(data.data_nascimento) + '">' +
-      '</div>' +
-      '<div class="form-group">' +
-        '<label class="form-label" for="dep-par-' + i + '">Parentesco</label>' +
-        '<select class="form-select" id="dep-par-' + i + '">' +
-          '<option value="">— Selecione —</option>' +
-          '<option value="Filho(a)"' + sel(data.parentesco,'Filho(a)') + '>Filho(a)</option>' +
-          '<option value="Cônjuge"' + sel(data.parentesco,'Cônjuge') + '>Cônjuge</option>' +
-          '<option value="Pai/Mãe"' + sel(data.parentesco,'Pai/Mãe') + '>Pai / Mãe</option>' +
-          '<option value="Irmão(ã)"' + sel(data.parentesco,'Irmão(ã)') + '>Irmão(ã)</option>' +
-          '<option value="Neto(a)"' + sel(data.parentesco,'Neto(a)') + '>Neto(a)</option>' +
-          '<option value="Outro"' + sel(data.parentesco,'Outro') + '>Outro</option>' +
-        '</select>' +
-      '</div>' +
-    '</div>';
-
-  document.getElementById('dependents-list').appendChild(div);
-  syncEmpty('dependents-list', 'dependents-empty');
-
-  /* expose applyMaskCPF to inline handler */
-  window.applyMaskCPF = applyMaskCPF;
-};
-
-window.removeDependent = function(i) {
-  document.getElementById('dep-item-' + i)?.remove();
-  syncEmpty('dependents-list', 'dependents-empty');
-};
-
-/* ══════════════════════════════════════
-   SPOUSE TOGGLE
-══════════════════════════════════════ */
-window.toggleConjugue = function(show) {
-  document.getElementById('conjugue-form').style.display = show ? '' : 'none';
-};
-
-/* Wire CPF mask for spouse after DOM is ready */
-document.addEventListener('app:ready', () => {
-  const el = document.getElementById('c-cpf');
-  if (el) el.addEventListener('input', () => { el.value = applyMaskCPF(el.value); });
-});
-
-/* ══════════════════════════════════════
-   CPF LOOKUP (DirectData)
-══════════════════════════════════════ */
-window.handleCPFLookup = async function() {
-  const cpfEl  = document.getElementById('f-cpf');
-  const btn    = document.getElementById('btn-cpf-lookup');
-  const status = document.getElementById('cpf-lookup-status');
-  const cpf    = cpfEl.value.replace(/\D/g,'');
-
-  if (cpf.length !== 11) { showToast('Informe um CPF válido (11 dígitos).', 'error'); return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Consultando...';
-  status.textContent = 'Consultando cadastro...';
-  status.style.color = 'var(--muted)';
-
-  try {
-    const result = await lookupCPF(cpf);
-    if (!result || !result.nome) {
-      status.textContent = 'CPF sem retorno de dados.';
-      status.style.color = 'var(--red)';
-      showToast('Nenhum dado encontrado para este CPF.', 'error');
-      return;
-    }
-
-    const setV = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.value = val; };
-    setV('f-nome',      result.nome);
-    setV('f-data-nasc', result.dataNascimento);
-    setV('f-sexo',      result.sexo);
-    setV('f-nome-mae',  result.nomeMae);
-
-    /* Pre-fill phones only if list is empty */
-    if (result.telefones && result.telefones.length > 0 &&
-        document.getElementById('phones-list').children.length === 0) {
-      result.telefones.slice(0, 3).forEach(t => addPhone(t));
-    }
-    /* Pre-fill addresses only if list is empty */
-    if (result.enderecos && result.enderecos.length > 0 &&
-        document.getElementById('addresses-list').children.length === 0) {
-      result.enderecos.slice(0, 2).forEach(a => addAddress(a));
-    }
-
-    status.textContent = '✓ Dados preenchidos com sucesso.';
-    status.style.color = 'var(--ok)';
-    showToast('Dados encontrados e preenchidos!', 'ok');
-  } catch (err) {
-    console.error('[CPF lookup]', err);
-    status.textContent = 'Erro ao consultar CPF.';
-    status.style.color = 'var(--red)';
-    showToast('Erro ao consultar CPF.', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = ICON_SEARCH + 'Consultar';
-  }
-};
-
-/* ══════════════════════════════════════
-   STEP NAVIGATION
-══════════════════════════════════════ */
-const TOTAL_STEPS = 5;
-
-window.goStep = function(step) {
-  for (let s = 1; s <= TOTAL_STEPS; s++) {
-    const panel = document.getElementById('panel-step-' + s);
-    if (panel) panel.style.display = (s === step) ? '' : 'none';
-    const dot = document.getElementById('ob-step-' + s);
-    if (dot) dot.className = s < step ? 't-step done' : s === step ? 't-step active' : 't-step';
-    const conn = document.getElementById('ob-conn-' + s);
-    if (conn) conn.className = 't-connector' + (s < step ? ' done' : '');
-  }
-  document.getElementById('step-label').textContent = 'Etapa ' + step + ' de ' + TOTAL_STEPS;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-/* ══════════════════════════════════════
-   DATA COLLECTION
-══════════════════════════════════════ */
 function getPhones() {
-  return Array.from(document.querySelectorAll('#phones-list .dyn-card')).map(div => {
-    const i = div.id.replace('phone-item-','');
+  return Array.from(document.getElementById('phones-list').children).map(card => {
+    const id = card.id.replace('phone-card-','');
     return {
-      tipo:     document.getElementById('phone-tipo-' + i)?.value || 'Celular',
-      numero:   document.getElementById('phone-num-'  + i)?.value.trim() || '',
-      whatsapp: document.getElementById('phone-wa-'   + i)?.checked || false,
+      tipo:     document.getElementById('phone_tipo_'+id)?.value || '',
+      numero:   document.getElementById('phone_num_'+id)?.value  || '',
+      whatsapp: document.getElementById('phone_wa_'+id)?.checked || false,
     };
   }).filter(p => p.numero);
 }
 
-function getAddresses() {
-  return Array.from(document.querySelectorAll('#addresses-list .dyn-card')).map(div => {
-    const i = div.id.replace('addr-item-','');
-    return {
-      tipo:        document.getElementById('addr-tipo-'   + i)?.value || 'Residencial',
-      cep:         document.getElementById('addr-cep-'    + i)?.value || '',
-      logradouro:  document.getElementById('addr-lograd-' + i)?.value.trim() || '',
-      numero:      document.getElementById('addr-num-'    + i)?.value.trim() || '',
-      complemento: document.getElementById('addr-compl-'  + i)?.value.trim() || '',
-      bairro:      document.getElementById('addr-bairro-' + i)?.value.trim() || '',
-      cidade:      document.getElementById('addr-cidade-' + i)?.value.trim() || '',
-      uf:          document.getElementById('addr-uf-'     + i)?.value.trim().toUpperCase() || '',
-    };
-  }).filter(a => a.logradouro || a.cep.replace(/\D/g,'').length > 0);
+/* ════════════════════════════════════════════
+   STEP 1 — Endereços
+════════════════════════════════════════════ */
+window.addAddress = function(data) {
+  data = data || {};
+  const i   = addrIdx++;
+  const cnt = document.getElementById('addrs-list').children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'dyn-card';
+  div.id = 'addr-card-' + i;
+  div.innerHTML =
+    '<div class="dyn-card-header">' +
+      '<span class="dyn-card-title">Endereço ' + cnt + '</span>' +
+      '<button type="button" class="btn-remove" onclick="removeAddress(' + i + ')">' + TRASH + '</button>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Tipo</label>' +
+        '<select id="addr_tipo_' + i + '" class="form-control">' +
+          '<option value="Residencial"' + (data.tipo==='Residencial'?' selected':'') + '>Residencial</option>' +
+          '<option value="Comercial"'  + (data.tipo==='Comercial'?' selected':'') + '>Comercial</option>' +
+          '<option value="Outros"'     + (data.tipo==='Outros'?' selected':'') + '>Outros</option>' +
+        '</select></div>' +
+      '<div class="form-group"><label class="form-label">CEP</label>' +
+        '<input type="text" id="addr_cep_' + i + '" class="form-control" placeholder="00000-000" maxlength="9"' +
+          ' value="' + esc(data.cep||'') + '" oninput="applyMaskCEP(this)" /></div>' +
+      '<div class="form-group" style="grid-column:1/-1"><label class="form-label">Logradouro</label>' +
+        '<input type="text" id="addr_log_' + i + '" class="form-control"' +
+          ' value="' + esc(data.logradouro||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">Número</label>' +
+        '<input type="text" id="addr_num_' + i + '" class="form-control"' +
+          ' value="' + esc(data.numero||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">Complemento</label>' +
+        '<input type="text" id="addr_comp_' + i + '" class="form-control"' +
+          ' value="' + esc(data.complemento||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">Bairro</label>' +
+        '<input type="text" id="addr_bairro_' + i + '" class="form-control"' +
+          ' value="' + esc(data.bairro||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">Cidade</label>' +
+        '<input type="text" id="addr_cidade_' + i + '" class="form-control"' +
+          ' value="' + esc(data.cidade||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">UF</label>' +
+        '<input type="text" id="addr_uf_' + i + '" class="form-control" maxlength="2"' +
+          ' value="' + esc(data.uf||'') + '" /></div>' +
+    '</div>';
+  document.getElementById('addrs-list').appendChild(div);
+  syncEmpty('addrs-list','addrs-empty');
+};
+
+window.removeAddress = function(i) {
+  document.getElementById('addr-card-'+i)?.remove();
+  syncEmpty('addrs-list','addrs-empty');
+};
+
+async function doLookupCEP(i) {
+  const cepEl = document.getElementById('addr_cep_'+i);
+  if (!cepEl) return;
+  const result = await lookupCEP(cepEl.value);
+  if (!result) return;
+  const s = (id,v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  s('addr_log_'   +i, result.logradouro);
+  s('addr_bairro_'+i, result.bairro);
+  s('addr_cidade_'+i, result.cidade);
+  s('addr_uf_'    +i, result.uf);
+  s('addr_cep_'   +i, result.cep);
 }
 
-function getDependents() {
-  return Array.from(document.querySelectorAll('#dependents-list .dyn-card')).map(div => {
-    const i = div.id.replace('dep-item-','');
+function getAddresses() {
+  return Array.from(document.getElementById('addrs-list').children).map(card => {
+    const i = card.id.replace('addr-card-','');
     return {
-      nome:            document.getElementById('dep-nome-' + i)?.value.trim() || '',
-      cpf:             document.getElementById('dep-cpf-'  + i)?.value.trim() || '',
-      data_nascimento: document.getElementById('dep-nasc-' + i)?.value || '',
-      parentesco:      document.getElementById('dep-par-'  + i)?.value || '',
+      tipo:        document.getElementById('addr_tipo_'   +i)?.value || '',
+      cep:         document.getElementById('addr_cep_'    +i)?.value || '',
+      logradouro:  document.getElementById('addr_log_'    +i)?.value || '',
+      numero:      document.getElementById('addr_num_'    +i)?.value || '',
+      complemento: document.getElementById('addr_comp_'   +i)?.value || '',
+      bairro:      document.getElementById('addr_bairro_' +i)?.value || '',
+      cidade:      document.getElementById('addr_cidade_' +i)?.value || '',
+      uf:          document.getElementById('addr_uf_'     +i)?.value || '',
     };
-  }).filter(d => d.nome);
+  }).filter(a => a.logradouro || a.cep);
+}
+
+/* ════════════════════════════════════════════
+   STEP 2 — Dependentes
+════════════════════════════════════════════ */
+window.addDependent = function(data) {
+  data = data || {};
+  const i   = depIdx++;
+  const cnt = document.getElementById('deps-list').children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'dyn-card';
+  div.id = 'dep-card-' + i;
+  div.innerHTML =
+    '<div class="dyn-card-header">' +
+      '<span class="dyn-card-title">Dependente ' + cnt + '</span>' +
+      '<button type="button" class="btn-remove" onclick="removeDependent(' + i + ')">' + TRASH + '</button>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Nome</label>' +
+        '<input type="text" id="dep_nome_' + i + '" class="form-control" value="' + esc(data.nome||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">CPF</label>' +
+        '<input type="text" id="dep_cpf_' + i + '" class="form-control" placeholder="000.000.000-00"' +
+          ' value="' + esc(data.cpf||'') + '" oninput="applyMaskCPF(this)" /></div>' +
+      '<div class="form-group"><label class="form-label">Data de nascimento</label>' +
+        '<input type="date" id="dep_nasc_' + i + '" class="form-control" value="' + esc(data.data_nascimento||'') + '" /></div>' +
+      '<div class="form-group"><label class="form-label">Parentesco</label>' +
+        '<select id="dep_par_' + i + '" class="form-control">' +
+          '<option value="filho"'    + (data.parentesco==='filho'?' selected':'') + '>Filho(a)</option>' +
+          '<option value="pai_mae"'  + (data.parentesco==='pai_mae'?' selected':'') + '>Pai / Mãe</option>' +
+          '<option value="irmao"'    + (data.parentesco==='irmao'?' selected':'') + '>Irmão / Irmã</option>' +
+          '<option value="outro"'    + (data.parentesco==='outro'?' selected':'') + '>Outro</option>' +
+        '</select></div>' +
+    '</div>';
+  document.getElementById('deps-list').appendChild(div);
+  syncEmpty('deps-list','deps-empty');
+};
+
+window.removeDependent = function(i) {
+  document.getElementById('dep-card-'+i)?.remove();
+  syncEmpty('deps-list','deps-empty');
+};
+
+function getDependents() {
+  return Array.from(document.getElementById('deps-list').children).map(card => {
+    const i = card.id.replace('dep-card-','');
+    return {
+      nome:            document.getElementById('dep_nome_'+i)?.value || '',
+      cpf:             document.getElementById('dep_cpf_'+i)?.value  || '',
+      data_nascimento: document.getElementById('dep_nasc_'+i)?.value || '',
+      parentesco:      document.getElementById('dep_par_'+i)?.value  || '',
+    };
+  });
 }
 
 function getConjugue() {
-  if (!document.getElementById('toggle-conjugue')?.checked) return null;
-  const nome = document.getElementById('c-nome')?.value.trim();
-  if (!nome) return null;
+  if (!document.getElementById('tem_conjugue')?.checked) return null;
   return {
-    nome,
-    cpf:             document.getElementById('c-cpf')?.value.trim()       || '',
-    data_nascimento: document.getElementById('c-data-nasc')?.value        || '',
-    rg:              document.getElementById('c-rg')?.value.trim()        || '',
-    profissao:       document.getElementById('c-profissao')?.value.trim() || '',
-    renda:           parseCurrency(document.getElementById('c-renda')?.value || ''),
+    nome:            document.getElementById('conj_nome')?.value            || '',
+    cpf:             document.getElementById('conj_cpf')?.value             || '',
+    data_nascimento: document.getElementById('conj_data_nascimento')?.value || '',
+    rg:              document.getElementById('conj_rg')?.value              || '',
+    profissao:       document.getElementById('conj_profissao')?.value       || '',
+    renda:           parseBRL(document.getElementById('conj_renda')?.value),
   };
 }
 
-function parseCurrency(str) {
-  const n = parseFloat((str || '').replace(/[^\d,]/g,'').replace(',','.'));
-  return isNaN(n) ? null : n;
+/* ════════════════════════════════════════════
+   STEP 5 — Mapa de Credores (CNJ §3)
+════════════════════════════════════════════ */
+window.addCredor = function(data) {
+  data = data || {};
+  const i   = credorIdx++;
+  const cnt = document.getElementById('credores-list').children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'dyn-card';
+  div.id = 'credor-card-' + i;
+
+  div.innerHTML =
+    '<div class="dyn-card-header">' +
+      '<span class="dyn-card-title">Credor ' + cnt + '</span>' +
+      '<button type="button" class="btn-remove" onclick="removeCredor(' + i + ')">' + TRASH + '</button>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group" style="grid-column:1/-1"><label class="form-label">Nome do credor <span class="required">*</span></label>' +
+        '<input type="text" id="cr_nome_' + i + '" class="form-control" placeholder="Ex.: Banco Itaú"' +
+          ' value="' + esc(data.nome||'') + '" onchange="updateCredorCalc(' + i + ')" /></div>' +
+      '<div class="form-group"><label class="form-label">Tipo de dívida</label>' +
+        '<select id="cr_tipo_' + i + '" class="form-control" onchange="onCredorTipoChange(' + i + ')">' +
+          '<option value="emprestimo"'    + (data.tipo==='emprestimo'?' selected':'') + '>Empréstimo pessoal</option>' +
+          '<option value="cartao"'        + (data.tipo==='cartao'?' selected':'') + '>Cartão de crédito</option>' +
+          '<option value="financiamento"' + (data.tipo==='financiamento'?' selected':'') + '>Financiamento</option>' +
+          '<option value="cheque"'        + (data.tipo==='cheque'?' selected':'') + '>Cheque especial</option>' +
+          '<option value="consignado"'    + (data.tipo==='consignado'?' selected':'') + '>Crédito consignado</option>' +
+          '<option value="outros"'        + (data.tipo==='outros'?' selected':'') + '>Outros</option>' +
+        '</select></div>' +
+      '<div class="form-group"><label class="form-label">Saldo devedor declarado</label>' +
+        '<input type="text" id="cr_valor_' + i + '" class="form-control" placeholder="R$ 0,00"' +
+          ' value="' + esc(data.valorDeclarado ? fmtBRL(data.valorDeclarado) : '') + '"' +
+          ' oninput="maskCurrency(this); updateCredorCalc(' + i + ')" /></div>' +
+      '<div class="form-group"><label class="form-label">Parcela mensal atual</label>' +
+        '<input type="text" id="cr_parcela_' + i + '" class="form-control" placeholder="R$ 0,00"' +
+          ' value="' + esc(data.parcela ? fmtBRL(data.parcela) : '') + '"' +
+          ' oninput="maskCurrency(this); updateCredorCalc(' + i + ')" /></div>' +
+      '<div class="form-group"><label class="form-label">Tipo de garantia</label>' +
+        '<select id="cr_garantia_' + i + '" class="form-control">' +
+          '<option value="">Sem garantia</option>' +
+          '<option value="imovel"'              + (data.garantia==='imovel'?' selected':'') + '>Imóvel</option>' +
+          '<option value="veiculo"'             + (data.garantia==='veiculo'?' selected':'') + '>Veículo</option>' +
+          '<option value="aval"'                + (data.garantia==='aval'?' selected':'') + '>Aval / Fiança</option>' +
+          '<option value="alienacao_fiduciaria"'+(data.garantia==='alienacao_fiduciaria'?' selected':'') + '>Alienação fiduciária</option>' +
+        '</select></div>' +
+      '<div class="form-group"><label class="form-label">Data do vencimento / inadimplência</label>' +
+        '<input type="date" id="cr_vencimento_' + i + '" class="form-control"' +
+          ' value="' + esc(data.dataVencimento||'') + '" onchange="updateCredorCalc(' + i + ')" /></div>' +
+    '</div>' +
+
+    /* Cap cartão — só aparece para tipo=cartao */
+    '<div id="cr_cap_' + i + '" style="display:none"><div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Valor original contratado</label>' +
+        '<input type="text" id="cr_orig_' + i + '" class="form-control" placeholder="R$ 0,00"' +
+          ' value="' + esc(data.valorOriginal ? fmtBRL(data.valorOriginal) : '') + '"' +
+          ' oninput="maskCurrency(this); updateCredorCalc(' + i + ')" /></div>' +
+      '<div class="form-group"><label class="form-label">Total já pago ao credor</label>' +
+        '<input type="text" id="cr_pago_' + i + '" class="form-control" placeholder="R$ 0,00"' +
+          ' value="' + esc(data.totalJaPago ? fmtBRL(data.totalJaPago) : '') + '"' +
+          ' oninput="maskCurrency(this); updateCredorCalc(' + i + ')" /></div>' +
+    '</div></div>' +
+
+    /* Conformidade CNJ §3 */
+    '<div class="section-divider" style="margin-top:12px">Conformidade CNJ §3</div>' +
+    '<div class="form-grid">' +
+      _cnjChk(i,'processo_judicial',    'Existe processo judicial em curso?',data) +
+      _cnjChk(i,'consignado',           'É crédito consignado (desconto em folha)?',data) +
+      _cnjChk(i,'vencida',              'Parcela está vencida?',data) +
+      _cnjChk(i,'renegociacao',         'Houve renegociação anterior?',data) +
+      _cnjChk(i,'recebeu_contrato',     'Recebeu via de contrato assinado?',data) +
+      _cnjChk(i,'informado_juros',      'Foi informado sobre os juros antes da contratação?',data) +
+      _cnjChk(i,'inadimplente_anterior','Já era inadimplente quando contratou?',data) +
+    '</div>' +
+
+    /* Painel de cálculo inline */
+    '<div id="cr_calc_' + i + '"></div>';
+
+  document.getElementById('credores-list').appendChild(div);
+  syncEmpty('credores-list','credores-empty');
+  onCredorTipoChange(i);
+};
+
+function _cnjChk(i, field, label, data) {
+  const checked = data && data[field] ? ' checked' : '';
+  return '<div class="form-group">' +
+    '<label class="toggle-label"><input type="checkbox" id="cr_' + field + '_' + i + '"' + checked + ' />' +
+    '<span style="font-size:12px">' + esc(label) + '</span></label></div>';
 }
 
-/* Simple HTML escape for dynamic innerHTML */
-function esc(v) {
-  return (v || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-window.esc = esc; /* needed by inline template strings */
+window.removeCredor = function(i) {
+  document.getElementById('credor-card-'+i)?.remove();
+  syncEmpty('credores-list','credores-empty');
+};
 
-/* ══════════════════════════════════════
-   PRE-POPULATE FROM CASO
-══════════════════════════════════════ */
-document.addEventListener('app:user-loaded', e => {
-  const { user, caso } = e.detail || {};
+window.onCredorTipoChange = function(i) {
+  const tipo = document.getElementById('cr_tipo_'+i)?.value;
+  const sec  = document.getElementById('cr_cap_'+i);
+  if (sec) sec.style.display = tipo === 'cartao' ? '' : 'none';
+  updateCredorCalc(i);
+};
 
-  if (user) {
-    const emailEl = document.getElementById('f-email');
-    if (emailEl) { emailEl.value = user.email || ''; }
+window.updateCredorCalc = function(i) {
+  const calcEl = document.getElementById('cr_calc_'+i);
+  if (!calcEl) return;
+  const cr = _getCredorData(i);
+  if (!cr.valorDeclarado) { calcEl.innerHTML = ''; return; }
+
+  /* Importação dinâmica já está no escopo do módulo */
+  const { calcCredor } = { calcCredor: window._cnjCalcCredor };
+  if (!calcCredor) return;
+
+  const r = calcCredor(cr);
+  let html = '<div class="credor-calc">';
+  html += '<strong>Saldo declarado:</strong> ' + fmtBRL(r.saldoDeclarado);
+  if (r.correcaoAplicada) {
+    html += ' &nbsp;+ <strong>SELIC ' + r.mesesAtraso + ' meses:</strong> ' + fmtBRL(r.jurosSelicAcum);
+    html += ' → <strong>Corrigido: ' + fmtBRL(r.saldoCorrigido) + '</strong>';
   }
+  if (r.capAplicado) {
+    html += '<br><span style="color:#dc2626">⚠ Cap 200% cartão — excedente: ' + fmtBRL(r.excedenteCartao) + '</span>';
+  }
+  html += '</div>';
+  r.alertas.forEach(a => { html += '<div class="credor-alerta">' + esc(a) + '</div>'; });
+  calcEl.innerHTML = html;
+};
+
+function _getCredorData(i) {
+  return {
+    nome:              document.getElementById('cr_nome_'+i)?.value            || '',
+    tipo:              document.getElementById('cr_tipo_'+i)?.value            || '',
+    valorDeclarado:    parseBRL(document.getElementById('cr_valor_'+i)?.value),
+    parcela:           parseBRL(document.getElementById('cr_parcela_'+i)?.value),
+    garantia:          document.getElementById('cr_garantia_'+i)?.value        || '',
+    dataVencimento:    document.getElementById('cr_vencimento_'+i)?.value      || '',
+    valorOriginal:     parseBRL(document.getElementById('cr_orig_'+i)?.value),
+    totalJaPago:       parseBRL(document.getElementById('cr_pago_'+i)?.value),
+    processo_judicial:     document.getElementById('cr_processo_judicial_'+i)?.checked     || false,
+    consignado:            document.getElementById('cr_consignado_'+i)?.checked            || false,
+    vencida:               document.getElementById('cr_vencida_'+i)?.checked              || false,
+    renegociacao:          document.getElementById('cr_renegociacao_'+i)?.checked          || false,
+    recebeu_contrato:      document.getElementById('cr_recebeu_contrato_'+i)?.checked      || false,
+    informado_juros:       document.getElementById('cr_informado_juros_'+i)?.checked       || false,
+    inadimplente_anterior: document.getElementById('cr_inadimplente_anterior_'+i)?.checked || false,
+  };
+}
+
+function getCredores() {
+  return Array.from(document.getElementById('credores-list').children)
+    .map(c => _getCredorData(c.id.replace('credor-card-','')))
+    .filter(c => c.nome || c.valorDeclarado);
+}
+
+/* ════════════════════════════════════════════
+   Helpers — coleta de dados por step
+════════════════════════════════════════════ */
+function getDespesas() {
+  const ids = ['luz','aluguel','condominio','agua','internet','alimentacao',
+               'pensao','educacao','plano_saude','medicamentos','impostos','outras'];
+  return Object.fromEntries(ids.map(k => [k, parseBRL(document.getElementById('desp_'+k)?.value)]));
+}
+
+function getPatrimonio() {
+  return {
+    imovel: {
+      situacao:   document.getElementById('imovel_situacao')?.value  || '',
+      parcela:    parseBRL(document.getElementById('imovel_parcela')?.value),
+      vencimento: document.getElementById('imovel_vencimento')?.value || '',
+    },
+    veiculo: {
+      situacao:   document.getElementById('veiculo_situacao')?.value  || '',
+      parcela:    parseBRL(document.getElementById('veiculo_parcela')?.value),
+      vencimento: document.getElementById('veiculo_vencimento')?.value || '',
+    },
+  };
+}
+
+function getCausas() {
+  return Array.from(document.querySelectorAll('.causa-chip.selected')).map(el => el.dataset.causa);
+}
+
+function getNegativacoes() {
+  return {
+    serasa:          document.getElementById('neg_serasa')?.checked          || false,
+    spc:             document.getElementById('neg_spc')?.checked             || false,
+    protestos:       document.getElementById('neg_protestos')?.checked       || false,
+    acoes_judiciais: document.getElementById('neg_acoes_judiciais')?.checked || false,
+    observacoes:     document.getElementById('neg_observacoes')?.value       || '',
+  };
+}
+
+function getConhecimento() {
+  const arr = [];
+  if (document.getElementById('cred_oferta_ativa')?.checked)  arr.push('oferta_ativa');
+  if (document.getElementById('cred_correspondente')?.checked) arr.push('correspondente');
+  if (document.getElementById('cred_indicacao')?.checked)      arr.push('indicacao');
+  if (document.getElementById('cred_procurou')?.checked)       arr.push('procurou');
+  return arr;
+}
+
+function collectAll() {
+  return {
+    /* Step 1 */
+    cpf:             document.getElementById('cpf')?.value            || '',
+    full_name:       document.getElementById('full_name')?.value      || '',
+    data_nascimento: document.getElementById('data_nascimento')?.value || '',
+    sexo:            document.getElementById('sexo')?.value           || '',
+    estado_civil:    document.getElementById('estado_civil')?.value   || '',
+    profissao:       document.getElementById('profissao')?.value      || '',
+    nome_mae:        document.getElementById('nome_mae')?.value       || '',
+    naturalidade:    document.getElementById('naturalidade')?.value   || '',
+    nacionalidade:   document.getElementById('nacionalidade')?.value  || '',
+    rg:              document.getElementById('rg')?.value             || '',
+    rg_emissor:      document.getElementById('rg_emissor')?.value     || '',
+    telefones:       getPhones(),
+    enderecos:       getAddresses(),
+    /* Step 2 */
+    situacao_profissional: document.getElementById('situacao_profissional')?.value || '',
+    renda:           parseBRL(document.getElementById('renda')?.value),
+    renda_familiar:  parseBRL(document.getElementById('renda_familiar')?.value),
+    n_dependentes:   +(document.getElementById('n_dependentes')?.value || 0),
+    conjugue:        getConjugue(),
+    dependentes:     getDependents(),
+    /* Step 3 */
+    despesas:   getDespesas(),
+    patrimonio: getPatrimonio(),
+    /* Step 4 */
+    causas_endividamento: getCausas(),
+    causas_descricao:     document.getElementById('causas_descricao')?.value || '',
+    negativacoes:         getNegativacoes(),
+    conhecimento_credito: getConhecimento(),
+    /* Step 5 */
+    credores_cnj: getCredores(),
+    /* Step 6 */
+    comprometimento_mensal: calcAnaliseGlobal({
+      rendaIndividual: parseBRL(document.getElementById('renda')?.value),
+      rendaFamiliar:   parseBRL(document.getElementById('renda_familiar')?.value),
+      despesas:        getDespesas(),
+      credores:        getCredores(),
+    }).comprometimentoDeclarado,
+    plano_pagamento: {
+      prazo_meses:     +(document.getElementById('plano_prazo')?.value    || 60),
+      carencia_meses:  +(document.getElementById('plano_carencia')?.value || 0),
+      renda_disponivel: parseBRL(document.getElementById('plano_renda_disp')?.value),
+      observacoes:     document.getElementById('plano_observacoes')?.value || '',
+    },
+  };
+}
+
+/* ════════════════════════════════════════════
+   STEP 6 — Análise financeira
+════════════════════════════════════════════ */
+function populateAnalise() {
+  const a = calcAnaliseGlobal({
+    rendaIndividual: parseBRL(document.getElementById('renda')?.value),
+    rendaFamiliar:   parseBRL(document.getElementById('renda_familiar')?.value),
+    despesas:        getDespesas(),
+    credores:        getCredores(),
+    prazoMeses:      +(document.getElementById('plano_prazo')?.value    || 60),
+    carenciaMeses:   +(document.getElementById('plano_carencia')?.value || 0),
+  });
+
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.className   = 'analise-card-value' + (cls ? ' '+cls : '');
+  };
+
+  set('an-renda',     fmtBRL(a.rendaBase));
+  set('an-despesas',  fmtBRL(a.totalDespesas));
+  set('an-minimo',    fmtBRL(a.minimoExistencial));
+  set('an-disponivel',fmtBRL(a.rendaDisponivel),
+      a.rendaDisponivel <= 0 ? 'danger' : a.rendaDisponivel < 500 ? 'warn' : 'ok');
+  set('an-dividas',   fmtBRL(a.totalDividas),
+      a.totalDividas > 50000 ? 'danger' : a.totalDividas > 10000 ? 'warn' : '');
+  const perc = (a.percComprometido * 100).toFixed(1) + '%';
+  set('an-comprometimento', perc,
+      a.percComprometido > 0.5 ? 'danger' : a.percComprometido > 0.3 ? 'warn' : 'ok');
+
+  const alertasEl = document.getElementById('analise-alertas');
+  alertasEl.innerHTML = a.alertas.map(al =>
+    '<div class="credor-alerta" style="margin-bottom:8px">' + esc(al) + '</div>'
+  ).join('');
+
+  // Pré-preenche renda disponível
+  const rdEl = document.getElementById('plano_renda_disp');
+  if (rdEl && !rdEl.value) rdEl.value = fmtBRL(a.rendaDisponivel);
+
+  recalcularPlano();
+}
+
+window.recalcularPlano = function() {
+  const credores = getCredores();
+  const analise  = calcAnaliseGlobal({
+    rendaIndividual: parseBRL(document.getElementById('renda')?.value),
+    rendaFamiliar:   parseBRL(document.getElementById('renda_familiar')?.value),
+    despesas:        getDespesas(),
+    credores,
+  });
+  const rendaDisp = parseBRL(document.getElementById('plano_renda_disp')?.value) || analise.rendaDisponivel;
+  const prazo     = +(document.getElementById('plano_prazo')?.value    || 60);
+  const carencia  = +(document.getElementById('plano_carencia')?.value || 0);
+
+  const p = calcPlanoPagamento({ totalDividas: analise.totalDividas, rendaDisponivel: rendaDisp, prazoMeses: prazo, carenciaMeses: carencia });
+
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val; el.className = 'analise-card-value'+(cls?' '+cls:''); }
+  };
+  set('plano-parcela-nec',  fmtBRL(p.parcelaNecessaria));
+  set('plano-parcela-poss', fmtBRL(p.parcelaPossivel));
+  set('plano-viavel',  p.viavel ? '✓ Viável' : '✗ Insuficiente', p.viavel ? 'ok' : 'danger');
+  set('plano-prazo-real', p.prazoNecessario <= 60
+      ? p.prazoNecessario + ' meses'
+      : p.prazoNecessario + ' meses (excede 60)');
+};
+
+/* ════════════════════════════════════════════
+   CPF Lookup
+════════════════════════════════════════════ */
+window.handleCPFLookup = async function() {
+  const cpfEl = document.getElementById('cpf');
+  const hint  = document.getElementById('cpf-hint');
+  const btn   = document.getElementById('btn-cpf-lookup');
+  const cpf   = cpfEl.value.replace(/\D/g,'');
+  if (cpf.length !== 11) { showToast('CPF inválido.','error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Buscando...';
+  hint.textContent = 'Consultando DirectData...';
+  hint.style.color = 'var(--blue)';
+
+  try {
+    const d = await lookupCPF(cpf);
+    if (!d) throw new Error('not found');
+    const s = (id,v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    s('full_name',       d.nome);
+    s('data_nascimento', d.dataNascimento);
+    s('nome_mae',        d.nomeMae);
+    if (d.sexo) { const el = document.getElementById('sexo'); if (el) el.value = d.sexo === 'M' ? 'M' : 'F'; }
+    (d.telefones || []).forEach(t => addPhone(t));
+    (d.enderecos  || []).forEach(e => addAddress(e));
+    hint.textContent = '✓ Dados preenchidos automaticamente.';
+    hint.style.color = 'var(--green)';
+    showToast('Dados do CPF preenchidos!', 'success');
+  } catch (_) {
+    hint.textContent = 'CPF não encontrado. Preencha manualmente.';
+    hint.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = SEARCH_ICO + ' Buscar';
+  }
+};
+
+/* ════════════════════════════════════════════
+   Autosave
+════════════════════════════════════════════ */
+let _autosaveTimer = null;
+
+function scheduleAutosave() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(doAutosave, 1500);
+}
+
+async function doAutosave() {
+  const el  = document.getElementById('autosave-status');
+  const txt = document.getElementById('autosave-txt');
+  if (el)  el.className = 'saving';
+  if (txt) txt.textContent = 'Salvando...';
+
+  try {
+    const data = collectAll();
+    saveDraft(_currentStep, data, _userId);
+    await CaseService.saveCNJStep(_currentStep, { ...data, cnj_step_atual: _currentStep });
+  } catch (_) {}
+
+  if (el)  el.className = 'saved';
+  if (txt) txt.textContent = 'Rascunho salvo';
+  setTimeout(() => { if (el) el.className = ''; }, 2500);
+}
+
+/* ════════════════════════════════════════════
+   Navegação
+════════════════════════════════════════════ */
+window.goStep = function(target) {
+  scheduleAutosave();
+
+  for (let s = 1; s <= 7; s++) {
+    const dot = document.getElementById('step-dot-'+s);
+    if (!dot) continue;
+    dot.className = 'cnj-step' +
+      (s < target  ? ' done'   : '') +
+      (s === target ? ' active' : '');
+  }
+
+  document.querySelectorAll('.cnj-panel').forEach((p, idx) => {
+    p.classList.toggle('active', idx + 1 === target);
+  });
+
+  _currentStep = target;
+  if (target === 6) populateAnalise();
+  if (target === 7) gerarPrevia();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+/* ════════════════════════════════════════════
+   JSON Preview
+════════════════════════════════════════════ */
+window.gerarPrevia = function() {
+  const el = document.getElementById('json-preview');
+  if (!el) return;
+  try {
+    const json = buildCNJJson(collectAll());
+    el.textContent = JSON.stringify(json, null, 2);
+  } catch (e) {
+    el.textContent = 'Erro: ' + e.message;
+  }
+};
+
+/* ════════════════════════════════════════════
+   Finalizar
+════════════════════════════════════════════ */
+window.finalizarCadastro = async function() {
+  const btn = document.getElementById('btn-finalizar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const payload = {
+      ...collectAll(),
+      observacoes:    document.getElementById('observacoes')?.value || '',
+      onboarding_done: true,
+      cnj_step_atual:  7,
+    };
+    payload.cnj_json = buildCNJJson(payload);
+
+    await CaseService.save(payload);
+    clearDraft(_userId);
+
+    showToast('Formulário enviado com sucesso! O escritório irá analisar seu caso.', 'success');
+    document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: payload }));
+    setTimeout(() => { window.location.href = '../index.html'; }, 2200);
+  } catch (e) {
+    showToast('Erro ao salvar: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '✓ Enviar formulário ao escritório';
+  }
+};
+
+/* ════════════════════════════════════════════
+   Pré-população a partir do Supabase
+════════════════════════════════════════════ */
+document.addEventListener('app:user-loaded', ({ detail }) => {
+  const { user, caso } = detail;
+  _userId = user?.id;
+
+  const emailEl = document.getElementById('email');
+  if (emailEl) emailEl.value = user?.email || '';
 
   if (!caso) return;
 
-  const setV = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val != null && val !== '') el.value = val;
-  };
+  const s = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.value = val; };
 
-  /* Step 1 */
-  setV('f-nome',          caso.full_name);
-  setV('f-cpf',           caso.cpf);
-  setV('f-data-nasc',     caso.data_nascimento);
-  setV('f-sexo',          caso.sexo);
-  setV('f-estado-civil',  caso.estado_civil);
-  setV('f-profissao',     caso.profissao);
-  setV('f-nome-mae',      caso.nome_mae);
-  setV('f-naturalidade',  caso.naturalidade);
-  setV('f-nacionalidade', caso.nacionalidade || 'Brasileira');
-  setV('f-rg',            caso.rg);
-  setV('f-rg-emissor',    caso.rg_emissor);
+  // Step 1
+  s('cpf',             caso.cpf);
+  s('full_name',       caso.full_name);
+  s('data_nascimento', caso.data_nascimento);
+  s('sexo',            caso.sexo);
+  s('estado_civil',    caso.estado_civil);
+  s('profissao',       caso.profissao);
+  s('nome_mae',        caso.nome_mae);
+  s('naturalidade',    caso.naturalidade);
+  s('nacionalidade',   caso.nacionalidade);
+  s('rg',              caso.rg);
+  s('rg_emissor',      caso.rg_emissor);
+  (caso.telefones || []).forEach(t => addPhone(t));
+  (caso.enderecos  || []).forEach(e => addAddress(e));
 
-  /* Step 2 — phones */
-  if (Array.isArray(caso.telefones) && caso.telefones.length) {
-    caso.telefones.forEach(t => addPhone(t));
-  }
-  /* Step 2 — addresses */
-  if (Array.isArray(caso.enderecos) && caso.enderecos.length) {
-    caso.enderecos.forEach(a => addAddress(a));
-  }
+  // Step 2
+  s('situacao_profissional', caso.situacao_profissional);
+  if (caso.renda != null)         s('renda',          fmtBRL(+caso.renda));
+  if (caso.renda_familiar != null) s('renda_familiar', fmtBRL(+caso.renda_familiar));
+  s('n_dependentes', caso.n_dependentes);
 
-  /* Step 3 — spouse */
-  if (caso.conjugue && typeof caso.conjugue === 'object' && caso.conjugue.nome) {
-    const tog = document.getElementById('toggle-conjugue');
-    if (tog) { tog.checked = true; toggleConjugue(true); }
-    setV('c-nome',     caso.conjugue.nome);
-    setV('c-cpf',      caso.conjugue.cpf);
-    setV('c-data-nasc',caso.conjugue.data_nascimento);
-    setV('c-rg',       caso.conjugue.rg);
-    setV('c-profissao',caso.conjugue.profissao);
-    if (caso.conjugue.renda) {
-      const el = document.getElementById('c-renda');
-      if (el) el.value = 'R$ ' + Number(caso.conjugue.renda).toLocaleString('pt-BR',{minimumFractionDigits:2});
-    }
+  if (caso.conjugue) {
+    document.getElementById('tem_conjugue').checked = true;
+    toggleConjugue();
+    s('conj_nome',            caso.conjugue.nome);
+    s('conj_cpf',             caso.conjugue.cpf);
+    s('conj_data_nascimento', caso.conjugue.data_nascimento);
+    s('conj_rg',              caso.conjugue.rg);
+    s('conj_profissao',       caso.conjugue.profissao);
+    if (caso.conjugue.renda != null) s('conj_renda', fmtBRL(+caso.conjugue.renda));
   }
-  /* Step 3 — dependents */
-  if (Array.isArray(caso.dependentes) && caso.dependentes.length) {
-    caso.dependentes.forEach(d => addDependent(d));
-  }
+  (caso.dependentes || []).forEach(d => addDependent(d));
 
-  /* Step 4 */
-  if (caso.renda) {
-    const el = document.getElementById('f-renda');
-    if (el) el.value = 'R$ ' + Number(caso.renda).toLocaleString('pt-BR',{minimumFractionDigits:2});
-  }
-  if (caso.divida_total_estimada) {
-    const el = document.getElementById('f-divida-total');
-    if (el) el.value = 'R$ ' + Number(caso.divida_total_estimada).toLocaleString('pt-BR',{minimumFractionDigits:2});
-  }
-  setV('f-credores', caso.n_credores);
-  setV('f-situacao', caso.situacao_atual);
-  setV('f-obs-fin',  caso.observacoes);
+  // Step 3 — despesas
+  const desp = caso.despesas || {};
+  Object.entries(desp).forEach(([k, v]) => { if (v) s('desp_'+k, fmtBRL(v)); });
+  updateTotalDespesas();
+
+  // Step 3 — patrimônio
+  const pat = caso.patrimonio || {};
+  s('imovel_situacao',  pat.imovel?.situacao);
+  if (pat.imovel?.parcela)   s('imovel_parcela',    fmtBRL(pat.imovel.parcela));
+  s('imovel_vencimento',     pat.imovel?.vencimento);
+  s('veiculo_situacao',      pat.veiculo?.situacao);
+  if (pat.veiculo?.parcela)  s('veiculo_parcela',   fmtBRL(pat.veiculo.parcela));
+  s('veiculo_vencimento',    pat.veiculo?.vencimento);
+
+  // Step 4
+  (caso.causas_endividamento || []).forEach(causa => {
+    document.querySelector('.causa-chip[data-causa="'+causa+'"]')?.classList.add('selected');
+  });
+  s('causas_descricao', caso.causas_descricao);
+  const neg = caso.negativacoes || {};
+  ['serasa','spc','protestos','acoes_judiciais'].forEach(k => {
+    const el = document.getElementById('neg_'+k); if (el && neg[k]) el.checked = true;
+  });
+  s('neg_observacoes', neg.observacoes);
+  (caso.conhecimento_credito || []).forEach(k => {
+    const el = document.getElementById('cred_'+k); if (el) el.checked = true;
+  });
+
+  // Step 5
+  (caso.credores_cnj || []).forEach(c => addCredor(c));
+
+  // Step 6
+  const plano = caso.plano_pagamento || {};
+  s('plano_prazo',    plano.prazo_meses    || 60);
+  s('plano_carencia', plano.carencia_meses || 0);
+  if (plano.renda_disponivel != null) s('plano_renda_disp', fmtBRL(plano.renda_disponivel));
+  s('plano_observacoes', plano.observacoes);
+
+  // Retoma no step salvo
+  const step = Math.min(caso.cnj_step_atual || 1, 7);
+  if (step > 1) goStep(step);
 });
 
-/* ══════════════════════════════════════
-   FINALIZAR CADASTRO
-══════════════════════════════════════ */
-window.finalizarCadastro = async function() {
-  const btn = document.getElementById('btn-finalizar');
-  if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+/* Expõe calcCredor para callbacks inline */
+import { calcCredor as _calcCredorFn } from '../js/cnj-engine.js';
+window._cnjCalcCredor = _calcCredorFn;
 
-  const dependentes = getDependents();
-
-  try {
-    await CaseService.save({
-      /* Step 1 — Qualificação */
-      full_name:             document.getElementById('f-nome')?.value.trim()          || null,
-      cpf:                   document.getElementById('f-cpf')?.value.trim()           || null,
-      data_nascimento:       document.getElementById('f-data-nasc')?.value            || null,
-      sexo:                  document.getElementById('f-sexo')?.value                 || null,
-      estado_civil:          document.getElementById('f-estado-civil')?.value         || null,
-      profissao:             document.getElementById('f-profissao')?.value.trim()     || null,
-      nome_mae:              document.getElementById('f-nome-mae')?.value.trim()      || null,
-      naturalidade:          document.getElementById('f-naturalidade')?.value.trim()  || null,
-      nacionalidade:         document.getElementById('f-nacionalidade')?.value.trim() || null,
-      rg:                    document.getElementById('f-rg')?.value.trim()            || null,
-      rg_emissor:            document.getElementById('f-rg-emissor')?.value.trim()    || null,
-      /* Step 2 — Contatos */
-      telefones:             getPhones(),
-      enderecos:             getAddresses(),
-      /* Step 3 — Família */
-      conjugue:              getConjugue(),
-      dependentes,
-      n_dependentes:         dependentes.length || null,
-      /* Step 4 — Financeiro */
-      renda:                 parseCurrency(document.getElementById('f-renda')?.value || ''),
-      divida_total_estimada: parseCurrency(document.getElementById('f-divida-total')?.value || ''),
-      n_credores:            parseInt(document.getElementById('f-credores')?.value) || null,
-      situacao_atual:        document.getElementById('f-situacao')?.value            || null,
-      observacoes:           document.getElementById('f-obs-fin')?.value.trim()      || null,
-      onboarding_done:       true,
-    });
-    showToast('Cadastro salvo! Redirecionando para documentos...', 'ok');
-    setTimeout(() => { window.location.href = 'documentos.html'; }, 1800);
-  } catch (err) {
-    console.error('[finalizar]', err);
-    showToast('Erro ao salvar. Tente novamente.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Finalizar e enviar documentos →'; }
-  }
-};
+/* Autosave ao modificar campos */
+document.addEventListener('input',  scheduleAutosave);
+document.addEventListener('change', scheduleAutosave);
 </script>
-
 </body>
 </html>

@@ -93,6 +93,23 @@ export const CaseService = {
     if (error) throw error;
     return data;
   },
+
+  /** Salva step CNJ e atualiza cnj_step_atual se avançou */
+  async saveCNJStep(step, fields) {
+    const uid = await getUserId();
+    const payload = {
+      ...fields,
+      user_id:        uid,
+      cnj_step_atual: step,
+    };
+    const { data, error } = await supabase
+      .from('portal_casos')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
 };
 
 export const DebtService = {
