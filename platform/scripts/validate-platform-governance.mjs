@@ -18,6 +18,7 @@ const checks = [
   ['document governance', 'governance/documents/module-requirements.md'],
   ['financial governance', 'governance/financial/module-requirements.md'],
   ['legal operations governance', 'governance/legal-operations/module-requirements.md'],
+  ['client experience governance', 'governance/client-experience/module-requirements.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
@@ -44,7 +45,8 @@ const requiredScripts = [
   'validate:workflows',
   'validate:knowledge',
   'validate:financial-intelligence',
-  'validate:legal-operations'
+  'validate:legal-operations',
+  'validate:client-experience'
 ];
 const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
 if (missingScripts.length) {
