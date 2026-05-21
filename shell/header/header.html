@@ -1,7 +1,8 @@
 <header class="portal-header" role="banner">
-  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menu lateral" aria-expanded="true" title="Recolher menu">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Recolher menu lateral" aria-expanded="true" title="Recolher menu">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/>
+      <path d="M8 4v12M11 8.5l3 2-3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
 
@@ -30,9 +31,29 @@
       </svg>
       <span class="shell-notification-dot" id="shell-notification-count" hidden>0</span>
     </button>
-    <div class="header-user" id="header-user" title="Usuário autenticado">
-      <div class="header-avatar" id="header-avatar" aria-hidden="true">HM</div>
-      <span id="header-user-name" class="header-user-name" hidden>—</span>
+    <div class="header-user-shell" id="header-user-shell">
+      <button type="button" class="header-user" id="header-user-trigger" data-shell-action="account-menu-toggle" aria-haspopup="menu" aria-expanded="false" title="Abrir menu da conta">
+        <div class="header-avatar" id="header-avatar" aria-hidden="true">HM</div>
+        <span class="header-user-meta">
+          <span id="header-user-name" class="header-user-name" hidden>—</span>
+          <span id="header-user-role" class="header-user-role" hidden>Conta</span>
+        </span>
+        <svg class="header-user-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="header-user-menu" id="header-user-menu" role="menu" aria-labelledby="header-user-trigger" hidden>
+        <div class="header-user-menu-summary">
+          <strong id="header-user-menu-name">Conta HMADV</strong>
+          <span id="header-user-menu-email">usuario@hmadv.com</span>
+        </div>
+        <button type="button" class="header-user-menu-item" data-shell-action="open-account-modal" data-account-view="perfil" role="menuitem">Perfil</button>
+        <button type="button" class="header-user-menu-item" data-shell-action="open-account-modal" data-account-view="conta" role="menuitem">Configuracoes da conta</button>
+        <button type="button" class="header-user-menu-item" data-shell-action="open-account-modal" data-account-view="permissoes" role="menuitem">Permissoes</button>
+        <button type="button" class="header-user-menu-item" data-shell-action="open-account-modal" data-account-view="preferencias" role="menuitem">Preferencias</button>
+        <div class="header-user-menu-separator" aria-hidden="true"></div>
+        <button type="button" class="header-user-menu-item header-user-menu-item-danger" data-shell-action="logout" role="menuitem">Sair</button>
+      </div>
     </div>
   </div>
 </header>
