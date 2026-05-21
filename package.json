@@ -6,7 +6,11 @@
     "dev":    "npx serve . -l 3000",
     "build":  "echo 'Site estático — sem build step necessário'",
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
-    "test":   "vitest run"
+    "test":   "vitest run",
+    "bootstrap:dev": "node platform/scripts/bootstrap-dev.mjs",
+    "validate:env": "node platform/scripts/validate-env.mjs",
+    "validate:platform": "node platform/scripts/validate-manifests.mjs && node platform/scripts/validate-shell-compatibility.mjs && node platform/scripts/validate-tenant-awareness.mjs && node platform/scripts/validate-platform-governance.mjs",
+    "diagnostics:platform": "node platform/scripts/diagnostics.mjs"
   },
   "repository": {
     "type": "git",
