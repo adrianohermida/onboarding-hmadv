@@ -863,9 +863,9 @@ function renderCnjFormSection() {
   const onlineDoc = formDocs.find(d => d.tipo === 'formulario_cnj_online');
   const anexoDoc  = formDocs.find(d => d.tipo === 'formulario_cnj_anexo_ii');
 
-  const clientVisible = formDocs.some(d =>
-    ['em_analise','aprovado','rejeitado','pendente_correcao','enviado'].includes(d.workflow_status)
-  );
+  // Show CNJ section whenever any doc exists — includes docs at the DB default
+  // status ('pendente_envio') which would otherwise yield a false "not submitted" state.
+  const clientVisible = formDocs.length > 0;
 
   if (!isAdmin && !clientVisible) {
     // Show "start form" card so client can navigate to the journey

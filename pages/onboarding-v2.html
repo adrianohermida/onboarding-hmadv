@@ -338,6 +338,7 @@ let isAdminUser = false;
 let unmountModeSelector = null;
 let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let formDoc   = null;   // portal_documentos row for formulario_cnj_online
+let anexoDoc  = null;   // portal_documentos row for formulario_cnj_anexo_ii
 let webAnexoGenerated = false; // true after user generates the Annex II via WEB path
 const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
@@ -466,7 +467,7 @@ async function loadData() {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {
-      const [casoRes, formRes] = await Promise.all([
+      const [casoRes, formRes, anexoRes] = await Promise.all([
         supabase.from('portal_casos')
           .select('onboarding_done,cnj_step_atual')
           .eq('user_id', user.id)
@@ -476,6 +477,11 @@ async function loadData() {
           .eq('user_id', user.id)
           .eq('tipo', 'formulario_cnj_online')
           .maybeSingle(),
+        supabase.from('portal_documentos')
+          .select('workflow_status,admin_notes,updated_at')
+          .eq('user_id', user.id)
+          .eq('tipo', 'formulario_cnj_anexo_ii')
+          .maybeSingle(),
       ]);
       if (casoRes.data) {
         casoState = {
@@ -483,7 +489,8 @@ async function loadData() {
           cnj_step_atual:  Number(casoRes.data.cnj_step_atual) || 0,
         };
       }
-      formDoc = formRes.data || null;
+      formDoc  = formRes.data  || null;
+      anexoDoc = anexoRes.data || null;
     }
   } catch (e) {
     console.warn('[Journey] loadData: casoState/formDoc query failed:', e.message);
@@ -498,8 +505,12 @@ async function loadData() {
   } else if (formDoc?.workflow_status === 'em_analise' || casoState?.onboarding_done) {
     const s = engine.getState('cnj_form');
     if (!['approved','rejected'].includes(s)) engine.setState('cnj_form', 'awaiting_review');
-    const sa = engine.getState('anexo_ii');
-    if (!['approved','completed'].includes(sa)) engine.setState('anexo_ii', 'awaiting_review');
+    // Only advance anexo_ii if an Anexo II doc has actually been submitted — prevents
+    // hiding WEB-generation controls for users who haven't sent the Anexo II yet.
+    if (anexoDoc) {
+      const sa = engine.getState('anexo_ii');
+      if (!['approved','completed'].includes(sa)) engine.setState('anexo_ii', 'awaiting_review');
+    }
   } else if (casoState?.cnj_step_atual > 0) {
     const s = engine.getState('cnj_form');
     if (!['completed','approved','awaiting_review','rejected'].includes(s)) {
