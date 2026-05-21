@@ -1,0 +1,24 @@
+{
+  "version": "0.6.0",
+  "components": [
+    { "name": "Button", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#button", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Input", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#input", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Select", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#select", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Checkbox", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#checkbox", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Radio", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#radio", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Switch", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#switch", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Textarea", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#textarea", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Card", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#card", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Badge", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#badge", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Tooltip", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#tooltip", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Dropdown", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#dropdown", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Tabs", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#tabs", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Accordion", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#accordion", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Progress", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#progress", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Skeleton", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#skeleton", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Alert", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#alert", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Toast", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#toast", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "Avatar", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#avatar", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" },
+    { "name": "EmptyState", "owner": "UI Refactor Agent", "usageDoc": "docs/design-system/components.md#emptystate", "a11yDoc": "docs/design-system/accessibility.md", "responsiveDoc": "docs/design-system/responsive.md" }
+  ]
+}
