@@ -14,6 +14,7 @@
  *   billing   : { subscription, usage, quotas, entitlements, cost, economics }
  *   integrations: { providers, health, telemetry, queue_depth, generated_at }
  *   workflows: { definitions, lifecycle, telemetry, sla, tasks, approvals, escalations, queue, generated_at }
+ *   knowledge: { metadata, lifecycle, classifications, timeline, knowledge, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -62,6 +63,23 @@ const _initialState = () => ({
     approvals: { total: 0, pending: 0, list: [] },
     escalations: { total: 0, open: 0, list: [] },
     queue: { depth: 0 },
+    generated_at: null,
+  },
+  knowledge: {
+    metadata: { total: 0, list: [] },
+    lifecycle: { total: 0, uploaded: 0, pending_review: 0, approved: 0, signed: 0, archived: 0, retained: 0, list: [] },
+    classifications: { total: 0, list: [] },
+    versions: { total: 0, list: [] },
+    evidence: { total: 0, list: [] },
+    timeline: { total: 0, list: [] },
+    search_index: { total: 0 },
+    knowledge: {
+      domains: [],
+      videos: { onboarding: 0, cnj: 0 },
+      journey: { total: 0, completed: 0, list: [] },
+      telemetry: { total: 0, videos_watched: 0, onboarding_progress_events: 0, documents_accessed: 0, template_used: 0, onboarding_abandonment: 0, list: [] },
+    },
+    search: { metadata_query_all: 0 },
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -190,6 +208,28 @@ class ShellStore extends EventTarget {
       approvals: snapshot.approvals || { total: 0, pending: 0, list: [] },
       escalations: snapshot.escalations || { total: 0, open: 0, list: [] },
       queue: snapshot.queue || { depth: 0 },
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Knowledge ─────────────────────────────────────────────────────────────
+  setKnowledgeSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('knowledge', {
+      metadata: snapshot.metadata || { total: 0, list: [] },
+      lifecycle: snapshot.lifecycle || { total: 0, uploaded: 0, pending_review: 0, approved: 0, signed: 0, archived: 0, retained: 0, list: [] },
+      classifications: snapshot.classifications || { total: 0, list: [] },
+      versions: snapshot.versions || { total: 0, list: [] },
+      evidence: snapshot.evidence || { total: 0, list: [] },
+      timeline: snapshot.timeline || { total: 0, list: [] },
+      search_index: snapshot.search_index || { total: 0 },
+      knowledge: snapshot.knowledge || {
+        domains: [],
+        videos: { onboarding: 0, cnj: 0 },
+        journey: { total: 0, completed: 0, list: [] },
+        telemetry: { total: 0, videos_watched: 0, onboarding_progress_events: 0, documents_accessed: 0, template_used: 0, onboarding_abandonment: 0, list: [] },
+      },
+      search: snapshot.search || { metadata_query_all: 0 },
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }
