@@ -18,6 +18,7 @@
  *   financial: { debts, expenses, income, commitment, diagnosis, alerts, telemetry, generated_at }
  *   legalOperations: { lifecycle, timeline, sla, risk, productivity, monitoring, analytics, telemetry, generated_at }
  *   clientExperience: { journeys, engagement, notifications, progress, retention, satisfaction, observability, analytics, telemetry, generated_at }
+ *   aiOs      : { agents, copilot, retrieval, actions, human_review, telemetry, observability, analytics, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -141,6 +142,17 @@ const _initialState = () => ({
     observability: { onboarding_abandonment: 0, upload_friction: 0, ux_bottlenecks: 0, client_delays: 0 },
     analytics: null,
     telemetry: { total: 0, onboarding: 0, notifications: 0, uploads: 0, progress: 0, feedbacks: 0, list: [] },
+    generated_at: null,
+  },
+  aiOs: {
+    agents: [],
+    copilot: { total: 0, list: [] },
+    retrieval: { total: 0, list: [] },
+    actions: { total: 0, list: [] },
+    human_review: { total: 0, pending: 0, list: [] },
+    telemetry: { total: 0, failures: 0, retries: 0, escalations: 0, human_review: 0, avg_latency_ms: 0, list: [] },
+    observability: { hallucination_risk: 0, workflow_misuse: 0, unsafe_actions: 0, tenant_violations: 0, prompt_failures: 0, degraded_responses: 0 },
+    analytics: null,
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -364,6 +376,22 @@ class ShellStore extends EventTarget {
       observability: snapshot.observability || { onboarding_abandonment: 0, upload_friction: 0, ux_bottlenecks: 0, client_delays: 0 },
       analytics: snapshot.analytics || null,
       telemetry: snapshot.telemetry || { total: 0, onboarding: 0, notifications: 0, uploads: 0, progress: 0, feedbacks: 0, list: [] },
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── AI OS ────────────────────────────────────────────────────────────────
+  setAiOsSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('aiOs', {
+      agents: Array.isArray(snapshot.agents) ? snapshot.agents : [],
+      copilot: snapshot.copilot || { total: 0, list: [] },
+      retrieval: snapshot.retrieval || { total: 0, list: [] },
+      actions: snapshot.actions || { total: 0, list: [] },
+      human_review: snapshot.human_review || { total: 0, pending: 0, list: [] },
+      telemetry: snapshot.telemetry || { total: 0, failures: 0, retries: 0, escalations: 0, human_review: 0, avg_latency_ms: 0, list: [] },
+      observability: snapshot.observability || { hallucination_risk: 0, workflow_misuse: 0, unsafe_actions: 0, tenant_violations: 0, prompt_failures: 0, degraded_responses: 0 },
+      analytics: snapshot.analytics || null,
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }

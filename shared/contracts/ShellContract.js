@@ -22,6 +22,7 @@ import { documentIntelligenceFoundation } from '../../document-intelligence/Docu
 import { financialIntelligenceFoundation } from '../../financial-intelligence/FinancialIntelligenceFoundation.js';
 import { legalOperationsFoundation } from '../../legal-operations/LegalOperationsFoundation.js';
 import { clientExperienceFoundation } from '../../client-experience/ClientExperienceFoundation.js';
+import { aiOsFoundation } from '../../ai-os/AIOSFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -152,6 +153,20 @@ export const clientExperience = {
   refresh: () => clientExperienceFoundation.snapshot(),
 };
 
+// ── AI OS API ─────────────────────────────────────────────────────────────
+export const aiOs = {
+  getSnapshot: () => store.get('aiOs') || {},
+  getAgents: () => store.get('aiOs')?.agents || [],
+  getCopilot: () => store.get('aiOs')?.copilot || { total: 0, list: [] },
+  getRetrieval: () => store.get('aiOs')?.retrieval || { total: 0, list: [] },
+  getActions: () => store.get('aiOs')?.actions || { total: 0, list: [] },
+  getHumanReview: () => store.get('aiOs')?.human_review || { total: 0, pending: 0, list: [] },
+  getTelemetry: () => store.get('aiOs')?.telemetry || {},
+  getObservability: () => store.get('aiOs')?.observability || {},
+  getAnalytics: () => store.get('aiOs')?.analytics || {},
+  refresh: () => aiOsFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -174,4 +189,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, tenant, shellStore, billing };
