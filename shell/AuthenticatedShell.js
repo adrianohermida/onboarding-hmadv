@@ -29,6 +29,8 @@ import { bus }                 from '../modules/events/EventBus.js';
 import { mountEventOrchestration } from '../events/orchestrators/bootstrap.js';
 import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration.js';
 import { mountObservabilityFoundation, observabilityFoundation } from '../observability/ObservabilityFoundation.js';
+import { mountIntegrationHub } from '../integrations/IntegrationHub.js';
+import { mountIntegrationShellVisibility } from '../integrations/ShellIntegrationVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -66,6 +68,8 @@ export class AuthenticatedShell {
       mountEventOrchestration();
       mountBillingShellIntegration();
       mountObservabilityFoundation();
+      mountIntegrationHub();
+      mountIntegrationShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();

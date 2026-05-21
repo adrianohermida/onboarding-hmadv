@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Integration Hub Admin</title>
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+  <main class="page-content" style="max-width:1080px;margin:0 auto;padding:24px;">
+    <h1 class="ds-h1">Integration Hub Admin</h1>
+    <p class="ds-body">Status de providers, webhooks, retries, filas e SLA.</p>
+    <section class="status-cards-grid" style="margin-top:20px;">
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Providers</div><div class="status-card-value" id="providers-total">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Health global</div><div class="status-card-value" id="health-global">unknown</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Retries</div><div class="status-card-value" id="retries-total">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Falhas</div><div class="status-card-value" id="failures-total">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Fila</div><div class="status-card-value" id="queue-depth">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">SLA violations</div><div class="status-card-value" id="sla-violations">0</div></div></article>
+    </section>
+  </main>
+</body>
+</html>
