@@ -424,6 +424,61 @@
   .doc-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:360px; color:var(--muted); gap:12px; }
   .doc-spinner { width:36px; height:36px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--blue); animation:spin .8s linear infinite; }
 
+  /* ── CNJ Form pinned section ─────────────────────── */
+  .cnj-form-section {
+    margin-bottom:24px;
+    border:1.5px solid rgba(26,58,92,.18);
+    border-radius:14px;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  .cnj-form-section-header {
+    background:linear-gradient(90deg,#1A3A5C,#2E6DA4);
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    color:#fff;
+  }
+  .cnj-form-section-title { font-size:14px; font-weight:700; flex:1; }
+  .cnj-form-section-sub   { font-size:11px; opacity:.75; }
+  .cnj-form-section-body  { padding:16px 20px; }
+  .cnj-form-card {
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    background:var(--bg);
+    margin-bottom:10px;
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .cnj-form-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--cnj-card-accent, #2E6DA4);
+  }
+  .cnj-form-card.status-em_analise    { --cnj-card-accent:#d97706; }
+  .cnj-form-card.status-aprovado      { --cnj-card-accent:#16a34a; }
+  .cnj-form-card.status-rejeitado     { --cnj-card-accent:#dc2626; }
+  .cnj-form-card.status-pendente_correcao { --cnj-card-accent:#ea580c; }
+  .cnj-form-card-icon  { width:40px; height:40px; flex-shrink:0; background:rgba(26,58,92,.07); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .cnj-form-card-body  { flex:1; min-width:0; }
+  .cnj-form-card-title { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:3px; }
+  .cnj-form-card-meta  { font-size:11px; color:var(--muted); }
+  .cnj-form-card-note  { font-size:11px; color:#ea580c; background:rgba(234,88,12,.07); border:1px solid rgba(234,88,12,.2); border-radius:5px; padding:5px 8px; margin-top:6px; }
+  .cnj-form-card-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+  .cnj-form-start-card {
+    border:2px dashed rgba(26,58,92,.2);
+    border-radius:10px;
+    padding:20px;
+    text-align:center;
+    background:rgba(26,58,92,.02);
+    margin-bottom:10px;
+  }
+
   @media (max-width:375px) {
     .doc-page { padding: 12px 8px 70px; }
     .doc-hero { padding: 16px 14px; border-radius: 12px; }
@@ -581,6 +636,20 @@
             <div class="drop-zone-hint" id="drop-zone-tipo-hint">Selecione abaixo qual documento está enviando</div>
           </div>
           <input type="file" id="drop-zone-input" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;" />
+
+          <!-- ── CNJ Form pinned section ────────────────────── -->
+          <div id="cnj-form-section" class="cnj-form-section" style="display:none;">
+            <div class="cnj-form-section-header">
+              <div>
+                <div class="cnj-form-section-title">Formulário CNJ — Superendividamento</div>
+                <div class="cnj-form-section-sub">Lei 14.181/2021 · Recomendação CNJ 125/2021</div>
+              </div>
+              <span id="cnj-form-section-badge" style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:2px 10px;">—</span>
+            </div>
+            <div class="cnj-form-section-body" id="cnj-form-section-body">
+              <!-- Rendered by renderCnjFormSection() -->
+            </div>
+          </div>
 
           <!-- Document Hub (grouped by category) -->
           <div id="doc-hub"></div>
@@ -772,7 +841,115 @@ function renderAll() {
   renderProgress(stats);
   renderRequestsBanner();
   renderSignaturePending();
+  renderCnjFormSection();
   renderDocHub();
+}
+
+// ── CNJ Form Section ──────────────────────────────────────────────────────────
+function renderCnjFormSection() {
+  const section  = byId('cnj-form-section');
+  const body     = byId('cnj-form-section-body');
+  const badge    = byId('cnj-form-section-badge');
+  if (!section || !body) return;
+
+  const isAdmin  = controller.isAdmin?.() ?? false;
+  const allDocs  = controller.engine.getAll();
+  const CNJ_TIPOS = ['formulario_cnj_online', 'formulario_cnj_anexo_ii'];
+  const formDocs = allDocs.filter(d => CNJ_TIPOS.includes(d.tipo));
+
+  // Client mode: only show section when there is a submitted form OR admin sends attachment
+  // Admin mode: always show section
+  const onlineDoc = formDocs.find(d => d.tipo === 'formulario_cnj_online');
+  const anexoDoc  = formDocs.find(d => d.tipo === 'formulario_cnj_anexo_ii');
+
+  const clientVisible = formDocs.some(d =>
+    ['em_analise','aprovado','rejeitado','pendente_correcao','enviado'].includes(d.workflow_status)
+  );
+
+  if (!isAdmin && !clientVisible) {
+    // Show "start form" card so client can navigate to the journey
+    section.style.display = '';
+    if (badge) badge.textContent = 'Pendente';
+    body.innerHTML = `
+      <div class="cnj-form-start-card">
+        <div style="font-size:28px;margin-bottom:8px">CNJ</div>
+        <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Formulário não preenchido</div>
+        <p style="font-size:12px;color:var(--ink2);margin:0 0 16px;line-height:1.5;">
+          Preencha o formulário guiado de superendividamento para continuar seu processo.
+        </p>
+        <a href="onboarding-v2.html" class="btn btn-primary btn-sm">Acessar jornada →</a>
+      </div>`;
+    return;
+  }
+
+  if (!isAdmin && !formDocs.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+
+  // Determine badge label from best status
+  const bestWf = onlineDoc?.workflow_status ?? anexoDoc?.workflow_status ?? 'pendente_envio';
+  const WF_LABELS = {
+    em_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Devolvido',
+    pendente_correcao: 'Corr. solicitada', enviado: 'Enviado', pendente_envio: 'Pendente',
+  };
+  if (badge) badge.textContent = WF_LABELS[bestWf] || bestWf;
+
+  const cards = formDocs.map(doc => {
+    const wf = doc.workflow_status || 'enviado';
+    const WF_COLOR = { em_analise:'#d97706', aprovado:'#16a34a', rejeitado:'#dc2626', pendente_correcao:'#ea580c' };
+    const wfLabel  = WF_LABELS[wf] || wf;
+    const updatedAt = doc.updated_at
+      ? new Date(doc.updated_at).toLocaleDateString('pt-BR')
+      : '—';
+    const tipo     = doc.tipo === 'formulario_cnj_online' ? 'Formulário Online' : 'Formulário PDF (Anexo II)';
+    const adminNotesHtml = (isAdmin || wf === 'rejeitado' || wf === 'pendente_correcao') && doc.admin_notes
+      ? `<div class="cnj-form-card-note">Nota: ${doc.admin_notes}</div>`
+      : '';
+
+    const clientActionsHtml = !isAdmin && (wf === 'rejeitado' || wf === 'pendente_correcao') && doc.tipo === 'formulario_cnj_online'
+      ? `<a href="onboarding.html?source=journey" class="btn btn-sm btn-primary">Corrigir formulário →</a>`
+      : '';
+
+    const adminActionsHtml = isAdmin && doc.id
+      ? `<button class="btn btn-sm btn-outline" onclick="openDocDrawer('${doc.id}')">Avaliar</button>`
+      : '';
+
+    return `
+      <div class="cnj-form-card status-${wf}">
+        <div class="cnj-form-card-icon">CNJ</div>
+        <div class="cnj-form-card-body">
+          <div class="cnj-form-card-title">${tipo}</div>
+          <div class="cnj-form-card-meta">
+            <span style="color:${WF_COLOR[wf]||'var(--muted)'};font-weight:600;">${wfLabel}</span>
+            · Atualizado em ${updatedAt}
+            ${isAdmin && doc.uploaded_by ? ` · Enviado por ${doc.uploaded_by}` : ''}
+          </div>
+          ${adminNotesHtml}
+          <div class="cnj-form-card-actions">
+            ${clientActionsHtml}
+            ${adminActionsHtml}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // If no form docs in admin mode, show empty state
+  body.innerHTML = cards || `
+    <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">
+      Nenhum formulário CNJ enviado pelo cliente ainda.
+    </div>`;
+}
+
+// ── Open document drawer by doc ID ────────────────────────────────────────────
+function openDocDrawer(docId) {
+  const doc = controller.engine.getAll().find(d => d.id === docId);
+  if (!doc) return;
+  // Re-use the existing drawer infrastructure
+  const isAdmin = controller.isAdmin?.() ?? false;
+  window._openDocDetail?.(doc, isAdmin);
 }
 
 function renderKPIs(stats) {

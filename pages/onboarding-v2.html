@@ -335,6 +335,8 @@ let uploadedFile  = null;
 let diagnostico   = null;  // financial diagnosis
 let isAdminUser = false;
 let unmountModeSelector = null;
+let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
+let formDoc   = null;   // portal_documentos row for formulario_cnj_online
 
 document.addEventListener('app:user-loaded', (e) => {
   isAdminUser = !!e.detail?.isAdmin;
@@ -368,6 +370,14 @@ document.addEventListener('app:user-loaded', (e) => {
 // ═══════════════════════════════════════════════════════════════
 async function bootstrap() {
   shell.init();
+
+  // Handle return from guided form (onboarding.html redirects here with ?formulario=concluido)
+  const _urlP = new URLSearchParams(window.location.search);
+  if (_urlP.get('formulario') === 'concluido') {
+    Toast.success('Formulário enviado! O escritório analisará seu caso em breve.');
+    history.replaceState(null, '', window.location.pathname);
+  }
+
   await loadData();
   renderTracker();
   const first = engine.getCurrentStep();
@@ -448,6 +458,51 @@ async function loadData() {
 
   // 4. Initialise engine with video progress
   engine.init(progressList);
+
+  // 5. Load caso state + form doc from DB (overrides stale sessionStorage)
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      const [casoRes, formRes] = await Promise.all([
+        supabase.from('portal_casos')
+          .select('onboarding_done,cnj_step_atual')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase.from('portal_documentos')
+          .select('workflow_status,admin_notes,updated_at')
+          .eq('user_id', user.id)
+          .eq('tipo', 'formulario_cnj_online')
+          .maybeSingle(),
+      ]);
+      if (casoRes.data) {
+        casoState = {
+          onboarding_done: !!casoRes.data.onboarding_done,
+          cnj_step_atual:  Number(casoRes.data.cnj_step_atual) || 0,
+        };
+      }
+      formDoc = formRes.data || null;
+    }
+  } catch (e) {
+    console.warn('[Journey] loadData: casoState/formDoc query failed:', e.message);
+  }
+
+  // 6. Sync engine states from DB truth (prevents stale sessionStorage drift)
+  if (formDoc?.workflow_status === 'aprovado') {
+    engine.setState('cnj_form', 'approved');
+    engine.setState('anexo_ii', 'approved');
+  } else if (formDoc?.workflow_status === 'rejeitado') {
+    engine.setState('cnj_form', 'rejected');
+  } else if (formDoc?.workflow_status === 'em_analise' || casoState?.onboarding_done) {
+    const s = engine.getState('cnj_form');
+    if (!['approved','rejected'].includes(s)) engine.setState('cnj_form', 'awaiting_review');
+    const sa = engine.getState('anexo_ii');
+    if (!['approved','completed'].includes(sa)) engine.setState('anexo_ii', 'awaiting_review');
+  } else if (casoState?.cnj_step_atual > 0) {
+    const s = engine.getState('cnj_form');
+    if (!['completed','approved','awaiting_review','rejected'].includes(s)) {
+      engine.setState('cnj_form', 'in_progress');
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -794,6 +849,49 @@ window.completeCartilha = function(stepId) {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// HELPER — online panel HTML (state-aware, shared between
+//          renderAnexoStep and renderCnjFormStep)
+// ═══════════════════════════════════════════════════════════════
+function buildOnlinePanelHtml() {
+  const cnjState = engine.getState('cnj_form');
+  const done     = casoState?.onboarding_done;
+  const inReview = cnjState === 'awaiting_review' || done;
+  const approved = cnjState === 'approved';
+  const rejected = cnjState === 'rejected';
+  const stepN    = casoState?.cnj_step_atual || 0;
+
+  if (approved) {
+    return `<div class="done-banner">Formulário aprovado pelo escritório. Plano de pagamento em elaboração.</div>`;
+  }
+  if (inReview) {
+    return `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;">
+      Formulário enviado. Aguardando análise do escritório.
+      <a href="onboarding.html?source=journey" style="margin-left:12px;font-size:12px;color:var(--navy);">Ver →</a>
+    </div>`;
+  }
+  if (rejected) {
+    return `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
+      Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${formDoc.admin_notes}` : ''} Acesse o formulário para corrigir.
+    </div>
+    <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+      Corrigir formulário →
+    </a>`;
+  }
+  return `
+    <div class="glass-info">
+      <div class="glass-info-title">Formulário guiado — 7 passos</div>
+      <ul>
+        <li>Preencha online com autopreenchimento e cálculo automático</li>
+        <li>Suas respostas são salvas a cada passo</li>
+        <li>Tempo estimado: 15–25 minutos</li>
+      </ul>
+    </div>
+    <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
+      ${stepN > 0 ? `Continuar formulário (passo ${stepN}/7) →` : 'Iniciar formulário guiado →'}
+    </a>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ANEXO II STEP
 // ═══════════════════════════════════════════════════════════════
 function renderAnexoStep(step, container) {
@@ -831,7 +929,7 @@ function renderAnexoStep(step, container) {
           </div>
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
             <div class="option-icon">WEB</div>
-            <div class="option-title">Online <span style="font-size:9px;background:rgba(245,166,35,.2);color:#c07b00;padding:1px 6px;border-radius:5px;vertical-align:middle">Em breve</span></div>
+            <div class="option-title">Online</div>
             <div class="option-desc">Formulário guiado no portal</div>
           </div>
         </div>
@@ -863,12 +961,7 @@ function renderAnexoStep(step, container) {
           <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="window.handleFileSelect(this)">
         </div>
 
-        <div id="panel-online" style="display:none">
-          <div class="glass-info">
-            <div class="glass-info-title">Em desenvolvimento</div>
-            <ul><li>O formulário online guiado estará disponível em breve. Por enquanto utilize a opção de PDF.</li></ul>
-          </div>
-        </div>
+        <div id="panel-online" style="display:none">${buildOnlinePanelHtml()}</div>
 
         <div class="jnav">
           <span class="jnav-info">Etapa ${idx + 1} de ${JOURNEY_STEPS.length}</span>
@@ -960,8 +1053,18 @@ window.submitAnexo = async function(stepId) {
 // CNJ FORM STEP
 // ═══════════════════════════════════════════════════════════════
 function renderCnjFormStep(step, container) {
-  const state = engine.getState(step.id);
-  const idx   = JOURNEY_STEPS.indexOf(step);
+  const state      = engine.getState(step.id);
+  const idx        = JOURNEY_STEPS.indexOf(step);
+  const isDone     = ['completed','approved','awaiting_review'].includes(state);
+  const isApproved = state === 'approved';
+  const isRejected = state === 'rejected';
+  const stepN      = casoState?.cnj_step_atual || 0;
+  const btnLabel   = isDone
+    ? 'Ver formulário enviado →'
+    : stepN > 0
+      ? `Continuar formulário (passo ${stepN}/7) →`
+      : 'Iniciar formulário →';
+
   container.innerHTML = `
     <div class="jcard">
       <div class="jcard-head">
@@ -970,8 +1073,16 @@ function renderCnjFormStep(step, container) {
         ${badgeHtml(state)}
       </div>
       <div class="jcard-body">
+        ${isApproved
+          ? `<div class="done-banner">Formulário aprovado. Plano de pagamento em elaboração.</div>`
+          : state === 'awaiting_review'
+            ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;">Formulário enviado. Aguardando análise do escritório.</div>`
+            : isRejected
+              ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);">Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${formDoc.admin_notes}` : ''}</div>`
+              : ''}
+
         <div class="glass-info">
-          <div class="glass-info-title">Os 7 passos do formulario CNJ</div>
+          <div class="glass-info-title">Os 7 passos do formulário CNJ</div>
           <ul>
             <li><b>1 – Identificação:</b> dados pessoais e documento</li>
             <li><b>2 – Situação Profissional:</b> renda, emprego, despesas</li>
@@ -985,17 +1096,16 @@ function renderCnjFormStep(step, container) {
 
         ${diagnostico ? `
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:14px 18px;margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">Seu Diagnostico Financeiro</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">Seu Diagnóstico Financeiro</div>
           <div class="fin-grid">${financialSnippet()}</div>
         </div>` : ''}
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-          <div style="font-size:20px;margin-bottom:8px">CNJ</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Preencher Formulário CNJ</div>
-          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Suas respostas são salvas automaticamente.</div>
-          <a href="onboarding.html" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-            Iniciar Formulario
+          ${!isDone ? `<div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Respostas salvas automaticamente.</div>` : ''}
+          <a href="onboarding.html?source=journey" class="btn ${isDone ? 'btn-outline' : 'btn-primary'}" style="display:inline-flex;align-items:center;gap:8px">
+            ${btnLabel}
           </a>
+          ${isRejected ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Corrija os pontos indicados e reenvie o formulário.</div>` : ''}
         </div>
 
         <div class="jnav">

@@ -155,6 +155,18 @@
           </div>
         </div>
 
+        <!-- CNJ Form workflow status card -->
+        <div id="cnj-form-status-card" style="display:none;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:16px;background:#fafbfc;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Formulário CNJ</div>
+              <div style="font-size:13px;font-weight:600;color:var(--navy);" id="cnj-form-status-text">—</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="cnj-form-status-hint" style="display:none;"></div>
+            </div>
+            <a id="cnj-form-status-link" href="onboarding.html?source=journey" style="font-size:12px;color:var(--blue);white-space:nowrap;font-weight:600;">Abrir →</a>
+          </div>
+        </div>
+
         <!-- Freshdesk ticket card -->
         <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
           <div style="font-size:12px;font-weight:700;color:var(--blue)">FD</div>
@@ -609,6 +621,10 @@ async function loadClientData(userId) {
   // CNJ step bar
   const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
   renderCNJStepBar(step);
+
+  // CNJ form status card
+  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online');
+  renderFormStatusCard(casoFull?.onboarding_done, step, formDoc);
 
   // Ticket Freshdesk
   const fdTicketId = rpcData?.fd_ticket_id ?? casoFull?.fd_ticket_id;
