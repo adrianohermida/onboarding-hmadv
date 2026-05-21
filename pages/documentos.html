@@ -945,11 +945,10 @@ function renderCnjFormSection() {
 
 // ── Open document drawer by doc ID ────────────────────────────────────────────
 function openDocDrawer(docId) {
-  const doc = controller.engine.getAll().find(d => d.id === docId);
-  if (!doc) return;
-  // Re-use the existing drawer infrastructure
-  const isAdmin = controller.isAdmin?.() ?? false;
-  window._openDocDetail?.(doc, isAdmin);
+  // Delegate to the existing drawer infrastructure; pass adminReview=true so the
+  // "Avaliar" tab is shown when the caller is an admin.
+  const isAdmin = (typeof controller.isAdmin === 'function' ? controller.isAdmin() : controller.isAdmin) ?? false;
+  window.openDrawer(docId, isAdmin);
 }
 
 function renderKPIs(stats) {
