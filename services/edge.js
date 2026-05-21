@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { FUNCTIONS_URL } from '../utils/config.js';
+import { toFriendlyMessage } from './error-messages.js';
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RETRIES = 2;
@@ -21,12 +22,7 @@ function parseErrorPayload(payload, status) {
   return payload.message || payload.error || `HTTP ${status}`;
 }
 
-export function toFriendlyMessage(error, fallback = 'Falha de conexao. Tente novamente em instantes.') {
-  const msg = String(error?.message || '');
-  if (msg.toLowerCase().includes('sess')) return 'Sessao expirada. Faca login novamente.';
-  if (msg.toLowerCase().includes('timeout')) return 'A requisicao demorou mais do que o esperado. Tente novamente.';
-  return fallback;
-}
+export { toFriendlyMessage };
 
 export async function invokeEdgeFunction(path, {
   method = 'POST',
