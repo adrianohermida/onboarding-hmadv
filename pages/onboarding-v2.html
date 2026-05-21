@@ -490,7 +490,7 @@ async function loadData() {
   if (formDoc?.workflow_status === 'aprovado') {
     engine.setState('cnj_form', 'approved');
     engine.setState('anexo_ii', 'approved');
-  } else if (formDoc?.workflow_status === 'rejeitado') {
+  } else if (formDoc?.workflow_status === 'rejeitado' || formDoc?.workflow_status === 'pendente_correcao') {
     engine.setState('cnj_form', 'rejected');
   } else if (formDoc?.workflow_status === 'em_analise' || casoState?.onboarding_done) {
     const s = engine.getState('cnj_form');

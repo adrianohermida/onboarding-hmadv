@@ -774,6 +774,7 @@ import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/document
 const controller = new DocumentModuleController({ supabase });
 
 const byId = (id) => document.getElementById(id);
+const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('app:ready', () => bootstrap().catch(handleError));
@@ -906,7 +907,7 @@ function renderCnjFormSection() {
       : '—';
     const tipo     = doc.tipo === 'formulario_cnj_online' ? 'Formulário Online' : 'Formulário PDF (Anexo II)';
     const adminNotesHtml = (isAdmin || wf === 'rejeitado' || wf === 'pendente_correcao') && doc.admin_notes
-      ? `<div class="cnj-form-card-note">Nota: ${doc.admin_notes}</div>`
+      ? `<div class="cnj-form-card-note">Nota: ${escHtml(doc.admin_notes)}</div>`
       : '';
 
     const clientActionsHtml = !isAdmin && (wf === 'rejeitado' || wf === 'pendente_correcao') && doc.tipo === 'formulario_cnj_online'
