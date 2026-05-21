@@ -305,13 +305,31 @@ function setAdminAlert(message = '', type = 'warn') {
   if (!alertEl) return;
   if (!message) {
     alertEl.style.display = 'none';
-    alertEl.textContent = '';
+    alertEl.innerHTML = '';
     alertEl.className = 'callout callout-warn';
     return;
   }
   alertEl.className = `callout callout-${type}`;
-  alertEl.textContent = message;
+  const showRetry = type === 'warn';
+  const retryBtn = showRetry
+    ? '<button type="button" id="adm-alert-retry" class="btn btn-ghost btn-sm" style="margin-left:auto;white-space:nowrap;">Tentar novamente</button>'
+    : '';
+
+  alertEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>${escapeHtml(message)}</span>
+      ${retryBtn}
+    </div>
+  `;
   alertEl.style.display = '';
+
+  const retryEl = byId('adm-alert-retry');
+  if (retryEl) {
+    retryEl.addEventListener('click', () => {
+      if (dashboardUnmounted) return;
+      loadAdminOverview();
+    });
+  }
 }
 
 function setAdminDiagBanner(detail) {
