@@ -16,14 +16,14 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521l';
+const SHELL_VERSION = '20260521m';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
 const SHELL_SERVICE_ERRORS_MAX = 80;
 const FRESHCHAT_SCRIPT_ID = 'freshchat-private-widget';
 const FRESHCHAT_SCRIPT_SRC = 'https://wchat.freshchat.com/js/widget.js';
-const FRESHCHAT_WIDGET_TOKEN = '252eab20-7dcb-432e-ae72-7a011bfef8de';
+const FRESHCHAT_WIDGET_TOKEN = 'ffefb5e9-3f8f-457f-8036-1b33e057e3f2';
 const FRESHCHAT_WIDGET_HOST = 'https://wchat.freshchat.com';
 const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
@@ -877,8 +877,8 @@ function initFreshchatWidget(user, caso) {
   }
 }
 
-function mountClientFreshchatWidget({ user, caso } = {}) {
-  if (!user || PUBLIC_PAGES.includes(getCurrentPage())) {
+function mountClientFreshchatWidget({ user, caso, isAdmin } = {}) {
+  if (!user || isAdmin || PUBLIC_PAGES.includes(getCurrentPage())) {
     removeFreshchatWidget();
     return;
   }
