@@ -86,13 +86,15 @@ async function loadComponents() {
   ]);
 
   // Wire up interactions (scripts in injected HTML don't execute via innerHTML)
-  window.handleLogout = () => AuthService.logout();
+  window.handleLogout = () => {
+    try { sessionStorage.removeItem('portal:user'); } catch (_) {}
+    AuthService.logout();
+  };
 
-  // Setup mobile sidebar toggle
+  // Setup mobile sidebar toggle (CSS controls visibility — no JS display override needed)
   const toggle = document.getElementById('sidebar-toggle');
   const sidebar = document.querySelector('.sidebar');
   if (toggle && sidebar) {
-    toggle.style.display = '';
     toggle.addEventListener('click', () => sidebar.classList.toggle('sidebar-open'));
     document.addEventListener('click', e => {
       if (sidebar.classList.contains('sidebar-open') &&

@@ -31,7 +31,9 @@ export const AdminService = {
   async getStats() {
     const { data, error } = await supabase.rpc('admin_get_stats');
     if (error) throw error;
-    return data;
+    // RPC may return array (single row) or object — normalise to object
+    const row = Array.isArray(data) ? (data[0] ?? {}) : (data ?? {});
+    return row;
   },
   async getClients() {
     const { data, error } = await supabase.rpc('admin_get_clients');

@@ -1605,7 +1605,7 @@ window.finalizarCadastro = async function() {
     const ticketMsg = fdTicketId ? ` Chamado #${fdTicketId} criado.` : '';
     showToast(`Formulário enviado com sucesso!${ticketMsg} Nossa equipe irá analisar seu caso.`, 'success');
     document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: { ...payload, fd_ticket_id: fdTicketId } }));
-    setTimeout(() => { window.location.href = '../pages/dashboard.html'; }, 2800);
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 2800);
   } catch (e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
     btn.disabled = false;

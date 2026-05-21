@@ -334,6 +334,9 @@ body.app-loaded .sk { display: none !important; }
   margin-top: 5px;
 }
 
+/* ── SIDEBAR TOGGLE (hidden on desktop, shown on mobile) ─── */
+.sidebar-toggle { display: none; }
+
 /* ── RESPONSIVE ───────────────────────────────── */
 @media (max-width: 1024px) {
   :root { --sidebar-w: 220px; }
@@ -365,7 +368,7 @@ body.app-loaded .sk { display: none !important; }
     border-top: 1px solid rgba(255,255,255,.1);
   }
 
-  .sidebar-toggle { display: flex !important; }
+  .sidebar-toggle { display: flex; }
 
   .main-area {
     margin-left: 0;

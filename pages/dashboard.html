@@ -30,17 +30,23 @@
     font-weight: 700;
     letter-spacing: 1px;
   }
-  .admin-selector {
-    background: rgba(255,255,255,.12);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,.25);
+  /* Mode toggle buttons */
+  .mode-btn {
+    padding: 4px 16px;
     border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 13px;
+    border: none;
     cursor: pointer;
-    min-width: 180px;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    color: rgba(255,255,255,.55);
+    transition: background .2s, color .2s;
   }
-  .admin-selector option { color: #000; background: #fff; }
+  .mode-btn-active {
+    background: rgba(255,255,255,.92);
+    color: var(--navy);
+    font-weight: 700;
+  }
 </style>
 </head>
 <body>
@@ -60,10 +66,11 @@
           <span style="font-size:13px;opacity:.75;">Painel Administrativo</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="font-size:12px;opacity:.55;">Visualizar como cliente:</span>
-          <select id="client-selector" class="admin-selector" onchange="window.switchView(this.value)">
-            <option value="">— Visão geral —</option>
-          </select>
+          <span style="font-size:12px;opacity:.7;">Modo de visualização:</span>
+          <div style="display:flex;gap:2px;background:rgba(0,0,0,.25);border-radius:8px;padding:3px;">
+            <button id="mode-admin-btn"  onclick="window.setViewMode('admin')"   class="mode-btn mode-btn-active">Administrador</button>
+            <button id="mode-client-btn" onclick="window.setViewMode('cliente')" class="mode-btn">Cliente</button>
+          </div>
         </div>
       </div>
 
@@ -128,7 +135,7 @@
       </div><!-- /admin-overview -->
 
       <!-- ── CLIENT VIEW (pessoal ou admin visualizando cliente) ─── -->
-      <div id="client-view">
+      <div id="client-view" style="display:none;">
 
         <div class="page-header page-header-row">
           <div>
@@ -152,7 +159,7 @@
         </div>
 
         <!-- Freshdesk ticket card -->
-        <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+        <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
           <div style="font-size:20px">🎫</div>
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--navy)">Chamado Freshdesk aberto</div>
@@ -272,6 +279,8 @@ const FASE_LABEL = {
 };
 
 let isAdminUser = false;
+const DEMO_EMAIL = 'suporte@hermidamaia.adv.br';
+let demoUserId   = null;   // populated once admin clients are loaded
 
 /* ── Listen for user identity ───────────────────────── */
 document.addEventListener('app:user-loaded', async e => {
@@ -279,7 +288,7 @@ document.addEventListener('app:user-loaded', async e => {
   isAdminUser = !!isAdmin;
 
   if (isAdmin) {
-    document.getElementById('admin-bar').style.display     = 'flex';
+    document.getElementById('admin-bar').style.display      = 'flex';
     document.getElementById('btn-onboarding').style.display = 'none';
   }
 });
@@ -289,6 +298,7 @@ document.addEventListener('app:ready', async () => {
   if (isAdminUser) {
     await loadAdminOverview();
   } else {
+    document.getElementById('client-view').style.display = '';
     loadProgressBar();
     await loadClientData(null);
   }
@@ -312,15 +322,9 @@ async function loadAdminOverview() {
     const count   = clients.length;
     document.getElementById('adm-clients-count').textContent = count + ' cliente' + (count !== 1 ? 's' : '');
 
-    const sel = document.getElementById('client-selector');
-    clients.forEach(c => {
-      const opt       = document.createElement('option');
-      opt.value       = c.user_id;
-      opt.textContent = c.full_name || c.email;
-      opt.dataset.name  = c.full_name || c.email;
-      opt.dataset.email = c.email;
-      sel.appendChild(opt);
-    });
+    // Cache demo user ID for mode switcher
+    const demoClient = clients.find(c => c.email === DEMO_EMAIL);
+    if (demoClient) demoUserId = demoClient.user_id;
 
     const tbody = document.getElementById('adm-clients-tbody');
     if (count === 0) {
@@ -335,7 +339,7 @@ async function loadAdminOverview() {
           <td style="font-size:12px;color:var(--muted);">${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</td>
           <td style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm"
-              onclick="document.getElementById('client-selector').value='${c.user_id}';window.switchView('${c.user_id}')">
+              onclick="window.switchView('${c.user_id}','${(c.full_name||c.email).replace(/'/g,'&#39;')}','${c.email}')">
               Dashboard
             </button>
             <a class="btn btn-ghost btn-sm" href="documentos.html?uid=${c.user_id}">Docs</a>
@@ -348,22 +352,41 @@ async function loadAdminOverview() {
   }
 }
 
-/* ── View switcher (admin only) ─────────────────────── */
-window.switchView = async function(userId) {
-  if (!userId) {
+/* ── Mode toggle (admin only) ───────────────────────── */
+window.setViewMode = async function(mode) {
+  const adminBtn  = document.getElementById('mode-admin-btn');
+  const clientBtn = document.getElementById('mode-client-btn');
+
+  if (mode === 'admin') {
+    if (adminBtn)  adminBtn.className  = 'mode-btn mode-btn-active';
+    if (clientBtn) clientBtn.className = 'mode-btn';
     document.getElementById('admin-overview').style.display = '';
     document.getElementById('client-view').style.display    = 'none';
-    return;
+  } else {
+    // Cliente mode — load demo user (suporte@hermidamaia.adv.br)
+    if (adminBtn)  adminBtn.className  = 'mode-btn';
+    if (clientBtn) clientBtn.className = 'mode-btn mode-btn-active';
+    document.getElementById('admin-overview').style.display = 'none';
+    document.getElementById('client-view').style.display    = '';
+    document.getElementById('view-title').textContent       = 'Visualização: Demo Cliente';
+    document.getElementById('view-subtitle').textContent    = DEMO_EMAIL;
+    loadProgressBar();
+    await loadClientData(demoUserId);
   }
+};
 
+/* ── View switcher from client table (admin only) ──── */
+window.switchView = async function(userId, name, email) {
+  if (!userId) { window.setViewMode('admin'); return; }
+  // Show client view for any selected client from the table
+  const adminBtn  = document.getElementById('mode-admin-btn');
+  const clientBtn = document.getElementById('mode-client-btn');
+  if (adminBtn)  adminBtn.className  = 'mode-btn';
+  if (clientBtn) clientBtn.className = 'mode-btn mode-btn-active';
   document.getElementById('admin-overview').style.display = 'none';
   document.getElementById('client-view').style.display    = '';
-
-  const sel = document.getElementById('client-selector');
-  const opt = sel.options[sel.selectedIndex];
-  document.getElementById('view-title').textContent    = opt.dataset.name  || opt.text;
-  document.getElementById('view-subtitle').textContent = opt.dataset.email || '';
-
+  document.getElementById('view-title').textContent    = name  || userId;
+  document.getElementById('view-subtitle').textContent = email || '';
   loadProgressBar();
   await loadClientData(userId);
 };
