@@ -53,8 +53,12 @@ function notifyViewModeSubscribers(mode, meta = {}) {
 function setPortalViewMode(mode, { source = 'app', persist = true, emit = true } = {}) {
   const next = normalizeViewMode(mode);
   const prev = getStoredViewMode();
+  if (prev === next) {
+    if (persist) setStoredViewMode(next);
+    return next;
+  }
   if (persist) setStoredViewMode(next);
-  if (!emit && prev === next) return next;
+  if (!emit) return next;
 
   const detail = { mode: next, source, prevMode: prev };
   notifyViewModeSubscribers(next, detail);
@@ -824,6 +828,18 @@ async function loadUser() {
   if (!user) return;
 
   const isAdmin = await checkIsAdmin().catch(() => false);
+  let hasStoredMode = false;
+  try {
+    hasStoredMode = !!sessionStorage.getItem(VIEW_MODE_KEY);
+  } catch (_) {
+    hasStoredMode = false;
+  }
+
+  if (!isAdmin) {
+    setPortalViewMode('cliente', { source: 'role-force', persist: true, emit: false });
+  } else if (!hasStoredMode) {
+    setPortalViewMode('admin', { source: 'role-default', persist: true, emit: false });
+  }
 
   if (!isAdmin) {
     try { await CaseService.ensureExists(); } catch (_) {}

@@ -410,6 +410,14 @@
             </div>
           </div>
 
+          <div id="findash-admin-bar" class="admin-bar" style="display:none; margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="admin-badge">ADMIN</span>
+              <span id="findash-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
+            </div>
+            <div id="findash-mode-selector"></div>
+          </div>
+
           <!-- ── Diagnóstico Banner ──────────────────────────────── -->
           <div id="fd-diag-banner" class="fd-diag-banner fd-diag--low" style="display:none;">
             <div class="fd-diag-icon" id="fd-diag-icon">OK</div>
@@ -755,6 +763,8 @@ let offDebtListChanged = null;
 let finDashBooting = false;
 let chartsEnabled = true;
 let finDashUnmounted = false;
+let isAdminUser = false;
+let unmountModeSelector = null;
 
 const shell = new Shell();
 
@@ -766,6 +776,33 @@ const safeSetText = (id, value) => {
   return el;
 };
 const isFinDashMounted = () => !finDashUnmounted && !!byId('fd-main');
+
+document.addEventListener('app:user-loaded', (e) => {
+  isAdminUser = !!e.detail?.isAdmin;
+  const bar = byId('findash-admin-bar');
+  if (!bar) return;
+
+  if (!isAdminUser) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  if (typeof unmountModeSelector === 'function') unmountModeSelector();
+  if (typeof window.mountPortalViewModeSelector === 'function') {
+    unmountModeSelector = window.mountPortalViewModeSelector('findash-mode-selector', {
+      onChange: (mode) => {
+        const contextEl = byId('findash-mode-context');
+        if (contextEl) {
+          contextEl.textContent = mode === 'admin'
+            ? 'Visualizando modo administrador'
+            : 'Visualizando modo cliente';
+        }
+      },
+    });
+    window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'findash-init' });
+  }
+});
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
@@ -1483,6 +1520,10 @@ document.addEventListener('app:ready', () => bootstrap().catch(err => {
 }));
 
 document.addEventListener('app:route-will-change', () => {
+  if (typeof unmountModeSelector === 'function') {
+    unmountModeSelector();
+    unmountModeSelector = null;
+  }
   finDashUnmounted = true;
   if (offDebtListChanged) {
     offDebtListChanged();

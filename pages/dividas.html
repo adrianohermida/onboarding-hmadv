@@ -27,6 +27,14 @@
         <button class="btn btn-primary btn-sm" onclick="showAddModal()">+ Adicionar dívida</button>
       </div>
 
+      <div id="dividas-admin-bar" class="admin-bar" style="display:none;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="admin-badge">ADMIN</span>
+          <span id="dividas-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
+        </div>
+        <div id="dividas-mode-selector"></div>
+      </div>
+
       <!-- KPI Summary -->
       <div class="kpi-grid" style="margin-bottom:16px;">
         <div class="kpi kpi-red">
@@ -171,6 +179,8 @@ window.showToast = showToast;
 let dividas = [];
 let renda = null;
 let dividasBooting = false;
+let isAdminUser = false;
+let unmountModeSelector = null;
 
 const byId = (id) => document.getElementById(id);
 
@@ -190,6 +200,15 @@ async function init() {
   renda = caso?.renda || null;
   renderTable();
   dividasBooting = false;
+}
+
+function applyViewMode(mode) {
+  const contextEl = byId('dividas-mode-context');
+  if (contextEl) {
+    contextEl.textContent = mode === 'admin'
+      ? 'Visualizando modo administrador'
+      : 'Visualizando modo cliente';
+  }
 }
 
 function renderTable() {
@@ -294,7 +313,29 @@ window.removeDivida = async function(id) {
 };
 
 document.addEventListener('app:ready', init);
+document.addEventListener('app:user-loaded', (e) => {
+  isAdminUser = !!e.detail?.isAdmin;
+  const bar = byId('dividas-admin-bar');
+  if (!bar) return;
+  if (!isAdminUser) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  if (typeof unmountModeSelector === 'function') unmountModeSelector();
+  if (typeof window.mountPortalViewModeSelector === 'function') {
+    unmountModeSelector = window.mountPortalViewModeSelector('dividas-mode-selector', {
+      onChange: (mode) => applyViewMode(mode),
+    });
+    window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'dividas-init' });
+  }
+});
 document.addEventListener('app:route-will-change', () => {
+  if (typeof unmountModeSelector === 'function') {
+    unmountModeSelector();
+    unmountModeSelector = null;
+  }
   dividasBooting = false;
 });
 </script>

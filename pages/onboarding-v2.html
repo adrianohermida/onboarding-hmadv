@@ -241,6 +241,14 @@
           </div>
         </div>
 
+        <div id="journey-admin-bar" class="admin-bar" style="display:none; margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="admin-badge">ADMIN</span>
+            <span id="journey-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
+          </div>
+          <div id="journey-mode-selector"></div>
+        </div>
+
         <!-- STEP TRACKER -->
         <div class="jt-wrap" id="journey-tracker" role="navigation" aria-label="Passos da jornada">
           <!-- Rendered by JourneyEngine -->
@@ -291,6 +299,35 @@ let activePlayer = null; // VideoPlayer instance
 let autosaveTimer = null;
 let uploadedFile  = null;
 let diagnostico   = null;  // financial diagnosis
+let isAdminUser = false;
+let unmountModeSelector = null;
+
+document.addEventListener('app:user-loaded', (e) => {
+  isAdminUser = !!e.detail?.isAdmin;
+  const bar = document.getElementById('journey-admin-bar');
+  if (!bar) return;
+
+  if (!isAdminUser) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  if (typeof unmountModeSelector === 'function') unmountModeSelector();
+  if (typeof window.mountPortalViewModeSelector === 'function') {
+    unmountModeSelector = window.mountPortalViewModeSelector('journey-mode-selector', {
+      onChange: (mode) => {
+        const contextEl = document.getElementById('journey-mode-context');
+        if (contextEl) {
+          contextEl.textContent = mode === 'admin'
+            ? 'Visualizando modo administrador'
+            : 'Visualizando modo cliente';
+        }
+      },
+    });
+    window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'journey-init' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // BOOTSTRAP — dual trigger (app:ready + DOMContentLoaded fallback)
@@ -317,6 +354,13 @@ function handleBootstrapError(e) {
   console.error('[Journey] bootstrap error:', e);
   renderError('Erro ao carregar a jornada. Verifique sua conexão e recarregue a página.');
 }
+
+document.addEventListener('app:route-will-change', () => {
+  if (typeof unmountModeSelector === 'function') {
+    unmountModeSelector();
+    unmountModeSelector = null;
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // DATA LOADING

@@ -27,6 +27,14 @@
         <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">+ Novo chamado</button>
       </div>
 
+      <div id="suporte-admin-bar" class="admin-bar" style="display:none; margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="admin-badge">ADMIN</span>
+          <span id="suporte-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
+        </div>
+        <div id="suporte-mode-selector"></div>
+      </div>
+
       <!-- Contact summary bar -->
       <div id="contact-bar" style="display:none; margin-bottom:16px;"></div>
 
@@ -150,12 +158,38 @@ window.showToast = showToast;
 let currentUser = null;
 let currentCaso = null;
 let suporteBooting = false;
+let isAdminUser = false;
+let unmountModeSelector = null;
 
 const byId = (id) => document.getElementById(id);
 
 document.addEventListener('app:user-loaded', e => {
   currentUser = e.detail?.user;
   currentCaso = e.detail?.caso;
+  isAdminUser = !!e.detail?.isAdmin;
+
+  const bar = byId('suporte-admin-bar');
+  if (!bar) return;
+  if (!isAdminUser) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  if (typeof unmountModeSelector === 'function') unmountModeSelector();
+  if (typeof window.mountPortalViewModeSelector === 'function') {
+    unmountModeSelector = window.mountPortalViewModeSelector('suporte-mode-selector', {
+      onChange: (mode) => {
+        const contextEl = byId('suporte-mode-context');
+        if (contextEl) {
+          contextEl.textContent = mode === 'admin'
+            ? 'Visualizando modo administrador'
+            : 'Visualizando modo cliente';
+        }
+      },
+    });
+    window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'suporte-init' });
+  }
 });
 
 async function init() {
@@ -274,6 +308,10 @@ window.submitTicket = async function() {
 
 document.addEventListener('app:ready', init);
 document.addEventListener('app:route-will-change', () => {
+  if (typeof unmountModeSelector === 'function') {
+    unmountModeSelector();
+    unmountModeSelector = null;
+  }
   suporteBooting = false;
 });
 </script>

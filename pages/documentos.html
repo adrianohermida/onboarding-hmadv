@@ -450,10 +450,7 @@
             <span class="admin-badge">ADMIN</span>
             <span id="doc-admin-context" style="font-size:13px;opacity:.8;">Modo administrador</span>
             <div style="flex:1;"></div>
-            <div class="view-switcher" id="view-switcher">
-              <button class="vm-btn active" data-mode="admin"   onclick="setViewMode('admin')">Admin</button>
-              <button class="vm-btn"        data-mode="cliente" onclick="setViewMode('cliente')">Cliente</button>
-            </div>
+            <div id="doc-mode-selector"></div>
             <button class="btn-ghost-sm" id="btn-back-client" onclick="window.location.href='dashboard.html'" style="display:none;">← Voltar</button>
           </div>
 
@@ -646,6 +643,7 @@ let drawerSignedUrl = null;
 let docsBooting = false;
 let offDocListChanged = null;
 let offUploadStarted = null;
+let unmountModeSelector = null;
 
 const byId = (id) => document.getElementById(id);
 
@@ -684,9 +682,17 @@ async function bootstrap() {
   viewingUid     = params.get('uid') || null;
 
   if (isAdmin) {
-    viewMode = viewingUid ? 'admin' : 'admin';
+    viewMode = window.getPortalViewMode?.() || 'admin';
     const adminBar = byId('doc-admin-bar');
     if (adminBar) adminBar.style.display = 'flex';
+    if (typeof unmountModeSelector === 'function') unmountModeSelector();
+    if (typeof window.mountPortalViewModeSelector === 'function') {
+      unmountModeSelector = window.mountPortalViewModeSelector('doc-mode-selector', {
+        adminLabel: 'Admin',
+        onChange: (mode) => { window.setViewMode(mode); },
+      });
+      window.setPortalViewMode?.(viewMode, { source: 'documentos-init' });
+    }
     if (viewingUid) {
       const backBtn = byId('btn-back-client');
       const contextEl = byId('doc-admin-context');
@@ -971,7 +977,6 @@ window.scrollToDoc = (tipo) => {
 // ── View Mode ─────────────────────────────────────────────────────────────────
 window.setViewMode = (mode) => {
   viewMode = mode;
-  document.querySelectorAll('.vm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
   renderAll();
 };
 
@@ -1261,6 +1266,10 @@ function handleError(err) {
 }
 
 document.addEventListener('app:route-will-change', () => {
+  if (typeof unmountModeSelector === 'function') {
+    unmountModeSelector();
+    unmountModeSelector = null;
+  }
   if (offDocListChanged) { offDocListChanged(); offDocListChanged = null; }
   if (offUploadStarted) { offUploadStarted(); offUploadStarted = null; }
   docsBooting = false;
