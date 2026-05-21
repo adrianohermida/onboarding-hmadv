@@ -423,6 +423,37 @@
 
   .doc-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:360px; color:var(--muted); gap:12px; }
   .doc-spinner { width:36px; height:36px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--blue); animation:spin .8s linear infinite; }
+
+  @media (max-width:375px) {
+    .doc-page { padding: 12px 8px 70px; }
+    .doc-hero { padding: 16px 14px; border-radius: 12px; }
+    .doc-hero-title { font-size: 19px; }
+    .doc-hero-sub { font-size: 12px; }
+    .doc-progress-wrap { min-width: 100%; }
+    .doc-kpi-grid { grid-template-columns: 1fr; gap: 8px; }
+    .doc-kpi { padding: 11px 12px; }
+    .doc-kpi-value { font-size: 18px; }
+    .doc-filter-bar { gap: 6px; }
+    .filter-chip { font-size: 11px; padding: 4px 10px; }
+    .doc-card { padding: 12px; }
+    .requests-banner { padding: 12px 12px; }
+    .drawer-header { padding: 12px 14px; }
+    .drawer-tabs { padding: 0 12px; }
+    .timeline-list { padding: 10px 12px; }
+    .drawer-review-form { padding: 12px 14px; }
+    .doc-modal-header, .doc-modal-body, .doc-modal-footer { padding-left: 14px; padding-right: 14px; }
+  }
+
+  @media (max-width:320px) {
+    .doc-page { padding: 10px 6px 66px; }
+    .doc-hero { padding: 14px 12px; }
+    .doc-hero-title { font-size: 17px; }
+    .doc-kpi-value { font-size: 16px; }
+    .doc-card-title { font-size: 12px; }
+    .doc-card-actions { gap: 6px; }
+    .doc-act-btn { padding: 5px 9px; font-size: 10px; }
+    .drawer-title { font-size: 14px; }
+  }
   </style>
 </head>
 <body>

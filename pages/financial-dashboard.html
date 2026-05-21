@@ -373,6 +373,34 @@
   .dep-btn { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink); transition:background .15s; }
   .dep-btn:hover { background:var(--ice); }
   .dep-count { font-size:18px; font-weight:800; color:var(--navy); min-width:32px; text-align:center; }
+
+  @media (max-width:375px) {
+    .fd-page { padding: 12px 8px 72px; }
+    .fd-hero { padding: 16px 14px; border-radius: 12px; }
+    .fd-hero-title { font-size: 18px; }
+    .fd-hero-sub { font-size: 12px; }
+    .score-badge { min-width: 100%; padding: 12px 10px; }
+    .score-number { font-size: 30px; }
+    .fd-kpi-grid { grid-template-columns: 1fr; gap: 8px; }
+    .fd-kpi { padding: 12px; }
+    .fd-kpi-value { font-size: 18px; }
+    .fd-diag-banner { padding: 12px 14px; }
+    .fd-diag-title { font-size: 14px; }
+    .fd-diag-text { font-size: 12px; }
+    .fd-card { padding: 14px 12px; }
+    .fd-section-header, .fd-section-body { padding-left: 12px; padding-right: 12px; }
+    .fd-modal-header, .fd-modal-body, .fd-modal-footer { padding-left: 14px; padding-right: 14px; }
+  }
+
+  @media (max-width:320px) {
+    .fd-page { padding: 10px 6px 68px; }
+    .fd-hero { padding: 14px 12px; }
+    .fd-hero-title { font-size: 16px; }
+    .score-number { font-size: 26px; }
+    .fd-kpi-value { font-size: 16px; }
+    .fd-card-title { font-size: 12px; }
+    .btn-fd-primary, .btn-fd-secondary, .btn-fd-danger { font-size: 12px; padding-left: 10px; padding-right: 10px; }
+  }
   </style>
 </head>
 <body>

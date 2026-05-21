@@ -657,3 +657,28 @@ td { padding: 9px 14px; vertical-align: middle; }
   .next-action-bar { align-items: flex-start; flex-direction: column; }
   .next-action-bar .btn { width: 100%; justify-content: center; }
 }
+
+@media (max-width: 375px) {
+  .sec { padding: 14px 12px; }
+  .card { padding: 14px 12px; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi { padding: 12px 10px; }
+  .kpi-value { font-size: 18px; }
+  .status-card { padding: 10px 11px; }
+  .status-card-value { font-size: 15px; }
+  .form-input, .form-select, .form-textarea { font-size: 13px; padding: 9px 10px; }
+  table { min-width: 420px; }
+  .btn { min-height: 34px; padding-left: 10px; padding-right: 10px; }
+}
+
+@media (max-width: 320px) {
+  .sec { padding: 12px 10px; }
+  .card { padding: 12px 10px; }
+  .kpi-label { letter-spacing: .4px; }
+  .kpi-value { font-size: 17px; }
+  .status-card { gap: 8px; }
+  .status-card-icon { width: 34px; height: 34px; }
+  .next-action-label { font-size: 9px; }
+  .next-action-text { font-size: 11px; }
+  table { min-width: 390px; }
+}
