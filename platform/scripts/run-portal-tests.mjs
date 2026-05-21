@@ -31,6 +31,7 @@ const batches = [
     'tests/trace-contracts.test.js',
   ],
   [
+    'tests/advogado-portal-contract.test.js',
     'tests/navigation-contract.test.js',
     'tests/phase3-contracts.test.js',
     'tests/shell-operational-contract.test.js',
