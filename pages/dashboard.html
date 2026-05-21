@@ -85,6 +85,7 @@
         </div>
 
         <div id="adm-alert" class="callout callout-warn" style="display:none;margin-bottom:12px;"></div>
+        <div id="adm-diag-banner" style="display:none;margin-bottom:12px;padding:8px 10px;border:1px solid #d8e0ea;background:#f6f8fb;color:#435469;border-radius:8px;font-size:12px;line-height:1.35;"></div>
 
         <div class="kpi-grid" style="margin-bottom:16px;">
           <div class="kpi">
@@ -284,12 +285,20 @@ let isAdminUser = false;
 const DEMO_EMAIL = 'suporte@hermidamaia.adv.br';
 let demoUserId   = null;   // populated once admin clients are loaded
 let dashboardUnmounted = false;
+const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const byId = (id) => document.getElementById(id);
 const setText = (id, value) => {
   const el = byId(id);
   if (el) el.textContent = value;
   return el;
 };
+
+const escapeHtml = (value) => String(value || '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
 
 function setAdminAlert(message = '', type = 'warn') {
   const alertEl = byId('adm-alert');
@@ -305,6 +314,26 @@ function setAdminAlert(message = '', type = 'warn') {
   alertEl.style.display = '';
 }
 
+function setAdminDiagBanner(detail) {
+  const el = byId('adm-diag-banner');
+  if (!el || !isAdminUser) return;
+  if (!detail) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+
+  const ts = detail.ts ? new Date(detail.ts) : new Date();
+  const hhmmss = ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const module = escapeHtml(detail.module || 'unknown');
+  const kind = escapeHtml(detail.kind || 'callback');
+  const source = escapeHtml(detail.source || 'runtime');
+  const msg = escapeHtml(detail.message || 'erro sem mensagem');
+
+  el.innerHTML = `Diagnostico shell: callback suprimido (${kind}/${source}) em <strong>${module}</strong> as ${hhmmss}. ${msg}`;
+  el.style.display = '';
+}
+
 /* ── Listen for user identity ───────────────────────── */
 document.addEventListener('app:user-loaded', async e => {
   const { isAdmin } = e.detail || {};
@@ -315,7 +344,19 @@ document.addEventListener('app:user-loaded', async e => {
     const onboardingBtn = byId('btn-onboarding');
     if (adminBar) adminBar.style.display = 'flex';
     if (onboardingBtn) onboardingBtn.style.display = 'none';
+
+    const history = Array.isArray(window.__shellSuppressedCallbacks)
+      ? window.__shellSuppressedCallbacks
+      : [];
+    if (history.length > 0) {
+      setAdminDiagBanner(history[history.length - 1]);
+    }
   }
+});
+
+window.addEventListener(SHELL_SUPPRESSED_EVENT, event => {
+  if (!isAdminUser || dashboardUnmounted) return;
+  setAdminDiagBanner(event?.detail || null);
 });
 
 /* ── Bootstrap data after app is ready ─────────────── */
