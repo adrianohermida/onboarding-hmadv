@@ -20,6 +20,11 @@ const nativeDocumentAddEventListener = document.addEventListener.bind(document);
 const nativeDocumentRemoveEventListener = document.removeEventListener.bind(document);
 const nativeWindowAddEventListener = window.addEventListener.bind(window);
 const nativeWindowRemoveEventListener = window.removeEventListener.bind(window);
+const nativeSetTimeout = window.setTimeout.bind(window);
+const nativeClearTimeout = window.clearTimeout.bind(window);
+const nativeSetInterval = window.setInterval.bind(window);
+const nativeClearInterval = window.clearInterval.bind(window);
+const capturedModuleTimers = [];
 
 function trackModuleListener(target, type, originalListener, listener, options) {
   if (!captureModuleListeners || typeof listener !== 'function') return;
@@ -35,6 +40,15 @@ function cleanupModuleListeners() {
     } else if (item.target === window) {
       nativeWindowRemoveEventListener(item.type, item.listener, item.options);
     }
+  }
+}
+
+function cleanupModuleTimers() {
+  while (capturedModuleTimers.length) {
+    const t = capturedModuleTimers.pop();
+    if (!t) continue;
+    if (t.kind === 'timeout') nativeClearTimeout(t.id);
+    if (t.kind === 'interval') nativeClearInterval(t.id);
   }
 }
 
@@ -68,6 +82,46 @@ window.addEventListener = function patchedWindowAddEventListener(type, listener,
 
   nativeWindowAddEventListener(type, wrapped, options);
   trackModuleListener(window, type, listener, wrapped, options);
+};
+
+window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
+  if (!captureModuleListeners || typeof handler !== 'function') {
+    return nativeSetTimeout(handler, timeout, ...args);
+  }
+
+  const token = activeModuleToken;
+  const wrapped = (...cbArgs) => {
+    if (token !== activeModuleToken) return;
+    return handler(...cbArgs);
+  };
+
+  const id = nativeSetTimeout(wrapped, timeout, ...args);
+  capturedModuleTimers.push({ kind: 'timeout', id });
+  return id;
+};
+
+window.clearTimeout = function patchedClearTimeout(id) {
+  return nativeClearTimeout(id);
+};
+
+window.setInterval = function patchedSetInterval(handler, timeout, ...args) {
+  if (!captureModuleListeners || typeof handler !== 'function') {
+    return nativeSetInterval(handler, timeout, ...args);
+  }
+
+  const token = activeModuleToken;
+  const wrapped = (...cbArgs) => {
+    if (token !== activeModuleToken) return;
+    return handler(...cbArgs);
+  };
+
+  const id = nativeSetInterval(wrapped, timeout, ...args);
+  capturedModuleTimers.push({ kind: 'interval', id });
+  return id;
+};
+
+window.clearInterval = function patchedClearInterval(id) {
+  return nativeClearInterval(id);
 };
 
 /* ── Session cache helpers ───────────────────────── */
@@ -177,6 +231,7 @@ function syncMainContent(parsedDoc) {
 async function runPageScripts(parsedDoc, targetUrl) {
   activeModuleToken += 1;
   cleanupModuleListeners();
+  cleanupModuleTimers();
   captureModuleListeners = true;
 
   const scripts = [...parsedDoc.querySelectorAll('script')]
