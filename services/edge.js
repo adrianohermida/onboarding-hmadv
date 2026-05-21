@@ -42,14 +42,21 @@ async function getFreshAccessToken(path) {
 
   const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
   const freshSession = refreshed?.session || session;
-  if (refreshErr || !freshSession?.access_token) {
-    const err = new Error('Sessao expirada');
+
+  // Transient refresh failure: log a warning but continue with the existing valid token
+  // rather than hard-failing calls that could succeed with the current access_token.
+  if (refreshErr) {
     emitServiceTelemetry({
       type: 'edge',
       path,
-      stage: 'session-refresh',
-      message: refreshErr?.message || err.message,
+      stage: 'session-refresh-warn',
+      message: refreshErr.message,
     });
+  }
+
+  if (!freshSession?.access_token) {
+    const err = new Error('Sessao expirada');
+    emitServiceTelemetry({ type: 'edge', path, stage: 'session-refresh', message: err.message });
     throw err;
   }
 
