@@ -165,7 +165,7 @@ body.app-loaded .sk { display: none !important; }
 .sidebar-logo .logo-mark svg { display: block; }
 
 .sidebar-name {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 14px;
   font-weight: 700;
   color: #fff;

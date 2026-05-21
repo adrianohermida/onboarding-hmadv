@@ -25,8 +25,8 @@
             gold:  '#F5A623',
           },
           fontFamily: {
-            serif: ['Libre Baskerville', 'Georgia', 'serif'],
-            sans:  ['DM Sans', 'system-ui', 'sans-serif'],
+            serif: ['Lucida Sans', 'Lucida Sans Unicode', 'Arial', 'Segoe UI', 'sans-serif'],
+            sans:  ['Lucida Sans', 'Lucida Sans Unicode', 'Arial', 'Segoe UI', 'sans-serif'],
           },
         }
       }
@@ -416,6 +416,14 @@
               <span id="findash-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
             </div>
             <div id="findash-mode-selector"></div>
+          </div>
+
+          <div class="next-action-bar">
+            <div class="next-action-copy">
+              <div class="next-action-label">Proxima acao</div>
+              <div class="next-action-text">Atualize renda e despesas para recalcular o diagnostico e salvar o plano.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('section-renda')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">Preencher renda</button>
           </div>
 
           <!-- ── Diagnóstico Banner ──────────────────────────────── -->
@@ -1245,7 +1253,7 @@ function renderDespesasPie(diag) {
   if (!data.length) {
     chartDesp = null;
     ctx.clearRect(0, 0, 400, 200);
-    ctx.font = '13px DM Sans, system-ui, sans-serif';
+    ctx.font = '13px Lucida Sans, Arial, sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
     ctx.fillText('Nenhuma despesa informada', 200, 100);
@@ -1287,7 +1295,7 @@ function renderDividasTipo() {
   if (!data.length) {
     chartDivTipo = null;
     ctx.clearRect(0, 0, 400, 200);
-    ctx.font = '13px DM Sans, system-ui, sans-serif';
+    ctx.font = '13px Lucida Sans, Arial, sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
     ctx.fillText('Nenhuma dívida cadastrada', 200, 100);

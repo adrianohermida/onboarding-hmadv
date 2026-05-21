@@ -64,9 +64,9 @@
 }
 
 .card-title {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 700;
   color: var(--navy);
   margin: 0;
 }
@@ -114,7 +114,7 @@
 }
 
 .kpi-value {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 24px;
   font-weight: 700;
   color: var(--navy);
@@ -175,10 +175,41 @@
 }
 
 .status-card-value {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 20px;
   color: var(--navy);
   line-height: 1.2;
+}
+
+.next-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid #c8d8ea;
+  background: #f0f6ff;
+}
+
+.next-action-copy {
+  min-width: 0;
+}
+
+.next-action-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 2px;
+}
+
+.next-action-text {
+  font-size: 12px;
+  color: var(--ink2);
+  line-height: 1.35;
 }
 
 .status-card-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
@@ -278,9 +309,9 @@
 }
 
 .sec-title {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 700;
   color: var(--navy);
   margin: 0;
 }
@@ -441,7 +472,7 @@ td { padding: 9px 14px; vertical-align: middle; }
 .empty-state-icon { font-size: 40px; margin-bottom: 14px; opacity: .45; }
 
 .empty-state h3 {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 17px;
   color: var(--ink2);
   margin-bottom: 6px;
@@ -519,7 +550,7 @@ td { padding: 9px 14px; vertical-align: middle; }
   background: var(--line2);
   border-radius: var(--r-sm);
   padding: 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--sans);
   font-size: 11px;
   color: var(--ink2);
   text-align: left;
@@ -610,4 +641,19 @@ td { padding: 9px 14px; vertical-align: middle; }
   .kpi-grid        { grid-template-columns: 1fr 1fr; }
   .status-cards-grid { grid-template-columns: 1fr; }
   .toast { right: 12px; bottom: 72px; max-width: calc(100vw - 24px); }
+  .kpi { padding: 14px 12px; }
+  .kpi-value { font-size: 20px; }
+  .kpi-label { font-size: 9px; margin-bottom: 5px; }
+  .kpi-hint { font-size: 10px; }
+  .status-card { padding: 12px 14px; gap: 10px; }
+  .status-card-value { font-size: 16px; }
+  .status-card-label { font-size: 9px; }
+  .sec-header { margin-bottom: 14px; padding-bottom: 10px; }
+  .sec-num { width: 24px; height: 24px; font-size: 11px; }
+  .sec-title { font-size: 14px; }
+  table { font-size: 12px; }
+  thead th { padding: 8px 10px; font-size: 10px; }
+  td { padding: 8px 10px; }
+  .next-action-bar { align-items: flex-start; flex-direction: column; }
+  .next-action-bar .btn { width: 100%; justify-content: center; }
 }

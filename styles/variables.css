@@ -35,8 +35,8 @@
   --brand-gold-lt: rgba(245,166,35,.22);
 
   /* Typography */
-  --serif: 'Libre Baskerville', Georgia, serif;
-  --sans:  'DM Sans', system-ui, sans-serif;
+  --serif: 'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
+  --sans:  'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
 
   /* Radii */
   --r:    12px;

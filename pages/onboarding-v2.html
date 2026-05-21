@@ -25,8 +25,8 @@
             gold:  '#F5A623',
           },
           fontFamily: {
-            serif: ['Libre Baskerville', 'Georgia', 'serif'],
-            sans:  ['DM Sans', 'system-ui', 'sans-serif'],
+            serif: ['Lucida Sans', 'Lucida Sans Unicode', 'Arial', 'Segoe UI', 'sans-serif'],
+            sans:  ['Lucida Sans', 'Lucida Sans Unicode', 'Arial', 'Segoe UI', 'sans-serif'],
           },
         }
       }
@@ -247,6 +247,14 @@
             <span id="journey-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
           </div>
           <div id="journey-mode-selector"></div>
+        </div>
+
+        <div class="next-action-bar">
+          <div class="next-action-copy">
+            <div class="next-action-label">Proxima acao</div>
+            <div class="next-action-text">Continue do passo ativo da jornada e finalize cada etapa antes de avancar.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('journey-tracker')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">Continuar jornada</button>
         </div>
 
         <!-- STEP TRACKER -->
