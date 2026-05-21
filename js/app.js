@@ -1,5 +1,5 @@
 import { Router }                    from './router.js';
-import { installRuntimeIsolation }   from './runtime-isolation.js';
+import { installRuntimeIsolation }   from './shell-runtime-isolation.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';

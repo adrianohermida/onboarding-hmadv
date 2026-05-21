@@ -5,7 +5,8 @@
   "scripts": {
     "dev":    "npx serve . -l 3000",
     "build":  "echo 'Site estático — sem build step necessário'",
-    "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main"
+    "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
+    "test":   "vitest run"
   },
   "repository": {
     "type": "git",
@@ -13,5 +14,9 @@
   },
   "author":  "Adriano Hermida Maia",
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  }
 }
