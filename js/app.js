@@ -10,6 +10,9 @@ const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
+const SHELL_VERSION = '20260521f';
+
+window.__shellVersion = SHELL_VERSION;
 
 let appUserDetail = null;
 let shellNavInFlight = false;
@@ -312,6 +315,28 @@ function syncMainContent(parsedDoc) {
   return true;
 }
 
+function getExpectedShellVersion(parsedDoc, targetUrl) {
+  const shellScript = [...parsedDoc.querySelectorAll('script[src]')].find(script => {
+    const src = script.getAttribute('src');
+    if (!src) return false;
+    try {
+      const u = new URL(src, targetUrl);
+      return u.pathname.endsWith('/js/app.js');
+    } catch (_) {
+      return src.includes('/js/app.js') || src.includes('js/app.js');
+    }
+  });
+
+  if (!shellScript) return null;
+
+  try {
+    const u = new URL(shellScript.getAttribute('src'), targetUrl);
+    return u.searchParams.get('v');
+  } catch (_) {
+    return null;
+  }
+}
+
 async function runPageScripts(parsedDoc, targetUrl) {
   activeModuleToken += 1;
   cleanupModuleListeners();
@@ -397,6 +422,15 @@ async function navigateModule(url, { pushState = true } = {}) {
 
     const html = await res.text();
     const parsedDoc = new DOMParser().parseFromString(html, 'text/html');
+    const expectedVersion = getExpectedShellVersion(parsedDoc, absolute);
+
+    if (expectedVersion && expectedVersion !== SHELL_VERSION) {
+      const hardReloadUrl = new URL(absolute, window.location.href);
+      hardReloadUrl.searchParams.set('_shellupgrade', `${SHELL_VERSION}->${expectedVersion}`);
+      hardReloadUrl.searchParams.set('_t', String(Date.now()));
+      window.location.href = hardReloadUrl.toString();
+      return;
+    }
 
     removeDynamicPageArtifacts();
     syncPageStyles(parsedDoc, absolute);
