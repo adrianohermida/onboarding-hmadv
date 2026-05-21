@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')!;
-const FROM_EMAIL   = Deno.env.get('FROM_EMAIL') ?? 'Portal Hermida Maia <portal@hermidamaia.adv.br>';
+const FROM_EMAIL   = Deno.env.get('FROM_EMAIL') ?? 'Portal Hermida Maia <contato@hermidamaia.adv.br>';
 const OFFICE_EMAIL = Deno.env.get('OFFICE_EMAIL') ?? 'contato@hermidamaia.adv.br';
 
 const cors = {

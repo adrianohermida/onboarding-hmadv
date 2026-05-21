@@ -144,13 +144,12 @@
       <div class="sec" id="panel-step-3" style="display:none;">
         <div class="sec-header">
           <div class="sec-num">3</div>
-          <h2 class="sec-title">Lista de Documentos Necessários</h2>
-          <span class="sec-tag">Upload em breve</span>
+          <h2 class="sec-title">Documentos Necessários</h2>
         </div>
 
-        <div class="callout callout-blue" style="margin-bottom:20px;">
-          <strong>Próxima etapa:</strong> O envio de documentos será habilitado em breve.
-          Esta lista mostra o que você precisará reunir.
+        <div class="callout callout-ok" style="margin-bottom:20px;">
+          <strong>Cadastro quase concluído!</strong> Após finalizar, você será direcionado para
+          a aba <strong>Documentos</strong> onde poderá fazer o upload de cada arquivo.
         </div>
 
         <div class="table-wrap">
@@ -159,52 +158,23 @@
               <tr>
                 <th>Documento</th>
                 <th>Obrigatório</th>
-                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>RG ou CNH (frente e verso)</td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>CPF (caso não esteja no RG)</td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>Comprovante de residência (últimos 90 dias)</td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>Comprovante de renda (holerite, extrato, etc.)</td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>Extratos bancários (últimos 3 meses)</td>
-                <td><span class="chip chip-red">Sim</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>Contratos de dívidas (quando disponíveis)</td>
-                <td><span class="chip chip-muted">Recomendado</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
-              <tr>
-                <td>Correspondências de cobrança</td>
-                <td><span class="chip chip-muted">Recomendado</span></td>
-                <td><span class="chip chip-warn">Pendente</span></td>
-              </tr>
+              <tr><td>RG ou CNH (frente e verso)</td><td><span class="chip chip-red">Sim</span></td></tr>
+              <tr><td>CPF</td><td><span class="chip chip-red">Sim</span></td></tr>
+              <tr><td>Comprovante de residência (últimos 90 dias)</td><td><span class="chip chip-red">Sim</span></td></tr>
+              <tr><td>Comprovante de renda (holerite, extrato, etc.)</td><td><span class="chip chip-red">Sim</span></td></tr>
+              <tr><td>Extratos bancários (últimos 3 meses)</td><td><span class="chip chip-red">Sim</span></td></tr>
+              <tr><td>Contratos de dívidas (quando disponíveis)</td><td><span class="chip chip-muted">Recomendado</span></td></tr>
+              <tr><td>Correspondências de cobrança</td><td><span class="chip chip-muted">Recomendado</span></td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="btn-group mt-24">
           <button class="btn btn-ghost" onclick="goStep(2)">← Voltar</button>
-          <button class="btn btn-ok" onclick="finalizarCadastro()">Finalizar cadastro</button>
+          <button class="btn btn-ok" onclick="finalizarCadastro()">Finalizar e enviar documentos →</button>
         </div>
       </div>
 
@@ -286,8 +256,8 @@ window.finalizarCadastro = async function() {
       observacoes:           document.getElementById('f-obs-fin').value.trim()     || null,
       onboarding_done:       true,
     });
-    showToast('Cadastro salvo! Redirecionando...', 'ok');
-    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1800);
+    showToast('Cadastro salvo! Redirecionando para documentos...', 'ok');
+    setTimeout(() => { window.location.href = 'documentos.html'; }, 1800);
   } catch (err) {
     console.error(err);
     showToast('Erro ao salvar. Tente novamente.', 'error');
