@@ -370,22 +370,27 @@ async function loadAdminOverview() {
 
 /* ── Mode toggle (admin only) ───────────────────────── */
 window.setViewMode = async function(mode) {
-  const adminBtn  = document.getElementById('mode-admin-btn');
-  const clientBtn = document.getElementById('mode-client-btn');
+  const adminBtn  = byId('mode-admin-btn');
+  const clientBtn = byId('mode-client-btn');
+  const adminOverviewEl = byId('admin-overview');
+  const clientViewEl = byId('client-view');
+  if (!adminOverviewEl || !clientViewEl) return;
 
   if (mode === 'admin') {
     if (adminBtn)  adminBtn.className  = 'mode-btn mode-btn-active';
     if (clientBtn) clientBtn.className = 'mode-btn';
-    document.getElementById('admin-overview').style.display = '';
-    document.getElementById('client-view').style.display    = 'none';
+    adminOverviewEl.style.display = '';
+    clientViewEl.style.display    = 'none';
   } else {
     // Cliente mode — load demo user (suporte@hermidamaia.adv.br)
     if (adminBtn)  adminBtn.className  = 'mode-btn';
     if (clientBtn) clientBtn.className = 'mode-btn mode-btn-active';
-    document.getElementById('admin-overview').style.display = 'none';
-    document.getElementById('client-view').style.display    = '';
-    document.getElementById('view-title').textContent       = 'Visualização: Demo Cliente';
-    document.getElementById('view-subtitle').textContent    = DEMO_EMAIL;
+    adminOverviewEl.style.display = 'none';
+    clientViewEl.style.display    = '';
+    const viewTitle = byId('view-title');
+    const viewSubtitle = byId('view-subtitle');
+    if (viewTitle) viewTitle.textContent = 'Visualização: Demo Cliente';
+    if (viewSubtitle) viewSubtitle.textContent = DEMO_EMAIL;
     loadProgressBar();
     await loadClientData(demoUserId);
   }
@@ -395,14 +400,20 @@ window.setViewMode = async function(mode) {
 window.switchView = async function(userId, name, email) {
   if (!userId) { window.setViewMode('admin'); return; }
   // Show client view for any selected client from the table
-  const adminBtn  = document.getElementById('mode-admin-btn');
-  const clientBtn = document.getElementById('mode-client-btn');
+  const adminBtn  = byId('mode-admin-btn');
+  const clientBtn = byId('mode-client-btn');
+  const adminOverviewEl = byId('admin-overview');
+  const clientViewEl = byId('client-view');
+  if (!adminOverviewEl || !clientViewEl) return;
+
   if (adminBtn)  adminBtn.className  = 'mode-btn';
   if (clientBtn) clientBtn.className = 'mode-btn mode-btn-active';
-  document.getElementById('admin-overview').style.display = 'none';
-  document.getElementById('client-view').style.display    = '';
-  document.getElementById('view-title').textContent    = name  || userId;
-  document.getElementById('view-subtitle').textContent = email || '';
+  adminOverviewEl.style.display = 'none';
+  clientViewEl.style.display    = '';
+  const viewTitle = byId('view-title');
+  const viewSubtitle = byId('view-subtitle');
+  if (viewTitle) viewTitle.textContent = name || userId;
+  if (viewSubtitle) viewSubtitle.textContent = email || '';
   loadProgressBar();
   await loadClientData(userId);
 };
@@ -510,13 +521,15 @@ function renderClientKPIs({ caso, dividas, docs }) {
 
 /* ── CNJ Step Bar (7 passos) ────────────────────────── */
 function renderCNJStepBar(step) {
-  const bar = document.getElementById('cnj-step-bar');
+  const bar = byId('cnj-step-bar');
   if (!bar) return;
   bar.style.display = '';
   const total = 7;
   const pct   = Math.min(100, Math.round((step / total) * 100));
-  document.getElementById('cnj-step-label').textContent  = `Passo ${step}/${total}`;
-  document.getElementById('cnj-step-bar-fill').style.width = pct + '%';
+  const stepLabel = byId('cnj-step-label');
+  const stepFill = byId('cnj-step-bar-fill');
+  if (stepLabel) stepLabel.textContent = `Passo ${step}/${total}`;
+  if (stepFill) stepFill.style.width = pct + '%';
 
   const STEPS = ['Identificação','Socioeconômico','Despesas','Endividamento','Credores','Análise','Documentação'];
   const dotsEl = document.getElementById('cnj-step-dots');
@@ -537,11 +550,12 @@ function renderCNJStepBar(step) {
 
 /* ── Freshdesk ticket card ──────────────────────────── */
 function renderFDTicketCard(ticketId) {
-  const card = document.getElementById('fd-ticket-card');
+  const card = byId('fd-ticket-card');
   if (!card) return;
   card.style.display = 'flex';
-  document.getElementById('fd-ticket-info').textContent = `Chamado #${ticketId} — Em análise pela equipe`;
-  const link = document.getElementById('fd-ticket-link');
+  const ticketInfo = byId('fd-ticket-info');
+  if (ticketInfo) ticketInfo.textContent = `Chamado #${ticketId} — Em análise pela equipe`;
+  const link = byId('fd-ticket-link');
   if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
 }
 
