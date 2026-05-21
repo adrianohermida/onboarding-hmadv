@@ -1235,7 +1235,7 @@ async function loadComponents() {
   const cached = getCached();
   if (cached?.user) {
     updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
-    updateHeaderUser(cached.user);
+    updateHeaderUser(cached.user, cached.isAdmin);
     updateShellModeSelector(cached.isAdmin);
   }
 
@@ -1260,7 +1260,7 @@ async function loadComponents() {
   // Restore from cache after HTML injection
   if (cached?.user) {
     updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
-    updateHeaderUser(cached.user);
+    updateHeaderUser(cached.user, cached.isAdmin);
     updateShellModeSelector(cached.isAdmin);
   }
 }
@@ -1296,7 +1296,7 @@ async function loadUser() {
   // Update UI immediately
   renderSidebarNavigation(isAdmin);
   updateSidebarUser(user, caso, isAdmin);
-  updateHeaderUser(user);
+  updateHeaderUser(user, isAdmin);
   updateShellModeSelector(isAdmin);
   mountClientFreshchatWidget(detail);
 
@@ -1597,6 +1597,79 @@ function closeShellModal() {
   const modal = document.getElementById('shell-modal-root');
   modal?.classList.remove('is-open');
   modal?.setAttribute('aria-hidden', 'true');
+}
+
+function renderAccountModal(view = 'conta') {
+  const { user, caso, isAdmin } = appUserDetail || {};
+  const display = getUserDisplayState(user, isAdmin);
+  const activeView = ['perfil', 'conta', 'permissoes', 'preferencias'].includes(view) ? view : 'conta';
+  const workspaceId = caso?.workspace_id || getActiveTenantId();
+  const permissions = isAdmin
+    ? ['Acesso administrativo', 'Gestao de modulos', 'Operacao multiworkspace']
+    : ['Portal do cliente', 'Documentos do caso', 'Acompanhamento da jornada'];
+
+  return `
+    <section class="account-modal">
+      <div class="account-modal-summary">
+        <div class="header-avatar" aria-hidden="true">${escapeShellHtml(display.initials)}</div>
+        <div>
+          <h3>${escapeShellHtml(display.display)}</h3>
+          <p>${escapeShellHtml(display.email || 'Conta autenticada no portal')}</p>
+          <span class="ui-badge ui-badge-brand">${escapeShellHtml(display.roleLabel)}</span>
+        </div>
+      </div>
+      <div class="account-modal-shortcuts">
+        <button type="button" class="ui-btn ${activeView === 'perfil' ? 'ui-btn-primary' : 'ui-btn-ghost'}" data-shell-action="open-account-modal" data-account-view="perfil">Perfil</button>
+        <button type="button" class="ui-btn ${activeView === 'conta' ? 'ui-btn-primary' : 'ui-btn-ghost'}" data-shell-action="open-account-modal" data-account-view="conta">Conta</button>
+        <button type="button" class="ui-btn ${activeView === 'permissoes' ? 'ui-btn-primary' : 'ui-btn-ghost'}" data-shell-action="open-account-modal" data-account-view="permissoes">Permissoes</button>
+        <button type="button" class="ui-btn ${activeView === 'preferencias' ? 'ui-btn-primary' : 'ui-btn-ghost'}" data-shell-action="open-account-modal" data-account-view="preferencias">Preferencias</button>
+      </div>
+      <div class="account-modal-grid">
+        <article class="account-modal-card ${activeView === 'perfil' ? 'is-active' : ''}">
+          <h4>Perfil</h4>
+          <p>Nome exibido, email principal e papel atual no workspace.</p>
+          <ul>
+            <li><strong>Nome:</strong> ${escapeShellHtml(display.display)}</li>
+            <li><strong>Email:</strong> ${escapeShellHtml(display.email || 'Nao informado')}</li>
+            <li><strong>Papel:</strong> ${escapeShellHtml(display.roleLabel)}</li>
+          </ul>
+        </article>
+        <article class="account-modal-card ${activeView === 'conta' ? 'is-active' : ''}">
+          <h4>Conta</h4>
+          <p>Contexto da conta e tenant ativo usado para isolar estado e preferencias.</p>
+          <ul>
+            <li><strong>Tenant:</strong> ${escapeShellHtml(workspaceId)}</li>
+            <li><strong>Versao shell:</strong> ${escapeShellHtml(SHELL_VERSION)}</li>
+            <li><strong>Rota atual:</strong> ${escapeShellHtml(getCurrentPage())}</li>
+          </ul>
+        </article>
+        <article class="account-modal-card ${activeView === 'permissoes' ? 'is-active' : ''}">
+          <h4>Permissoes</h4>
+          <p>Escopo funcional ativo para esta sessao autenticada.</p>
+          <ul>
+            ${permissions.map(item => `<li>${escapeShellHtml(item)}</li>`).join('')}
+          </ul>
+        </article>
+        <article class="account-modal-card ${activeView === 'preferencias' ? 'is-active' : ''}">
+          <h4>Preferencias</h4>
+          <p>Controles de visualizacao e produtividade do shell responsivo.</p>
+          <ul>
+            <li><strong>Sidebar:</strong> ${document.querySelector('.portal-shell')?.classList.contains('sidebar-collapsed') ? 'Recolhida' : 'Expandida'}</li>
+            <li><strong>Modo:</strong> ${escapeShellHtml(getStoredViewMode())}</li>
+            <li><strong>Notificacoes:</strong> ${getShellNotifications().length}</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
+function openAccountModal(view = 'conta') {
+  setAccountMenuOpen(false);
+  openShellModal({
+    title: 'Conta e configuracoes',
+    body: renderAccountModal(view),
+  });
 }
 
 function renderGlobalSearchPanel(query = '') {
