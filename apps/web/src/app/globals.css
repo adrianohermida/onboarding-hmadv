@@ -30,6 +30,9 @@
     --sidebar-accent: 220 30% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
     --font-sans: 'Inter', system-ui, sans-serif;
   }
 
@@ -48,6 +51,9 @@
     --muted-foreground: 215 16% 60%;
     --accent: 220 30% 15%;
     --accent-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
     --sidebar: 222 47% 5%;
     --sidebar-border: 220 30% 12%;
     --sidebar-accent: 220 30% 10%;
