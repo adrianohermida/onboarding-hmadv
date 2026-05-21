@@ -83,6 +83,15 @@ function setStoredViewMode(mode) {
   } catch (_) {}
 }
 
+function getEffectiveIsAdmin(hasAdminAccess = null) {
+  const canUseAdminView = typeof hasAdminAccess === 'boolean'
+    ? hasAdminAccess
+    : !!appUserDetail?.isAdmin;
+
+  if (!canUseAdminView) return false;
+  return getStoredViewMode() === 'admin';
+}
+
 function notifyViewModeSubscribers(mode, meta = {}) {
   portalViewModeSubscribers.forEach(cb => {
     try { cb(mode, meta); } catch (_) {}
@@ -792,6 +801,28 @@ function setupShellNavigation() {
   });
 }
 
+function syncShellViewMode({ navigateOnMismatch = true, source = 'view-mode' } = {}) {
+  const effectiveIsAdmin = getEffectiveIsAdmin();
+  renderSidebarNavigation(effectiveIsAdmin);
+  if (appUserDetail?.user) {
+    updateSidebarUser(appUserDetail.user, appUserDetail.caso, effectiveIsAdmin);
+    updateHeaderUser(appUserDetail.user, effectiveIsAdmin);
+  }
+  initRouter();
+  revealAppWhenReady();
+
+  if (!navigateOnMismatch) return;
+
+  const modules = getShellModules();
+  const current = getCurrentPage();
+  if (PUBLIC_PAGES.includes(current)) return;
+  if (modules.some(module => module.key === current)) return;
+
+  const fallback = modules[0]?.key;
+  if (!fallback || fallback === current) return;
+  navigateModule(`${fallback}.html`, { pushState: true });
+}
+
 function getNavIcon(moduleKey) {
   const icons = {
     dashboard: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/></svg>',
@@ -887,9 +918,11 @@ function updateSidebarUser(user, caso, isAdmin) {
   const emailEl  = document.getElementById('sidebar-user-email');
   const statusEl = document.getElementById('sidebar-case-status');
   if (emailEl)  emailEl.textContent  = user?.email || '';
-  if (statusEl) statusEl.textContent = isAdmin
-    ? 'Administrador'
-    : (caso?.fase || 'Cadastro');
+  if (statusEl) {
+    statusEl.textContent = appUserDetail?.isAdmin && !isAdmin
+      ? 'Visualizacao cliente'
+      : (isAdmin ? 'Administrador' : (caso?.fase || 'Cadastro'));
+  }
 }
 
 function updateHeaderUser(user, isAdmin = false) {
@@ -899,18 +932,21 @@ function updateHeaderUser(user, isAdmin = false) {
   const menuNameEl = document.getElementById('header-user-menu-name');
   const menuEmailEl = document.getElementById('header-user-menu-email');
   if (!user) return;
-  const displayState = getUserDisplayState(user, isAdmin);
+  const displayState = getUserDisplayState(user, appUserDetail?.isAdmin || false);
+  const roleLabel = appUserDetail?.isAdmin && !isAdmin
+    ? 'Administrador · visao cliente'
+    : displayState.roleLabel;
   if (nameEl) {
     nameEl.textContent = displayState.display;
     nameEl.hidden = false;
   }
   if (roleEl) {
-    roleEl.textContent = displayState.roleLabel;
+    roleEl.textContent = roleLabel;
     roleEl.hidden = false;
   }
   if (avatarEl) avatarEl.textContent = displayState.initials;
   if (menuNameEl) menuNameEl.textContent = displayState.display;
-  if (menuEmailEl) menuEmailEl.textContent = displayState.email || displayState.roleLabel;
+  if (menuEmailEl) menuEmailEl.textContent = displayState.email || roleLabel;
 }
 
 function updateShellModeSelector(isAdmin = false) {
@@ -1232,9 +1268,10 @@ async function loadComponent(selector, path) {
 async function loadComponents() {
   // Pre-populate from cache for instant render
   const cached = getCached();
+  const cachedEffectiveIsAdmin = getEffectiveIsAdmin(cached?.isAdmin || false);
   if (cached?.user) {
-    updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
-    updateHeaderUser(cached.user, cached.isAdmin);
+    updateSidebarUser(cached.user, cached.caso, cachedEffectiveIsAdmin);
+    updateHeaderUser(cached.user, cachedEffectiveIsAdmin);
     updateShellModeSelector(cached.isAdmin);
   }
 
@@ -1244,7 +1281,7 @@ async function loadComponents() {
   ]);
 
   ensureShellManagers();
-  renderSidebarNavigation(cached?.isAdmin || false);
+  renderSidebarNavigation(cachedEffectiveIsAdmin);
   initRouter();
 
   // Wire up interactions (scripts in injected HTML don't execute via innerHTML)
@@ -1258,8 +1295,8 @@ async function loadComponents() {
 
   // Restore from cache after HTML injection
   if (cached?.user) {
-    updateSidebarUser(cached.user, cached.caso, cached.isAdmin);
-    updateHeaderUser(cached.user, cached.isAdmin);
+    updateSidebarUser(cached.user, cached.caso, cachedEffectiveIsAdmin);
+    updateHeaderUser(cached.user, cachedEffectiveIsAdmin);
     updateShellModeSelector(cached.isAdmin);
   }
 }
@@ -1291,11 +1328,12 @@ async function loadUser() {
   const detail = { user, caso, isAdmin };
   appUserDetail = detail;
   setRuntimeTenantConfig(detail);
+  const effectiveIsAdmin = getEffectiveIsAdmin(isAdmin);
 
   // Update UI immediately
-  renderSidebarNavigation(isAdmin);
-  updateSidebarUser(user, caso, isAdmin);
-  updateHeaderUser(user, isAdmin);
+  renderSidebarNavigation(effectiveIsAdmin);
+  updateSidebarUser(user, caso, effectiveIsAdmin);
+  updateHeaderUser(user, effectiveIsAdmin);
   updateShellModeSelector(isAdmin);
   mountClientFreshchatWidget(detail);
 
@@ -1389,7 +1427,7 @@ async function bootPortalShell() {
 }
 
 function getShellModules() {
-  const isAdmin = !!appUserDetail?.isAdmin;
+  const isAdmin = getEffectiveIsAdmin();
   try {
     return new Router().getSidebarModules({ isAdmin });
   } catch (_) {
@@ -1796,9 +1834,9 @@ function renderMobileWorkspaceNav() {
     document.body.appendChild(dock);
   }
 
-  const preferred = !!appUserDetail?.isAdmin
+  const preferred = getEffectiveIsAdmin()
     ? ['painel', 'documentos', 'processos', 'analytics']
-    : ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
+    : ['meu-caso', 'onboarding-v2', 'meus-documentos', 'suporte'];
   const modules = getShellModules().filter(module => preferred.includes(module.key));
   dock.innerHTML = modules.map(module => `
     <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">
@@ -1822,3 +1860,6 @@ async function init() {
 }
 
 nativeDocumentAddEventListener('DOMContentLoaded', init);
+window.addEventListener(VIEW_MODE_EVENT, () => {
+  syncShellViewMode({ navigateOnMismatch: true, source: 'view-mode-event' });
+});
