@@ -36,13 +36,14 @@ function Invoke-Git {
     [Parameter(Mandatory = $true)]
     [string[]]$Arguments,
     [switch]$AllowFailure,
-    [switch]$Capture
+    [switch]$Capture,
+    [switch]$ReadOnly
   )
 
   $cmdText = 'git ' + ($Arguments -join ' ')
   Write-Log "EXEC $cmdText"
 
-  if ($WhatIf) {
+  if ($WhatIf -and -not $ReadOnly) {
     return [pscustomobject]@{
       ExitCode = 0
       Output = @('[WhatIf] command not executed')
@@ -109,8 +110,8 @@ function Read-Checkpoint {
   }
 }
 
-function Ensure-CleanTree {
-  $status = Invoke-Git -Arguments @('status', '--short') -Capture
+function Test-CleanTree {
+  $status = Invoke-Git -Arguments @('status', '--short') -Capture -ReadOnly
   $dirty = @($status.Output | Where-Object { $_ -and $_.Trim() })
   if ($dirty.Count -gt 0 -and -not $AllowDirty) {
     throw "Working tree is dirty. Commit or stash changes before running the unification script, or pass -AllowDirty explicitly."
@@ -121,16 +122,16 @@ function Ensure-CleanTree {
   }
 }
 
-function Ensure-BranchExists {
+function Resolve-BranchExists {
   param([string]$BranchName)
 
-  $local = Invoke-Git -Arguments @('show-ref', '--verify', '--quiet', "refs/heads/$BranchName") -AllowFailure
+  $local = Invoke-Git -Arguments @('show-ref', '--verify', '--quiet', "refs/heads/$BranchName") -AllowFailure -ReadOnly
   if ($local.ExitCode -eq 0) {
     return $BranchName
   }
 
   $remoteRef = "refs/remotes/$Remote/$BranchName"
-  $remoteCheck = Invoke-Git -Arguments @('show-ref', '--verify', '--quiet', $remoteRef) -AllowFailure
+  $remoteCheck = Invoke-Git -Arguments @('show-ref', '--verify', '--quiet', $remoteRef) -AllowFailure -ReadOnly
   if ($remoteCheck.ExitCode -ne 0) {
     throw "Branch '$BranchName' was not found locally or on $Remote."
   }
@@ -164,8 +165,8 @@ function Merge-Branch {
   )
 
   Write-Log "Starting merge for $BranchName"
-  $branchToMerge = Ensure-BranchExists -BranchName $BranchName
-  $divergence = Invoke-Git -Arguments @('rev-list', '--left-right', '--count', "$BaseBranch...$branchToMerge") -Capture
+  $branchToMerge = Resolve-BranchExists -BranchName $BranchName
+  $divergence = Invoke-Git -Arguments @('rev-list', '--left-right', '--count', "$BaseBranch...$branchToMerge") -Capture -ReadOnly
   if ($divergence.Output.Count -gt 0) {
     Write-Log "Divergence $BaseBranch...$branchToMerge => $($divergence.Output[0])"
   }
@@ -217,8 +218,17 @@ function Invoke-Validation {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $repoRoot
+$gitDir = (& git rev-parse --git-dir 2>$null)
+if ($LASTEXITCODE -ne 0 -or -not $gitDir) {
+  throw 'Could not resolve .git directory for the current repository.'
+}
+$gitDirPath = if ([System.IO.Path]::IsPathRooted($gitDir)) {
+  $gitDir
+} else {
+  Join-Path $repoRoot $gitDir
+}
 
-$logsDir = Join-Path $repoRoot 'platform\logging\git-unify'
+$logsDir = Join-Path $gitDirPath 'copilot-unify'
 if (-not (Test-Path $logsDir)) {
   New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 }
@@ -237,7 +247,7 @@ if ($checkpoint) {
   Write-Log "Resuming from checkpoint stage '$($checkpoint.stage)'"
 }
 
-Ensure-CleanTree
+Test-CleanTree
 
 if (-not $SkipFetch) {
   Invoke-Git -Arguments @('fetch', '--all', '--prune')
