@@ -15,7 +15,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521h';
+const SHELL_VERSION = '20260521i';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -80,6 +80,13 @@ function mountPortalViewModeSelector(containerOrId, options = {}) {
     ? document.getElementById(containerOrId)
     : containerOrId;
   if (!container) return () => {};
+
+  const shellSelector = document.getElementById('shell-mode-selector');
+  if (shellSelector && container.id !== 'shell-mode-selector') {
+    container.innerHTML = '';
+    container.hidden = true;
+    return () => {};
+  }
 
   const {
     label = 'Modo de visualizacao:',
@@ -545,6 +552,13 @@ function setupShellNavigation() {
   markInitialStylesAsCore();
 
   document.addEventListener('click', event => {
+    const shellAction = event.target?.closest?.('[data-shell-action]');
+    if (shellAction?.dataset.shellAction === 'logout') {
+      event.preventDefault();
+      window.handleLogout?.();
+      return;
+    }
+
     const link = event.target?.closest?.('a[href]');
     if (!link) return;
     if (link.target === '_blank' || link.hasAttribute('download')) return;
@@ -623,7 +637,10 @@ function updateHeaderUser(user) {
   const email    = user.email || '';
   const display  = user.user_metadata?.full_name || email;
   const initials = email.substring(0, 2).toUpperCase();
-  if (nameEl)   { nameEl.textContent = display; nameEl.style.display = ''; }
+  if (nameEl) {
+    nameEl.textContent = display;
+    nameEl.hidden = false;
+  }
   if (avatarEl)   avatarEl.textContent = initials;
 }
 

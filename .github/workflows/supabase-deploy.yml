@@ -27,6 +27,8 @@ jobs:
             FROM_EMAIL="Portal Hermida Maia <contato@hermidamaia.adv.br>" \
             OFFICE_EMAIL="contato@hermidamaia.adv.br" \
             DIRECTDATA_TOKEN="${{ secrets.DIRECTDATA_TOKEN }}" \
+            AUTENTIQUE_WEBHOOK_SECRET_DOC="${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_DOC }}" \
+            AUTENTIQUE_WEBHOOK_SECRET_SIGN="${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_SIGN }}" \
             --project-ref sspvizogbcyigquqycsz
 
       - name: Deploy portal-notify
@@ -48,4 +50,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy directdata-proxy \
+            --project-ref sspvizogbcyigquqycsz
+
+      - name: Deploy portal-signature-webhook
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy portal-signature-webhook \
             --project-ref sspvizogbcyigquqycsz

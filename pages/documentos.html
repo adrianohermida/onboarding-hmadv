@@ -18,7 +18,7 @@
     };
   </script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script type="module" src="../js/app.js?v=20260521h"></script>
+  <script type="module" src="../js/app.js?v=20260521i"></script>
 
   <style>
   /* ── Page layout ─────────────────────────────────────── */
@@ -591,27 +591,27 @@
     <div class="drawer-header">
       <div>
         <div class="drawer-title" id="drawer-title">Documento</div>
-        <div style="font-size:11px;color:var(--muted);" id="drawer-subtitle">—</div>
+        <div class="drawer-subtitle" id="drawer-subtitle">—</div>
       </div>
       <button class="drawer-close" onclick="closeDrawer()">X</button>
     </div>
     <div class="drawer-tabs" id="drawer-tabs">
       <div class="drawer-tab active" data-tab="view" onclick="switchDrawerTab('view')">Visualizar</div>
       <div class="drawer-tab" data-tab="timeline" onclick="switchDrawerTab('timeline')">Timeline</div>
-      <div class="drawer-tab" data-tab="review" id="drawer-tab-review" onclick="switchDrawerTab('review')" style="display:none;">Avaliar</div>
+      <div class="drawer-tab" data-tab="review" id="drawer-tab-review" onclick="switchDrawerTab('review')" hidden>Avaliar</div>
     </div>
     <!-- View panel -->
     <div class="drawer-panel active" data-tab-panel="view" id="panel-view">
       <div class="pdf-viewer-toolbar" id="viewer-toolbar">
-        <span id="viewer-filename" style="font-size:12px;font-weight:700;color:var(--ink);flex:1;"></span>
+        <span id="viewer-filename" class="viewer-filename"></span>
         <button class="pdf-toolbar-btn" onclick="openFullscreen()">Tela cheia</button>
         <button class="pdf-toolbar-btn" id="btn-download-doc" onclick="downloadDoc()">Baixar</button>
       </div>
       <iframe id="pdf-frame" class="pdf-viewer-frame" src="about:blank"></iframe>
-      <div id="no-preview" style="display:none;text-align:center;padding:40px;color:var(--muted);">
-        <div style="font-size:20px;margin-bottom:12px;">DOC</div>
+      <div id="no-preview" class="no-preview" hidden>
+        <div class="no-preview-icon">DOC</div>
         <div>Arquivo não disponível para pré-visualização.</div>
-        <button class="btn-primary-sm" style="margin-top:12px;" onclick="downloadDoc()">Baixar arquivo</button>
+        <button class="btn-primary-sm no-preview-action" onclick="downloadDoc()">Baixar arquivo</button>
       </div>
     </div>
     <!-- Timeline panel -->
@@ -621,7 +621,7 @@
     <!-- Admin review panel -->
     <div class="drawer-panel" data-tab-panel="review" id="panel-review">
       <div class="drawer-review-form">
-        <div style="margin-bottom:16px;">
+        <div class="drawer-field-block">
           <div class="field-label">Ação</div>
           <div class="review-workflow-btns">
             <button class="rwf-btn success" data-ws="aprovado" onclick="selectWorkflow('aprovado')">Aprovar</button>
@@ -635,7 +635,7 @@
           <label class="field-label" for="review-obs">Observação para o cliente</label>
           <textarea class="field-textarea" id="review-obs" rows="3" placeholder="Explique a decisão ao cliente…"></textarea>
         </div>
-        <div class="field-mb" id="review-sig-wrap" style="display:none;">
+        <div class="field-mb" id="review-sig-wrap" hidden>
           <label class="field-label">Email do signatário</label>
           <input class="field-input" id="review-sig-email" type="email" placeholder="email@cliente.com" />
         </div>
@@ -643,7 +643,7 @@
           <label class="field-label" for="review-admin-notes">Nota interna (visível só para admin)</label>
           <textarea class="field-textarea" id="review-admin-notes" rows="2" placeholder="Anotação interna…"></textarea>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <div class="drawer-actions">
           <button class="btn-ghost-sm" onclick="closeDrawer()">Cancelar</button>
           <button class="btn-primary-sm" id="btn-confirm-review" onclick="confirmReview()" disabled>Confirmar</button>
         </div>
@@ -655,35 +655,39 @@
 <!-- ── Module Script ────────────────────────────────────────────────────────── -->
 <script type="module">
 import { supabase }        from '../services/supabase.js';
-import { DocumentService, AdminService } from '../services/database.js';
+import { DocumentService } from '../services/database.js';
 import { FUNCTIONS_URL }   from '../utils/config.js';
-import { invokeEdgeFunction } from '../services/edge.js';
 import { bus }             from '../modules/events/EventBus.js';
-import { Shell }           from '../modules/ui/Shell.js';
 import { Toast }           from '../modules/ui/Toast.js';
 import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documents/DocumentEngine.js';
-import { UploadEngine }    from '../modules/documents/UploadEngine.js';
+import { DocumentModuleController } from '../modules/documents/DocumentModuleController.js';
+import {
+  getDrawerReviewPayload,
+  renderDrawerHeader,
+  renderDrawerViewer,
+  resetDrawerReview,
+  selectDrawerWorkflow,
+  setDrawerOpen,
+  setDrawerReviewVisible,
+  setDrawerTab,
+} from '../modules/documents/DocumentDrawer.js';
 import { SignatureService } from '../modules/documents/SignatureService.js';
+import {
+  createDocumentUploader,
+  setDocumentCardUploading,
+  triggerDocumentUpload,
+} from '../modules/documents/DocumentUploadActions.js';
+import {
+  renderDocumentCard,
+  renderDocumentHub,
+  renderDocumentRequestsBanner,
+  renderDocumentTimeline,
+  renderSignaturePendingCards,
+} from '../modules/documents/DocumentUi.js';
+import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/documents/DocumentWorkflowActions.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const shell    = new Shell();
-let engine     = new DocumentEngine();
-let uploader   = null;
-let sigService = null;
-
-let currentUser    = null;
-let currentCaso    = null;
-let isAdmin        = false;
-let viewMode       = 'cliente';        // 'cliente' | 'admin'
-let viewingUid     = null;             // admin viewing a client
-let activeFilter   = 'all';
-let drawerDocId    = null;
-let reviewWorkflow = null;
-let drawerSignedUrl = null;
-let docsBooting = false;
-let offDocListChanged = null;
-let offUploadStarted = null;
-let unmountModeSelector = null;
+const controller = new DocumentModuleController({ supabase });
 
 const byId = (id) => document.getElementById(id);
 
@@ -699,88 +703,56 @@ if (document.readyState === 'complete') {
 }
 
 async function bootstrap() {
-  if (docsBooting) return;
-  docsBooting = true;
+  if (!controller.beginBootstrap()) return;
 
   const loadingEl = byId('doc-loading');
   const mainEl = byId('doc-main');
-  if (!loadingEl || !mainEl) { docsBooting = false; return; }
+  if (!loadingEl || !mainEl) { controller.endBootstrap(); return; }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; docsBooting = false; return; }
+  const session = await controller.requireSession();
+  if (!session) { controller.endBootstrap(); return; }
 
-  currentUser = session.user;
-  shell.init();
-
-  // Check admin status
-  const { data: adminRow } = await supabase
-    .from('admin_users').select('user_id').eq('user_id', currentUser.id).maybeSingle();
-  isAdmin = !!adminRow;
-
-  // Check URL params for admin viewing client
-  const params   = new URLSearchParams(window.location.search);
-  viewingUid     = params.get('uid') || null;
-
-  if (isAdmin) {
-    viewMode = window.getPortalViewMode?.() || 'admin';
-    const adminBar = byId('doc-admin-bar');
-    if (adminBar) adminBar.style.display = 'flex';
-    if (typeof unmountModeSelector === 'function') unmountModeSelector();
-    if (typeof window.mountPortalViewModeSelector === 'function') {
-      unmountModeSelector = window.mountPortalViewModeSelector('doc-mode-selector', {
-        adminLabel: 'Admin',
-        onChange: (mode) => { window.setViewMode(mode); },
-      });
-      window.setPortalViewMode?.(viewMode, { source: 'documentos-init' });
-    }
-    if (viewingUid) {
-      const backBtn = byId('btn-back-client');
-      const contextEl = byId('doc-admin-context');
-      if (backBtn) backBtn.style.display = '';
-      if (contextEl) contextEl.textContent = `Revisando documentos do cliente`;
-    }
-  }
+  controller.initShell();
+  await controller.loadAdminContext({
+    onModeChange: (mode) => { window.setViewMode(mode); },
+  });
 
   // Init signature service
-  sigService = new SignatureService(FUNCTIONS_URL, async () => {
+  controller.setServices({
+    signatureService: new SignatureService(FUNCTIONS_URL, async () => {
     const { data: { session: s } } = await supabase.auth.getSession();
     return s?.access_token || '';
+    }),
   });
 
   // Init document engine
-  const svc = viewingUid && isAdmin
-    ? { ...DocumentService, list: () => DocumentService.listForUser(viewingUid) }
-    : DocumentService;
+  controller.setServices({ engine: new DocumentEngine() });
+  const svc = controller.resolveDocumentService(DocumentService);
 
-  await engine.init(svc);
-  await engine.loadRequests();
+  await controller.engine.init(svc);
+  await controller.engine.loadRequests();
 
   // Init upload engine
-  const dropZone = byId('drop-zone-global');
-  uploader = new UploadEngine(dropZone, {
-    onUpload:   (file, tipo) => engine.upload(tipo, file),
-    onProgress: (pct, tipo)  => updateProgress(tipo, pct),
-    onSuccess:  (res, tipo)  => { Toast.success(`${tipo} enviado com sucesso!`); },
-    onError:    (err, tipo)  => Toast.error(err.message || 'Erro ao enviar documento.'),
-    onPreview:  (url, tipo)  => {},
-  });
-  uploader.mount();
+  controller.setServices({ uploader: createDocumentUploader({
+    dropZone: byId('drop-zone-global'),
+    engine: controller.engine,
+    toast: Toast,
+  }) });
 
   // Listen for list changes
-  if (offDocListChanged) offDocListChanged();
-  if (offUploadStarted) offUploadStarted();
-  offDocListChanged = bus.on('document.list.changed', () => renderAll());
-  offUploadStarted = bus.on('upload.started', ({ tipo }) => setCardUploading(tipo, true));
+  controller.clearSubscriptions();
+  controller.addSubscription(bus.on('document.list.changed', () => renderAll()));
+  controller.addSubscription(bus.on('upload.started', ({ tipo }) => setDocumentCardUploading(tipo, true)));
 
   renderAll();
   loadingEl.style.display = 'none';
   mainEl.style.display    = 'block';
-  docsBooting = false;
+  controller.endBootstrap();
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAll() {
-  const stats = engine.getStats();
+  const stats = controller.engine.getStats();
   renderKPIs(stats);
   renderProgress(stats);
   renderRequestsBanner();
@@ -799,7 +771,7 @@ function renderKPIs(stats) {
   pendEl.textContent  = stats.pending;
   analiseEl.textContent    = stats.inReview;
   aprovEl.textContent  = stats.approved;
-  const rejected = engine.getByStatus('rejeitado').length;
+  const rejected = controller.engine.getByStatus('rejeitado').length;
   rejeEl.textContent = rejected;
   sigEl.textContent = stats.sigPend;
 }
@@ -816,193 +788,64 @@ function renderProgress(stats) {
 }
 
 function renderRequestsBanner() {
-  const requests = engine.getRequests();
+  const requests = controller.engine.getRequests();
   const el = byId('requests-banner');
   if (!el) return;
   if (!requests.length) { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = `
-    <div class="requests-banner">
-      <div class="requests-banner-icon">${icon('inbox', {size:24,color:'rgba(255,255,255,.85)'})}</div>
-      <div class="requests-banner-body">
-        <div class="requests-banner-title">O escritório solicitou ${requests.length} documento${requests.length > 1 ? 's' : ''}</div>
-        <div class="requests-banner-sub">Envie os documentos pendentes para agilizar seu processo.</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${requests.slice(0,3).map(r => `
-          <span class="request-pill ${r.priority==='urgent'?'urgent':''}" onclick="scrollToDoc('${r.document_tipo}')">
-            ${r.priority === 'urgent' ? icon('alert-triangle',{size:12,color:'#fca5a5'})+' ' : ''}${esc(r.document_label)}
-          </span>
-        `).join('')}
-      </div>
-    </div>
-  `;
+  el.innerHTML = renderDocumentRequestsBanner(requests);
 }
 
 function renderSignaturePending() {
-  const sigDocs = engine.getAwaitingSignature();
+  const sigDocs = controller.engine.getAwaitingSignature();
   const sec = document.getElementById('sig-section');
   const cards = document.getElementById('sig-cards');
   if (!sigDocs.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
-  cards.innerHTML = sigDocs.map(d => `
-    <div class="sig-card">
-      <div class="sig-card-icon">SIG</div>
-      <div class="sig-card-body">
-        <div class="sig-card-title">${esc(d.label)}</div>
-        <div class="sig-card-meta">${d.autentique_id ? `ID Autentique: ${d.autentique_id}` : 'Aguardando link de assinatura'}</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${d.autentique_id
-          ? `<a href="https://app.autentique.com.br/documento/assinar/${d.autentique_id}" target="_blank" class="doc-act-btn purple">Assinar agora</a>`
-          : ''}
-        <button class="doc-act-btn" onclick="openDrawer('${d.id}')">Ver detalhes</button>
-      </div>
-    </div>
-  `).join('');
+  cards.innerHTML = renderSignaturePendingCards(sigDocs);
 }
 
 function renderDocHub() {
   const hub = document.getElementById('doc-hub');
-  const allDocs = engine.getAll();
-  const filtered = activeFilter === 'all'
-    ? allDocs
-    : allDocs.filter(d => d.workflow_status === activeFilter ||
-        (activeFilter === 'aprovado' && d.workflow_status === 'assinado'));
+  const allDocs = controller.engine.getAll();
+  if (!hub) return;
 
-  // Group by category
-  const cats = {};
-  for (const d of filtered) {
-    const cat = d.category || 'complementares';
-    if (!cats[cat]) cats[cat] = [];
-    cats[cat].push(d);
-  }
-
-  if (!Object.keys(cats).length && !allDocs.filter(d=>d.direction==='office_to_client').length) {
-    hub.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">${icon('folder-open',{size:32,color:'var(--muted)'})}</div><div>Nenhum documento encontrado.</div></div>`;
-    return;
-  }
-
-  const catOrder = ['identidade','residencia','financeiro','dividas','contratos','cnj','judiciais','complementares'];
-  const sortedCats = catOrder.filter(c => cats[c]);
-
-  hub.innerHTML = renderOfficeDocsSection(allDocs) + sortedCats.map(catKey => {
-    const catMeta  = DOCUMENT_CATEGORIES[catKey] || { label: catKey, icon: 'folder', color: '#6b7280' };
-    const docs     = cats[catKey];
-    const approved = docs.filter(d => ['aprovado','assinado'].includes(d.workflow_status)).length;
-    const catPct   = docs.length > 0 ? Math.round((approved / docs.length) * 100) : 0;
-
-    return `
-      <div class="cat-section" id="cat-${catKey}">
-        <div class="cat-section-header">
-          <div class="cat-icon">${icon(catMeta.icon, {size:16, color: catMeta.color || 'var(--blue)'})}</div>
-          <div class="cat-title">${catMeta.label}</div>
-          <div class="cat-progress-bar">
-            <div class="cat-progress-fill" style="width:${catPct}%;background:${catMeta.color || 'var(--blue)'}"></div>
-          </div>
-          <div class="cat-count">${approved}/${docs.length}</div>
-        </div>
-        <div class="doc-cards-grid">
-          ${docs.map(d => renderDocCard(d)).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
+  hub.innerHTML = renderDocumentHub({
+    allDocs,
+    activeFilter: controller.activeFilter,
+    categories: DOCUMENT_CATEGORIES,
+    renderCard: renderDocCard,
+  });
 
   // Show/hide drop zone for client mode
   const dz = document.getElementById('drop-zone-global');
-  dz.style.display = (!isAdmin || viewMode === 'cliente') ? 'none' : 'none'; // hidden globally, per-card upload used
+  dz.style.display = (!controller.isAdmin || controller.viewMode === 'cliente') ? 'none' : 'none'; // hidden globally, per-card upload used
 
   // Activate Lucide icons on static data-lucide elements
   if (window.lucide?.createIcons) window.lucide.createIcons();
 }
 
 function renderDocCard(d) {
-  const ws      = WORKFLOW_STATES[d.workflow_status] || WORKFLOW_STATES.pendente_envio;
-  const canUpload = ['pendente_envio','pendente_correcao','rejeitado'].includes(d.workflow_status) && (!isAdmin || viewMode === 'cliente');
+  const canUpload = ['pendente_envio','pendente_correcao','rejeitado'].includes(d.workflow_status) && (!controller.isAdmin || controller.viewMode === 'cliente');
   const canView   = !!d.storage_path;
-  const adminMode = isAdmin && viewMode === 'admin';
-
-  const noteHtml = d.observacao_admin
-    ? `<div class="doc-card-note">${esc(d.observacao_admin)}</div>` : '';
-  const adminNoteHtml = adminMode && d.admin_notes
-    ? `<div class="doc-card-note is-admin">${icon('lock',{size:11,color:'#6b7280'})} ${esc(d.admin_notes)}</div>` : '';
-
-  const metaHtml = d.nome_arquivo
-    ? `<div class="doc-card-filename">${icon('paperclip',{size:11,color:'var(--muted)'})} ${esc(d.nome_arquivo)} ${d.file_size ? `<span class="doc-card-size">(${fmtSize(d.file_size)})</span>` : ''}</div>` : '';
-  const metaDate = d.updated_at
-    ? `<span>Atualizado: ${timeAgo(d.updated_at)}</span>` : '';
-  const version = d.version > 1 ? `<span>v${d.version}</span>` : '';
-
-  let actions = '';
-
-  if (canUpload) {
-    actions += `<button class="doc-act-btn primary" onclick="triggerUpload('${d.tipo}')">${icon('upload-cloud',{size:13,color:'#fff'})} Enviar</button>`;
-  }
-  if (canView) {
-    actions += `<button class="doc-act-btn" onclick="openDrawer('${d.id || d.tipo}')">${icon('eye',{size:13,color:'var(--ink2)'})} Ver</button>`;
-  }
-  if (adminMode) {
-    actions += `<button class="doc-act-btn warn" onclick="openDrawer('${d.id || d.tipo}', true)">${icon('clipboard-check',{size:13,color:'#fff'})} Avaliar</button>`;
-    if (d.storage_path && d.workflow_status === 'aprovado') {
-      actions += `<button class="doc-act-btn purple" onclick="openSigModal('${d.id}')">${icon('pen-line',{size:13,color:'#fff'})} Assinar</button>`;
-    }
-  }
-  if (!actions) {
-    actions = `<span style="font-size:11px;color:var(--muted);">Nenhuma ação disponível</span>`;
-  }
-
-  return `
-    <div class="doc-card status-${d.workflow_status}" id="card-${d.tipo}">
-      <div class="doc-card-top">
-        <div class="doc-card-icon">${icon(d.icon || 'file-text', {size:20, color: DOCUMENT_CATEGORIES[d.category]?.color || 'var(--blue)'})}</div>
-        <div class="doc-card-header">
-          <div class="doc-card-title">${esc(d.label)}</div>
-          <div class="doc-card-cat">${DOCUMENT_CATEGORIES[d.category]?.label || d.category || '—'}</div>
-          ${metaHtml}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-          <div class="doc-status-badge" style="background:${ws.bg};color:${ws.color};">
-            ${icon(ws.icon, {size:11, color:ws.color})} ${ws.label}
-          </div>
-          <span class="${d.required ? 'doc-required-pill' : 'doc-optional-pill'}">${d.required ? 'Obrigatório' : 'Opcional'}</span>
-        </div>
-      </div>
-      ${noteHtml}${adminNoteHtml}
-      ${metaDate || version ? `<div class="doc-card-meta">${metaDate}${version}</div>` : ''}
-      <div class="doc-upload-progress" id="prog-${d.tipo}">
-        <div class="doc-upload-fill" id="prog-fill-${d.tipo}"></div>
-      </div>
-      <div class="doc-card-divider"></div>
-      <div class="doc-card-actions">${actions}</div>
-    </div>
-  `;
+  const adminMode = controller.isAdmin && controller.viewMode === 'admin';
+  return renderDocumentCard(d, {
+    workflowStates: WORKFLOW_STATES,
+    categories: DOCUMENT_CATEGORIES,
+    canUpload,
+    canView,
+    adminMode,
+  });
 }
 
 // ── Upload ────────────────────────────────────────────────────────────────────
 window.triggerUpload = (tipo) => {
-  const input = document.createElement('input');
-  input.type   = 'file';
-  input.accept = '.pdf,.jpg,.jpeg,.png,.webp';
-  input.onchange = () => {
-    if (input.files?.[0]) uploader._handleFile(input.files[0], tipo);
-  };
-  input.click();
+  triggerDocumentUpload(controller.uploader, tipo);
 };
-
-function setCardUploading(tipo, active) {
-  const prog = document.getElementById(`prog-${tipo}`);
-  if (prog) prog.classList.toggle('active', active);
-}
-
-function updateProgress(tipo, pct) {
-  const fill = document.getElementById(`prog-fill-${tipo}`);
-  if (fill) fill.style.width = `${pct}%`;
-}
 
 // ── Filter ────────────────────────────────────────────────────────────────────
 window.setFilter = (filter) => {
-  activeFilter = filter;
+  controller.setActiveFilter(filter);
   document.querySelectorAll('.filter-chip').forEach(c => {
     c.classList.toggle('active', c.dataset.filter === filter);
   });
@@ -1016,70 +859,48 @@ window.scrollToDoc = (tipo) => {
 
 // ── View Mode ─────────────────────────────────────────────────────────────────
 window.setViewMode = (mode) => {
-  viewMode = mode;
+  controller.setViewMode(mode);
   renderAll();
 };
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
 window.openDrawer = async (docIdOrTipo, adminReview = false) => {
-  const doc = engine.getAll().find(d => d.id === docIdOrTipo || d.tipo === docIdOrTipo);
+  const doc = controller.engine.getAll().find(d => d.id === docIdOrTipo || d.tipo === docIdOrTipo);
   if (!doc) return;
-  drawerDocId     = doc.id;
-  drawerSignedUrl = null;
+  controller.openDrawer(doc.id);
 
-  document.getElementById('drawer-title').textContent    = doc.label;
-  document.getElementById('drawer-subtitle').textContent = `${DOCUMENT_CATEGORIES[doc.category]?.label || '—'} · ${WORKFLOW_STATES[doc.workflow_status]?.label || '—'}`;
+  renderDrawerHeader(doc, DOCUMENT_CATEGORIES, WORKFLOW_STATES);
 
   // Show/hide review tab
-  const reviewTab = document.getElementById('drawer-tab-review');
-  reviewTab.style.display = (isAdmin && viewMode === 'admin') ? '' : 'none';
+  setDrawerReviewVisible(controller.isAdmin && controller.viewMode === 'admin');
 
   // Reset review state
-  reviewWorkflow = null;
-  document.getElementById('btn-confirm-review').disabled = true;
-  document.querySelectorAll('.rwf-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('review-obs').value        = doc.observacao_admin || '';
-  document.getElementById('review-admin-notes').value = doc.admin_notes      || '';
+  resetDrawerReview(doc);
 
   // Load signed URL for viewer
   if (doc.storage_path) {
     try {
-      drawerSignedUrl = await DocumentService.getSignedUrl(doc.storage_path);
-      const frame     = document.getElementById('pdf-frame');
-      const noPreview = document.getElementById('no-preview');
-      document.getElementById('viewer-filename').textContent = doc.nome_arquivo || doc.label;
-      if (doc.mime_type?.startsWith('image/')) {
-        frame.src = drawerSignedUrl;
-        noPreview.style.display = 'none';
-        frame.style.display     = 'block';
-      } else {
-        frame.src = drawerSignedUrl + '#toolbar=1&navpanes=0&view=FitH';
-        noPreview.style.display = 'none';
-        frame.style.display     = 'block';
-      }
+      controller.setDrawerSignedUrl(await DocumentService.getSignedUrl(doc.storage_path));
+      renderDrawerViewer(doc, controller.drawerSignedUrl);
     } catch {
-      document.getElementById('pdf-frame').style.display    = 'none';
-      document.getElementById('no-preview').style.display   = 'block';
+      renderDrawerViewer(doc, null);
     }
   } else {
-    document.getElementById('pdf-frame').src              = 'about:blank';
-    document.getElementById('pdf-frame').style.display    = 'none';
-    document.getElementById('no-preview').style.display   = 'block';
+    renderDrawerViewer(doc, null);
   }
 
   // Load timeline
-  const timeline = drawerDocId ? await engine.getTimeline(drawerDocId) : [];
+  const timeline = controller.drawerDocId ? await controller.engine.getTimeline(controller.drawerDocId) : [];
   renderTimeline(timeline, doc);
 
   // Open to appropriate tab
-  switchDrawerTab(adminReview ? 'review' : 'view');
-  document.getElementById('doc-drawer').classList.add('open');
+  setDrawerTab(adminReview ? 'review' : 'view');
+  setDrawerOpen(true);
 };
 
 window.closeDrawer = () => {
-  document.getElementById('doc-drawer').classList.remove('open');
-  drawerDocId = null;
-  drawerSignedUrl = null;
+  setDrawerOpen(false);
+  controller.closeDrawer();
 };
 
 // Close on backdrop click
@@ -1091,78 +912,52 @@ if (drawerEl) {
 }
 
 window.switchDrawerTab = (tab) => {
-  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.querySelectorAll('.drawer-panel').forEach(p => p.classList.toggle('active', p.dataset.tabPanel === tab));
+  setDrawerTab(tab);
 };
 
 // ── Timeline ──────────────────────────────────────────────────────────────────
 function renderTimeline(events, doc) {
   const el = document.getElementById('timeline-items');
-  if (!events.length) {
-    const ws = WORKFLOW_STATES[doc.workflow_status];
-    events = [{ evento_tipo: doc.workflow_status, descricao: `Status atual: ${ws?.label || '—'}`, created_at: doc.updated_at }];
-  }
-  const TL_ICONS = {
-    'document.enviado':      'UP',
-    'document.aprovado':     'OK',
-    'document.rejeitado':    'NO',
-    'document.em_analise':   'AN',
-    'document.arquivado':    'ARQ',
-    'signature.requested':   'SIG',
-    'signature.completed':   'DONE',
-  };
-  el.innerHTML = events.map(e => `
-    <div class="timeline-item">
-      <div class="tl-dot">${TL_ICONS[e.evento_tipo] || 'LOG'}</div>
-      <div class="tl-body">
-        <div class="tl-event">${esc(e.descricao)}</div>
-        <div class="tl-meta">${e.author_name ? `${esc(e.author_name)} · ` : ''}${timeAgo(e.created_at)}</div>
-        ${e.payload?.observacao ? `<div class="tl-note">${esc(e.payload.observacao)}</div>` : ''}
-      </div>
-    </div>
-  `).join('');
+  if (el) el.innerHTML = renderDocumentTimeline(events, doc, WORKFLOW_STATES);
 }
 
 // ── Admin Review ──────────────────────────────────────────────────────────────
 window.selectWorkflow = (ws) => {
-  reviewWorkflow = ws;
-  document.querySelectorAll('.rwf-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.ws === ws);
-  });
-  document.getElementById('btn-confirm-review').disabled = false;
-  document.getElementById('review-sig-wrap').style.display = ws === 'aguardando_assinatura' ? '' : 'none';
+  controller.setReviewWorkflow(ws);
+  selectDrawerWorkflow(ws);
 };
 
 window.confirmReview = async () => {
-  if (!reviewWorkflow || !drawerDocId) return;
+  if (!controller.reviewWorkflow || !controller.drawerDocId) return;
   const btn = document.getElementById('btn-confirm-review');
   btn.disabled = true;
   btn.innerHTML = '<span class="fd-spinner-inline"></span> Salvando…';
 
-  const obs        = document.getElementById('review-obs').value.trim() || null;
-  const adminNotes = document.getElementById('review-admin-notes').value.trim() || null;
-  const sigEmail   = document.getElementById('review-sig-email').value.trim() || null;
+  const { obs, adminNotes, sigEmail } = getDrawerReviewPayload();
 
   try {
-    if (reviewWorkflow === 'aguardando_assinatura' && sigEmail) {
-      const doc = engine.getAll().find(d => d.id === drawerDocId);
-      await sigService.requestSignature({
-        documentId:   drawerDocId,
-        storagePath:  doc?.storage_path,
-        signerEmail:  sigEmail,
-        signerName:   sigEmail,
-        documentName: document.getElementById('drawer-title').textContent,
-      });
-      await engine._adminWorkflow(drawerDocId, 'aguardando_assinatura', obs, adminNotes);
-    } else {
-      await engine._adminWorkflow(drawerDocId, reviewWorkflow, obs, adminNotes);
-    }
+    await applyDocumentReview({
+      engine: controller.engine,
+      signatureService: controller.signatureService,
+      docId: controller.drawerDocId,
+      workflowStatus: controller.reviewWorkflow,
+      obs,
+      adminNotes,
+      sigEmail,
+      documentName: document.getElementById('drawer-title')?.textContent,
+    });
 
-    const label = WORKFLOW_STATES[reviewWorkflow]?.label || reviewWorkflow;
+    const label = WORKFLOW_STATES[controller.reviewWorkflow]?.label || controller.reviewWorkflow;
     Toast.success(`Documento atualizado: ${label}`);
 
     // Freshdesk / email notification (fire-and-forget)
-    _notifyDocUpdate(drawerDocId, reviewWorkflow, obs).catch(console.warn);
+    notifyDocumentWorkflow({
+      engine: controller.engine,
+      docId: controller.drawerDocId,
+      workflowStatus: controller.reviewWorkflow,
+      obs,
+      targetUserId: controller.viewingUid,
+    }).catch(error => console.warn('[Documentos] notify error:', error.message));
 
     closeDrawer();
 
@@ -1174,60 +969,6 @@ window.confirmReview = async () => {
   }
 };
 
-// ── Freshdesk / notify integration ───────────────────────────────────────────
-async function _notifyDocUpdate(docId, workflowStatus, obs) {
-  try {
-    const doc = engine.getAll().find(d => d.id === docId);
-    const tipo = doc?.tipo || docId;
-    const EVENT_MAP = {
-      aprovado:              'document_approved',
-      rejeitado:             'document_rejected',
-      pendente_correcao:     'document_correction_requested',
-      aguardando_assinatura: 'document_signature_requested',
-      assinado:              'document_signed',
-    };
-    const notifyType = EVENT_MAP[workflowStatus];
-    if (!notifyType) return;
-
-    await invokeEdgeFunction('portal-notify', {
-      method: 'POST',
-      body: {
-        type:        notifyType,
-        payload: {
-          tipo,
-          tipoLabel:  doc?.label || tipo,
-          status:     workflowStatus,
-          observacao: obs,
-        },
-        // If viewing client, pass their user context
-        ...(viewingUid ? { targetUserId: viewingUid } : {}),
-      },
-      retries: 1,
-      timeoutMs: 10000,
-    });
-  } catch (e) {
-    console.warn('[Documentos] notify error:', e.message);
-  }
-}
-
-// ── Office documents section ──────────────────────────────────────────────────
-function renderOfficeDocsSection(docs) {
-  const officeDocs = docs.filter(d => d.direction === 'office_to_client');
-  if (!officeDocs.length) return '';
-  return `
-    <div class="cat-section" id="cat-office-to-client" style="margin-bottom:24px;">
-      <div class="cat-section-header" style="background:linear-gradient(90deg,#f5f3ff,#ede9fe);border-radius:10px;padding:12px 16px;margin-bottom:12px;border-bottom:none;">
-        <div class="cat-icon">${icon('inbox', {size:16, color:'#6d28d9'})}</div>
-        <div class="cat-title" style="color:#4c1d95;">Documentos do Escritório para Você</div>
-        <div class="cat-count" style="color:#7c3aed;">${officeDocs.length} doc${officeDocs.length > 1 ? 's' : ''}</div>
-      </div>
-      <div class="doc-cards-grid">
-        ${officeDocs.map(d => renderDocCard(d)).join('')}
-      </div>
-    </div>
-  `;
-}
-
 // ── Viewer actions ────────────────────────────────────────────────────────────
 window.openFullscreen = () => {
   const frame = document.getElementById('pdf-frame');
@@ -1235,61 +976,17 @@ window.openFullscreen = () => {
 };
 
 window.downloadDoc = () => {
-  if (drawerSignedUrl) window.open(drawerSignedUrl, '_blank');
+  if (controller.drawerSignedUrl) window.open(controller.drawerSignedUrl, '_blank');
 };
 
 // ── Signature modal ───────────────────────────────────────────────────────────
 window.openSigModal = (docId) => {
-  drawerDocId = docId;
   openDrawer(docId, true);
   setTimeout(() => selectWorkflow('aguardando_assinatura'), 100);
 };
 
-// ── Utility ───────────────────────────────────────────────────────────────────
-function esc(s) {
-  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-}
-
-/**
- * Render a Lucide icon as an SVG string.
- * Falls back to a small colored dot if Lucide is unavailable.
- */
-function icon(name, { size = 16, color = 'currentColor', strokeWidth = 1.5 } = {}) {
-  if (window.lucide?.icons?.[name]) {
-    return window.lucide.icons[name].toSvg({
-      width: size, height: size,
-      stroke: color,
-      'stroke-width': strokeWidth,
-      fill: 'none',
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round',
-    });
-  }
-  // fallback: colored square
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect x="2" y="2" width="${size-4}" height="${size-4}" rx="2" fill="${color}" opacity=".7"/></svg>`;
-}
-
-function timeAgo(ts) {
-  if (!ts) return '—';
-  const diff = Date.now() - new Date(ts).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1)  return 'agora mesmo';
-  if (m < 60) return `${m}min atrás`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h atrás`;
-  const d = Math.floor(h / 24);
-  return `${d}d atrás`;
-}
-
-function fmtSize(bytes) {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1048576) return `${(bytes/1024).toFixed(0)}KB`;
-  return `${(bytes/1048576).toFixed(1)}MB`;
-}
-
 function handleError(err) {
-  docsBooting = false;
+  controller.endBootstrap();
   console.error('[Documentos] bootstrap error:', err);
   Toast.error('Erro ao carregar documentos. Tente recarregar.');
   const loadingEl = byId('doc-loading');
@@ -1302,13 +999,7 @@ function handleError(err) {
 }
 
 document.addEventListener('app:route-will-change', () => {
-  if (typeof unmountModeSelector === 'function') {
-    unmountModeSelector();
-    unmountModeSelector = null;
-  }
-  if (offDocListChanged) { offDocListChanged(); offDocListChanged = null; }
-  if (offUploadStarted) { offUploadStarted(); offUploadStarted = null; }
-  docsBooting = false;
+  controller.cleanup();
 });
 </script>
 
