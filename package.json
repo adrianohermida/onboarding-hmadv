@@ -21,7 +21,8 @@
     "validate:financial-intelligence": "node platform/scripts/validate-financial-intelligence-foundation.mjs",
     "validate:legal-operations": "node platform/scripts/validate-legal-operations-foundation.mjs",
     "validate:client-experience": "node platform/scripts/validate-client-experience-foundation.mjs",
-    "validate:ai-os": "node platform/scripts/validate-ai-os-foundation.mjs"
+    "validate:ai-os": "node platform/scripts/validate-ai-os-foundation.mjs",
+    "validate:compliance-os": "node platform/scripts/validate-compliance-os-foundation.mjs"
   },
   "repository": {
     "type": "git",
