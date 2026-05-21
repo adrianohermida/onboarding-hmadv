@@ -1663,16 +1663,45 @@ document.addEventListener('app:user-loaded', ({ detail }) => {
   const emailEl = document.getElementById('email');
   if (emailEl) emailEl.value = user?.email || '';
 
-  // Show "already submitted" banner when form was already finalized
+  // Check portal_documentos workflow_status to determine banner + button state
   if (caso?.onboarding_done) {
-    const banner = document.getElementById('form-submitted-banner');
-    if (banner) banner.style.display = '';
-    if (_fromJourney) {
-      const backLink = document.getElementById('form-back-journey-link');
-      if (backLink) backLink.style.display = 'inline';
-    }
-    const btn = document.getElementById('btn-finalizar');
-    if (btn) { btn.disabled = true; btn.textContent = 'Formulário já enviado'; }
+    supabase
+      .from('portal_documentos')
+      .select('workflow_status,admin_notes')
+      .eq('user_id', user.id)
+      .eq('tipo', 'formulario_cnj_online')
+      .maybeSingle()
+      .then(({ data: fd }) => {
+        const wf = fd?.workflow_status || 'em_analise';
+        const isCorrection = wf === 'rejeitado' || wf === 'pendente_correcao';
+        const banner   = document.getElementById('form-submitted-banner');
+        const iconEl   = document.getElementById('form-banner-icon');
+        const titleEl  = document.getElementById('form-banner-title');
+        const bodyEl   = document.getElementById('form-banner-body');
+        const backLink = document.getElementById('form-back-journey-link');
+        const btn      = document.getElementById('btn-finalizar');
+
+        if (banner) {
+          if (isCorrection) {
+            // Amber/red correction banner — button stays enabled for resubmission
+            banner.style.cssText += ';background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.3);';
+            if (iconEl) { iconEl.setAttribute('stroke', '#c0392b'); iconEl.innerHTML = '<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>'; }
+            if (titleEl) { titleEl.style.color = '#c0392b'; titleEl.textContent = wf === 'rejeitado' ? 'Correção necessária' : 'Correção solicitada pelo escritório'; }
+            if (bodyEl)  bodyEl.textContent = fd?.admin_notes || 'O escritório solicitou correções. Atualize os dados e reenvie o formulário.';
+            if (btn)     { btn.disabled = false; btn.textContent = 'Reenviar formulário corrigido'; }
+          } else {
+            // Green submitted banner — button disabled
+            banner.style.cssText += ';background:rgba(21,128,61,.08);border:1px solid rgba(21,128,61,.25);';
+            if (iconEl) { iconEl.setAttribute('stroke', '#15803d'); iconEl.innerHTML = '<path d="M20 6L9 17l-5-5"/>'; }
+            if (titleEl) { titleEl.style.color = '#15803d'; titleEl.textContent = 'Formulário já enviado ao escritório'; }
+            if (bodyEl)  bodyEl.textContent = 'Você já preencheu e enviou este formulário. O escritório irá analisar e entrar em contato.';
+            if (btn)     { btn.disabled = true; btn.textContent = 'Formulário já enviado'; }
+          }
+          banner.style.display = '';
+        }
+
+        if (_fromJourney && backLink) backLink.style.display = 'inline';
+      });
   }
 
   if (!caso) return;
