@@ -1,305 +1,299 @@
-# Arquitetura do Portal HMADV — Superendividamento CNJ
+# Arquitetura Enterprise — Portal HMADV
+## Superendividamento CNJ · Lei 14.181/2021 · Recomendação CNJ 125/2021
 
-> **Lei 14.181/2021 + Recomendação CNJ 125/2021 (Anexo II)**
-> Versão: Sprint 7 — Enterprise Architecture
-> Última atualização: 2026-05-20
-
----
-
-## Princípios Fundamentais
-
-```
-NÃO recrie o banco.      NÃO reinvente funcionalidades.      NÃO quebre compatibilidade.
-```
-
-O sistema é uma **evolução organizada do ecossistema existente** — não um sistema novo desconectado. Toda expansão é aditiva: `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE`.
+> **Princípio fundamental:** Este sistema é uma **evolução organizada do ecossistema existente** —
+> não um sistema novo desconectado. Toda expansão é **aditiva**: `ADD COLUMN IF NOT EXISTS`,
+> `CREATE OR REPLACE`, `CREATE TABLE IF NOT EXISTS`.
+>
+> **Versão:** Sprint 8.5 — Enterprise Architecture Completo  
+> **Última atualização:** 2026-05-20
 
 ---
 
-## Mapa de Ecossistema
-
-### Schemas ativos (246+ tabelas)
-
-| Schema | Responsabilidade | Tabelas-chave |
-|--------|-----------------|---------------|
-| `public` | Core do portal CNJ | `portal_casos`, `portal_dividas`, `portal_documentos`, `portal_workspaces`, `portal_workspace_members`, `portal_cnj_timeline`, `portal_cnj_notifications` |
-| `re_*` | Plataforma RE (forms, journeys, documents, tasks) | `re_users`, `re_forms`, `re_journeys`, `re_documents`, `re_tasks`, `re_form_responses` |
-| `freshdesk_*` | CRM / Suporte | `freshdesk_contacts`, `freshdesk_tickets`, `freshdesk_agents` |
-| `freshsales_*` | CRM / Vendas | `freshsales_contacts`, `freshsales_deals` |
-| `billing_*` | Faturamento / Contratos | `billing_contracts`, `billing_invoices` |
-| `agentlab_*` | IA / Automação | `agentlab_agents`, `agentlab_runs` |
-| `auth` | Supabase Auth (não modificar) | `auth.users` |
-| `storage` | Supabase Storage (não modificar) | `storage.objects`, `storage.buckets` |
-
-### Engines existentes — NÃO recriar
-
-| Engine | Localização | Uso |
-|--------|-------------|-----|
-| Form Builder | `re_forms` + `re_form_responses` | Formulários dinâmicos |
-| Onboarding Journey | `re_journeys` | Fluxo de onboarding genérico |
-| Document Engine | `re_documents` | GED / gestão de documentos |
-| Task/Workflow | `re_tasks` | Automação e orquestração |
-| **CNJ Engine** | `js/cnj-engine.js` | Cálculos Lei 14.181 (SELIC, cap cartão, Price, mínimo existencial) |
-
----
-
-## Arquitetura Multi-tenant
+## Regras Absolutas (imutáveis)
 
 ```
-platform_admin (is_platform_admin = true)
-    └── portal_workspaces  (slug: hmadv-principal, hmadv-sp, ...)
-            └── portal_workspace_members  (role: owner | admin | advogado | estagiario | member)
-                    └── portal_casos  (workspace_id FK)
-                            └── portal_cnj_timeline (append-only)
-                            └── portal_documentos
-                            └── portal_dividas
-```
-
-### Funções de autorização (SECURITY DEFINER)
-
-```sql
-is_platform_admin()   -- super-admin com acesso irrestrito
-is_any_admin()        -- admin_users + platform_admin + workspace owner/admin
-my_workspace_ids()    -- array de workspace_ids do usuário atual
-get_re_user_id()      -- auth.uid() → re_users.id
+✗  PROIBIDO: DROP TABLE · RENAME TABLE · remover colunas · alterar FKs incompatíveis
+✗  PROIBIDO: recriar engines existentes (forms, journeys, documents, workflows)
+✓  OBRIGATÓRIO: reutilizar tabelas existentes · expandir com ADD COLUMN IF NOT EXISTS
+✓  OBRIGATÓRIO: respeitar auth.users · RLS · Storage · Realtime
+✓  OBRIGATÓRIO: migrations em /supabase/migrations-safe · verificar existência · reversíveis
 ```
 
 ---
 
-## Fluxo CNJ — Lei do Superendividamento
+## 1. Mapa do Ecossistema (246+ tabelas auditadas)
 
-```
-Cliente                    Portal                      Backend / Integrações
-  │                          │                                │
-  ├─ Acessa /onboarding ────►│                                │
-  │                          ├─ Step 1: CPF → DirectData ────►│ (API DirectData)
-  │                          ├─ Step 2-4: Formulário CNJ      │
-  │                          ├─ Step 5: Mapa de Credores      │
-  │                          │   ├─ SELIC correction          │
-  │                          │   ├─ Cap cartão 200%           │
-  │                          │   └─ Price amortization        │
-  │                          ├─ Step 6: Análise (cnj-engine)  │
-  │                          └─ Step 7: Documentação          │
-  │                                 │                         │
-  │                          finalizarCadastro()              │
-  │                                 ├──────────────────────► portal_casos (upsert)
-  │                                 │                        portal_cnj_timeline (trigger)
-  │                                 └──────────────────────► Freshdesk ticket (webhook)
-  │                                                          portal_cnj_notifications (queue)
-```
+### Prefixos de domínio
 
-### Steps do Formulário CNJ (7 etapas)
-
-| Step | Conteúdo | Campos-chave | CNJ Ref |
-|------|----------|--------------|---------|
-| 1 | Identificação | CPF, nome, RG, endereços, telefones | Anexo II §1 |
-| 2 | Socioeconômico | situacao_profissional, renda, dependentes | §2a-c |
-| 3 | Despesas e Patrimônio | 12 categorias, imóvel, veículo | §2d-i |
-| 4 | Endividamento | causas, negativações, como soube | §2j-o |
-| 5 | Mapa de Credores | credores_cnj[], SELIC, cap cartão | §3 |
-| 6 | Análise | calcAnaliseGlobal(), plano art. 104-A | art. 104-A CDC |
-| 7 | Documentação | checklist, JSON preview, observações | — |
+| Prefixo | Responsabilidade | Tabelas principais |
+|---------|-----------------|---------------------|
+| `portal_*` | Core CNJ superendividamento | `portal_casos`, `portal_dividas`, `portal_documentos`, `portal_workspaces`, `portal_workspace_members`, `portal_cnj_timeline`, `portal_cnj_notifications` |
+| `re_*` | Plataforma RE (engines reutilizáveis) | `re_users`, `re_forms`, `re_form_responses`, `re_form_answers`, `re_journeys`, `re_journey_steps`, `re_documents`, `re_tasks`, `re_notifications`, `re_invoices` |
+| `freshdesk_*` | Mirror CRM Freshdesk (SSOT Supabase) | `freshdesk_tickets` (154), `freshdesk_contacts` (5999), `freshdesk_agents`, `freshdesk_groups`, `freshdesk_articles` (249) |
+| `freshsales_*` | Mirror CRM Freshsales | `freshsales_contacts` (109), `freshsales_deals_registry` (217), `freshsales_products` (8) |
+| `billing_*` | Faturamento / Contratos | `billing_contracts` (250), `billing_receivables` (750), `billing_import_rows` (5954) |
+| `agentlab_*` | IA / Automação / RAG | `agentlab_knowledge_chunks` (10225), `agentlab_intents` (31), `agentlab_workflow_library` (20), `agentlab_conversation_threads` (23) |
+| `hmadv_*` | Módulos HMADV-específicos | `hmadv_finance_admin_settings`, `hmadv_market_ads_*` |
 
 ---
 
-## Cálculos Legais — `js/cnj-engine.js`
-
-### Constantes
-
-```javascript
-SALARIO_MINIMO       = 1622.00   // vigente 2024
-SELIC_ANUAL          = 0.1375    // Lei 14.905/2024
-SELIC_MENSAL         = (1 + SELIC_ANUAL)^(1/12) - 1
-CAP_CARTAO_FATOR     = 2.0       // 200% do valor original
-PRAZO_MAX_MESES      = 60        // art. 104-A CDC
-MINIMO_EXISTENCIAL   = 405.50    // 25% SM × Decreto 11.150/2022
-```
-
-### Funções principais
-
-| Função | Finalidade |
-|--------|-----------|
-| `calcMinimoExistencial()` | Retorna R$ 405,50 (25% SM) |
-| `corrigirPorSelic(valor, dataVenc, dataBase?)` | Correção SELIC com contagem de meses |
-| `aplicarCapCartao(original, pago, saldo)` | Cap 200% — Lei 14.181 art. 54-B |
-| `calcSaldoSemJurosFuturos(pmt, taxa, n)` | PV pela tabela Price |
-| `calcCredor(credor)` | Aplica Price + SELIC + cap automaticamente |
-| `calcPlanoPagamento({...})` | Plano art. 104-A, viabilidade, prazo necessário |
-| `calcAnaliseGlobal({...})` | Análise completa: comprometimento, mínimo existencial, alertas |
-| `buildCNJJson(caso)` | Gera JSON estruturado CNJ (§1, §2a-o, §3) para petições |
-| `saveDraft / loadDraft / clearDraft` | Autosave localStorage (`cnj_draft`) |
-
----
-
-## Schema de Banco — Tabelas Principais
-
-### `portal_casos` — case central
-
-Colunas nativas + expansões Sprint 7 + bridges Safe 001:
+## 2. Diagrama Multi-tenant
 
 ```
-id, user_id, workspace_id, full_name, cpf, data_nascimento, ...
--- Sprint 7 (CNJ):
-situacao_profissional, renda_familiar, despesas, patrimonio,
-causas_endividamento, negativacoes, conhecimento_credito,
-credores_cnj, comprometimento_mensal, plano_pagamento,
-cnj_json, cnj_step_atual
--- Safe 001 (bridges):
-rg_emissor, re_user_id, fd_contact_id, fd_ticket_id,
-workspace_id, metadata, extra_data, settings
-```
-
-### `portal_cnj_timeline` — log imutável
-
-```
-id, caso_id, workspace_id, evento_tipo (CHECK 16 tipos),
-evento_subtipo, descricao, payload, author_uid, author_role,
-fd_ticket_id, re_task_id, documento_id, step_cnj,
-is_visible_client, created_at   -- sem updated_at (append-only)
-```
-
-**Triggers automáticos:**
-- `trg_auto_timeline_portal_casos` → grava ao mudar `fase`, `cnj_step_atual`, `onboarding_done`
-- `trg_auto_timeline_portal_documentos` → grava ao aprovar/rejeitar documento
-
-### `portal_cnj_notifications` — fila multi-canal
-
-```
-id, caso_id, workspace_id, timeline_id,
-recipient_uid, recipient_email, canal (email|freshdesk|portal|whatsapp|sms),
-assunto, corpo_html, corpo_texto, template_key, template_vars,
-status (pendente|enviado|falhou|ignorado|cancelado),
-tentativas, max_tentativas, ultimo_erro,
-agendado_para, enviado_em, resend_id, fd_note_id
+auth.users (Supabase Auth — SSOT de identidade)
+    │
+    ├─── portal_workspace_members ─── portal_workspaces (1 escritório = 1 workspace)
+    │         role: owner/admin/member     slug, name, plan, settings
+    │
+    ├─── portal_casos ─────────────── workspace_id → portal_workspaces
+    │         user_id (1:1 com auth.users)
+    │         re_user_id → re_users         ← bridge para plataforma RE
+    │         cnj_form_id → re_forms        ← form template CNJ
+    │         cnj_response_id → re_form_responses
+    │         fd_contact_id → freshdesk_contacts
+    │         fd_ticket_id → freshdesk_tickets
+    │         fs_contact_id → freshsales_contacts
+    │
+    ├─── portal_dividas ────────────── user_id + workspace_id (propagado via trigger)
+    ├─── portal_documentos ─────────── user_id + workspace_id + re_document_id → re_documents
+    ├─── portal_cnj_timeline ──────── caso_id + workspace_id (append-only, 16 tipos)
+    └─── portal_cnj_notifications ─── caso_id + workspace_id (fila multi-canal)
 ```
 
 ---
 
-## Views Unificadas
+## 3. Plano de Reutilização (engines existentes)
 
-### `vw_superendividamento_cliente`
+### ✅ NÃO recriar — reutilizar diretamente
 
-```sql
-portal_casos
-   LEFT JOIN re_users           (ON re_users.auth_id = portal_casos.user_id)
-  LEFT JOIN LATERAL freshdesk_contacts  (por email)
-  LEFT JOIN LATERAL freshdesk_tickets   (último ticket)
-  LEFT JOIN LATERAL portal_documentos   (contadores)
-  LEFT JOIN LATERAL portal_cnj_timeline (resumo)
-  LEFT JOIN portal_workspaces
-```
-`WITH (security_barrier = true)` — protege contra query pushdown malicioso.
-
-### `vw_cnj_dashboard_admin`
-Painel executivo agrupado por `workspace_id + fase`. KPIs: total casos, formulários completos, total dívidas declaradas, renda média, casos críticos (comprometimento > 30%).
-
-### `vw_cnj_mapa_credores_analise`
-Expande `credores_cnj[]` em linhas normalizadas via `jsonb_array_elements WITH ORDINALITY`. Permite queries analíticas sobre credores individuais.
-
-### `vw_freshdesk_portal_sync`
-Estado de sincronização portal ↔ Freshdesk. Flags: `tem_fd_contact`, `tem_fd_ticket`, `fd_contact_orphan`.
+| Engine existente | Tabelas | Como reutilizar no portal CNJ |
+|-----------------|---------|-------------------------------|
+| **Form Builder** | `re_forms`, `re_form_pages`, `re_form_questions`, `re_form_answers`, `re_form_responses` | Formulário CNJ 7 passos pode ser migrado como `re_forms` com `system_key='cnj_superendividamento'`. `portal_casos.cnj_form_id` e `cnj_response_id` fazem o link. |
+| **Journey Engine** | `re_journeys`, `re_journey_steps`, `re_journey_assignments`, `re_journey_step_completions` | Jornada do cliente (cadastro → análise → conciliação) mapeada em `re_journeys`. `re_journey_steps` pode ter `form_id` para cada passo CNJ. |
+| **Document Engine** | `re_documents`, `re_form_answers.file_path` | `portal_documentos.re_document_id` já faz o link. Trigger `_sync_portal_doc_to_re_doc` propaga status. |
+| **Task Engine** | `re_tasks` | `re_tasks.portal_caso_id` (migration 006) vincula tarefas do escritório a casos específicos. |
+| **Notification Engine** | `re_notifications` | Complementar a `portal_cnj_notifications`. Para notificações da plataforma RE (invoices, lembretes). |
+| **Billing Engine** | `billing_contracts`, `billing_receivables` | Honorários do escritório associados ao caso. |
+| **AgentLab RAG** | `agentlab_knowledge_chunks`, `agentlab_knowledge_sources` | Base de conhecimento jurídico CNJ para suporte IA. |
 
 ---
 
-## RPCs (SECURITY DEFINER)
+## 4. Formulário CNJ 7 Passos (Lei 14.181/2021)
 
-### `rpc_get_meu_caso()` — uso pelo cliente
-Retorna dados completos do caso autenticado: fase, step, docs (contadores), últimos 10 eventos da timeline (só `is_visible_client = true`), `fd_ticket_id`, `workspace_slug`.
+| Passo | Seção CNJ | Campos chave em `portal_casos` |
+|-------|-----------|-------------------------------|
+| 1 | Identificação pessoal | `full_name`, `cpf`, `data_nascimento`, `rg`, `estado_civil`, `profissao`, `telefones`, `enderecos` |
+| 2 | Situação socioeconômica | `situacao_profissional`, `renda`, `renda_familiar`, `n_dependentes`, `conjugue`, `dependentes` |
+| 3 | Despesas e patrimônio | `despesas` (jsonb), `patrimonio` (jsonb) |
+| 4 | Análise do endividamento | `causas_endividamento`, `negativacoes`, `conhecimento_credito` |
+| 5 | Mapa de credores | `credores_cnj` (jsonb array) |
+| 6 | Plano de pagamento | `plano_pagamento` (jsonb), `comprometimento_mensal` |
+| 7 | Documentação | `portal_documentos` (7 tipos obrigatórios + 2 opcionais) |
 
-### `rpc_admin_busca_cpf(_cpf TEXT)` — uso admin
-Guard `is_any_admin()`. Busca caso por CPF (sanitizado via `regexp_replace`), retorna JSONB consolidado: caso + auth_email + fd_contact + docs[] + timeline[] + último ticket.
-
----
-
-## RLS — Matriz de Acesso
-
-| Tabela / View | Cliente (owner) | Workspace Admin | Platform Admin |
-|---------------|-----------------|-----------------|----------------|
-| `portal_casos` | SELECT (own) | SELECT (workspace) | ALL |
-| `portal_documentos` | SELECT/INSERT (own) | SELECT (workspace) | ALL |
-| `portal_cnj_timeline` | SELECT (visible_client=true) | SELECT (workspace) | ALL |
-| `portal_cnj_notifications` | SELECT (canal=portal) | — | ALL |
-| `portal_workspaces` | SELECT (member) | UPDATE (owner) | ALL |
-| `portal_workspace_members` | SELECT (member) | — | ALL |
-| `vw_superendividamento_cliente` | GRANT SELECT (filtered by RLS) | GRANT SELECT | GRANT SELECT |
+**Cálculos automáticos** (via `cnj-engine.js`):
+- `calcAnaliseGlobal()` → comprometimento, índice de endividamento
+- `calcPlanoPagamento()` → parcela máxima (renda disponível / 60 meses)
+- `buildCNJJson()` → estrutura oficial Lei 14.181/2021
 
 ---
 
-## Migrations
-
-### Ordem de execução
+## 5. Fases do Caso
 
 ```
-supabase/migrations/
-  20260520_sprint7_cnj_campos.sql      ← Sprint 7: +12 colunas CNJ
-
-supabase/migrations-safe/              ← Enterprise Architecture (aditivas/reversíveis)
-  20260520_safe_001_bridges.sql        ← Pontes: rg_emissor, re_user_id, fd_*, workspace_id
-  20260520_safe_002_workspace_admin.sql← Multi-tenant: workspaces, members, funções admin
-  20260520_safe_003_cnj_timeline.sql   ← Timeline + Notificações + Triggers automáticos
-  20260520_safe_004_views_rls.sql      ← Views consolidadas + RPCs + Grants
+cadastro → analise → conciliacao → judicial → encerrado
 ```
 
-### Estratégia de segurança
+| Fase | Trigger automático | Notificação | Timeline |
+|------|-------------------|-------------|----------|
+| `cadastro` | `handle_new_portal_user()` | magic link Resend | `formulario_enviado` |
+| `analise` | Mudança manual admin | email `fase_alterada` | `fase_alterada` |
+| `conciliacao` | Agendamento audiência | email + WhatsApp | `conciliacao_agendada` |
+| `judicial` | Protocolo CNJ | email | `fase_alterada` |
+| `encerrado` | Admin | email | `encerrado` |
 
-- `ADD COLUMN IF NOT EXISTS` apenas — nunca `DROP`, `RENAME`, `ALTER TYPE` incompatível
-- `CREATE TABLE IF NOT EXISTS` — idempotente
-- `CREATE OR REPLACE` para funções e views
-- `DROP TRIGGER IF EXISTS` antes de criar (idempotente)
-- `INSERT ... ON CONFLICT DO NOTHING` para seeds
-- `CREATE INDEX CONCURRENTLY IF NOT EXISTS` — não bloqueia tabela
-- Seção `-- DOWN` em cada arquivo para rollback manual documentado
+**Trigger automático de timeline:** `_auto_timeline_fase_alterada()` insere evento em `portal_cnj_timeline` a cada mudança de `portal_casos.fase`.
 
 ---
 
-## Integrações Externas
+## 6. Schemas: Tabelas-chave com colunas críticas
 
-| Sistema | Bridge | Secret |
-|---------|--------|--------|
-| **DirectData** | CPF lookup no Step 1 | `DIRECTDATA_TOKEN` (Supabase/GitHub secret apenas) |
-| **Freshdesk** | `freshdesk_contacts`, `freshdesk_tickets`, `fd_contact_id`, `fd_ticket_id` | `FRESHDESK_API_KEY` |
-| **Resend** | `portal_cnj_notifications.resend_id` | `RESEND_API_KEY` |
-| **Freshsales** | `freshsales_contacts`, `fs_contact_id` | `FRESHSALES_API_KEY` |
-| **RE Platform** | `re_users`, `re_user_id`, `re_task_id`, `re_document_id` | interno |
-
-### Regras de segurança (invioláveis)
-
-- `DIRECTDATA_TOKEN` → **NUNCA** no frontend. Apenas `DIRECTDATA_TOKEN` como secret server-side.
-- `FROM_EMAIL` → sempre `contato@hermidamaia.adv.br` (não `portal@hermidamaia.adv.br`)
-- Bypass dev (`172145`) → **NUNCA** exposto na UI de produção
-- Imagens da marca → apenas `logo-hermidamaia.png` e `logo-hermidamaia-sq.png` (sem SVG/IA)
-
----
-
-## Estrutura de Arquivos
-
+### `portal_casos` (núcleo do sistema)
 ```
-onboarding-hmadv/
-├── pages/
-│   └── onboarding.html          ← Formulário CNJ 7 steps (Sprint 7)
-├── js/
-│   └── cnj-engine.js            ← Engine legal (SELIC, cap, Price, buildCNJJson)
-├── services/
-│   └── database.js              ← CaseService.saveCNJStep() + demais serviços
-├── supabase/
-│   ├── migrations/
-│   │   └── 20260520_sprint7_cnj_campos.sql
-│   └── migrations-safe/
-│       ├── 20260520_safe_001_bridges.sql
-│       ├── 20260520_safe_002_workspace_admin.sql
-│       ├── 20260520_safe_003_cnj_timeline.sql
-│       └── 20260520_safe_004_views_rls.sql
-└── ARCHITECTURE.md              ← este arquivo
+id uuid PK | user_id uuid FK auth.users | workspace_id uuid FK portal_workspaces
+re_user_id uuid FK re_users | cnj_form_id uuid | cnj_response_id uuid
+fd_contact_id bigint | fd_ticket_id bigint | fs_contact_id text
+fase text DEFAULT 'cadastro' | cnj_step_atual smallint DEFAULT 1
+onboarding_done boolean DEFAULT false | proxima_acao text
+credores_cnj jsonb | plano_pagamento jsonb | cnj_json jsonb
+metadata jsonb | extra_data jsonb | settings jsonb
+```
+
+### `portal_cnj_timeline` (append-only, 16 tipos de evento)
+```
+id uuid PK | caso_id uuid FK portal_casos | workspace_id uuid
+evento_tipo text | evento_subtipo text | descricao text
+payload jsonb | author_uid uuid | author_role text
+fd_ticket_id bigint | re_task_id uuid | documento_id uuid
+is_visible_client boolean DEFAULT true | created_at timestamptz
+```
+
+**Tipos de evento:** `formulario_enviado`, `ticket_criado`, `ticket_atualizado`, `documento_aprovado`, `documento_rejeitado`, `documento_enviado`, `fase_alterada`, `step_concluido`, `notificacao_enviada`, `comentario_admin`, `conciliacao_agendada`, `acordo_formalizado`, `encerrado`
+
+### `freshdesk_tickets` (mirror completo)
+```
+fd_ticket_id bigint | portal_caso_id uuid | fd_contact_id bigint
+subject text | status int | cnj_fase text | cnj_form_json jsonb
+metadata jsonb | created_at timestamptz
 ```
 
 ---
 
-## Status das Migrations (2026-05-20)
+## 7. Funções SECURITY DEFINER (RLS helpers)
 
-| Migration | Status | Observação |
-|-----------|--------|------------|
-| `sprint7_cnj_campos` | ✅ Aplicada | 12 colunas CNJ em portal_casos |
-| `safe_001_bridges` | ✅ Aplicada | Bridges + sync trigger rg_emissor |
-| `safe_002_workspace_admin` | ✅ Aplicada | Workspace hmadv-principal criado |
-| `safe_003_cnj_timeline` | ✅ Aplicada | Timeline + notif + triggers automáticos |
-| `safe_004_views_rls` | ✅ Aplicada | 4 views + 2 RPCs + grants |
+| Função | Retorno | Descrição |
+|--------|---------|-----------|
+| `is_platform_admin()` | `boolean` | Lê `admin_profiles.is_platform_admin` |
+| `is_any_admin()` | `boolean` | `admin_users` OR `is_platform_admin()` OR workspace owner/admin |
+| `my_workspace_ids()` | `uuid[]` | Todos os `workspace_id` do usuário logado |
+| `rpc_get_meu_caso()` | `TABLE` | Caso + timeline + docs para usuário atual |
+| `rpc_admin_busca_cpf(cpf)` | `jsonb` | Busca caso por CPF (admin only) |
+| `admin_get_stats()` | `json` | Métricas agregadas do escritório |
+| `admin_get_clients()` | `TABLE` | Lista de clientes com KPIs |
+| `rpc_admin_workspace_stats(uuid)` | `json` | Métricas drill-down por workspace |
+
+---
+
+## 8. Views unificadas
+
+| View | Propósito | Fonte de dados |
+|------|-----------|----------------|
+| `vw_superendividamento_cliente` | Dashboard cliente: caso completo | `portal_casos` + `auth.users` + FD + docs |
+| `vw_cnj_dashboard_admin` | Admin: KPIs por workspace/fase | `portal_casos` + `portal_workspaces` |
+| `vw_cnj_mapa_credores_analise` | Mapa de credores expandido | `portal_casos.credores_cnj` (jsonb unnest) |
+| `vw_freshdesk_portal_sync` | Status de sincronização FD | `portal_casos` + `freshdesk_contacts` + `freshdesk_tickets` |
+| `vw_admin_global` | Dashboard platform-level por workspace | Todas as tabelas portal_* + FD |
+| `vw_admin_casos_detalhado` | Lista de casos enriquecida para admin | `portal_casos` + JOINs calculados |
+| `vw_portal_cnj_form_status` | Bridge portal_casos ↔ re_forms | `portal_casos` + `re_forms` + `re_form_responses` |
+
+---
+
+## 9. Matriz RLS
+
+| Tabela | Política cliente | Política admin |
+|--------|-----------------|----------------|
+| `portal_casos` | `user_id = auth.uid()` | `is_any_admin()` |
+| `portal_dividas` | `user_id = auth.uid()` | `is_any_admin()` + workspace |
+| `portal_documentos` | `user_id = auth.uid()` | `is_any_admin()` + workspace |
+| `portal_cnj_timeline` | `caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid())` AND `is_visible_client` | `is_any_admin()` |
+| `portal_cnj_notifications` | N/A (somente sistema) | `is_any_admin()` |
+| `portal_workspaces` | `id = ANY(my_workspace_ids())` | `is_platform_admin()` |
+| `re_documents` | `user_id = auth.uid()` | `is_any_admin()` |
+| `re_form_responses` | `user_id = auth.uid()` | `is_any_admin()` |
+| `freshdesk_tickets` | N/A (somente via RPC) | `is_any_admin()` |
+| `admin_profiles` | N/A | `is_platform_admin()` |
+
+---
+
+## 10. Plano de Migrations Seguras
+
+### `/supabase/migrations-safe/` — ordem de aplicação
+
+```
+001_bridges.sql              ← re_users.portal_caso_id + portal_documentos.re_document_id
+002_workspace_admin.sql      ← portal_workspaces + portal_workspace_members + admin_profiles
+003_cnj_timeline.sql         ← portal_cnj_timeline + portal_cnj_notifications
+004_views_rls.sql            ← 4 views unificadas + rpc_get_meu_caso + rpc_admin_busca_cpf
+005_multitenant_propagation  ← workspace_id em portal_dividas + portal_documentos + trigger
+006_re_bridges.sql           ← cnj_form_id, cnj_response_id + workspace_id em re_forms/re_journeys
+007_admin_global.sql         ← vw_admin_global + vw_admin_casos_detalhado + RPCs aprimorados
+008_rls_secure.sql           ← RLS nas 11 tabelas sem proteção (auditadas)
+009_sync_triggers.sql        ← 5 triggers: sync re_users, sync re_documents, auto-timeline, auto-notificação
+```
+
+### Estratégia de aplicação
+1. **Jamais usar `apply_migration` em produção** sem revisar o SQL completo
+2. Testar em branch Supabase antes de aplicar em prod
+3. Cada migration tem seção de REVERSÃO documentada
+4. Usar `DO $$ BEGIN ... END $$` com `IF NOT EXISTS` para idempotência
+5. Backfills com `UPDATE ... WHERE campo IS NULL` (não toca dados existentes)
+
+---
+
+## 11. Integração Freshdesk — Fluxo completo
+
+```
+Cliente preenche formulário CNJ (onboarding.html)
+  └── finalizarCadastro() → CaseService.save(payload) → portal_casos (upsert)
+        └── Edge Function portal-cnj-complete (Deno/TS):
+              1. Carrega portal_casos via service_role
+              2. POST /api/v2/tickets → Freshdesk ticket criado
+              3. UPDATE portal_casos SET fd_ticket_id = X
+              4. INSERT freshdesk_tickets (mirror)
+              5. INSERT portal_cnj_timeline (ticket_criado)
+              6. POST Resend API → email cliente + escritório
+              7. INSERT portal_cnj_notifications (registro)
+        └── Trigger _auto_timeline_onboarding_done → formulario_enviado na timeline
+
+Admin acessa dashboard.html
+  └── rpc_get_meu_caso() / AdminService.getClients()
+  └── vw_cnj_dashboard_admin → KPIs por workspace/fase
+  └── vw_admin_global → métricas plataforma
+
+Admin muda fase do caso:
+  └── UPDATE portal_casos SET fase = 'analise'
+        └── Trigger _auto_timeline_fase_alterada → evento na timeline
+        └── Edge Function portal-notify → email tipo 'fase_alterada'
+```
+
+---
+
+## 12. Segredos e Configurações (nunca no frontend)
+
+| Segredo | Onde armazenar | Uso |
+|---------|---------------|-----|
+| `DIRECTDATA_TOKEN` | Supabase Vault + GitHub Secrets | Lookup CPF (directdata-proxy) |
+| `RESEND_API_KEY` | Supabase Edge Function secrets | Envio de emails |
+| `FRESHDESK_API_KEY` | Supabase Edge Function secrets | API Freshdesk v2 |
+| `FRESHSALES_TOKEN` | Supabase Vault | OAuth Freshsales |
+| `FROM_EMAIL` | Edge Function env | Sempre `contato@hermidamaia.adv.br` |
+| `OFFICE_EMAIL` | Edge Function env | `contato@hermidamaia.adv.br` |
+| Dev bypass `172145` | NUNCA no frontend | Apenas server-side |
+
+---
+
+## 13. Design System Hermida Maia
+
+| Token CSS | Valor | Uso |
+|-----------|-------|-----|
+| `--navy` | `#1A3A5C` | Sidebar, headers, fundo login |
+| `--blue` | `#2E6DA4` | Ações primárias, links |
+| `--brand-gold` | `#F5A623` | Marca, destaques |
+| `--ok` | `#1a7a4a` | Sucesso, aprovado |
+| `--warn` | `#b45309` | Atenção, pendente |
+| `--red` | `#C0392B` | Erro, dívida abusiva |
+| `--serif` | Libre Baskerville | Headings, valores financeiros |
+| `--sans` | DM Sans | Corpo, labels, botões |
+
+---
+
+## 14. Roadmap de Sprints
+
+| Sprint | Escopo | Status |
+|--------|--------|--------|
+| 0 | Refatoração estrutural base | ✅ |
+| 1 | Branding + Autenticação Supabase | ✅ |
+| 2 | Integração Freshdesk | ✅ |
+| 3 | Upload de documentos + pipeline de aprovação | ✅ |
+| 4 | Análise de dívidas (portal_dividas) | ✅ |
+| 5 | Admin dashboard + DirectData CPF lookup | ✅ |
+| 6 | Shell persistente + pipeline avançado | ✅ |
+| 7 | Formulário CNJ 7 passos + cnj-engine.js | ✅ |
+| 7.5 | Enterprise Architecture — multi-tenant, timeline, views | ✅ |
+| 8 | Portal Pós-Onboarding — ticket, timeline, step bar | ✅ |
+| 8.5 | QA Sprint 0–8 — bugs mobile, mode selector, demo user | ✅ |
+| **9** | **Admin CNJ — vw_cnj_dashboard_admin, busca CPF UI** | 🔜 |
+| **10** | **Notificações push + WhatsApp + fila portal_cnj_notifications** | 🔜 |
+| **11** | **Relatórios PDF — petição CNJ, plano 104-A, mapa credores** | 🔜 |
+| **12** | **re_forms bridge — formulário CNJ via engine re_forms** | 🔜 |
+| **13** | **Billing — honorários por caso + re_invoices** | 🔜 |
