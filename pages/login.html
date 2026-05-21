@@ -247,6 +247,7 @@
 <script type="module">
 import { isValidEmail, showToast } from '../utils/helpers.js';
 import { AuthService }             from '../services/auth.js';
+import { supabase }                from '../services/supabase.js';
 
 const ADMIN_EMAIL    = 'adrianohermida@gmail.com';
 const ADMIN_DEV_CODE = '172145';
@@ -310,7 +311,8 @@ window.handleVerify = async function() {
 
   let result;
   if (currentEmail === ADMIN_EMAIL && code === ADMIN_DEV_CODE) {
-    result = await AuthService.signInWithPassword(ADMIN_EMAIL, ADMIN_DEV_CODE);
+    const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_DEV_CODE });
+    result = error ? { ok: false, message: error.message } : { ok: true };
   } else {
     result = await AuthService.verifyOTP(currentEmail, code);
   }
@@ -324,9 +326,8 @@ window.handleVerify = async function() {
 };
 
 window.resetForm = function() {
-  document.getElementById('email').value   = '';
+  document.getElementById('email').value    = '';
   document.getElementById('otp-code').value = '';
-  document.getElementById('dev-hint').style.display = 'none';
   currentEmail = '';
   setState('state-form');
   setTimeout(() => document.getElementById('email').focus(), 50);
