@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jornada CNJ · Portal HMADV</title>
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <script type="module" src="../js/app.js"></script>
+  <style>
+  /* ═══════════════════════════════════════════════
+     JOURNEY ENGINE — Design System
+  ═══════════════════════════════════════════════ */
+
+  /* ── Page layout ─────────────────────────────── */
+  .journey-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 0 80px;
+  }
+
+  /* ── Hero banner ──────────────────────────────── */
+  .journey-hero {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e4a7a 60%, #0f2d4a 100%);
+    border-radius: var(--r-lg);
+    padding: 32px 36px 28px;
+    color: #fff;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .journey-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='400' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='350' cy='50' r='120' fill='rgba(255,255,255,.04)'/%3E%3Ccircle cx='80' cy='160' r='80' fill='rgba(255,255,255,.03)'/%3E%3C/svg%3E") no-repeat right center;
+    pointer-events: none;
+  }
+  .journey-hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: rgba(255,255,255,.9);
+    margin-bottom: 12px;
+  }
+  .journey-hero h1 {
+    font-size: 22px; font-weight: 700; margin: 0 0 8px;
+    font-family: var(--serif);
+  }
+  .journey-hero p {
+    font-size: 14px; color: rgba(255,255,255,.78); margin: 0;
+    max-width: 560px; line-height: 1.6;
+  }
+  .journey-hero-progress {
+    margin-top: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .journey-hero-bar {
+    flex: 1; height: 6px; background: rgba(255,255,255,.2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .journey-hero-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #F5A623, #f7b84b);
+    border-radius: 3px;
+    transition: width .5s ease;
+  }
+  .journey-hero-pct {
+    font-size: 12px; font-weight: 700; color: #F5A623;
+    min-width: 36px; text-align: right;
+  }
+
+  /* ── Step tracker (horizontal scrollable) ──────── */
+  .journey-tracker {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    overflow-x: auto;
+    padding: 4px 0 8px;
+    scrollbar-width: none;
+  }
+  .journey-tracker::-webkit-scrollbar { display: none; }
+
+  .jt-step {
+    display: flex; flex-direction: column; align-items: center;
+    flex: 0 0 auto; min-width: 80px;
+    position: relative; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .jt-step.locked { opacity: .45; cursor: not-allowed; }
+  .jt-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 18px; left: calc(50% + 18px);
+    width: calc(100% - 36px);
+    height: 2px; background: var(--line); z-index: 0;
+  }
+  .jt-step.done:not(:last-child)::after,
+  .jt-step.active:not(:last-child)::after { background: var(--navy); }
+
+  .jt-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; z-index: 1;
+    transition: all .25s;
+    box-shadow: var(--shadow-sm);
+  }
+  .jt-step.done   .jt-dot { background: var(--navy); border-color: var(--navy); }
+  .jt-step.active .jt-dot { background: #F5A623; border-color: #F5A623; box-shadow: 0 0 0 4px rgba(245,166,35,.22); }
+  .jt-step.rejected .jt-dot { background: var(--red); border-color: var(--red); }
+
+  .jt-label {
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); margin-top: 6px; text-align: center;
+    max-width: 72px; line-height: 1.25;
+  }
+  .jt-step.done   .jt-label { color: var(--navy); }
+  .jt-step.active .jt-label { color: #c07b00; }
+
+  /* ── Journey step card ────────────────────────── */
+  .journey-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .journey-card-header {
+    display: flex; align-items: flex-start;
+    gap: 16px; padding: 20px 24px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .jc-icon {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: var(--r-sm);
+    background: var(--ice);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .jc-title {
+    font-size: 16px; font-weight: 700; color: var(--ink); margin: 0 0 4px;
+  }
+  .jc-subtitle {
+    font-size: 12px; color: var(--ink2); line-height: 1.5;
+  }
+  .jc-badge {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 10px; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px;
+    border: 1px solid;
+  }
+  .badge-locked    { color: var(--muted); border-color: var(--line); background: var(--bg); }
+  .badge-available { color: var(--blue); border-color: rgba(46,109,164,.25); background: rgba(46,109,164,.07); }
+  .badge-active    { color: #c07b00; border-color: rgba(245,166,35,.4); background: rgba(245,166,35,.1); }
+  .badge-done      { color: var(--ok); border-color: rgba(26,122,74,.25); background: rgba(26,122,74,.08); }
+  .badge-rejected  { color: var(--red); border-color: rgba(192,57,43,.25); background: rgba(192,57,43,.08); }
+
+  .journey-card-body { padding: 24px; }
+
+  /* ── VIDEO PLAYER ENGINE ─────────────────────── */
+  .video-engine-wrap {
+    position: relative;
+    background: #000;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 16px;
+  }
+  .video-engine-wrap iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: none;
+  }
+  /* Loading state over video */
+  .video-loading-overlay {
+    position: absolute; inset: 0;
+    background: #0f1923;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff; gap: 12px; z-index: 2;
+    transition: opacity .3s;
+  }
+  .video-loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .video-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(255,255,255,.2);
+    border-top-color: #F5A623;
+    border-radius: 50%;
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Watch progress bar under player */
+  .video-progress-bar {
+    height: 4px; background: var(--line); border-radius: 2px;
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .video-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--navy), #F5A623);
+    border-radius: 2px;
+    transition: width .8s ease;
+  }
+
+  /* Watch stats row */
+  .video-stats {
+    display: flex; align-items: center;
+    gap: 16px; margin-bottom: 16px;
+    font-size: 12px; color: var(--ink2);
+  }
+  .video-stat { display: flex; align-items: center; gap: 5px; }
+  .video-stat-val { font-weight: 700; color: var(--ink); }
+
+  /* Completion check */
+  .video-complete-banner {
+    background: rgba(26,122,74,.08);
+    border: 1px solid rgba(26,122,74,.2);
+    border-radius: var(--r-sm);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--ok);
+    font-weight: 600; margin-bottom: 16px;
+  }
+
+  /* ── SKIP GOVERNANCE ─────────────────────────── */
+  .skip-governance {
+    background: rgba(245,166,35,.07);
+    border: 1px solid rgba(245,166,35,.3);
+    border-radius: var(--r-sm);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .skip-governance h4 {
+    font-size: 13px; font-weight: 700; color: var(--ink); margin: 0 0 8px;
+  }
+  .skip-governance p {
+    font-size: 12px; color: var(--ink2); margin: 0 0 12px; line-height: 1.6;
+  }
+  .skip-declare-label {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: var(--ink2); cursor: pointer; line-height: 1.5;
+  }
+  .skip-declare-label input[type=checkbox] {
+    margin-top: 2px; flex-shrink: 0; accent-color: var(--navy);
+  }
+
+  /* ── PDF VIEWER ENGINE ───────────────────────── */
+  .pdf-engine-wrap {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .pdf-viewer-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px; color: var(--ink2);
+  }
+  .pdf-viewer-toolbar strong { color: var(--ink); }
+  .pdf-viewer-area {
+    height: 420px;
+    position: relative;
+    background: #525659;
+    overflow: hidden;
+  }
+  .pdf-viewer-area iframe {
+    width: 100%; height: 100%; border: none;
+  }
+  .pdf-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; color: rgba(255,255,255,.7);
+    font-size: 14px; text-align: center; padding: 20px;
+  }
+  .pdf-placeholder-icon { font-size: 48px; }
+
+  /* ── PDF Download cards ──────────────────────── */
+  .pdf-download-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: box-shadow .2s, border-color .2s;
+    cursor: pointer;
+    margin-bottom: 12px;
+    text-decoration: none; color: inherit;
+  }
+  .pdf-download-card:hover {
+    border-color: var(--navy);
+    box-shadow: var(--shadow-md);
+  }
+  .pdf-dl-icon {
+    width: 44px; height: 44px; flex-shrink: 0;
+    background: rgba(30,58,92,.08);
+    border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .pdf-dl-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .pdf-dl-meta { font-size: 11px; color: var(--muted); }
+  .pdf-dl-downloaded {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 11px; font-weight: 600;
+    color: var(--ok);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ── Glassmorphism info card ─────────────────── */
+  .glass-info {
+    background: linear-gradient(135deg, rgba(26,58,92,.05) 0%, rgba(245,166,35,.06) 100%);
+    border: 1px solid rgba(26,58,92,.12);
+    border-radius: var(--r-sm);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .glass-info-title {
+    font-size: 12px; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--navy); margin-bottom: 8px;
+  }
+  .glass-info ul {
+    margin: 0; padding-left: 18px;
+    font-size: 13px; color: var(--ink2); line-height: 1.7;
+  }
+  .glass-info li + li { margin-top: 2px; }
+
+  /* ── Anexo II options ────────────────────────── */
+  .anexo-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 580px) { .anexo-options { grid-template-columns: 1fr; } }
+
+  .anexo-option {
+    background: var(--white);
+    border: 2px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 16px;
+    cursor: pointer; transition: all .2s;
+    text-align: center;
+  }
+  .anexo-option:hover { border-color: var(--navy); box-shadow: var(--shadow-sm); }
+  .anexo-option.selected { border-color: var(--navy); background: var(--ice); }
+  .anexo-option-icon { font-size: 28px; margin-bottom: 8px; }
+  .anexo-option-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .anexo-option-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* ── Upload area ─────────────────────────────── */
+  .upload-drop-zone {
+    border: 2px dashed var(--line);
+    border-radius: var(--r-sm);
+    padding: 32px 20px;
+    text-align: center;
+    transition: all .2s; cursor: pointer;
+    background: var(--bg);
+  }
+  .upload-drop-zone:hover,
+  .upload-drop-zone.drag-over {
+    border-color: var(--navy);
+    background: var(--ice);
+  }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-text { font-size: 13px; color: var(--ink2); }
+  .upload-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .upload-preview {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--ok-bg);
+    border: 1px solid rgba(26,122,74,.2);
+    border-radius: var(--r-sm);
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 13px; color: var(--ok);
+  }
+
+  /* ── Navigation bar ──────────────────────────── */
+  .journey-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 28px; padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .journey-nav-info { font-size: 12px; color: var(--muted); }
+
+  /* ── Autosave indicator ──────────────────────── */
+  .autosave-indicator {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--white); border: 1px solid var(--line);
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 11px; color: var(--muted);
+    box-shadow: var(--shadow-sm);
+    display: flex; align-items: center; gap: 6px;
+    z-index: 100; transition: all .3s;
+    pointer-events: none;
+  }
+  .autosave-indicator.saving { color: var(--blue); border-color: rgba(46,109,164,.3); }
+  .autosave-indicator.saved  { color: var(--ok);   border-color: rgba(26,122,74,.3); }
+  .autosave-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ── Completion screen ───────────────────────── */
+  .journey-complete {
+    text-align: center; padding: 40px 24px;
+  }
+  .journey-complete-icon { font-size: 64px; margin-bottom: 16px; }
+  .journey-complete h2 { font-size: 24px; font-weight: 700; color: var(--ink); font-family: var(--serif); margin-bottom: 12px; }
+  .journey-complete p  { font-size: 15px; color: var(--ink2); max-width: 480px; margin: 0 auto 24px; line-height: 1.7; }
+
+  /* ── Responsive ──────────────────────────────── */
+  @media (max-width: 600px) {
+    .journey-hero { padding: 20px; }
+    .journey-hero h1 { font-size: 18px; }
+    .journey-card-body { padding: 16px; }
+    .jt-step { min-width: 64px; }
+    .jt-label { font-size: 8px; max-width: 60px; }
+    .journey-card-header { padding: 14px 16px 12px; }
+  }
+  </style>
+</head>
+<body>
+<div class="portal-shell">
+  <aside class="sidebar">
+    <div data-component="sidebar"></div>
+  </aside>
+
+  <div class="main-wrap">
+    <header class="topbar">
+      <div data-component="header"></div>
+    </header>
+
+    <main class="page-content">
+      <div class="journey-page">
+
+        <!-- ── HERO ─────────────────────────────── -->
+        <div class="journey-hero">
+          <div class="journey-hero-badge">⚖️ Lei 14.181/2021 · CNJ 125/2021</div>
+          <h1>Sua Jornada de Superendividamento</h1>
+          <p>Siga cada etapa com cuidado. O escritório Hermida Maia Advocacia está com você em cada passo desta jornada de recuperação financeira.</p>
+          <div class="journey-hero-progress">
+            <div class="journey-hero-bar">
+              <div class="journey-hero-bar-fill" id="hero-bar-fill" style="width:0%"></div>
+            </div>
+            <span class="journey-hero-pct" id="hero-pct-text">0%</span>
+          </div>
+        </div>
+
+        <!-- ── STEP TRACKER ──────────────────────── -->
+        <div class="journey-tracker" id="journey-tracker">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- ── STEP CONTENT ──────────────────────── -->
+        <div id="journey-content">
+          <!-- Rendered by JS -->
+        </div>
+
+      </div><!-- .journey-page -->
+
+      <!-- Autosave indicator -->
+      <div class="autosave-indicator" id="autosave-indicator">
+        <div class="autosave-dot"></div>
+        <span id="autosave-text">Rascunho salvo</span>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script type="module">
+import { VideoService, DownloadAuditService } from '../services/database.js';
+import { supabase } from '../services/supabase.js';
+
+// ═══════════════════════════════════════════════
+// JOURNEY ENGINE CONFIG
+// ═══════════════════════════════════════════════
+const JOURNEY_STEPS = [
+  {
+    id: 'video_welcome',
+    type: 'video',
+    stepKey: 'welcome',
+    icon: '🎬',
+    title: 'Boas-vindas',
+    subtitle: 'Conheça o processo e o que esperar desta jornada.',
+    cnjStepRef: 1,
+    required: true,
+    allowSkip: false,
+    skipMinPct: 100,
+  },
+  {
+    id: 'video_lei',
+    type: 'video',
+    stepKey: 'lei_superendividamento',
+    icon: '⚖️',
+    title: 'Seus Direitos',
+    subtitle: 'Entenda a Lei 14.181/2021 e como ela protege você.',
+    cnjStepRef: 2,
+    required: true,
+    allowSkip: true,
+    skipMinPct: 80,
+  },
+  {
+    id: 'video_negociacao',
+    type: 'video',
+    stepKey: 'negociacao',
+    icon: '🤝',
+    title: 'Negociação',
+    subtitle: 'Como funciona a conciliação com seus credores.',
+    cnjStepRef: 3,
+    required: true,
+    allowSkip: true,
+    skipMinPct: 80,
+  },
+  {
+    id: 'video_plano',
+    type: 'video',
+    stepKey: 'plano_pagamento',
+    icon: '📋',
+    title: 'Plano de Pagamento',
+    subtitle: 'Entenda o formulário oficial CNJ Anexo II.',
+    cnjStepRef: 4,
+    required: true,
+    allowSkip: true,
+    skipMinPct: 80,
+  },
+  {
+    id: 'cartilha',
+    type: 'pdf_view',
+    icon: '📚',
+    title: 'Cartilha CNJ',
+    subtitle: 'Leia a Cartilha de Superendividamento do CNJ.',
+    cnjStepRef: 5,
+    assetKey: 'cartilha_superendividamento',
+    assetLabel: 'Cartilha Superendividamento CNJ',
+    assetVersion: '2024-v1',
+    storageKey: 'public/cartilha-superendividamento.pdf',
+    required: true,
+    allowSkip: true,
+    skipMinPct: 0,
+  },
+  {
+    id: 'anexo_ii',
+    type: 'pdf_form',
+    icon: '📄',
+    title: 'Formulário Anexo II',
+    subtitle: 'Baixe e envie o formulário oficial do plano de pagamento.',
+    cnjStepRef: 6,
+    assetKey: 'anexo_ii_cnj',
+    assetLabel: 'Formulário Oficial CNJ Anexo II',
+    assetVersion: '2024-v1',
+    storageKey: 'public/anexo-ii-cnj.pdf',
+    required: true,
+    allowSkip: false,
+    skipMinPct: 0,
+  },
+  {
+    id: 'cnj_form',
+    type: 'cnj_form',
+    icon: '✅',
+    title: 'Formulário CNJ',
+    subtitle: 'Preencha os 7 passos do formulário de superendividamento.',
+    cnjStepRef: 7,
+    required: true,
+    allowSkip: false,
+    skipMinPct: 0,
+  },
+];
+
+// State machine values (ordered importance)
+const STATES = {
+  locked:          0,
+  available:       1,
+  in_progress:     2,
+  awaiting_review: 3,
+  rejected:        4,
+  approved:        5,
+  completed:       6,
+};
+
+// ═══════════════════════════════════════════════
+// JOURNEY ENGINE STATE
+// ═══════════════════════════════════════════════
+let stepStates   = {};   // { stepId: 'locked'|'available'|... }
+let videoMeta    = {};   // { stepKey: { id, youtube_id, allow_skip, skip_min_pct } }
+let videoProgress = {};  // { videoId: { watch_pct, max_pct_reached, status, last_position_sec } }
+let currentStep  = null; // current JOURNEY_STEPS entry
+let ytPlayers    = {};   // { videoId: YT.Player }
+let ytReady      = false;
+let watchTimers  = {};   // { videoId: setInterval }
+let pendingYouTube = [];  // steps waiting for YT API ready
+let uploadedFile  = null;  // anexo_ii uploaded file
+
+// ── Autosave state ───────────────────────────
+let autosaveTimer = null;
+function triggerAutosave(label = 'Rascunho salvo') {
+  const el = document.getElementById('autosave-indicator');
+  const tx = document.getElementById('autosave-text');
+  if (!el || !tx) return;
+  el.className = 'autosave-indicator saving';
+  tx.textContent = 'Salvando…';
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    el.className = 'autosave-indicator saved';
+    tx.textContent = label;
+    setTimeout(() => { el.className = 'autosave-indicator'; }, 3000);
+  }, 800);
+}
+
+// ═══════════════════════════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════════════════════════
+document.addEventListener('app:ready', async () => {
+  try {
+    await loadJourneyData();
+    computeStepStates();
+    renderTracker();
+    const firstOpen = determineCurrentStep();
+    navigateTo(firstOpen);
+  } catch (e) {
+    console.error('[Journey] bootstrap error:', e);
+    showGlobalError('Erro ao carregar a jornada. Tente recarregar a página.');
+  }
+});
+
+async function loadJourneyData() {
+  // Load video metadata from DB
+  const videos = await VideoService.listVideos();
+  for (const v of videos) {
+    videoMeta[v.step_key] = v;
+  }
+
+  // Load user progress
+  const progList = await VideoService.listProgress();
+  for (const p of progList) {
+    const stepKey = p.onboarding_videos?.step_key ?? p.step_key;
+    if (stepKey) {
+      videoProgress[p.video_id] = p;
+    }
+  }
+
+  // Restore persisted journey state from sessionStorage
+  const saved = tryParse(sessionStorage.getItem('journey:states')) || {};
+  for (const [k, v] of Object.entries(saved)) {
+    stepStates[k] = v;
+  }
+}
+
+function computeStepStates() {
+  // First step always available
+  for (let i = 0; i < JOURNEY_STEPS.length; i++) {
+    const step = JOURNEY_STEPS[i];
+    if (!stepStates[step.id]) {
+      stepStates[step.id] = i === 0 ? 'available' : 'locked';
+    }
+  }
+
+  // Re-evaluate based on video progress
+  for (const step of JOURNEY_STEPS) {
+    if (step.type === 'video') {
+      const vid = videoMeta[step.stepKey];
+      if (vid) {
+        const prog = videoProgress[vid.id];
+        if (prog) {
+          if (prog.status === 'completed' || prog.status === 'skipped') {
+            stepStates[step.id] = 'completed';
+          } else if (prog.watch_pct > 0 || prog.status === 'in_progress') {
+            stepStates[step.id] = 'in_progress';
+          }
+        }
+      }
+    }
+  }
+
+  // Propagate unlocks: if step[i] is completed, step[i+1] becomes available
+  for (let i = 0; i < JOURNEY_STEPS.length - 1; i++) {
+    const s = JOURNEY_STEPS[i];
+    if (stepStates[s.id] === 'completed' || stepStates[s.id] === 'approved') {
+      const next = JOURNEY_STEPS[i + 1];
+      if (stepStates[next.id] === 'locked') {
+        stepStates[next.id] = 'available';
+      }
+    }
+  }
+
+  persistStates();
+}
+
+function determineCurrentStep() {
+  // Find first non-completed step that is available or in_progress
+  for (const step of JOURNEY_STEPS) {
+    const s = stepStates[step.id];
+    if (s === 'in_progress' || s === 'available' || s === 'rejected') return step.id;
+  }
+  // All done?
+  const allDone = JOURNEY_STEPS.every(s =>
+    ['completed','approved'].includes(stepStates[s.id])
+  );
+  if (allDone) return '__completed__';
+  return JOURNEY_STEPS[0].id;
+}
+
+function persistStates() {
+  sessionStorage.setItem('journey:states', JSON.stringify(stepStates));
+}
+
+// ═══════════════════════════════════════════════
+// RENDER TRACKER
+// ═══════════════════════════════════════════════
+function renderTracker() {
+  const el = document.getElementById('journey-tracker');
+  if (!el) return;
+  el.innerHTML = JOURNEY_STEPS.map((step, i) => {
+    const state = stepStates[step.id] || 'locked';
+    const cls = state === 'completed' || state === 'approved' ? 'done'
+              : state === 'in_progress' || state === 'available' ? (currentStep?.id === step.id ? 'active' : '')
+              : state === 'rejected' ? 'rejected'
+              : 'locked';
+    const dotContent = state === 'completed' || state === 'approved' ? '✓'
+                     : state === 'rejected' ? '✗'
+                     : step.icon;
+    return `
+      <div class="jt-step ${cls}" data-step="${step.id}"
+           onclick="window.journeyNavigate('${step.id}')"
+           title="${step.title}">
+        <div class="jt-dot">${dotContent}</div>
+        <div class="jt-label">${step.title}</div>
+      </div>`;
+  }).join('');
+  updateHeroProgress();
+}
+
+function updateHeroProgress() {
+  const total = JOURNEY_STEPS.length;
+  const done = JOURNEY_STEPS.filter(s =>
+    ['completed','approved'].includes(stepStates[s.id])
+  ).length;
+  const pct = Math.round((done / total) * 100);
+  const fill = document.getElementById('hero-bar-fill');
+  const text = document.getElementById('hero-pct-text');
+  if (fill) fill.style.width = pct + '%';
+  if (text) text.textContent = pct + '%';
+}
+
+window.journeyNavigate = function(stepId) {
+  const state = stepStates[stepId];
+  if (state === 'locked') {
+    showToast('Complete os passos anteriores para desbloquear esta etapa.', 'warn');
+    return;
+  }
+  navigateTo(stepId);
+};
+
+// ═══════════════════════════════════════════════
+// NAVIGATE TO STEP
+// ═══════════════════════════════════════════════
+function navigateTo(stepId) {
+  if (stepId === '__completed__') {
+    renderCompletion();
+    return;
+  }
+  const step = JOURNEY_STEPS.find(s => s.id === stepId);
+  if (!step) return;
+
+  currentStep = step;
+  stopAllWatchTimers();
+
+  if (step.type === 'video') {
+    renderVideoStep(step);
+  } else if (step.type === 'pdf_view') {
+    renderPdfViewStep(step);
+  } else if (step.type === 'pdf_form') {
+    renderAnexoIIStep(step);
+  } else if (step.type === 'cnj_form') {
+    renderCnjFormStep(step);
+  }
+
+  renderTracker();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════
+// VIDEO STEP
+// ═══════════════════════════════════════════════
+function renderVideoStep(step) {
+  const content = document.getElementById('journey-content');
+  const vid = videoMeta[step.stepKey];
+  if (!vid) {
+    content.innerHTML = `<div class="card p-24">
+      <p class="text-muted">Vídeo não encontrado. Verifique sua conexão e tente novamente.</p>
+    </div>`;
+    return;
+  }
+
+  const prog = videoProgress[vid.id];
+  const watchPct = prog?.max_pct_reached ?? 0;
+  const isDone   = prog?.status === 'completed' || prog?.status === 'skipped';
+  const state    = stepStates[step.id];
+  const badgeHtml = renderBadge(isDone ? 'completed' : state);
+
+  const canSkip  = vid.allow_skip && watchPct >= vid.skip_min_pct;
+  const skipNote = vid.allow_skip
+    ? `Você pode pular após assistir ${vid.skip_min_pct}% do vídeo.`
+    : 'Este vídeo deve ser assistido na íntegra antes de avançar.';
+
+  content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-header">
+        <div class="jc-icon">${step.icon}</div>
+        <div>
+          <div class="jc-title">${step.title}</div>
+          <div class="jc-subtitle">${vid.title}</div>
+        </div>
+        ${badgeHtml}
+      </div>
+      <div class="journey-card-body">
+        ${isDone ? `<div class="video-complete-banner">✅ Você já concluiu este vídeo. Pode revisá-lo ou avançar.</div>` : ''}
+
+        <div class="video-engine-wrap" id="video-wrap-${vid.id}">
+          <div class="video-loading-overlay" id="video-loading-${vid.id}">
+            <div class="video-spinner"></div>
+            <span style="font-size:13px;color:rgba(255,255,255,.7)">Carregando vídeo…</span>
+          </div>
+          <div id="yt-player-${vid.id}"></div>
+        </div>
+
+        <div class="video-progress-bar">
+          <div class="video-progress-fill" id="vpf-${vid.id}" style="width:${watchPct}%"></div>
+        </div>
+        <div class="video-stats">
+          <div class="video-stat">📺 <span class="video-stat-val" id="vstat-pct-${vid.id}">${watchPct}%</span> assistido</div>
+          <div class="video-stat">⏱ <span class="video-stat-val" id="vstat-time-${vid.id}">—</span></div>
+          <div class="video-stat" id="vstat-status-${vid.id}" style="margin-left:auto"></div>
+        </div>
+
+        <div class="glass-info" style="margin-bottom:16px">
+          <div class="glass-info-title">💡 Sobre este vídeo</div>
+          <ul>
+            <li>${vid.description || step.subtitle}</li>
+            <li>${skipNote}</li>
+          </ul>
+        </div>
+
+        ${!isDone && vid.allow_skip ? `
+        <div class="skip-governance" id="skip-box-${vid.id}" style="${canSkip?'':'opacity:.5;pointer-events:none'}">
+          <h4>⚠️ Pular vídeo com declaração</h4>
+          <p>Se já conhece o conteúdo, você pode pular após atingir ${vid.skip_min_pct}% de visualização.
+             Você precisará declarar que está ciente do conteúdo.</p>
+          <label class="skip-declare-label">
+            <input type="checkbox" id="skip-declare-${vid.id}" onchange="window.updateSkipDeclare('${vid.id}')">
+            Declaro que tenho conhecimento do conteúdo deste vídeo e estou ciente das minhas obrigações como previsto na Lei 14.181/2021.
+          </label>
+          <div style="margin-top:12px">
+            <button class="btn btn-sm btn-outline" id="btn-skip-${vid.id}"
+                    onclick="window.skipVideo('${vid.id}','${step.id}')"
+                    disabled style="margin-top:8px">
+              Confirmar e pular
+            </button>
+          </div>
+        </div>` : ''}
+
+        <div class="journey-nav">
+          <div class="journey-nav-info">
+            Etapa ${JOURNEY_STEPS.indexOf(step) + 1} de ${JOURNEY_STEPS.length}
+          </div>
+          <div style="display:flex;gap:8px">
+            ${JOURNEY_STEPS.indexOf(step) > 0 ? `
+            <button class="btn btn-outline btn-sm" onclick="window.journeyNavigate('${JOURNEY_STEPS[JOURNEY_STEPS.indexOf(step)-1].id}')">
+              ← Anterior
+            </button>` : ''}
+            <button class="btn btn-primary" id="btn-next-${step.id}"
+                    ${isDone ? '' : 'disabled'}
+                    onclick="window.journeyNext('${step.id}')">
+              Próximo passo →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Mount YouTube player
+  initYouTubePlayer(vid, step, prog?.last_position_sec ?? 0);
+}
+
+function initYouTubePlayer(vid, step, startSec = 0) {
+  const mountId = `yt-player-${vid.id}`;
+  if (ytReady) {
+    mountPlayer(vid, step, startSec, mountId);
+  } else {
+    pendingYouTube.push({ vid, step, startSec, mountId });
+  }
+}
+
+function mountPlayer(vid, step, startSec, mountId) {
+  if (ytPlayers[vid.id]) {
+    try { ytPlayers[vid.id].destroy(); } catch (_) {}
+    delete ytPlayers[vid.id];
+  }
+  ytPlayers[vid.id] = new YT.Player(mountId, {
+    videoId:    vid.youtube_id,
+    playerVars: {
+      start:     Math.floor(startSec),
+      rel:       0, showinfo: 0, modestbranding: 1,
+      enablejsapi: 1,
+      origin:    window.location.origin,
+    },
+    host: 'https://www.youtube-nocookie.com',
+    events: {
+      onReady:       (e) => onYTReady(e, vid, step),
+      onStateChange: (e) => onYTStateChange(e, vid, step),
+    },
+  });
+}
+
+function onYTReady(event, vid, step) {
+  const overlay = document.getElementById(`video-loading-${vid.id}`);
+  if (overlay) overlay.classList.add('hidden');
+  // Update time display when ready
+  const dur = event.target.getDuration?.() || 0;
+  if (dur) updateTimeDisplay(vid.id, 0, dur);
+}
+
+function onYTStateChange(event, vid, step) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    startWatchTimer(vid, step);
+  } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+    stopWatchTimer(vid.id);
+    if (event.data === YT.PlayerState.ENDED) {
+      onVideoEnded(vid, step);
+    }
+  }
+}
+
+function startWatchTimer(vid, step) {
+  if (watchTimers[vid.id]) return;
+  watchTimers[vid.id] = setInterval(async () => {
+    const player = ytPlayers[vid.id];
+    if (!player) return;
+    const cur = player.getCurrentTime?.() ?? 0;
+    const dur = player.getDuration?.()     ?? 0;
+    if (dur <= 0) return;
+
+    const pct = Math.min(100, Math.round((cur / dur) * 100));
+    updateWatchUI(vid.id, pct, cur, dur);
+
+    // Save every 10 seconds
+    if (Math.round(cur) % 10 === 0) {
+      try {
+        const prog = await VideoService.upsertProgress(vid.id, {
+          watch_pct:        pct,
+          watch_sec:        Math.round(cur),
+          status:           pct >= 100 ? 'completed' : 'in_progress',
+          last_position_sec: Math.round(cur),
+        });
+        videoProgress[vid.id] = prog;
+        triggerAutosave('Progresso salvo');
+
+        // Enable skip button if threshold reached
+        if (vid.allow_skip && pct >= vid.skip_min_pct) {
+          const skipBox = document.getElementById(`skip-box-${vid.id}`);
+          if (skipBox) {
+            skipBox.style.opacity   = '1';
+            skipBox.style.pointerEvents = 'auto';
+          }
+        }
+        // Enable next button if done
+        if (pct >= 100) {
+          onVideoEnded(vid, step);
+        }
+      } catch (_) {}
+    }
+  }, 1000);
+}
+
+function stopWatchTimer(videoId) {
+  if (watchTimers[videoId]) {
+    clearInterval(watchTimers[videoId]);
+    delete watchTimers[videoId];
+  }
+}
+
+function stopAllWatchTimers() {
+  Object.keys(watchTimers).forEach(stopWatchTimer);
+  Object.keys(ytPlayers).forEach(id => {
+    try { ytPlayers[id].pauseVideo?.(); } catch (_) {}
+  });
+}
+
+function updateWatchUI(videoId, pct, cur, dur) {
+  const fill  = document.getElementById(`vpf-${videoId}`);
+  const pctEl = document.getElementById(`vstat-pct-${videoId}`);
+  if (fill)  fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+  updateTimeDisplay(videoId, cur, dur);
+}
+
+function updateTimeDisplay(videoId, cur, dur) {
+  const el = document.getElementById(`vstat-time-${videoId}`);
+  if (el) el.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+async function onVideoEnded(vid, step) {
+  stopWatchTimer(vid.id);
+  try {
+    const prog = await VideoService.markCompleted(vid.id);
+    videoProgress[vid.id] = { ...videoProgress[vid.id], ...prog };
+  } catch (_) {}
+
+  stepStates[step.id] = 'completed';
+  persistStates();
+
+  // Unlock next step
+  unlockNextStep(step.id);
+
+  // Enable next button
+  const btnNext = document.getElementById(`btn-next-${step.id}`);
+  if (btnNext) btnNext.removeAttribute('disabled');
+
+  // Show completion banner if not already shown
+  if (!document.querySelector('.video-complete-banner')) {
+    const wrap = document.getElementById(`video-wrap-${vid.id}`);
+    if (wrap) {
+      const banner = document.createElement('div');
+      banner.className = 'video-complete-banner';
+      banner.innerHTML = '✅ Vídeo concluído! Você pode avançar para o próximo passo.';
+      wrap.parentNode.insertBefore(banner, wrap.nextSibling);
+    }
+  }
+
+  updateWatchUI(vid.id, 100, 1, 1);
+  renderTracker();
+  triggerAutosave('Etapa concluída ✓');
+}
+
+window.updateSkipDeclare = function(videoId) {
+  const cb  = document.getElementById(`skip-declare-${videoId}`);
+  const btn = document.getElementById(`btn-skip-${videoId}`);
+  if (btn) btn.disabled = !cb?.checked;
+};
+
+window.skipVideo = async function(videoId, stepId) {
+  const cb = document.getElementById(`skip-declare-${videoId}`);
+  if (!cb?.checked) return;
+  try {
+    const prog = await VideoService.markSkipped(videoId, 'Declaração de ciência');
+    videoProgress[videoId] = { ...videoProgress[videoId], ...prog };
+    stepStates[stepId] = 'completed';
+    persistStates();
+    unlockNextStep(stepId);
+    showToast('Passo marcado como concluído.', 'ok');
+    renderTracker();
+    const btnNext = document.getElementById(`btn-next-${stepId}`);
+    if (btnNext) btnNext.removeAttribute('disabled');
+    triggerAutosave('Etapa pulada ✓');
+  } catch (e) {
+    showToast('Erro ao salvar declaração.', 'error');
+  }
+};
+
+// ═══════════════════════════════════════════════
+// PDF VIEW STEP (Cartilha)
+// ═══════════════════════════════════════════════
+async function renderPdfViewStep(step) {
+  const content = document.getElementById('journey-content');
+  const state   = stepStates[step.id];
+  const isDone  = state === 'completed' || state === 'approved';
+
+  // Build public URL for the PDF from Supabase Storage
+  const { data: pdfUrlData } = await supabase.storage
+    .from('portal-assets')
+    .getPublicUrl(step.storageKey ?? 'public/cartilha-superendividamento.pdf');
+  const pdfUrl = pdfUrlData?.publicUrl;
+
+  content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-header">
+        <div class="jc-icon">${step.icon}</div>
+        <div>
+          <div class="jc-title">${step.title}</div>
+          <div class="jc-subtitle">${step.subtitle}</div>
+        </div>
+        ${renderBadge(isDone ? 'completed' : state)}
+      </div>
+      <div class="journey-card-body">
+        ${isDone ? `<div class="video-complete-banner">✅ Você já acessou a Cartilha CNJ. Pode revisá-la a qualquer momento.</div>` : ''}
+
+        <div class="glass-info" style="margin-bottom:16px">
+          <div class="glass-info-title">📚 O que você encontrará nesta cartilha</div>
+          <ul>
+            <li>Seus direitos como consumidor superendividado (Lei 14.181/2021)</li>
+            <li>Como funciona o processo de renegociação coletiva perante o Judiciário</li>
+            <li>O papel do juiz e do conciliador no processo CNJ</li>
+            <li>O que é o mínimo existencial e como ele é calculado</li>
+            <li>Orientações sobre o Formulário CNJ Anexo II</li>
+          </ul>
+        </div>
+
+        <div class="pdf-engine-wrap">
+          <div class="pdf-viewer-toolbar">
+            <span><strong>Cartilha de Superendividamento — CNJ / Senacon</strong></span>
+            <span id="pdf-read-status" style="color:var(--muted)">Versão 2024</span>
+          </div>
+          <div class="pdf-viewer-area">
+            ${pdfUrl
+              ? `<iframe src="${pdfUrl}#toolbar=1&navpanes=0" title="Cartilha Superendividamento CNJ"></iframe>`
+              : `<div class="pdf-placeholder">
+                  <div class="pdf-placeholder-icon">📄</div>
+                  <div>Pré-visualização indisponível.<br>Use o botão abaixo para baixar a cartilha.</div>
+                </div>`
+            }
+          </div>
+        </div>
+
+        <div class="pdf-download-card" id="dl-cartilha" onclick="window.downloadCartilha()">
+          <div class="pdf-dl-icon">📥</div>
+          <div>
+            <div class="pdf-dl-name">Baixar Cartilha Superendividamento CNJ</div>
+            <div class="pdf-dl-meta">PDF · Conselho Nacional de Justiça · 2024</div>
+          </div>
+          <div class="pdf-dl-downloaded" id="dl-cartilha-status" style="display:none">
+            ✓ Baixado
+          </div>
+        </div>
+
+        <div class="journey-nav">
+          <div class="journey-nav-info">
+            Etapa ${JOURNEY_STEPS.indexOf(step) + 1} de ${JOURNEY_STEPS.length}
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="window.journeyNavigate('${JOURNEY_STEPS[JOURNEY_STEPS.indexOf(step)-1].id}')">
+              ← Anterior
+            </button>
+            <button class="btn btn-primary" id="btn-next-cartilha"
+                    onclick="window.completeCartilha('${step.id}')">
+              Lido — Avançar →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.downloadCartilha = async function() {
+  const { data: urlData } = await supabase.storage
+    .from('portal-assets')
+    .getPublicUrl('public/cartilha-superendividamento.pdf');
+  const url = urlData?.publicUrl;
+  if (!url) {
+    showToast('Arquivo ainda não disponível. Entre em contato com o escritório.', 'warn');
+    return;
+  }
+  await DownloadAuditService.downloadAndLog(url,
+    'cartilha_superendividamento',
+    'Cartilha Superendividamento CNJ',
+    { assetVersion: '2024-v1', cnjStepRef: 5, filename: 'Cartilha-Superendividamento-CNJ.pdf' }
+  );
+  const el = document.getElementById('dl-cartilha-status');
+  if (el) el.style.display = 'flex';
+  triggerAutosave('Download registrado ✓');
+};
+
+window.completeCartilha = async function(stepId) {
+  stepStates[stepId] = 'completed';
+  persistStates();
+  unlockNextStep(stepId);
+  renderTracker();
+  triggerAutosave('Etapa concluída ✓');
+  const nextStep = getNextStep(stepId);
+  if (nextStep) navigateTo(nextStep.id);
+};
+
+// ═══════════════════════════════════════════════
+// ANEXO II STEP
+// ═══════════════════════════════════════════════
+function renderAnexoIIStep(step) {
+  const content = document.getElementById('journey-content');
+  const state   = stepStates[step.id];
+  const isDone  = state === 'completed' || state === 'awaiting_review' || state === 'approved';
+
+  content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-header">
+        <div class="jc-icon">${step.icon}</div>
+        <div>
+          <div class="jc-title">${step.title}</div>
+          <div class="jc-subtitle">${step.subtitle}</div>
+        </div>
+        ${renderBadge(state)}
+      </div>
+      <div class="journey-card-body">
+        ${state === 'awaiting_review' ? `
+        <div class="video-complete-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">
+          ⏳ Formulário enviado — Aguardando análise do escritório.
+        </div>` : ''}
+        ${state === 'approved' ? `
+        <div class="video-complete-banner">✅ Formulário aprovado pelo escritório!</div>` : ''}
+        ${state === 'rejected' ? `
+        <div class="video-complete-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">
+          ❌ Formulário devolvido para correção. Veja as observações abaixo e reenvie.
+        </div>` : ''}
+
+        <div class="glass-info">
+          <div class="glass-info-title">📄 O Formulário Oficial CNJ Anexo II</div>
+          <ul>
+            <li>Documento exigido pela Recomendação CNJ 125/2021 para requerimento de renegociação coletiva</li>
+            <li>Deve conter seus dados pessoais, lista completa de credores e valores devidos</li>
+            <li>Após preenchido e enviado, o escritório analisa e valida antes de protocolar no Judiciário</li>
+            <li>Você pode baixar o formulário em PDF, preencher manualmente e enviar de volta</li>
+          </ul>
+        </div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">
+          Escolha como prefere preencher:
+        </div>
+        <div class="anexo-options">
+          <div class="anexo-option selected" id="opt-offline" onclick="window.selectAnexoOption('offline')">
+            <div class="anexo-option-icon">📥</div>
+            <div class="anexo-option-title">Baixar e enviar</div>
+            <div class="anexo-option-desc">Baixe o PDF oficial, preencha e faça upload aqui</div>
+          </div>
+          <div class="anexo-option" id="opt-online" onclick="window.selectAnexoOption('online')" title="Em breve">
+            <div class="anexo-option-icon">💻</div>
+            <div class="anexo-option-title">Preencher online <span style="font-size:9px;background:rgba(245,166,35,.2);color:#c07b00;padding:1px 6px;border-radius:6px;vertical-align:middle">Em breve</span></div>
+            <div class="anexo-option-desc">Formulário guiado diretamente no portal</div>
+          </div>
+        </div>
+
+        <!-- Offline: download + upload -->
+        <div id="panel-offline">
+          <div class="pdf-download-card" id="dl-anexo" onclick="window.downloadAnexo()">
+            <div class="pdf-dl-icon">📄</div>
+            <div>
+              <div class="pdf-dl-name">Formulário Oficial CNJ Anexo II</div>
+              <div class="pdf-dl-meta">PDF · Recomendação CNJ 125/2021 · Versão 2024</div>
+            </div>
+            <div class="pdf-dl-downloaded" id="dl-anexo-status" style="display:none">
+              ✓ Baixado
+            </div>
+          </div>
+
+          <div style="font-size:13px;font-weight:700;color:var(--ink);margin:16px 0 8px">
+            Enviar formulário preenchido:
+          </div>
+          <div class="upload-drop-zone" id="upload-zone" onclick="document.getElementById('file-input-anexo').click()">
+            <div class="upload-icon">📎</div>
+            <div class="upload-text">Clique para selecionar o PDF preenchido</div>
+            <div class="upload-hint">ou arraste e solte aqui · PDF · máx. 10MB</div>
+          </div>
+          <div id="upload-preview-wrap" style="display:none">
+            <div class="upload-preview">
+              <span>📄</span>
+              <span id="upload-filename" style="font-weight:600">—</span>
+              <span id="upload-filesize" style="color:var(--muted)">—</span>
+              <button class="btn btn-sm btn-outline" style="margin-left:auto;color:var(--red)"
+                      onclick="window.clearAnexoUpload()">✕</button>
+            </div>
+          </div>
+          <input type="file" id="file-input-anexo" accept=".pdf,application/pdf" style="display:none"
+                 onchange="window.handleAnexoFile(this)">
+        </div>
+
+        <!-- Online form (placeholder) -->
+        <div id="panel-online" style="display:none">
+          <div class="glass-info">
+            <div class="glass-info-title">🔧 Formulário online em desenvolvimento</div>
+            <ul>
+              <li>Em breve você poderá preencher o Formulário CNJ Anexo II diretamente neste portal</li>
+              <li>Por enquanto, utilize a opção de baixar e enviar o PDF</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="journey-nav">
+          <div class="journey-nav-info">
+            Etapa ${JOURNEY_STEPS.indexOf(step) + 1} de ${JOURNEY_STEPS.length}
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="window.journeyNavigate('${JOURNEY_STEPS[JOURNEY_STEPS.indexOf(step)-1].id}')">
+              ← Anterior
+            </button>
+            <button class="btn btn-primary" id="btn-submit-anexo"
+                    onclick="window.submitAnexo('${step.id}')" disabled>
+              Enviar formulário →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Drag and drop
+  setupDropZone();
+}
+
+window.selectAnexoOption = function(option) {
+  document.getElementById('opt-offline').classList.toggle('selected', option === 'offline');
+  document.getElementById('opt-online').classList.toggle('selected', option === 'online');
+  document.getElementById('panel-offline').style.display = option === 'offline' ? '' : 'none';
+  document.getElementById('panel-online').style.display  = option === 'online'  ? '' : 'none';
+};
+
+window.downloadAnexo = async function() {
+  const { data: urlData } = await supabase.storage
+    .from('portal-assets')
+    .getPublicUrl('public/anexo-ii-cnj.pdf');
+  const url = urlData?.publicUrl;
+  if (!url) {
+    showToast('Arquivo não disponível. Entre em contato com o escritório.', 'warn');
+    return;
+  }
+  await DownloadAuditService.downloadAndLog(url,
+    'anexo_ii_cnj',
+    'Formulário Oficial CNJ Anexo II',
+    { assetVersion: '2024-v1', cnjStepRef: 6, filename: 'Formulario-Anexo-II-CNJ.pdf' }
+  );
+  const el = document.getElementById('dl-anexo-status');
+  if (el) el.style.display = 'flex';
+  triggerAutosave('Download registrado ✓');
+};
+
+function setupDropZone() {
+  const zone = document.getElementById('upload-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) applyAnexoFile(file);
+  });
+}
+
+window.handleAnexoFile = function(input) {
+  const file = input.files[0];
+  if (file) applyAnexoFile(file);
+};
+
+function applyAnexoFile(file) {
+  if (file.type !== 'application/pdf') {
+    showToast('Apenas arquivos PDF são aceitos.', 'warn'); return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('Arquivo muito grande. Máximo: 10MB.', 'warn'); return;
+  }
+  uploadedFile = file;
+  document.getElementById('upload-preview-wrap').style.display = '';
+  document.getElementById('upload-filename').textContent = file.name;
+  document.getElementById('upload-filesize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  document.getElementById('btn-submit-anexo').removeAttribute('disabled');
+  triggerAutosave('Arquivo selecionado');
+}
+
+window.clearAnexoUpload = function() {
+  uploadedFile = null;
+  document.getElementById('upload-preview-wrap').style.display = 'none';
+  document.getElementById('file-input-anexo').value = '';
+  document.getElementById('btn-submit-anexo').setAttribute('disabled', '');
+};
+
+window.submitAnexo = async function(stepId) {
+  if (!uploadedFile) { showToast('Selecione o PDF preenchido antes de enviar.', 'warn'); return; }
+  const btn = document.getElementById('btn-submit-anexo');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  try {
+    // Upload to Supabase Storage
+    const { data: { user } } = await supabase.auth.getUser();
+    const uid = user.id;
+    const path = `${uid}/anexo_ii/${Date.now()}.pdf`;
+    const { error: upErr } = await supabase.storage
+      .from('portal-documentos')
+      .upload(path, uploadedFile, { upsert: true });
+    if (upErr) throw upErr;
+
+    // Update document status
+    await supabase.from('portal_documentos')
+      .upsert({
+        user_id: uid,
+        tipo: 'formulario_cnj_anexo_ii',
+        nome_arquivo: uploadedFile.name,
+        storage_path: path,
+        status: 'em_analise',
+      }, { onConflict: 'user_id,tipo' });
+
+    stepStates[stepId] = 'awaiting_review';
+    persistStates();
+    unlockNextStep(stepId);
+    renderTracker();
+    triggerAutosave('Formulário enviado ✓');
+    showToast('Formulário enviado! O escritório analisará em breve.', 'ok');
+    // Refresh view
+    const step = JOURNEY_STEPS.find(s => s.id === stepId);
+    if (step) renderAnexoIIStep(step);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Enviar formulário →';
+    showToast('Erro ao enviar. Tente novamente.', 'error');
+    console.error('[Anexo II]', e);
+  }
+};
+
+// ═══════════════════════════════════════════════
+// CNJ FORM STEP (redirects to onboarding.html)
+// ═══════════════════════════════════════════════
+function renderCnjFormStep(step) {
+  const content = document.getElementById('journey-content');
+  const state   = stepStates[step.id];
+  const isDone  = state === 'completed' || state === 'approved';
+
+  content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-header">
+        <div class="jc-icon">${step.icon}</div>
+        <div>
+          <div class="jc-title">${step.title}</div>
+          <div class="jc-subtitle">${step.subtitle}</div>
+        </div>
+        ${renderBadge(state)}
+      </div>
+      <div class="journey-card-body">
+        ${isDone ? `<div class="video-complete-banner">✅ Formulário CNJ preenchido e enviado ao escritório.</div>` : ''}
+
+        <div class="glass-info" style="margin-bottom:20px">
+          <div class="glass-info-title">📋 Formulário CNJ — 7 Passos</div>
+          <ul>
+            <li><strong>Passo 1 – Identificação:</strong> Dados pessoais e documentos</li>
+            <li><strong>Passo 2 – Situação Profissional:</strong> Renda, emprego e despesas mensais</li>
+            <li><strong>Passo 3 – Patrimônio:</strong> Imóvel, veículo e bens declarados</li>
+            <li><strong>Passo 4 – Causas:</strong> Como e por que ocorreu o endividamento</li>
+            <li><strong>Passo 5 – Credores:</strong> Lista completa de dívidas e credores</li>
+            <li><strong>Passo 6 – Análise:</strong> Capacidade de pagamento calculada</li>
+            <li><strong>Passo 7 – Revisão e Envio:</strong> Confirmação e protocolo ao escritório</li>
+          </ul>
+        </div>
+
+        <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:20px;text-align:center">
+          <div style="font-size:28px;margin-bottom:8px">📝</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Preencha o Formulário CNJ Completo</div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">
+            Tempo estimado: 15–25 minutos. Suas respostas são salvas automaticamente.
+          </div>
+          <a href="onboarding.html" class="btn btn-primary" style="display:inline-flex;gap:8px;align-items:center">
+            🚀 Iniciar Formulário CNJ
+          </a>
+        </div>
+
+        <div class="journey-nav">
+          <div class="journey-nav-info">
+            Etapa ${JOURNEY_STEPS.indexOf(step) + 1} de ${JOURNEY_STEPS.length} — Última etapa
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="window.journeyNavigate('${JOURNEY_STEPS[JOURNEY_STEPS.indexOf(step)-1].id}')">
+            ← Anterior
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// COMPLETION SCREEN
+// ═══════════════════════════════════════════════
+function renderCompletion() {
+  const content = document.getElementById('journey-content');
+  content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-body">
+        <div class="journey-complete">
+          <div class="journey-complete-icon">🎉</div>
+          <h2>Parabéns! Jornada concluída.</h2>
+          <p>Você completou todas as etapas da Jornada de Superendividamento. O escritório Hermida Maia Advocacia irá revisar seu processo e entrar em contato em breve.</p>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <a href="dashboard.html" class="btn btn-primary">Ir para o Painel →</a>
+            <a href="documentos.html" class="btn btn-outline">Ver Documentos</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  renderTracker();
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION HELPERS
+// ═══════════════════════════════════════════════
+function unlockNextStep(completedStepId) {
+  const idx = JOURNEY_STEPS.findIndex(s => s.id === completedStepId);
+  if (idx >= 0 && idx < JOURNEY_STEPS.length - 1) {
+    const next = JOURNEY_STEPS[idx + 1];
+    if (stepStates[next.id] === 'locked') {
+      stepStates[next.id] = 'available';
+      persistStates();
+    }
+  }
+}
+
+function getNextStep(currentStepId) {
+  const idx = JOURNEY_STEPS.findIndex(s => s.id === currentStepId);
+  return idx >= 0 && idx < JOURNEY_STEPS.length - 1 ? JOURNEY_STEPS[idx + 1] : null;
+}
+
+window.journeyNext = function(stepId) {
+  const next = getNextStep(stepId);
+  if (next) navigateTo(next.id);
+};
+
+// ═══════════════════════════════════════════════
+// YOUTUBE API CALLBACK (global)
+// ═══════════════════════════════════════════════
+window.onYouTubeIframeAPIReady = function() {
+  ytReady = true;
+  // Mount any players that were waiting
+  for (const p of pendingYouTube) {
+    mountPlayer(p.vid, p.step, p.startSec, p.mountId);
+  }
+  pendingYouTube = [];
+};
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function renderBadge(state) {
+  const map = {
+    locked:          ['badge-locked',    '🔒 Bloqueado'],
+    available:       ['badge-available', '▶ Disponível'],
+    in_progress:     ['badge-active',    '⏳ Em andamento'],
+    awaiting_review: ['badge-active',    '🔍 Em análise'],
+    approved:        ['badge-done',      '✓ Aprovado'],
+    rejected:        ['badge-rejected',  '✗ Devolvido'],
+    completed:       ['badge-done',      '✓ Concluído'],
+  };
+  const [cls, label] = map[state] || map.locked;
+  return `<div class="jc-badge ${cls}">${label}</div>`;
+}
+
+function showToast(msg, type = 'info') {
+  const colors = {
+    ok:    { bg: 'rgba(26,122,74,.9)',   fg: '#fff' },
+    warn:  { bg: 'rgba(180,83,9,.9)',    fg: '#fff' },
+    error: { bg: 'rgba(192,57,43,.9)',   fg: '#fff' },
+    info:  { bg: 'rgba(26,58,92,.9)',    fg: '#fff' },
+  };
+  const c = colors[type] || colors.info;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:70px;right:20px;z-index:9999;
+    background:${c.bg};color:${c.fg};padding:10px 18px;border-radius:8px;
+    font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);
+    animation:slideInUp .3s ease;max-width:320px;line-height:1.4`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function showGlobalError(msg) {
+  const content = document.getElementById('journey-content');
+  if (content) content.innerHTML = `
+    <div class="journey-card">
+      <div class="journey-card-body" style="text-align:center;padding:40px">
+        <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+        <p style="color:var(--red);font-weight:600">${msg}</p>
+        <button class="btn btn-primary" onclick="location.reload()">Recarregar</button>
+      </div>
+    </div>`;
+}
+
+function tryParse(str) {
+  try { return JSON.parse(str); } catch (_) { return null; }
+}
+
+// ── Global CSS animation ─────────────────────
+const style = document.createElement('style');
+style.textContent = `@keyframes slideInUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
