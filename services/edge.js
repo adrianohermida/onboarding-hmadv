@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { FUNCTIONS_URL } from '../utils/config.js';
+import { SUPABASE_ANON } from '../utils/config.js';
 import { toFriendlyMessage } from './error-messages.js';
 
 const DEFAULT_TIMEOUT_MS = 12000;
@@ -42,14 +43,21 @@ async function getFreshAccessToken(path) {
 
   const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
   const freshSession = refreshed?.session || session;
-  if (refreshErr || !freshSession?.access_token) {
-    const err = new Error('Sessao expirada');
+
+  // Transient refresh failure: log a warning but continue with the existing valid token
+  // rather than hard-failing calls that could succeed with the current access_token.
+  if (refreshErr) {
     emitServiceTelemetry({
       type: 'edge',
       path,
-      stage: 'session-refresh',
-      message: refreshErr?.message || err.message,
+      stage: 'session-refresh-warn',
+      message: refreshErr.message,
     });
+  }
+
+  if (!freshSession?.access_token) {
+    const err = new Error('Sessao expirada');
+    emitServiceTelemetry({ type: 'edge', path, stage: 'session-refresh', message: err.message });
     throw err;
   }
 
@@ -77,6 +85,7 @@ export async function invokeEdgeFunction(path, {
       const response = await fetch(`${FUNCTIONS_URL}/${path}`, {
         method,
         headers: {
+          apikey: SUPABASE_ANON,
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           ...headers,
@@ -97,7 +106,7 @@ export async function invokeEdgeFunction(path, {
         if (response.status === 401 && attempt < retries) {
           try {
             const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session?.access_token && refreshed.session.access_token !== accessToken) {
+            if (refreshed?.session?.access_token) {
               accessToken = refreshed.session.access_token;
               lastError = err;
               await delay(backoffMs * (attempt + 1));
@@ -122,6 +131,10 @@ export async function invokeEdgeFunction(path, {
       return await response.text();
     } catch (error) {
       clearTimeout(timer);
+      if (error && typeof error === 'object' && 'status' in error) {
+        throw error;
+      }
+
       const isAbort = error?.name === 'AbortError' || String(error).includes('timeout');
       const isNetwork = error instanceof TypeError;
       const retryable = isAbort || isNetwork;

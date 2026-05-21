@@ -155,6 +155,18 @@
           </div>
         </div>
 
+        <!-- CNJ Form workflow status card -->
+        <div id="cnj-form-status-card" style="display:none;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:16px;background:#fafbfc;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">Formulário CNJ</div>
+              <div style="font-size:13px;font-weight:600;color:var(--navy);" id="cnj-form-status-text">—</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="cnj-form-status-hint" style="display:none;"></div>
+            </div>
+            <a id="cnj-form-status-link" href="onboarding.html?source=journey" style="font-size:12px;color:var(--blue);white-space:nowrap;font-weight:600;">Abrir →</a>
+          </div>
+        </div>
+
         <!-- Freshdesk ticket card -->
         <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
           <div style="font-size:12px;font-weight:700;color:var(--blue)">FD</div>
@@ -240,7 +252,12 @@
           </div>
           <div class="activity-list" id="activity-list">
             <div class="empty-state">
-              <div class="empty-state-icon">CNJ</div>
+              <div class="empty-state-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".45">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 7v5l3 3"/>
+                </svg>
+              </div>
               <h3>Nenhuma atividade ainda</h3>
               <p>As atualizações do seu caso aparecerão aqui.</p>
               <a href="onboarding.html" class="btn btn-primary btn-sm">Iniciar cadastro</a>
@@ -261,7 +278,7 @@
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
-<script type="module" src="../js/app.js?v=20260521j"></script>
+<script type="module" src="../js/app.js?v=20260521p"></script>
 <script type="module">
 import { CaseService, DebtService, DocumentService, AdminService } from '../services/database.js';
 import { formatCurrency } from '../utils/helpers.js';
@@ -605,6 +622,10 @@ async function loadClientData(userId) {
   const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
   renderCNJStepBar(step);
 
+  // CNJ form status card
+  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online');
+  renderFormStatusCard(casoFull?.onboarding_done, step, formDoc);
+
   // Ticket Freshdesk
   const fdTicketId = rpcData?.fd_ticket_id ?? casoFull?.fd_ticket_id;
   if (fdTicketId) renderFDTicketCard(fdTicketId);
@@ -635,6 +656,8 @@ function renderClientKPIs({ caso, dividas, docs }) {
   const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
   setText('sc-pendencias', pendTotal || '—');
   if (caso) setText('footer-case-id', 'ID: ' + caso.id.slice(0, 8).toUpperCase());
+  const adminFormDoc = docs.find(d => d.tipo === 'formulario_cnj_online');
+  renderFormStatusCard(caso?.onboarding_done, caso?.cnj_step_atual, adminFormDoc);
   buildActivityFeedLegacy(caso, dividas, docs);
 }
 
@@ -676,6 +699,49 @@ function renderFDTicketCard(ticketId) {
   if (ticketInfo) ticketInfo.textContent = `Chamado #${ticketId} — Em análise pela equipe`;
   const link = byId('fd-ticket-link');
   if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
+}
+
+/* ── CNJ Form Status Card ───────────────────────────── */
+function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
+  const card   = byId('cnj-form-status-card');
+  const textEl = byId('cnj-form-status-text');
+  const hintEl = byId('cnj-form-status-hint');
+  const linkEl = byId('cnj-form-status-link');
+  if (!card || !textEl) return;
+
+  const wf = formDoc?.workflow_status || null;
+  let text = '', hint = '', bg = '#fafbfc', border = '1px solid var(--line)';
+
+  if (wf === 'aprovado') {
+    text = 'Formulário aprovado ✓';
+    hint = 'Plano de pagamento em elaboração.';
+    bg   = 'rgba(21,128,61,.05)'; border = '1px solid rgba(21,128,61,.3)';
+    if (linkEl) { linkEl.textContent = 'Ver formulário →'; linkEl.href = 'documentos.html'; }
+  } else if (wf === 'rejeitado' || wf === 'pendente_correcao') {
+    text = wf === 'rejeitado' ? 'Correção necessária' : 'Correção solicitada';
+    hint = formDoc?.admin_notes || 'Verifique as instruções do advogado.';
+    bg   = 'rgba(192,57,43,.04)'; border = '1px solid rgba(192,57,43,.3)';
+    if (linkEl) { linkEl.textContent = 'Corrigir →'; linkEl.href = 'onboarding.html?source=journey'; }
+  } else if (wf === 'em_analise' || onboardingDone) {
+    text = 'Formulário em análise';
+    hint = 'O escritório irá analisar e entrar em contato.';
+    bg   = 'rgba(245,166,35,.05)'; border = '1px solid rgba(245,166,35,.3)';
+    if (linkEl) { linkEl.textContent = 'Ver formulário →'; linkEl.href = 'documentos.html'; }
+  } else if ((cnjStepAtual || 0) > 0) {
+    text = `Formulário em andamento — passo ${cnjStepAtual}/7`;
+    hint = 'Continue de onde parou.';
+    if (linkEl) { linkEl.textContent = 'Continuar →'; linkEl.href = 'onboarding.html?source=journey'; }
+  } else {
+    text = 'Formulário não iniciado';
+    hint = 'Acesse a Jornada para iniciar.';
+    if (linkEl) { linkEl.textContent = 'Iniciar →'; linkEl.href = 'onboarding-v2.html'; }
+  }
+
+  card.style.display = '';
+  card.style.background = bg;
+  card.style.border = border;
+  textEl.textContent = text;
+  if (hintEl) { hintEl.textContent = hint; hintEl.style.display = hint ? '' : 'none'; }
 }
 
 /* ── Timeline real (portal_cnj_timeline) ────────────── */

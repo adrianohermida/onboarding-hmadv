@@ -34,7 +34,7 @@
   </script>
 
   <!-- App shell (auth + component loader) -->
-  <script type="module" src="../js/app.js?v=20260521j"></script>
+  <script type="module" src="../js/app.js?v=20260521p"></script>
 
   <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api" async></script>
@@ -321,6 +321,7 @@ import { FinancialCalculator } from '../modules/financial/calculator.js';
 import { VideoPlayer }      from '../modules/videos/VideoPlayer.js';
 import { Toast }            from '../modules/ui/Toast.js';
 import { Shell }            from '../modules/ui/Shell.js';
+import { openCnjAnexoIIPrint } from '../js/cnj-pdf-generator.js';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -335,6 +336,11 @@ let uploadedFile  = null;
 let diagnostico   = null;  // financial diagnosis
 let isAdminUser = false;
 let unmountModeSelector = null;
+let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
+let formDoc   = null;   // portal_documentos row for formulario_cnj_online
+let anexoDoc  = null;   // portal_documentos row for formulario_cnj_anexo_ii
+let webAnexoGenerated = false; // true after user generates the Annex II via WEB path
+const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 document.addEventListener('app:user-loaded', (e) => {
   isAdminUser = !!e.detail?.isAdmin;
@@ -368,6 +374,14 @@ document.addEventListener('app:user-loaded', (e) => {
 // ═══════════════════════════════════════════════════════════════
 async function bootstrap() {
   shell.init();
+
+  // Handle return from guided form (onboarding.html redirects here with ?formulario=concluido)
+  const _urlP = new URLSearchParams(window.location.search);
+  if (_urlP.get('formulario') === 'concluido') {
+    Toast.success('Formulário enviado! O escritório analisará seu caso em breve.');
+    history.replaceState(null, '', window.location.pathname);
+  }
+
   await loadData();
   renderTracker();
   const first = engine.getCurrentStep();
@@ -448,6 +462,61 @@ async function loadData() {
 
   // 4. Initialise engine with video progress
   engine.init(progressList);
+
+  // 5. Load caso state + form doc from DB (overrides stale sessionStorage)
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) {
+      const [casoRes, formRes, anexoRes] = await Promise.all([
+        supabase.from('portal_casos')
+          .select('onboarding_done,cnj_step_atual')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase.from('portal_documentos')
+          .select('workflow_status,admin_notes,updated_at')
+          .eq('user_id', user.id)
+          .eq('tipo', 'formulario_cnj_online')
+          .maybeSingle(),
+        supabase.from('portal_documentos')
+          .select('workflow_status,admin_notes,updated_at')
+          .eq('user_id', user.id)
+          .eq('tipo', 'formulario_cnj_anexo_ii')
+          .maybeSingle(),
+      ]);
+      if (casoRes.data) {
+        casoState = {
+          onboarding_done: !!casoRes.data.onboarding_done,
+          cnj_step_atual:  Number(casoRes.data.cnj_step_atual) || 0,
+        };
+      }
+      formDoc  = formRes.data  || null;
+      anexoDoc = anexoRes.data || null;
+    }
+  } catch (e) {
+    console.warn('[Journey] loadData: casoState/formDoc query failed:', e.message);
+  }
+
+  // 6. Sync engine states from DB truth (prevents stale sessionStorage drift)
+  if (formDoc?.workflow_status === 'aprovado') {
+    engine.setState('cnj_form', 'approved');
+    engine.setState('anexo_ii', 'approved');
+  } else if (formDoc?.workflow_status === 'rejeitado' || formDoc?.workflow_status === 'pendente_correcao') {
+    engine.setState('cnj_form', 'rejected');
+  } else if (formDoc?.workflow_status === 'em_analise' || casoState?.onboarding_done) {
+    const s = engine.getState('cnj_form');
+    if (!['approved','rejected'].includes(s)) engine.setState('cnj_form', 'awaiting_review');
+    // Only advance anexo_ii if an Anexo II doc has actually been submitted — prevents
+    // hiding WEB-generation controls for users who haven't sent the Anexo II yet.
+    if (anexoDoc) {
+      const sa = engine.getState('anexo_ii');
+      if (!['approved','completed'].includes(sa)) engine.setState('anexo_ii', 'awaiting_review');
+    }
+  } else if (casoState?.cnj_step_atual > 0) {
+    const s = engine.getState('cnj_form');
+    if (!['completed','approved','awaiting_review','rejected'].includes(s)) {
+      engine.setState('cnj_form', 'in_progress');
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -794,12 +863,156 @@ window.completeCartilha = function(stepId) {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// HELPER — WEB panel for Anexo II step (state-aware)
+//   • cnj_form not done → redirect to guided form
+//   • cnj_form done     → generate CNJ Annex II doc + confirm
+// ═══════════════════════════════════════════════════════════════
+function buildAnexoWebPanelHtml() {
+  const cnjState = engine.getState('cnj_form');
+  const done     = casoState?.onboarding_done;
+  const isReady  = ['awaiting_review', 'approved', 'completed'].includes(cnjState) || done;
+  const isApproved = cnjState === 'approved';
+  const isRejected = cnjState === 'rejected';
+  const stepN    = casoState?.cnj_step_atual || 0;
+
+  if (isApproved) {
+    return `
+      <div class="done-banner">Formulário CNJ aprovado pelo escritório. Plano de pagamento em elaboração.</div>`;
+  }
+
+  if (isReady) {
+    // Guided form complete — user can generate the Annex II document
+    return `
+      <div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;margin-bottom:12px;">
+        ✓ Formulário guiado preenchido. Gere o Formulário Oficial CNJ Anexo II abaixo.
+      </div>
+      <div class="glass-info" style="margin-bottom:12px;">
+        <div class="glass-info-title">Como funciona a opção WEB</div>
+        <ul>
+          <li>Seus dados são usados para pré-preencher o Formulário Oficial CNJ Anexo II</li>
+          <li>O documento abre em uma nova janela — use <strong>Imprimir → Salvar como PDF</strong></li>
+          <li>Após gerar, clique em <strong>Confirmar envio ao escritório</strong> para finalizar</li>
+        </ul>
+      </div>
+      <div id="anexo-web-generate-area">
+        <button class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:8px"
+          onclick="window.generateAnexoIIDoc()">
+          📄 Gerar Formulário CNJ Anexo II
+        </button>
+        <p id="anexo-web-generated-note" style="display:none;font-size:12px;color:#15803d;font-weight:600;margin:4px 0 8px;">
+          ✓ Documento gerado! Salve o PDF na janela que abriu e depois confirme abaixo.
+        </p>
+        <br>
+        <button id="btn-confirm-web-anexo" class="btn btn-outline" disabled
+          style="display:inline-flex;align-items:center;gap:8px;font-size:13px"
+          onclick="window.confirmAnexoWebGenerated('${JOURNEY_STEPS.find(s=>s.type==='pdf_form')?.id}')">
+          Confirmar envio ao escritório →
+        </button>
+      </div>`;
+  }
+
+  if (isRejected) {
+    return `
+      <div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
+        Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${escHtml(formDoc.admin_notes)}` : ''} Corrija e reenvie o formulário guiado.
+      </div>
+      <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+        Corrigir formulário →
+      </a>`;
+  }
+
+  // Not started or in-progress — redirect to guided form first
+  return `
+    <div class="glass-info" style="margin-bottom:12px;">
+      <div class="glass-info-title">Preencha o formulário guiado primeiro</div>
+      <ul>
+        <li>O sistema irá pré-preencher o Formulário Oficial CNJ Anexo II com seus dados</li>
+        <li>Preencha os 7 passos do formulário guiado (15–25 minutos)</li>
+        <li>Seus dados são salvos automaticamente a cada passo</li>
+        <li>Após concluir, o Anexo II será gerado automaticamente aqui</li>
+      </ul>
+    </div>
+    <a href="onboarding.html?source=journey" class="btn btn-primary"
+       style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
+      ${stepN > 0 ? `Continuar formulário guiado (passo ${stepN}/7) →` : 'Iniciar formulário guiado →'}
+    </a>`;
+}
+
+// ── CNJ Annex II — WEB flow handlers ──────────────────────────────────────
+
+window.generateAnexoIIDoc = async function() {
+  const btn = document.querySelector('[onclick*="generateAnexoIIDoc"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando documento…'; }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+    const { data: caso } = await supabase
+      .from('portal_casos')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!caso) throw new Error('Dados do caso não encontrados');
+
+    const win = openCnjAnexoIIPrint(caso);
+    if (!win) {
+      Toast.warn('Pop-up bloqueado. Permita pop-ups para este site e tente novamente.');
+      if (btn) { btn.disabled = false; btn.innerHTML = '📄 Gerar Formulário CNJ Anexo II'; }
+      return;
+    }
+
+    webAnexoGenerated = true;
+    const note  = document.getElementById('anexo-web-generated-note');
+    const conf  = document.getElementById('btn-confirm-web-anexo');
+    if (note) note.style.display = '';
+    if (conf) conf.removeAttribute('disabled');
+    if (btn) { btn.innerHTML = '🔄 Gerar novamente'; btn.disabled = false; }
+  } catch (e) {
+    Toast.error('Erro ao gerar documento: ' + (e.message || 'tente novamente.'));
+    if (btn) { btn.disabled = false; btn.innerHTML = '📄 Gerar Formulário CNJ Anexo II'; }
+  }
+};
+
+window.confirmAnexoWebGenerated = async function(stepId) {
+  if (!webAnexoGenerated) { Toast.warn('Gere o documento antes de confirmar.'); return; }
+  const btn = document.getElementById('btn-confirm-web-anexo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: caso }     = await supabase.from('portal_casos').select('id,workspace_id').eq('user_id', user.id).maybeSingle();
+    await supabase.from('portal_documentos').upsert({
+      user_id:         user.id,
+      tipo:            'formulario_cnj_anexo_ii',
+      nome_arquivo:    'Formulário CNJ Anexo II (gerado online)',
+      status:          'em_analise',       // legacy field used by dashboard KPI/activity aggregations
+      workflow_status: 'em_analise',
+      direction:       'client_to_office',
+      caso_id:         caso?.id ?? null,
+      workspace_id:    caso?.workspace_id ?? null,
+      updated_at:      new Date().toISOString(),
+    }, { onConflict: 'user_id,tipo' });
+
+    engine.setState(stepId || 'anexo_ii', 'awaiting_review');
+    renderTracker();
+    triggerAutosave('Formulário CNJ enviado');
+    Toast.success('Formulário CNJ Anexo II enviado ao escritório!');
+    const step = JOURNEY_STEPS.find(s => s.id === (stepId || 'anexo_ii'));
+    if (step) renderAnexoStep(step, document.getElementById('journey-content'));
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar envio ao escritório →'; }
+    Toast.error('Erro ao registrar envio. Tente novamente.');
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
 // ANEXO II STEP
 // ═══════════════════════════════════════════════════════════════
 function renderAnexoStep(step, container) {
-  const state  = engine.getState(step.id);
-  const isDone = ['completed','approved','awaiting_review'].includes(state);
-  const idx    = JOURNEY_STEPS.indexOf(step);
+  const state      = engine.getState(step.id);
+  const isDone     = ['completed','approved','awaiting_review'].includes(state);
+  const isApproved = state === 'approved';
+  const isRejected = state === 'rejected';
+  const idx        = JOURNEY_STEPS.indexOf(step);
+  webAnexoGenerated = false; // reset when step re-renders
 
   container.innerHTML = `
     <div class="jcard">
@@ -809,12 +1022,19 @@ function renderAnexoStep(step, container) {
         ${badgeHtml(state)}
       </div>
       <div class="jcard-body">
-        ${state === 'awaiting_review' ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">Formulario enviado. Aguardando analise do escritorio.</div>` : ''}
-        ${state === 'approved' ? `<div class="done-banner">Formulario aprovado pelo escritorio.</div>` : ''}
-        ${state === 'rejected' ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">Formulario devolvido para correcao. Reenvie abaixo.</div>` : ''}
+        ${state === 'awaiting_review' ? `
+          <div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">
+            Formulário enviado. Aguardando análise do escritório.
+          </div>` : ''}
+        ${isApproved ? `<div class="done-banner">Formulário CNJ Anexo II aprovado pelo escritório. ✓</div>` : ''}
+        ${isRejected ? `
+          <div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">
+            Formulário devolvido para correção. Reenvie abaixo.
+          </div>` : ''}
 
+        ${!isDone ? `
         <div class="glass-info">
-          <div class="glass-info-title">Formulario Oficial CNJ Anexo II</div>
+          <div class="glass-info-title">Formulário Oficial CNJ Anexo II</div>
           <ul>
             <li>Exigido pela Recomendação CNJ 125/2021 para renegociação coletiva</li>
             <li>Deve conter seus dados pessoais, lista completa de credores e valores devidos</li>
@@ -831,8 +1051,8 @@ function renderAnexoStep(step, container) {
           </div>
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
             <div class="option-icon">WEB</div>
-            <div class="option-title">Online <span style="font-size:9px;background:rgba(245,166,35,.2);color:#c07b00;padding:1px 6px;border-radius:5px;vertical-align:middle">Em breve</span></div>
-            <div class="option-desc">Formulário guiado no portal</div>
+            <div class="option-title">Online</div>
+            <div class="option-desc">Gera o Anexo II a partir dos seus dados</div>
           </div>
         </div>
 
@@ -846,8 +1066,11 @@ function renderAnexoStep(step, container) {
             <div class="pdf-dl-done" id="dl-anexo-done">Baixado</div>
           </div>
 
-          <p style="font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px">Enviar formulário preenchido:</p>
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <p style="font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px">
+            Enviar formulário preenchido:
+          </p>
+          <div class="upload-zone" id="upload-zone"
+               onclick="document.getElementById('file-input').click()">
             <div class="upload-zone-icon">ARQ</div>
             <div class="upload-zone-text">Clique ou arraste o PDF preenchido aqui</div>
             <div class="upload-zone-hint">PDF · máx. 10 MB</div>
@@ -857,33 +1080,45 @@ function renderAnexoStep(step, container) {
               <span>PDF</span>
               <span id="upload-fname" style="font-weight:600;flex:1">—</span>
               <span id="upload-fsize" style="color:var(--muted)">—</span>
-              <button class="btn btn-sm" style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px" onclick="window.clearUpload()">X</button>
+              <button class="btn btn-sm"
+                style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px"
+                onclick="window.clearUpload()">✕</button>
             </div>
           </div>
-          <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="window.handleFileSelect(this)">
+          <input type="file" id="file-input" accept="application/pdf" style="display:none"
+                 onchange="window.handleFileSelect(this)">
+
+          <div class="jnav" style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line)">
+            <span class="jnav-info">Etapa ${idx + 1} de ${JOURNEY_STEPS.length}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              ${idx > 0 ? `<button class="btn btn-outline btn-sm" onclick="window.journeyGoTo('${JOURNEY_STEPS[idx-1].id}')">← Anterior</button>` : ''}
+              <button class="btn btn-primary" id="btn-submit-anexo" disabled
+                onclick="window.submitAnexo('${step.id}')">Enviar formulário →</button>
+            </div>
+          </div>
         </div>
 
         <div id="panel-online" style="display:none">
-          <div class="glass-info">
-            <div class="glass-info-title">Em desenvolvimento</div>
-            <ul><li>O formulário online guiado estará disponível em breve. Por enquanto utilize a opção de PDF.</li></ul>
-          </div>
+          ${buildAnexoWebPanelHtml()}
         </div>
 
-        <div class="jnav">
+        ` : `
+        <!-- Already submitted / approved — show navigation only -->
+        <div class="jnav" style="margin-top:8px">
           <span class="jnav-info">Etapa ${idx + 1} de ${JOURNEY_STEPS.length}</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
             ${idx > 0 ? `<button class="btn btn-outline btn-sm" onclick="window.journeyGoTo('${JOURNEY_STEPS[idx-1].id}')">← Anterior</button>` : ''}
-            ${state === 'awaiting_review' || state === 'approved'
-              ? `<button class="btn btn-primary" onclick="window.journeyGoTo('${engine.nextStep(step.id)?.id}')">Próximo passo →</button>`
-              : `<button class="btn btn-primary" id="btn-submit-anexo" disabled onclick="window.submitAnexo('${step.id}')">Enviar formulário →</button>`
-            }
+            <button class="btn btn-primary"
+              onclick="window.journeyGoTo('${engine.nextStep(step.id)?.id}')">
+              Próximo passo →
+            </button>
           </div>
         </div>
+        `}
       </div>
     </div>`;
 
-  setupDropZone();
+  if (!isDone) setupDropZone();
 }
 
 window.selectOption = function(opt) {
@@ -891,6 +1126,11 @@ window.selectOption = function(opt) {
   document.getElementById('opt-online').classList.toggle('selected', opt === 'online');
   document.getElementById('panel-offline').style.display = opt === 'offline' ? '' : 'none';
   document.getElementById('panel-online').style.display  = opt === 'online'  ? '' : 'none';
+  // Re-evaluate PDF submit button — only relevant when offline panel is visible
+  if (opt === 'online' && !uploadedFile) {
+    const btn = document.getElementById('btn-submit-anexo');
+    if (btn) btn.setAttribute('disabled', '');
+  }
 };
 
 window.downloadAnexo = async function() {
@@ -960,8 +1200,18 @@ window.submitAnexo = async function(stepId) {
 // CNJ FORM STEP
 // ═══════════════════════════════════════════════════════════════
 function renderCnjFormStep(step, container) {
-  const state = engine.getState(step.id);
-  const idx   = JOURNEY_STEPS.indexOf(step);
+  const state      = engine.getState(step.id);
+  const idx        = JOURNEY_STEPS.indexOf(step);
+  const isDone     = ['completed','approved','awaiting_review'].includes(state);
+  const isApproved = state === 'approved';
+  const isRejected = state === 'rejected';
+  const stepN      = casoState?.cnj_step_atual || 0;
+  const btnLabel   = isDone
+    ? 'Ver formulário enviado →'
+    : stepN > 0
+      ? `Continuar formulário (passo ${stepN}/7) →`
+      : 'Iniciar formulário →';
+
   container.innerHTML = `
     <div class="jcard">
       <div class="jcard-head">
@@ -970,8 +1220,16 @@ function renderCnjFormStep(step, container) {
         ${badgeHtml(state)}
       </div>
       <div class="jcard-body">
+        ${isApproved
+          ? `<div class="done-banner">Formulário aprovado. Plano de pagamento em elaboração.</div>`
+          : state === 'awaiting_review'
+            ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;">Formulário enviado. Aguardando análise do escritório.</div>`
+            : isRejected
+              ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);">Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${formDoc.admin_notes}` : ''}</div>`
+              : ''}
+
         <div class="glass-info">
-          <div class="glass-info-title">Os 7 passos do formulario CNJ</div>
+          <div class="glass-info-title">Os 7 passos do formulário CNJ</div>
           <ul>
             <li><b>1 – Identificação:</b> dados pessoais e documento</li>
             <li><b>2 – Situação Profissional:</b> renda, emprego, despesas</li>
@@ -985,17 +1243,16 @@ function renderCnjFormStep(step, container) {
 
         ${diagnostico ? `
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:14px 18px;margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">Seu Diagnostico Financeiro</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">Seu Diagnóstico Financeiro</div>
           <div class="fin-grid">${financialSnippet()}</div>
         </div>` : ''}
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-          <div style="font-size:20px;margin-bottom:8px">CNJ</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Preencher Formulário CNJ</div>
-          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Suas respostas são salvas automaticamente.</div>
-          <a href="onboarding.html" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-            Iniciar Formulario
+          ${!isDone ? `<div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Respostas salvas automaticamente.</div>` : ''}
+          <a href="onboarding.html?source=journey" class="btn ${isDone ? 'btn-outline' : 'btn-primary'}" style="display:inline-flex;align-items:center;gap:8px">
+            ${btnLabel}
           </a>
+          ${isRejected ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Corrija os pontos indicados e reenvie o formulário.</div>` : ''}
         </div>
 
         <div class="jnav">

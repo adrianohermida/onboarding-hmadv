@@ -11,7 +11,7 @@ const EMAIL_CONFIG_ID = Number(Deno.env.get("FRESHDESK_EMAIL_CONFIG_ID") ?? "0")
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
 };
 
 type JsonRecord = Record<string, any>;
@@ -28,6 +28,19 @@ function adminClient() {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+}
+
+function anonClient(req: Request) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonFromEnv = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const anonFromHeader = req.headers.get("apikey") ?? "";
+  const anonKey = anonFromEnv || anonFromHeader;
+
+  if (!supabaseUrl || !anonKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, anonKey);
 }
 
 function escapeHtml(value: unknown) {
@@ -62,11 +75,11 @@ function decodeClaims(token: string): JsonRecord {
   }
 }
 
-async function getAuthenticatedUser(req: Request, admin: ReturnType<typeof adminClient>) {
+async function getAuthenticatedUser(req: Request, anon: NonNullable<ReturnType<typeof anonClient>>) {
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { user: null, email: null, token: null, error: "Sessão ausente" };
 
-  const { data, error } = await admin.auth.getUser(token);
+  const { data, error } = await anon.auth.getUser(token);
   const claims = decodeClaims(token);
   const user = data?.user ?? null;
   const email = user?.email ?? claims.email ?? claims.user_metadata?.email ?? null;
@@ -103,11 +116,21 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method Not Allowed" }, 405);
 
   try {
-    const admin = adminClient();
-    const auth = await getAuthenticatedUser(req, admin);
+    const anon = anonClient(req);
+    if (!anon) {
+      return json({ error: "ServerMisconfigured", message: "SUPABASE_URL/SUPABASE_ANON_KEY ausentes" }, 500);
+    }
+
+    const auth = await getAuthenticatedUser(req, anon);
     if (auth.error || !auth.user || !auth.email) {
       return json({ error: "Unauthenticated", message: auth.error }, 401);
     }
+
+    if (!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+      return json({ error: "ServerMisconfigured", message: "SUPABASE_SERVICE_ROLE_KEY ausente" }, 500);
+    }
+
+    const admin = adminClient();
 
     const body = await req.json().catch(() => ({})) as JsonRecord;
     const action = String(body.action ?? "");
