@@ -238,11 +238,11 @@ export class UploadEngine {
 
   static getFileIcon(mimeType, fileName = '') {
     if (!mimeType && fileName) {
-      if (fileName.endsWith('.pdf')) return '📄';
-      if (fileName.match(/\.(jpg|jpeg|png|webp)$/i)) return '🖼️';
+      if (fileName.endsWith('.pdf')) return 'PDF';
+      if (fileName.match(/\.(jpg|jpeg|png|webp)$/i)) return 'IMG';
     }
-    if (mimeType === 'application/pdf')  return '📄';
-    if (mimeType?.startsWith('image/')) return '🖼️';
-    return '📎';
+    if (mimeType === 'application/pdf')  return 'PDF';
+    if (mimeType?.startsWith('image/')) return 'IMG';
+    return 'ARQ';
   }
 }

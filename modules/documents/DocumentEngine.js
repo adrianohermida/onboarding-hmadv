@@ -111,7 +111,7 @@ export class DocumentEngine {
         .map(r => ({
           tipo:             r.tipo,
           label:            r.nome_arquivo || r.tipo,
-          icon:             r.direction === 'office_to_client' ? '📨' : '📄',
+          icon:             r.direction === 'office_to_client' ? 'OUT' : 'DOC',
           category:         r.category || 'contratos',
           required:         false,
           id:               r.id,

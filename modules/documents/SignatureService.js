@@ -24,11 +24,11 @@ import { bus } from '../events/EventBus.js';
 
 // Autentique signature status mapping
 export const AUTENTIQUE_STATUS = {
-  pending:    { label: 'Aguardando assinatura', color: '#d97706', icon: '⏳' },
-  signed:     { label: 'Assinado',              color: '#16a34a', icon: '✅' },
-  rejected:   { label: 'Rejeitado',             color: '#dc2626', icon: '❌' },
-  expired:    { label: 'Expirado',              color: '#6b7280', icon: '⌛' },
-  processing: { label: 'Processando',           color: '#2E6DA4', icon: '🔄' },
+  pending:    { label: 'Aguardando assinatura', color: '#d97706', icon: 'PEND' },
+  signed:     { label: 'Assinado',              color: '#16a34a', icon: 'OK' },
+  rejected:   { label: 'Rejeitado',             color: '#dc2626', icon: 'NO' },
+  expired:    { label: 'Expirado',              color: '#6b7280', icon: 'EXP' },
+  processing: { label: 'Processando',           color: '#2E6DA4', icon: 'PROC' },
 };
 
 export class SignatureService {
