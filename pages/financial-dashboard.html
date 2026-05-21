@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Dashboard Financeiro · Portal HMADV</title>
+
+  <!-- Design system tokens -->
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+
+  <!-- TailwindCSS CDN — apenas utilities, sem preflight -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      corePlugins: { preflight: false },
+      theme: {
+        extend: {
+          colors: {
+            navy:  '#1A3A5C',
+            blue2: '#2E6DA4',
+            ice:   '#EBF3FC',
+            gold:  '#F5A623',
+          },
+          fontFamily: {
+            serif: ['Libre Baskerville', 'Georgia', 'serif'],
+            sans:  ['DM Sans', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- App shell -->
+  <script type="module" src="../js/app.js"></script>
+
+  <style>
+  /* ── Shell ──────────────────────────────────────────────────────── */
+  .portal-shell  { display:flex; height:100dvh; overflow:hidden; }
+  .main-wrap     { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+  .page-content  { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+
+  .sidebar       { transition:transform .28s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:1023px) {
+    .sidebar               { position:fixed; inset:0 auto 0 0; z-index:50; transform:translateX(-100%); }
+    .sidebar.sidebar--open { transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.4); }
+    .sidebar-toggle        { display:flex !important; }
+  }
+
+  /* ── Page layout ────────────────────────────────────────────────── */
+  .fd-page   { max-width:1100px; margin:0 auto; padding:24px 20px 96px; }
+  @media (max-width:640px) { .fd-page { padding:16px 12px 80px; } }
+
+  /* ── Hero banner ────────────────────────────────────────────────── */
+  .fd-hero {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2E6DA4 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #fff;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .fd-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .fd-hero-left { position:relative; z-index:1; }
+  .fd-hero-label { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; opacity:.7; margin-bottom:6px; }
+  .fd-hero-title { font-family: var(--serif); font-size:24px; font-weight:700; margin-bottom:4px; }
+  @media (max-width:640px) { .fd-hero-title { font-size:20px; } }
+  .fd-hero-sub   { font-size:13px; opacity:.75; max-width:420px; }
+
+  /* Score badge */
+  .score-badge {
+    position: relative; z-index:1;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 14px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 120px;
+    backdrop-filter: blur(8px);
+  }
+  .score-number  { font-size:40px; font-weight:800; line-height:1; }
+  .score-label   { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; opacity:.7; margin-top:4px; }
+  .score-tag     { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; display:inline-block; margin-top:6px; }
+
+  /* ── KPI Grid ───────────────────────────────────────────────────── */
+  .fd-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .fd-kpi {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .fd-kpi::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--kpi-accent, var(--blue));
+    border-radius: 0 0 12px 12px;
+  }
+  .fd-kpi-icon  { font-size:20px; margin-bottom:6px; }
+  .fd-kpi-label { font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
+  .fd-kpi-value { font-size:20px; font-weight:800; color:var(--ink); margin:4px 0 2px; line-height:1.1; }
+  .fd-kpi-hint  { font-size:11px; color:var(--muted); }
+  .fd-kpi-red    { --kpi-accent: #dc2626; } .fd-kpi-red .fd-kpi-value    { color:#dc2626; }
+  .fd-kpi-warn   { --kpi-accent: #d97706; } .fd-kpi-warn .fd-kpi-value   { color:#d97706; }
+  .fd-kpi-green  { --kpi-accent: #16a34a; } .fd-kpi-green .fd-kpi-value  { color:#16a34a; }
+  .fd-kpi-navy   { --kpi-accent: #1A3A5C; } .fd-kpi-navy .fd-kpi-value   { color:#1A3A5C; }
+  .fd-kpi-blue   { --kpi-accent: #2E6DA4; } .fd-kpi-blue .fd-kpi-value   { color:#2E6DA4; }
+  .fd-kpi-gold   { --kpi-accent: #B7860B; } .fd-kpi-gold .fd-kpi-value   { color:#B7860B; }
+
+  /* ── Diagnóstico banner ─────────────────────────────────────────── */
+  .fd-diag-banner {
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 24px;
+    border-width: 1px;
+    border-style: solid;
+  }
+  .fd-diag-icon  { font-size:28px; flex-shrink:0; margin-top:1px; }
+  .fd-diag-title { font-size:15px; font-weight:700; margin-bottom:3px; }
+  .fd-diag-text  { font-size:13px; line-height:1.55; opacity:.85; }
+  .fd-diag-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .fd-diag-pill  { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; border:1px solid currentColor; }
+
+  /* Severity variants */
+  .fd-diag--critical { background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+  .fd-diag--high     { background:#fff7ed; border-color:#fdba74; color:#9a3412; }
+  .fd-diag--medium   { background:#fefce8; border-color:#fde047; color:#854d0e; }
+  .fd-diag--low      { background:#f0fdf4; border-color:#86efac; color:#14532d; }
+
+  /* ── Charts ─────────────────────────────────────────────────────── */
+  .fd-charts-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width:768px) { .fd-charts-grid { grid-template-columns: 1fr; } }
+
+  .fd-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    padding: 20px 22px;
+  }
+  .fd-card-title { font-size:13px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .fd-card-title span { font-size:16px; }
+
+  /* Comprometimento gauge */
+  .gauge-wrap { position:relative; display:flex; align-items:center; justify-content:center; padding:8px 0 4px; }
+  .gauge-center {
+    position:absolute; text-align:center;
+    top:50%; left:50%; transform:translate(-50%, -45%);
+  }
+  .gauge-pct   { font-size:30px; font-weight:800; color:var(--ink); line-height:1; }
+  .gauge-sub   { font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.5px; margin-top:3px; }
+
+  /* ── Sections ────────────────────────────────────────────────────── */
+  .fd-section {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .fd-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 22px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color .2s;
+  }
+  .fd-section-header:hover { background: #fafbfc; }
+  .fd-section-header.open  { border-bottom-color: var(--line); }
+  .fd-section-icon   { font-size:20px; flex-shrink:0; }
+  .fd-section-title  { font-size:14px; font-weight:700; color:var(--ink); flex:1; }
+  .fd-section-badge  { font-size:11px; color:var(--muted); background:var(--line2); padding:3px 8px; border-radius:6px; }
+  .fd-section-chevron { font-size:12px; color:var(--muted); transition:transform .25s; }
+  .fd-section-header.open .fd-section-chevron { transform:rotate(180deg); }
+  .fd-section-body   { padding:20px 22px; display:none; }
+  .fd-section-body.open { display:block; }
+
+  /* ── Expense grid ────────────────────────────────────────────────── */
+  .expense-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .expense-item { display:flex; flex-direction:column; gap:4px; }
+  .expense-label {
+    font-size:12px; font-weight:600; color:var(--ink2);
+    display:flex; align-items:center; gap:6px;
+  }
+  .expense-badge-ess {
+    font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px;
+    background:var(--red-bg); color:var(--red); letter-spacing:.3px;
+  }
+  .expense-badge-var {
+    font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px;
+    background:#f0f4f8; color:var(--ink2); letter-spacing:.3px;
+  }
+  .expense-input {
+    width:100%; padding:8px 10px 8px 28px;
+    border:1px solid var(--line); border-radius:8px;
+    font-size:13px; font-weight:600; color:var(--ink);
+    background:#fff; transition:border-color .2s, box-shadow .2s;
+    position:relative;
+  }
+  .expense-input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(46,109,164,.12); }
+  .expense-wrap { position:relative; }
+  .expense-prefix {
+    position:absolute; left:9px; top:50%; transform:translateY(-50%);
+    font-size:12px; color:var(--muted); font-weight:700; pointer-events:none;
+  }
+
+  /* ── Debt list ───────────────────────────────────────────────────── */
+  .fd-debt-row {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .fd-debt-row:last-child { border-bottom:none; }
+  .fd-debt-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; background:var(--ice); }
+  .fd-debt-info { flex:1; min-width:0; }
+  .fd-debt-credor { font-size:13px; font-weight:700; color:var(--ink); }
+  .fd-debt-tipo   { font-size:11px; color:var(--muted); }
+  .fd-debt-valor  { font-size:14px; font-weight:800; color:var(--ink); text-align:right; }
+  .fd-debt-parcela { font-size:11px; color:var(--muted); text-align:right; }
+  .fd-debt-status {
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px;
+    white-space:nowrap;
+  }
+  .fd-debt-empty { text-align:center; padding:32px; color:var(--muted); }
+  .fd-debt-empty-icon { font-size:36px; margin-bottom:8px; }
+
+  /* ── Plano de pagamento ──────────────────────────────────────────── */
+  .fd-plan-row {
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    padding:14px 0; border-bottom:1px solid var(--line); gap:8px;
+  }
+  .fd-plan-row:last-child { border-bottom:none; }
+  .fd-plan-label { font-size:13px; color:var(--ink2); }
+  .fd-plan-value { font-size:14px; font-weight:800; color:var(--ink); }
+
+  /* ── Save bar ────────────────────────────────────────────────────── */
+  .fd-save-bar {
+    position: fixed; bottom:0; left:0; right:0; z-index:40;
+    background:#fff; border-top:1px solid var(--line);
+    padding:12px 20px; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; box-shadow:0 -4px 20px rgba(0,0,0,.07);
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .fd-save-bar.visible { transform:translateY(0); }
+  @media (max-width:1023px) { .fd-save-bar { left:0 !important; } }
+
+  /* ── Debt modal ──────────────────────────────────────────────────── */
+  .fd-modal-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .fd-modal-backdrop.open { opacity:1; pointer-events:auto; }
+  .fd-modal {
+    background:#fff; border-radius:16px; box-shadow:var(--shadow-lg);
+    width:100%; max-width:520px; max-height:90dvh; overflow-y:auto;
+    transform:translateY(20px) scale(.97); transition:transform .25s;
+  }
+  .fd-modal-backdrop.open .fd-modal { transform:translateY(0) scale(1); }
+  .fd-modal-header {
+    padding:22px 24px 16px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .fd-modal-title  { font-size:16px; font-weight:700; color:var(--ink); }
+  .fd-modal-close  { width:30px; height:30px; border-radius:6px; border:none; background:var(--line2); cursor:pointer; font-size:14px; color:var(--ink2); display:flex; align-items:center; justify-content:center; }
+  .fd-modal-close:hover { background:var(--line); }
+  .fd-modal-body   { padding:22px 24px; }
+  .fd-modal-footer { padding:16px 24px 22px; border-top:1px solid var(--line); display:flex; gap:10px; justify-content:flex-end; }
+
+  /* Form fields */
+  .fd-field       { margin-bottom:14px; }
+  .fd-label       { font-size:12px; font-weight:700; color:var(--ink2); margin-bottom:5px; display:block; }
+  .fd-input, .fd-select {
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:13px; color:var(--ink); background:#fff;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .fd-input:focus, .fd-select:focus {
+    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(46,109,164,.12);
+  }
+  .fd-input-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* Checkbox toggle */
+  .fd-toggle { display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .fd-toggle input { accent-color:var(--blue); width:16px; height:16px; cursor:pointer; }
+  .fd-toggle-label { font-size:13px; color:var(--ink2); }
+
+  /* ── Utilities ───────────────────────────────────────────────────── */
+  .btn-fd-primary {
+    background: var(--navy); color:#fff; border:none; border-radius:8px;
+    padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer;
+    transition:background .2s, transform .1s;
+  }
+  .btn-fd-primary:hover  { background:#152e4a; }
+  .btn-fd-primary:active { transform:scale(.98); }
+  .btn-fd-secondary {
+    background: transparent; color:var(--ink2); border:1px solid var(--line);
+    border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer;
+    transition:background .2s;
+  }
+  .btn-fd-secondary:hover { background:var(--line2); }
+  .btn-fd-danger {
+    background: #fef2f2; color:#dc2626; border:1px solid #fca5a5;
+    border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer;
+    transition:background .2s;
+  }
+  .btn-fd-danger:hover { background:#fee2e2; }
+  .btn-fd-ghost {
+    background: transparent; color:var(--blue); border:none;
+    font-size:12px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:6px;
+    transition:background .2s;
+  }
+  .btn-fd-ghost:hover { background:var(--ice); }
+
+  .fd-loading {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:360px; color:var(--muted); gap:12px;
+  }
+  .fd-spinner {
+    width:36px; height:36px; border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--blue);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .fd-renda-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  @media (max-width:480px) { .fd-renda-row { grid-template-columns:1fr; } }
+
+  /* Dependentes stepper */
+  .dep-stepper { display:flex; align-items:center; gap:10px; }
+  .dep-btn { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink); transition:background .15s; }
+  .dep-btn:hover { background:var(--ice); }
+  .dep-count { font-size:18px; font-weight:800; color:var(--navy); min-width:32px; text-align:center; }
+  </style>
+</head>
+<body>
+
+<!-- ── Shell ──────────────────────────────────────────────────────────── -->
+<div class="portal-shell">
+  <div data-component="sidebar"></div>
+
+  <div class="main-wrap">
+    <div data-component="header"></div>
+
+    <main class="page-content">
+      <div class="fd-page">
+
+        <!-- Loading state -->
+        <div id="fd-loading" class="fd-loading">
+          <div class="fd-spinner"></div>
+          <span>Carregando diagnóstico financeiro…</span>
+        </div>
+
+        <!-- Main content (hidden until loaded) -->
+        <div id="fd-main" style="display:none;">
+
+          <!-- ── Hero ─────────────────────────────────────────────── -->
+          <div class="fd-hero">
+            <div class="fd-hero-left">
+              <div class="fd-hero-label">💎 Diagnóstico Financeiro</div>
+              <div class="fd-hero-title">Painel de Recuperação Financeira</div>
+              <div class="fd-hero-sub">Análise baseada na Lei 14.181/2021 — Mínimo existencial, comprometimento de renda e capacidade de pagamento calculados automaticamente.</div>
+            </div>
+            <div class="score-badge">
+              <div class="score-number" id="fd-score-num">—</div>
+              <div class="score-label">Score Crítico</div>
+              <div class="score-tag" id="fd-score-tag">—</div>
+            </div>
+          </div>
+
+          <!-- ── Diagnóstico Banner ──────────────────────────────── -->
+          <div id="fd-diag-banner" class="fd-diag-banner fd-diag--low" style="display:none;">
+            <div class="fd-diag-icon" id="fd-diag-icon">✅</div>
+            <div style="flex:1;">
+              <div class="fd-diag-title" id="fd-diag-title">Situação controlada</div>
+              <div class="fd-diag-text" id="fd-diag-text">Seu comprometimento de renda está dentro dos limites legais.</div>
+              <div class="fd-diag-pills" id="fd-diag-pills"></div>
+            </div>
+          </div>
+
+          <!-- ── KPI Grid ───────────────────────────────────────── -->
+          <div class="fd-kpi-grid">
+            <div class="fd-kpi fd-kpi-navy">
+              <div class="fd-kpi-icon">💰</div>
+              <div class="fd-kpi-label">Renda Total</div>
+              <div class="fd-kpi-value" id="kpi-renda">R$ —</div>
+              <div class="fd-kpi-hint">Bruta declarada</div>
+            </div>
+            <div class="fd-kpi fd-kpi-blue">
+              <div class="fd-kpi-icon">🏠</div>
+              <div class="fd-kpi-label">Despesas Essenciais</div>
+              <div class="fd-kpi-value" id="kpi-desp-ess">R$ —</div>
+              <div class="fd-kpi-hint">Moradia, alimentação…</div>
+            </div>
+            <div class="fd-kpi">
+              <div class="fd-kpi-icon">📱</div>
+              <div class="fd-kpi-label">Despesas Variáveis</div>
+              <div class="fd-kpi-value" id="kpi-desp-var">R$ —</div>
+              <div class="fd-kpi-hint">Internet, lazer…</div>
+            </div>
+            <div class="fd-kpi fd-kpi-red">
+              <div class="fd-kpi-icon">💳</div>
+              <div class="fd-kpi-label">Total Dívidas</div>
+              <div class="fd-kpi-value" id="kpi-total-dividas">R$ —</div>
+              <div class="fd-kpi-hint" id="kpi-n-credores">0 credores</div>
+            </div>
+            <div class="fd-kpi fd-kpi-warn">
+              <div class="fd-kpi-icon">📊</div>
+              <div class="fd-kpi-label">Comprometimento</div>
+              <div class="fd-kpi-value" id="kpi-comprometimento">—%</div>
+              <div class="fd-kpi-hint">Das parcelas / renda</div>
+            </div>
+            <div class="fd-kpi fd-kpi-gold">
+              <div class="fd-kpi-icon">⚖️</div>
+              <div class="fd-kpi-label">Mínimo Existencial</div>
+              <div class="fd-kpi-value" id="kpi-min-exist">R$ —</div>
+              <div class="fd-kpi-hint">Lei 14.181/2021</div>
+            </div>
+            <div class="fd-kpi fd-kpi-green" id="kpi-sobra-card">
+              <div class="fd-kpi-icon">✨</div>
+              <div class="fd-kpi-label">Sobra Mensal</div>
+              <div class="fd-kpi-value" id="kpi-sobra">R$ —</div>
+              <div class="fd-kpi-hint">Após dívidas e mínimo</div>
+            </div>
+          </div>
+
+          <!-- ── Charts ─────────────────────────────────────────── -->
+          <div class="fd-charts-grid">
+            <!-- Comprometimento gauge -->
+            <div class="fd-card">
+              <div class="fd-card-title"><span>📊</span> Comprometimento de Renda</div>
+              <div class="gauge-wrap" style="height:200px;">
+                <canvas id="chart-gauge" style="max-width:220px;max-height:200px;"></canvas>
+                <div class="gauge-center">
+                  <div class="gauge-pct" id="gauge-pct-label">—%</div>
+                  <div class="gauge-sub" id="gauge-severity-label">—</div>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">
+                Limite legal: <strong>70%</strong> (Lei 14.181/2021)
+              </div>
+            </div>
+
+            <!-- Bar chart: Renda breakdown -->
+            <div class="fd-card">
+              <div class="fd-card-title"><span>💹</span> Composição da Renda</div>
+              <canvas id="chart-breakdown" style="max-height:220px;"></canvas>
+            </div>
+          </div>
+
+          <!-- Despesas pie + Dívidas by type -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+            <div class="fd-card">
+              <div class="fd-card-title"><span>🍩</span> Distribuição de Despesas</div>
+              <canvas id="chart-despesas" style="max-height:200px;"></canvas>
+            </div>
+            <div class="fd-card">
+              <div class="fd-card-title"><span>💳</span> Dívidas por Tipo</div>
+              <canvas id="chart-dividas-tipo" style="max-height:200px;"></canvas>
+            </div>
+          </div>
+          <!-- Stack to single col on mobile -->
+          <style>@media (max-width:640px){
+            .fd-charts-grid { grid-template-columns:1fr; }
+            .fd-page > div > div[style*="grid-template-columns:1fr 1fr"]{
+              display:block !important;
+            }
+            .fd-page > div > div[style*="grid-template-columns:1fr 1fr"] > .fd-card {
+              margin-bottom:16px;
+            }
+          }</style>
+
+          <!-- ── Renda e Dependentes ────────────────────────────── -->
+          <div class="fd-section" id="section-renda">
+            <div class="fd-section-header open" onclick="toggleSection('renda')">
+              <div class="fd-section-icon">💰</div>
+              <div class="fd-section-title">Renda Mensal</div>
+              <div class="fd-section-badge" id="badge-renda">Não informado</div>
+              <div class="fd-section-chevron">▼</div>
+            </div>
+            <div class="fd-section-body open" id="body-renda">
+              <div class="fd-renda-row">
+                <div class="fd-field">
+                  <label class="fd-label" for="inp-renda-propria">💼 Renda própria (salário/pró-labore)</label>
+                  <div class="expense-wrap">
+                    <span class="expense-prefix">R$</span>
+                    <input class="expense-input fd-input" id="inp-renda-propria" type="number" min="0" step="0.01" placeholder="0,00" oninput="onInputChange()" />
+                  </div>
+                </div>
+                <div class="fd-field">
+                  <label class="fd-label" for="inp-renda-familiar">👨‍👩‍👧 Renda familiar (cônjuge / outros)</label>
+                  <div class="expense-wrap">
+                    <span class="expense-prefix">R$</span>
+                    <input class="expense-input fd-input" id="inp-renda-familiar" type="number" min="0" step="0.01" placeholder="0,00" oninput="onInputChange()" />
+                  </div>
+                </div>
+              </div>
+              <div class="fd-field">
+                <label class="fd-label">👨‍👧 Número de dependentes</label>
+                <div class="dep-stepper">
+                  <button class="dep-btn" onclick="changeDep(-1)">−</button>
+                  <div class="dep-count" id="dep-count-display">0</div>
+                  <button class="dep-btn" onclick="changeDep(1)">+</button>
+                  <span style="font-size:12px;color:var(--muted);margin-left:4px;">(afeta o mínimo existencial)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Despesas Essenciais ─────────────────────────────── -->
+          <div class="fd-section" id="section-ess">
+            <div class="fd-section-header" onclick="toggleSection('ess')">
+              <div class="fd-section-icon">🏠</div>
+              <div class="fd-section-title">Despesas Essenciais</div>
+              <div class="fd-section-badge" id="badge-ess">R$ —</div>
+              <div class="fd-section-chevron">▼</div>
+            </div>
+            <div class="fd-section-body" id="body-ess">
+              <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+                Despesas essenciais são deduzidas da renda para calcular a renda disponível. Incluídas no mínimo existencial (Lei 14.181/2021).
+              </p>
+              <div class="expense-grid" id="expense-grid-ess"><!-- rendered by JS --></div>
+            </div>
+          </div>
+
+          <!-- ── Despesas Variáveis ─────────────────────────────── -->
+          <div class="fd-section" id="section-var">
+            <div class="fd-section-header" onclick="toggleSection('var')">
+              <div class="fd-section-icon">📱</div>
+              <div class="fd-section-title">Despesas Variáveis</div>
+              <div class="fd-section-badge" id="badge-var">R$ —</div>
+              <div class="fd-section-chevron">▼</div>
+            </div>
+            <div class="fd-section-body" id="body-var">
+              <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+                Despesas não essenciais — internet, lazer, streaming, etc.
+              </p>
+              <div class="expense-grid" id="expense-grid-var"><!-- rendered by JS --></div>
+            </div>
+          </div>
+
+          <!-- ── Dívidas ─────────────────────────────────────────── -->
+          <div class="fd-section" id="section-dividas">
+            <div class="fd-section-header open" onclick="toggleSection('dividas')">
+              <div class="fd-section-icon">💳</div>
+              <div class="fd-section-title">Dívidas Cadastradas</div>
+              <div class="fd-section-badge" id="badge-dividas">0 dívidas</div>
+              <div class="fd-section-chevron">▼</div>
+            </div>
+            <div class="fd-section-body open" id="body-dividas">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                <span style="font-size:12px;color:var(--muted);">Dívidas ativas são usadas no cálculo de comprometimento.</span>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn-fd-ghost" onclick="window.open('dividas.html','_self')">Ver tudo →</button>
+                  <button class="btn-fd-primary" onclick="openDebtModal()">+ Adicionar dívida</button>
+                </div>
+              </div>
+              <div id="fd-debts-list"><!-- rendered by JS --></div>
+            </div>
+          </div>
+
+          <!-- ── Plano de Pagamento Sugerido ────────────────────── -->
+          <div class="fd-card" id="fd-plan-card" style="margin-bottom:24px;">
+            <div class="fd-card-title"><span>📋</span> Plano de Pagamento Sugerido — Lei 14.181/2021</div>
+            <div id="fd-plan-body"><!-- rendered by JS --></div>
+          </div>
+
+        </div><!-- /fd-main -->
+      </div><!-- /fd-page -->
+    </main>
+  </div>
+</div>
+
+<!-- ── Save bar ────────────────────────────────────────────────────────── -->
+<div class="fd-save-bar" id="fd-save-bar">
+  <div style="font-size:13px;color:var(--ink2);">
+    <strong>💾 Alterações não salvas</strong>
+    <span style="color:var(--muted);"> — atualize o diagnóstico para salvar.</span>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn-fd-secondary" onclick="discardChanges()">Descartar</button>
+    <button class="btn-fd-primary" id="fd-save-btn" onclick="saveFinancial()">Salvar diagnóstico</button>
+  </div>
+</div>
+
+<!-- ── Debt Modal ──────────────────────────────────────────────────────── -->
+<div class="fd-modal-backdrop" id="debt-modal">
+  <div class="fd-modal">
+    <div class="fd-modal-header">
+      <div class="fd-modal-title" id="modal-title">Nova Dívida</div>
+      <button class="fd-modal-close" onclick="closeDebtModal()">✕</button>
+    </div>
+    <div class="fd-modal-body">
+      <input type="hidden" id="modal-debt-id" />
+
+      <div class="fd-field">
+        <label class="fd-label" for="m-credor">Credor *</label>
+        <input class="fd-input" id="m-credor" type="text" placeholder="Ex: Banco Bradesco, Nubank…" />
+      </div>
+
+      <div class="fd-input-row">
+        <div class="fd-field">
+          <label class="fd-label" for="m-tipo">Tipo de dívida *</label>
+          <select class="fd-select" id="m-tipo"></select>
+        </div>
+        <div class="fd-field">
+          <label class="fd-label" for="m-status">Status</label>
+          <select class="fd-select" id="m-status"></select>
+        </div>
+      </div>
+
+      <div class="fd-input-row">
+        <div class="fd-field">
+          <label class="fd-label" for="m-valor">Valor total *</label>
+          <div class="expense-wrap">
+            <span class="expense-prefix">R$</span>
+            <input class="expense-input fd-input" id="m-valor" type="number" min="0" step="0.01" placeholder="0,00" />
+          </div>
+        </div>
+        <div class="fd-field">
+          <label class="fd-label" for="m-parcela">Parcela mensal</label>
+          <div class="expense-wrap">
+            <span class="expense-prefix">R$</span>
+            <input class="expense-input fd-input" id="m-parcela" type="number" min="0" step="0.01" placeholder="0,00" />
+          </div>
+        </div>
+      </div>
+
+      <div class="fd-input-row">
+        <div class="fd-field">
+          <label class="fd-label" for="m-meses">Meses restantes</label>
+          <input class="fd-input" id="m-meses" type="number" min="0" placeholder="Ex: 24" />
+        </div>
+        <div class="fd-field">
+          <label class="fd-label" for="m-juros">Juros a.m. (%)</label>
+          <input class="fd-input" id="m-juros" type="number" min="0" step="0.01" placeholder="Ex: 2,5" />
+        </div>
+      </div>
+
+      <div class="fd-input-row">
+        <div class="fd-field">
+          <label class="fd-label" for="m-banco">Banco / contrato</label>
+          <input class="fd-input" id="m-banco" type="text" placeholder="Ex: Cód. 001" />
+        </div>
+        <div class="fd-field">
+          <label class="fd-label" for="m-vencimento">Data vencimento</label>
+          <input class="fd-input" id="m-vencimento" type="date" />
+        </div>
+      </div>
+
+      <div class="fd-field">
+        <label class="fd-toggle">
+          <input type="checkbox" id="m-negativado" />
+          <span class="fd-toggle-label">🚨 Negativado (SPC/Serasa)</span>
+        </label>
+      </div>
+
+      <div class="fd-field">
+        <label class="fd-label" for="m-obs">Observações</label>
+        <textarea class="fd-input" id="m-obs" rows="2" placeholder="Informações extras sobre esta dívida…" style="resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="fd-modal-footer">
+      <button class="btn-fd-secondary" onclick="closeDebtModal()">Cancelar</button>
+      <button class="btn-fd-danger" id="modal-delete-btn" onclick="deleteCurrentDebt()" style="display:none;">Excluir</button>
+      <button class="btn-fd-primary" onclick="saveDebt()">Salvar dívida</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Module Script ───────────────────────────────────────────────────── -->
+<script type="module">
+import { supabase }            from '../services/supabase.js';
+import { DebtService, CaseService } from '../services/database.js';
+import { bus }                 from '../modules/events/EventBus.js';
+import { Shell }               from '../modules/ui/Shell.js';
+import { Toast }               from '../modules/ui/Toast.js';
+import { DebtEngine, DEBT_STATUS, CREDITOR_TYPES } from '../modules/debt-engine/DebtEngine.js';
+import {
+  FinancialCalculator,
+  DESPESAS_CONFIG,
+  DESPESAS_ESSENCIAIS_KEYS,
+  DESPESAS_VARIAVEIS_KEYS,
+} from '../modules/financial/calculator.js';
+
+// ── State ──────────────────────────────────────────────────────────────
+let engine       = new DebtEngine();
+let caso         = null;
+let despesas     = {};
+let rendaPropria = 0;
+let rendaFam     = 0;
+let nDep         = 0;
+let dirty        = false;
+let editingDebtId = null;
+
+// Chart instances
+let chartGauge   = null;
+let chartBreak   = null;
+let chartDesp    = null;
+let chartDivTipo = null;
+
+const shell = new Shell();
+
+// ── Bootstrap ──────────────────────────────────────────────────────────
+async function bootstrap() {
+  // Auth guard
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  shell.init();
+  await loadData();
+  buildExpenseGrids();
+  renderAll();
+
+  // Listen for debt changes
+  bus.on('debt.list.changed', () => {
+    updateDebtSection();
+    refreshDiag();
+    renderCharts();
+  });
+}
+
+async function loadData() {
+  try {
+    caso = await CaseService.get();
+    if (caso) {
+      rendaPropria = Number(caso.renda_mensal)          || 0;
+      rendaFam     = Number(caso.renda_familiar)        || 0;
+      nDep         = Number(caso.numero_dependentes)    || 0;
+      try { despesas = JSON.parse(caso.despesas_json || '{}'); } catch { despesas = {}; }
+    }
+    await engine.init(DebtService);
+    document.getElementById('fd-loading').style.display = 'none';
+    document.getElementById('fd-main').style.display    = 'block';
+  } catch (e) {
+    console.error('[FinDash] loadData error:', e);
+    Toast.error('Erro ao carregar dados financeiros.');
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────
+function renderAll() {
+  syncFormValues();
+  refreshDiag();
+  renderCharts();
+  updateDebtSection();
+}
+
+function syncFormValues() {
+  document.getElementById('inp-renda-propria').value  = rendaPropria || '';
+  document.getElementById('inp-renda-familiar').value = rendaFam     || '';
+  document.getElementById('dep-count-display').textContent = nDep;
+  document.getElementById('badge-renda').textContent = rendaPropria
+    ? FinancialCalculator.formatBRL(rendaPropria + rendaFam)
+    : 'Não informado';
+
+  // Despesas inputs
+  for (const key of [...DESPESAS_ESSENCIAIS_KEYS, ...DESPESAS_VARIAVEIS_KEYS]) {
+    const el = document.getElementById(`exp-${key}`);
+    if (el) el.value = despesas[key] || '';
+  }
+  updateDespesasBadges();
+}
+
+function refreshDiag() {
+  const rendaTotal = rendaPropria + rendaFam;
+  const diag = engine.getDiagnostico(rendaTotal, despesas, nDep);
+  const score = FinancialCalculator.calcularScore(diag);
+
+  // Score badge
+  document.getElementById('fd-score-num').textContent = score;
+  const scoreTag = document.getElementById('fd-score-tag');
+  scoreTag.textContent = FinancialCalculator.getSeverityLabel(diag.severity);
+  const scoreColors = { critical:'#dc2626', high:'#ea580c', medium:'#d97706', low:'#16a34a' };
+  const c = scoreColors[diag.severity] || '#6b7280';
+  scoreTag.style.background = c + '22';
+  scoreTag.style.color = c;
+
+  // KPIs
+  document.getElementById('kpi-renda').textContent            = FinancialCalculator.formatBRL(diag.rendaTotal);
+  document.getElementById('kpi-desp-ess').textContent         = FinancialCalculator.formatBRL(diag.despesasEssenciais);
+  document.getElementById('kpi-desp-var').textContent         = FinancialCalculator.formatBRL(diag.despesasVariaveis);
+  document.getElementById('kpi-total-dividas').textContent    = FinancialCalculator.formatBRL(diag.totalDividas);
+  document.getElementById('kpi-n-credores').textContent       = `${engine.getActiveCount()} credores ativos`;
+  document.getElementById('kpi-comprometimento').textContent  = FinancialCalculator.formatPct(diag.comprometimentoPct);
+  document.getElementById('kpi-min-exist').textContent        = FinancialCalculator.formatBRL(diag.minExistencial);
+  document.getElementById('kpi-sobra').textContent            = FinancialCalculator.formatBRL(diag.sobraReal);
+
+  // Sobra KPI color
+  const sobraCard = document.getElementById('kpi-sobra-card');
+  sobraCard.className = 'fd-kpi ' + (diag.sobraReal < 0 ? 'fd-kpi-red' : 'fd-kpi-green');
+  sobraCard.querySelector('.fd-kpi-icon').textContent = diag.sobraReal < 0 ? '⚠️' : '✨';
+
+  // Diagnóstico banner
+  renderDiagBanner(diag);
+  renderPlan(diag);
+  updateDespesasBadges();
+
+  // Gauge pct label
+  document.getElementById('gauge-pct-label').textContent = FinancialCalculator.formatPct(diag.comprometimentoPct);
+  document.getElementById('gauge-severity-label').textContent = FinancialCalculator.getSeverityLabel(diag.severity);
+}
+
+function renderDiagBanner(diag) {
+  const banner = document.getElementById('fd-diag-banner');
+  banner.style.display = 'flex';
+  banner.className = `fd-diag-banner fd-diag--${diag.severity}`;
+
+  const icons   = { critical:'🚨', high:'⚠️', medium:'⚡', low:'✅' };
+  const titles  = {
+    critical: 'Superendividamento crítico — ação urgente necessária',
+    high:     'Superendividamento confirmado — Lei 14.181/2021 aplicável',
+    medium:   'Atenção: comprometimento elevado de renda',
+    low:      'Situação financeira controlada',
+  };
+  const texts   = {
+    critical: `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — acima de 90%. O mínimo existencial está ameaçado. Solicite audiência de conciliação imediatamente.`,
+    high:     `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — acima de 70%. Você se enquadra como superendividado conforme o art. 54-A do CDC.`,
+    medium:   `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — entre 50% e 70%. Atenção: aproximando-se do limite de superendividamento.`,
+    low:      `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — dentro dos limites. Continue monitorando suas finanças.`,
+  };
+
+  document.getElementById('fd-diag-icon').textContent  = icons[diag.severity]  || '📊';
+  document.getElementById('fd-diag-title').textContent = titles[diag.severity] || '';
+  document.getElementById('fd-diag-text').textContent  = texts[diag.severity]  || '';
+
+  const pills = [];
+  if (diag.violaMinExistencial) pills.push('⚠️ Viola mínimo existencial');
+  if (diag.isSuperendividado)   pills.push('📋 Enquadra Lei 14.181/2021');
+  if (diag.deficit > 0)         pills.push(`Déficit: ${FinancialCalculator.formatBRL(diag.deficit)}/mês`);
+  if (diag.parcelaMensalTotal > 0) pills.push(`Parcelas: ${FinancialCalculator.formatBRL(diag.parcelaMensalTotal)}/mês`);
+
+  document.getElementById('fd-diag-pills').innerHTML = pills
+    .map(t => `<span class="fd-diag-pill">${t}</span>`).join('');
+}
+
+function renderPlan(diag) {
+  const el = document.getElementById('fd-plan-body');
+  if (!diag.planoSugerido) {
+    el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+      <div>Preencha sua renda e despesas para calcular o plano sugerido.</div>
+    </div>`;
+    return;
+  }
+  const p = diag.planoSugerido;
+  const rows = [
+    ['💰 Capacidade de pagamento mensal', FinancialCalculator.formatBRL(diag.capacidadePagamento)],
+    ['📋 Parcela mensal sugerida',         FinancialCalculator.formatBRL(p.parcelaSugerida)],
+    ['📅 Prazo estimado para quitação',    p.prazoMesesEstimado ? `${p.prazoMesesEstimado} meses (${Math.ceil(p.prazoMesesEstimado/12).toFixed(1)} anos)` : '—'],
+    ['💳 Total das dívidas',               FinancialCalculator.formatBRL(diag.totalDividas)],
+    ['⚖️ Mínimo existencial preservado',   FinancialCalculator.formatBRL(diag.minExistencial)],
+    ['✨ Sobra após plano',                FinancialCalculator.formatBRL(diag.sobraReal)],
+  ];
+  el.innerHTML = rows.map(([l, v]) => `
+    <div class="fd-plan-row">
+      <span class="fd-plan-label">${l}</span>
+      <span class="fd-plan-value">${v}</span>
+    </div>
+  `).join('') + `
+    <div style="margin-top:16px;padding:14px;background:var(--ice);border-radius:8px;font-size:12px;color:var(--ink2);line-height:1.6;">
+      <strong>⚖️ Base legal:</strong> Art. 54-E do CDC (Lei 14.181/2021) — O plano de pagamento não pode comprometer o mínimo existencial
+      (1 salário mínimo + 30% por dependente = <strong>${FinancialCalculator.formatBRL(diag.minExistencial)}</strong>).
+    </div>
+  `;
+}
+
+// ── Expense Grids ──────────────────────────────────────────────────────
+function buildExpenseGrids() {
+  buildGrid('expense-grid-ess', DESPESAS_ESSENCIAIS_KEYS, true);
+  buildGrid('expense-grid-var', DESPESAS_VARIAVEIS_KEYS, false);
+}
+
+function buildGrid(containerId, keys, essential) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = keys.map(k => {
+    const cfg = DESPESAS_CONFIG[k];
+    return `
+      <div class="expense-item">
+        <label class="expense-label" for="exp-${k}">
+          ${cfg.icon} ${cfg.label}
+          <span class="${essential ? 'expense-badge-ess' : 'expense-badge-var'}">${essential ? 'Essencial' : 'Variável'}</span>
+        </label>
+        <div class="expense-wrap">
+          <span class="expense-prefix">R$</span>
+          <input class="expense-input" id="exp-${k}" type="number" min="0" step="0.01" placeholder="0,00"
+            oninput="window._fdOnExpenseChange('${k}', this.value)" />
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function updateDespesasBadges() {
+  const totEss = FinancialCalculator.somarDespesasEssenciais(despesas);
+  const totVar = FinancialCalculator.somarDespesasVariaveis(despesas);
+  document.getElementById('badge-ess').textContent = totEss > 0 ? FinancialCalculator.formatBRL(totEss) : 'R$ —';
+  document.getElementById('badge-var').textContent = totVar > 0 ? FinancialCalculator.formatBRL(totVar) : 'R$ —';
+}
+
+// ── Debt Section ───────────────────────────────────────────────────────
+function updateDebtSection() {
+  const debts = engine.getAll();
+  document.getElementById('badge-dividas').textContent = `${debts.length} dívida${debts.length !== 1 ? 's' : ''}`;
+
+  const el = document.getElementById('fd-debts-list');
+  if (!debts.length) {
+    el.innerHTML = `<div class="fd-debt-empty">
+      <div class="fd-debt-empty-icon">💳</div>
+      <div>Nenhuma dívida cadastrada ainda.</div>
+    </div>`;
+    return;
+  }
+
+  // Show up to 6, link to full list
+  const shown = debts.slice(0, 6);
+  el.innerHTML = shown.map(d => {
+    const meta   = DEBT_STATUS[d.status] || DEBT_STATUS.ativa;
+    const ctMeta = CREDITOR_TYPES.find(t => t.value === d.tipo);
+    const parcela = d.parcela_mensal ? ` · ${FinancialCalculator.formatBRL(d.parcela_mensal)}/mês` : '';
+    return `
+      <div class="fd-debt-row" style="cursor:pointer;" onclick="window._fdEditDebt('${d.id}')">
+        <div class="fd-debt-icon">${d.negativado ? '🚨' : '💳'}</div>
+        <div class="fd-debt-info">
+          <div class="fd-debt-credor">${esc(d.credor)}</div>
+          <div class="fd-debt-tipo">${ctMeta?.label || d.tipo || '—'}${d.negativado ? ' · Negativado' : ''}</div>
+        </div>
+        <div>
+          <div class="fd-debt-valor">${FinancialCalculator.formatBRL(d.valor)}</div>
+          <div class="fd-debt-parcela">${parcela}</div>
+        </div>
+        <div class="fd-debt-status" style="background:${meta.bg};color:${meta.color};">${meta.label}</div>
+      </div>`;
+  }).join('');
+
+  if (debts.length > 6) {
+    el.innerHTML += `<div style="text-align:center;padding:12px 0 4px;">
+      <button class="btn-fd-ghost" onclick="window.open('dividas.html','_self')">Ver todas ${debts.length} dívidas →</button>
+    </div>`;
+  }
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────
+function renderCharts() {
+  const rendaTotal = rendaPropria + rendaFam;
+  const diag = engine.getDiagnostico(rendaTotal, despesas, nDep);
+
+  renderGauge(diag);
+  renderBreakdown(diag);
+  renderDespesasPie(diag);
+  renderDividasTipo();
+}
+
+function renderGauge(diag) {
+  const pct  = Math.min(100, diag.comprometimentoPct);
+  const rest = Math.max(0, 100 - pct);
+  const colors = { critical:'#dc2626', high:'#ea580c', medium:'#d97706', low:'#16a34a' };
+  const color  = colors[diag.severity] || '#2E6DA4';
+
+  const ctx = document.getElementById('chart-gauge').getContext('2d');
+  if (chartGauge) chartGauge.destroy();
+  chartGauge = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct, rest],
+        backgroundColor: [color, '#f1f5f9'],
+        borderWidth: 0,
+        borderRadius: [4, 0],
+      }]
+    },
+    options: {
+      cutout: '72%',
+      rotation: -90,
+      circumference: 180,
+      plugins: { legend: { display:false }, tooltip: { enabled:false } },
+      animation: { animateRotate: true, duration: 700 },
+    }
+  });
+}
+
+function renderBreakdown(diag) {
+  const ctx = document.getElementById('chart-breakdown').getContext('2d');
+  if (chartBreak) chartBreak.destroy();
+  chartBreak = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Renda Total'],
+      datasets: [
+        { label: 'Despesas essenciais', data: [diag.despesasEssenciais], backgroundColor: '#2E6DA4', borderRadius:4 },
+        { label: 'Despesas variáveis',  data: [diag.despesasVariaveis],  backgroundColor: '#93c5fd', borderRadius:4 },
+        { label: 'Parcelas dívidas',    data: [diag.parcelaMensalTotal], backgroundColor: '#dc2626', borderRadius:4 },
+        { label: 'Mínimo existencial',  data: [diag.minExistencial],     backgroundColor: '#d97706', borderRadius:4 },
+        { label: 'Sobra',              data: [Math.max(0, diag.sobraReal)], backgroundColor: '#16a34a', borderRadius:4 },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth:10, font:{ size:11 }, padding:10 } },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${FinancialCalculator.formatBRL(c.raw)}` } }
+      },
+      scales: {
+        x: { stacked:true, grid:{ color:'#f1f5f9' }, ticks:{ callback: v => FinancialCalculator.formatBRL(v), font:{ size:10 } } },
+        y: { stacked:true, display:false },
+      }
+    }
+  });
+}
+
+function renderDespesasPie(diag) {
+  const labels = [], data = [], colors = [
+    '#1A3A5C','#2E6DA4','#3b82f6','#60a5fa','#93c5fd','#bfdbfe',
+    '#dbeafe','#B7860B','#d97706','#f59e0b',
+  ];
+  for (const k of DESPESAS_ESSENCIAIS_KEYS) {
+    const v = Number(despesas[k]) || 0;
+    if (v > 0) { labels.push(DESPESAS_CONFIG[k].label); data.push(v); }
+  }
+  for (const k of DESPESAS_VARIAVEIS_KEYS) {
+    const v = Number(despesas[k]) || 0;
+    if (v > 0) { labels.push(DESPESAS_CONFIG[k].label); data.push(v); }
+  }
+
+  const ctx = document.getElementById('chart-despesas').getContext('2d');
+  if (chartDesp) chartDesp.destroy();
+  if (!data.length) {
+    ctx.clearRect(0, 0, 400, 200);
+    ctx.font = '13px DM Sans, system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhuma despesa informada', 200, 100);
+    return;
+  }
+  chartDesp = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth:1, borderColor:'#fff' }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:true,
+      plugins: {
+        legend: { position:'right', labels:{ boxWidth:10, font:{ size:10 }, padding:8 } },
+        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${FinancialCalculator.formatBRL(c.raw)}` } },
+      }
+    }
+  });
+}
+
+function renderDividasTipo() {
+  const groups = engine.groupByType();
+  const labels = [], data = [], bgs = [];
+  const palette = ['#dc2626','#ea580c','#d97706','#16a34a','#2E6DA4','#7c3aed','#0891b2','#db2777'];
+  let ci = 0;
+  for (const [tipo, g] of Object.entries(groups)) {
+    const meta = CREDITOR_TYPES.find(t => t.value === tipo);
+    labels.push(meta?.label || tipo);
+    data.push(g.total);
+    bgs.push(palette[ci++ % palette.length]);
+  }
+
+  const ctx = document.getElementById('chart-dividas-tipo').getContext('2d');
+  if (chartDivTipo) chartDivTipo.destroy();
+  if (!data.length) {
+    ctx.clearRect(0, 0, 400, 200);
+    ctx.font = '13px DM Sans, system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhuma dívida cadastrada', 200, 100);
+    return;
+  }
+  chartDivTipo = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: bgs, borderWidth:1, borderColor:'#fff' }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:true,
+      plugins: {
+        legend: { position:'right', labels:{ boxWidth:10, font:{ size:10 }, padding:8 } },
+        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${FinancialCalculator.formatBRL(c.raw)}` } },
+      }
+    }
+  });
+}
+
+// ── Debt Modal ─────────────────────────────────────────────────────────
+function openDebtModal(debtId = null) {
+  editingDebtId = debtId;
+  const modal  = document.getElementById('debt-modal');
+  const delBtn = document.getElementById('modal-delete-btn');
+
+  // Populate selects once
+  if (!document.getElementById('m-tipo').options.length) {
+    CREDITOR_TYPES.forEach(t => {
+      const o = new Option(t.label, t.value);
+      document.getElementById('m-tipo').add(o);
+    });
+    Object.entries(DEBT_STATUS).forEach(([k, v]) => {
+      const o = new Option(v.label, k);
+      document.getElementById('m-status').add(o);
+    });
+  }
+
+  if (debtId) {
+    document.getElementById('modal-title').textContent = 'Editar Dívida';
+    delBtn.style.display = 'block';
+    const d = engine.getAll().find(x => x.id === debtId);
+    if (d) {
+      document.getElementById('modal-debt-id').value = d.id;
+      document.getElementById('m-credor').value    = d.credor || '';
+      document.getElementById('m-tipo').value      = d.tipo   || 'outro';
+      document.getElementById('m-status').value    = d.status || 'ativa';
+      document.getElementById('m-valor').value     = d.valor  || '';
+      document.getElementById('m-parcela').value   = d.parcela_mensal || '';
+      document.getElementById('m-meses').value     = d.meses_restantes || '';
+      document.getElementById('m-juros').value     = d.taxa_juros_mensal || '';
+      document.getElementById('m-banco').value     = d.banco  || '';
+      document.getElementById('m-vencimento').value = d.data_vencimento ? d.data_vencimento.slice(0,10) : '';
+      document.getElementById('m-negativado').checked = !!d.negativado;
+      document.getElementById('m-obs').value       = d.observacoes || '';
+    }
+  } else {
+    document.getElementById('modal-title').textContent = 'Nova Dívida';
+    delBtn.style.display = 'none';
+    document.getElementById('modal-debt-id').value = '';
+    ['m-credor','m-valor','m-parcela','m-meses','m-juros','m-banco','m-vencimento','m-obs'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('m-tipo').value   = 'outro';
+    document.getElementById('m-status').value = 'ativa';
+    document.getElementById('m-negativado').checked = false;
+  }
+  modal.classList.add('open');
+}
+window.openDebtModal = openDebtModal;
+
+function closeDebtModal() {
+  document.getElementById('debt-modal').classList.remove('open');
+  editingDebtId = null;
+}
+window.closeDebtModal = closeDebtModal;
+
+async function saveDebt() {
+  const credor = document.getElementById('m-credor').value.trim();
+  const valor  = parseFloat(document.getElementById('m-valor').value);
+  if (!credor) { Toast.warn('Informe o nome do credor.'); return; }
+  if (!valor || valor <= 0) { Toast.warn('Informe um valor válido.'); return; }
+
+  const data = {
+    credor,
+    tipo:              document.getElementById('m-tipo').value,
+    status:            document.getElementById('m-status').value,
+    valor,
+    parcela_mensal:    parseFloat(document.getElementById('m-parcela').value)   || 0,
+    meses_restantes:   parseInt(document.getElementById('m-meses').value)       || null,
+    taxa_juros_mensal: parseFloat(document.getElementById('m-juros').value)     || 0,
+    banco:             document.getElementById('m-banco').value.trim()          || null,
+    data_vencimento:   document.getElementById('m-vencimento').value            || null,
+    negativado:        document.getElementById('m-negativado').checked,
+    observacoes:       document.getElementById('m-obs').value.trim()            || null,
+  };
+
+  try {
+    if (editingDebtId) {
+      await engine.update(editingDebtId, data);
+      Toast.success('Dívida atualizada!');
+    } else {
+      await engine.add(data);
+      Toast.success('Dívida adicionada!');
+    }
+    closeDebtModal();
+  } catch (e) {
+    console.error('[FinDash] saveDebt error:', e);
+    Toast.error('Erro ao salvar dívida: ' + e.message);
+  }
+}
+window.saveDebt = saveDebt;
+
+async function deleteCurrentDebt() {
+  if (!editingDebtId) return;
+  if (!confirm('Tem certeza que deseja excluir esta dívida?')) return;
+  try {
+    await engine.remove(editingDebtId);
+    closeDebtModal();
+    Toast.success('Dívida excluída.');
+  } catch (e) {
+    Toast.error('Erro ao excluir dívida.');
+  }
+}
+window.deleteCurrentDebt = deleteCurrentDebt;
+
+// expose edit handler
+window._fdEditDebt = (id) => openDebtModal(id);
+
+// ── Income / Expenses input handlers ──────────────────────────────────
+window.onInputChange = function() {
+  rendaPropria = parseFloat(document.getElementById('inp-renda-propria').value)  || 0;
+  rendaFam     = parseFloat(document.getElementById('inp-renda-familiar').value) || 0;
+  const total  = rendaPropria + rendaFam;
+  document.getElementById('badge-renda').textContent = total > 0
+    ? FinancialCalculator.formatBRL(total)
+    : 'Não informado';
+  markDirty();
+  refreshDiag();
+  renderCharts();
+};
+
+window._fdOnExpenseChange = function(key, val) {
+  despesas[key] = parseFloat(val) || 0;
+  markDirty();
+  refreshDiag();
+  renderCharts();
+};
+
+window.changeDep = function(delta) {
+  nDep = Math.max(0, nDep + delta);
+  document.getElementById('dep-count-display').textContent = nDep;
+  markDirty();
+  refreshDiag();
+  renderCharts();
+};
+
+// ── Save / Discard ─────────────────────────────────────────────────────
+function markDirty() {
+  if (!dirty) {
+    dirty = true;
+    document.getElementById('fd-save-bar').classList.add('visible');
+  }
+}
+
+window.discardChanges = async function() {
+  dirty = false;
+  document.getElementById('fd-save-bar').classList.remove('visible');
+  await loadData();
+  syncFormValues();
+  refreshDiag();
+  renderCharts();
+  Toast.info('Alterações descartadas.');
+};
+
+window.saveFinancial = async function() {
+  const btn = document.getElementById('fd-save-btn');
+  btn.textContent = 'Salvando…';
+  btn.disabled    = true;
+  try {
+    await CaseService.save({
+      renda_mensal:        rendaPropria,
+      renda_familiar:      rendaFam,
+      numero_dependentes:  nDep,
+      despesas_json:       JSON.stringify(despesas),
+    });
+    dirty = false;
+    document.getElementById('fd-save-bar').classList.remove('visible');
+    Toast.success('Diagnóstico financeiro salvo!');
+
+    // Emit event for other pages
+    bus.emit('financial.saved', {
+      renda: rendaPropria + rendaFam,
+      despesas,
+      nDep,
+    });
+  } catch (e) {
+    console.error('[FinDash] save error:', e);
+    Toast.error('Erro ao salvar: ' + e.message);
+  } finally {
+    btn.textContent = 'Salvar diagnóstico';
+    btn.disabled    = false;
+  }
+};
+
+// ── Section toggle ─────────────────────────────────────────────────────
+window.toggleSection = function(key) {
+  const header = document.querySelector(`#section-${key} .fd-section-header`);
+  const body   = document.getElementById(`body-${key}`);
+  const isOpen = header.classList.contains('open');
+  header.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+};
+
+// ── Utility ────────────────────────────────────────────────────────────
+function esc(str) {
+  return (str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────
+document.addEventListener('app:ready', () => bootstrap().catch(err => {
+  console.error('[FinDash] bootstrap error:', err);
+  Toast.error('Erro ao inicializar o painel. Tente recarregar a página.');
+  document.getElementById('fd-loading').innerHTML =
+    '<div style="text-align:center;color:var(--red);"><div style="font-size:32px;margin-bottom:8px;">⚠️</div><div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div></div>';
+}));
+
+// Fallback para race condition
+if (document.readyState === 'complete') {
+  setTimeout(() => {
+    if (document.getElementById('fd-loading').style.display !== 'none') {
+      bootstrap().catch(console.error);
+    }
+  }, 1500);
+}
+</script>
+
+</body>
+</html>
