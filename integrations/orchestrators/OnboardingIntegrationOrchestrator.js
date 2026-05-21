@@ -23,6 +23,16 @@ export function mountOnboardingIntegrationOrchestrator() {
       name: payload?.name || 'Cliente',
     });
 
+    bus.emit('journey.release.requested', {
+      tenant_id: context.tenant_id,
+      reason: 'onboarding_completed',
+    }, {
+      tenant_id: context.tenant_id,
+      trace_id: context.trace_id,
+      workflow_id: context.workflow_id,
+      source_module: 'integrations.onboarding_orchestrator',
+    });
+
     bus.emit('integration.completed', {
       provider: 'freshdesk,resend',
       operation: 'onboarding_orchestration',

@@ -19,5 +19,32 @@
       <article class="status-card"><div class="status-card-body"><div class="status-card-label">SLA violations</div><div class="status-card-value" id="sla-violations">0</div></div></article>
     </section>
   </main>
+
+  <script type="module">
+    import { integrationHub } from '../../integrations/IntegrationHub.js';
+
+    const ids = {
+      providers: document.getElementById('providers-total'),
+      health: document.getElementById('health-global'),
+      retries: document.getElementById('retries-total'),
+      failures: document.getElementById('failures-total'),
+      queue: document.getElementById('queue-depth'),
+      sla: document.getElementById('sla-violations'),
+    };
+
+    function render() {
+      const snapshot = integrationHub.snapshot();
+      ids.providers.textContent = String(snapshot.providers?.length || 0);
+      ids.health.textContent = snapshot.health?.global || 'unknown';
+      ids.retries.textContent = String(snapshot.telemetry?.retries || 0);
+      ids.failures.textContent = String(snapshot.telemetry?.failures || 0);
+      ids.queue.textContent = String(snapshot.queue_depth || 0);
+      ids.sla.textContent = String(snapshot.telemetry?.sla_violations || 0);
+    }
+
+    integrationHub.mount();
+    render();
+    setInterval(render, 10000);
+  </script>
 </body>
 </html>
