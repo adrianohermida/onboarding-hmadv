@@ -777,7 +777,7 @@ function renderRequestsBanner() {
   el.style.display = 'block';
   el.innerHTML = `
     <div class="requests-banner">
-      <div class="requests-banner-icon">📩</div>
+      <div class="requests-banner-icon">${icon('inbox', {size:24,color:'rgba(255,255,255,.85)'})}</div>
       <div class="requests-banner-body">
         <div class="requests-banner-title">O escritório solicitou ${requests.length} documento${requests.length > 1 ? 's' : ''}</div>
         <div class="requests-banner-sub">Envie os documentos pendentes para agilizar seu processo.</div>
@@ -785,7 +785,7 @@ function renderRequestsBanner() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${requests.slice(0,3).map(r => `
           <span class="request-pill ${r.priority==='urgent'?'urgent':''}" onclick="scrollToDoc('${r.document_tipo}')">
-            ${r.priority === 'urgent' ? '🚨 ' : ''}${esc(r.document_label)}
+            ${r.priority === 'urgent' ? icon('alert-triangle',{size:12,color:'#fca5a5'})+' ' : ''}${esc(r.document_label)}
           </span>
         `).join('')}
       </div>
@@ -833,7 +833,7 @@ function renderDocHub() {
   }
 
   if (!Object.keys(cats).length && !allDocs.filter(d=>d.direction==='office_to_client').length) {
-    hub.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">📋</div><div>Nenhum documento encontrado.</div></div>`;
+    hub.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">${icon('folder-open',{size:32,color:'var(--muted)'})}</div><div>Nenhum documento encontrado.</div></div>`;
     return;
   }
 
@@ -841,7 +841,7 @@ function renderDocHub() {
   const sortedCats = catOrder.filter(c => cats[c]);
 
   hub.innerHTML = renderOfficeDocsSection(allDocs) + sortedCats.map(catKey => {
-    const catMeta  = DOCUMENT_CATEGORIES[catKey] || { label: catKey, icon: '📁' };
+    const catMeta  = DOCUMENT_CATEGORIES[catKey] || { label: catKey, icon: 'folder', color: '#6b7280' };
     const docs     = cats[catKey];
     const approved = docs.filter(d => ['aprovado','assinado'].includes(d.workflow_status)).length;
     const catPct   = docs.length > 0 ? Math.round((approved / docs.length) * 100) : 0;
@@ -849,7 +849,7 @@ function renderDocHub() {
     return `
       <div class="cat-section" id="cat-${catKey}">
         <div class="cat-section-header">
-          <div class="cat-icon">${catMeta.icon}</div>
+          <div class="cat-icon">${icon(catMeta.icon, {size:16, color: catMeta.color || 'var(--blue)'})}</div>
           <div class="cat-title">${catMeta.label}</div>
           <div class="cat-progress-bar">
             <div class="cat-progress-fill" style="width:${catPct}%;background:${catMeta.color || 'var(--blue)'}"></div>
@@ -866,6 +866,9 @@ function renderDocHub() {
   // Show/hide drop zone for client mode
   const dz = document.getElementById('drop-zone-global');
   dz.style.display = (!isAdmin || viewMode === 'cliente') ? 'none' : 'none'; // hidden globally, per-card upload used
+
+  // Activate Lucide icons on static data-lucide elements
+  if (window.lucide?.createIcons) window.lucide.createIcons();
 }
 
 function renderDocCard(d) {
@@ -877,10 +880,10 @@ function renderDocCard(d) {
   const noteHtml = d.observacao_admin
     ? `<div class="doc-card-note">${esc(d.observacao_admin)}</div>` : '';
   const adminNoteHtml = adminMode && d.admin_notes
-    ? `<div class="doc-card-note is-admin">🔒 ${esc(d.admin_notes)}</div>` : '';
+    ? `<div class="doc-card-note is-admin">${icon('lock',{size:11,color:'#6b7280'})} ${esc(d.admin_notes)}</div>` : '';
 
   const metaHtml = d.nome_arquivo
-    ? `<div class="doc-card-filename">📎 ${esc(d.nome_arquivo)} ${d.file_size ? `<span class="doc-card-size">(${fmtSize(d.file_size)})</span>` : ''}</div>` : '';
+    ? `<div class="doc-card-filename">${icon('paperclip',{size:11,color:'var(--muted)'})} ${esc(d.nome_arquivo)} ${d.file_size ? `<span class="doc-card-size">(${fmtSize(d.file_size)})</span>` : ''}</div>` : '';
   const metaDate = d.updated_at
     ? `<span>Atualizado: ${timeAgo(d.updated_at)}</span>` : '';
   const version = d.version > 1 ? `<span>v${d.version}</span>` : '';
@@ -888,15 +891,15 @@ function renderDocCard(d) {
   let actions = '';
 
   if (canUpload) {
-    actions += `<button class="doc-act-btn primary" onclick="triggerUpload('${d.tipo}')">📤 Enviar</button>`;
+    actions += `<button class="doc-act-btn primary" onclick="triggerUpload('${d.tipo}')">${icon('upload-cloud',{size:13,color:'#fff'})} Enviar</button>`;
   }
   if (canView) {
-    actions += `<button class="doc-act-btn" onclick="openDrawer('${d.id || d.tipo}')">👁 Ver</button>`;
+    actions += `<button class="doc-act-btn" onclick="openDrawer('${d.id || d.tipo}')">${icon('eye',{size:13,color:'var(--ink2)'})} Ver</button>`;
   }
   if (adminMode) {
-    actions += `<button class="doc-act-btn warn" onclick="openDrawer('${d.id || d.tipo}', true)">⚖️ Avaliar</button>`;
+    actions += `<button class="doc-act-btn warn" onclick="openDrawer('${d.id || d.tipo}', true)">${icon('clipboard-check',{size:13,color:'#fff'})} Avaliar</button>`;
     if (d.storage_path && d.workflow_status === 'aprovado') {
-      actions += `<button class="doc-act-btn purple" onclick="openSigModal('${d.id}')">✍️ Assinar</button>`;
+      actions += `<button class="doc-act-btn purple" onclick="openSigModal('${d.id}')">${icon('pen-line',{size:13,color:'#fff'})} Assinar</button>`;
     }
   }
   if (!actions) {
@@ -906,7 +909,7 @@ function renderDocCard(d) {
   return `
     <div class="doc-card status-${d.workflow_status}" id="card-${d.tipo}">
       <div class="doc-card-top">
-        <div class="doc-card-icon">${d.icon || '📄'}</div>
+        <div class="doc-card-icon">${icon(d.icon || 'file-text', {size:20, color: DOCUMENT_CATEGORIES[d.category]?.color || 'var(--blue)'})}</div>
         <div class="doc-card-header">
           <div class="doc-card-title">${esc(d.label)}</div>
           <div class="doc-card-cat">${DOCUMENT_CATEGORIES[d.category]?.label || d.category || '—'}</div>
@@ -914,7 +917,7 @@ function renderDocCard(d) {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
           <div class="doc-status-badge" style="background:${ws.bg};color:${ws.color};">
-            ${ws.icon} ${ws.label}
+            ${icon(ws.icon, {size:11, color:ws.color})} ${ws.label}
           </div>
           <span class="${d.required ? 'doc-required-pill' : 'doc-optional-pill'}">${d.required ? 'Obrigatório' : 'Opcional'}</span>
         </div>
@@ -1168,7 +1171,7 @@ function renderOfficeDocsSection(docs) {
   return `
     <div class="cat-section" id="cat-office-to-client" style="margin-bottom:24px;">
       <div class="cat-section-header" style="background:linear-gradient(90deg,#f5f3ff,#ede9fe);border-radius:10px;padding:12px 16px;margin-bottom:12px;border-bottom:none;">
-        <div class="cat-icon">📨</div>
+        <div class="cat-icon">${icon('inbox', {size:16, color:'#6d28d9'})}</div>
         <div class="cat-title" style="color:#4c1d95;">Documentos do Escritório para Você</div>
         <div class="cat-count" style="color:#7c3aed;">${officeDocs.length} doc${officeDocs.length > 1 ? 's' : ''}</div>
       </div>
@@ -1199,6 +1202,25 @@ window.openSigModal = (docId) => {
 // ── Utility ───────────────────────────────────────────────────────────────────
 function esc(s) {
   return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+/**
+ * Render a Lucide icon as an SVG string.
+ * Falls back to a small colored dot if Lucide is unavailable.
+ */
+function icon(name, { size = 16, color = 'currentColor', strokeWidth = 1.5 } = {}) {
+  if (window.lucide?.icons?.[name]) {
+    return window.lucide.icons[name].toSvg({
+      width: size, height: size,
+      stroke: color,
+      'stroke-width': strokeWidth,
+      fill: 'none',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+    });
+  }
+  // fallback: colored square
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect x="2" y="2" width="${size-4}" height="${size-4}" rx="2" fill="${color}" opacity=".7"/></svg>`;
 }
 
 function timeAgo(ts) {
