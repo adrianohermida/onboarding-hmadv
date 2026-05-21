@@ -116,6 +116,7 @@ Valor: <seu-usuario>.github.io
 | 7      | Formulário CNJ 7 passos — Lei 14.181/2021 + cnj-engine.js     | ✅ Concluído   |
 | 7.5    | Enterprise Architecture — multi-tenant, timeline, views       | ✅ Concluído   |
 | 8      | Portal Pós-Onboarding — ticket automático, timeline, step bar | ✅ Concluído   |
+| 8.5    | QA Sprint 0–8 — mobile menu, mode selector, demo user, fixes  | ✅ Concluído   |
 | 9      | Admin CNJ — dashboard vw_cnj_dashboard_admin, busca por CPF   | 🔜 Próximo    |
 | 10     | Notificações push + WhatsApp + fila portal_cnj_notifications  | 🔜 Planejado  |
 | 11     | Relatórios PDF — petição CNJ, plano 104-A, mapa de credores   | 🔜 Planejado  |
