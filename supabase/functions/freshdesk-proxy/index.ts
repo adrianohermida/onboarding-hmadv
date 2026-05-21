@@ -11,7 +11,7 @@ const EMAIL_CONFIG_ID = Number(Deno.env.get("FRESHDESK_EMAIL_CONFIG_ID") ?? "0")
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
 };
 
 type JsonRecord = Record<string, any>;

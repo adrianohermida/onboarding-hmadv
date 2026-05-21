@@ -45,7 +45,8 @@
       "Bash(gh api *)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/documentos.html)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" diff --stat)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/dashboard.html)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/dashboard.html)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add js/cnj-pdf-generator.js pages/onboarding-v2.html)"
     ]
   }
 }

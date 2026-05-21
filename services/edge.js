@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { FUNCTIONS_URL } from '../utils/config.js';
+import { SUPABASE_ANON } from '../utils/config.js';
 import { toFriendlyMessage } from './error-messages.js';
 
 const DEFAULT_TIMEOUT_MS = 12000;
@@ -84,6 +85,7 @@ export async function invokeEdgeFunction(path, {
       const response = await fetch(`${FUNCTIONS_URL}/${path}`, {
         method,
         headers: {
+          apikey: SUPABASE_ANON,
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           ...headers,
