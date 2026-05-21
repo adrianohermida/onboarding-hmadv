@@ -1,23 +1,32 @@
-/**
- * ViewModeSwitcher — reusable view mode switcher component.
- *
- * Modes: 'cliente' | 'advogado' | 'admin'
- *
- * Renders a pill-style switcher into any container element.
- * Emits shell:viewmode-changed event and updates ShellStore.
- *
- * Usage:
- *   import { ViewModeSwitcher } from '../../shell/layout/ViewModeSwitcher.js';
- *   const switcher = new ViewModeSwitcher(containerEl, { modes: ['cliente','admin'] });
- *   switcher.mount();
- */
-import { store } from '../state/ShellStore.js';
+const VIEW_MODE_KEY = 'portal:view-mode';
+const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 
 const MODE_LABELS = {
   cliente:  'Cliente',
   advogado: 'Advogado',
   admin:    'Admin',
 };
+
+function normalizeMode(mode) {
+  return mode === 'admin' || mode === 'advogado' ? mode : 'cliente';
+}
+
+function getStoredMode() {
+  try {
+    return normalizeMode(sessionStorage.getItem(VIEW_MODE_KEY) || 'cliente');
+  } catch (_) {
+    return 'cliente';
+  }
+}
+
+function setStoredMode(mode) {
+  const next = normalizeMode(mode);
+  try {
+    sessionStorage.setItem(VIEW_MODE_KEY, next);
+  } catch (_) {}
+  window.dispatchEvent(new CustomEvent(VIEW_MODE_EVENT, { detail: { mode: next, source: 'shell-switcher' } }));
+  return next;
+}
 
 export class ViewModeSwitcher {
   /**
@@ -33,18 +42,15 @@ export class ViewModeSwitcher {
 
   mount() {
     if (!this._container) return;
-    const current = store.getViewMode();
+    const current = getStoredMode();
 
     this._el = document.createElement('div');
-    this._el.className = 'view-mode-switcher';
-    this._el.style.cssText = 'display:flex;background:#f1f5f9;border-radius:8px;padding:3px;gap:1px;';
+    this._el.className = 'portal-mode-switch';
     this._render(current);
     this._container.appendChild(this._el);
 
-    // Sync when external changes arrive
-    store.subscribe('viewMode', ({ detail }) => {
-      this._render(detail.mode || detail.state?.mode || store.getViewMode());
-    });
+    this._listener = event => this._render(event?.detail?.mode || getStoredMode());
+    window.addEventListener(VIEW_MODE_EVENT, this._listener);
 
     return this;
   }
@@ -54,20 +60,15 @@ export class ViewModeSwitcher {
     this._el.innerHTML = this._modes.map(mode => `
       <button
         data-mode="${mode}"
-        style="
-          padding:5px 14px;border-radius:6px;border:none;cursor:pointer;
-          font-size:12px;font-weight:600;transition:background .15s,color .15s;
-          ${mode === current
-            ? 'background:#fff;color:#1A3A5C;box-shadow:0 1px 4px rgba(0,0,0,.1);'
-            : 'background:transparent;color:#64748b;'}
-        "
+        class="portal-mode-btn${mode === current ? ' portal-mode-btn-active' : ''}"
+        type="button"
+        aria-pressed="${mode === current ? 'true' : 'false'}"
       >${MODE_LABELS[mode] || mode}</button>
     `).join('');
 
     this._el.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
-        const mode = btn.dataset.mode;
-        store.setViewMode(mode);
+        const mode = setStoredMode(btn.dataset.mode);
         this._render(mode);
         if (this._onChange) this._onChange(mode);
       });
@@ -75,13 +76,13 @@ export class ViewModeSwitcher {
   }
 
   setMode(mode) {
-    store.setViewMode(mode);
-    this._render(mode);
+    this._render(setStoredMode(mode));
   }
 
-  getMode() { return store.getViewMode(); }
+  getMode() { return getStoredMode(); }
 
   destroy() {
+    if (this._listener) window.removeEventListener(VIEW_MODE_EVENT, this._listener);
     this._el?.remove();
   }
 }

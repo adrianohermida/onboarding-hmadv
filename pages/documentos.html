@@ -743,8 +743,8 @@ import { DocumentService } from '../services/database.js';
 import { FUNCTIONS_URL }   from '../utils/config.js';
 import { bus }             from '../modules/events/EventBus.js';
 import { Toast }           from '../modules/ui/Toast.js';
-import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documents/DocumentEngine.js';
-import { DocumentModuleController } from '../modules/documents/DocumentModuleController.js';
+import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documentos/DocumentEngine.js';
+import { DocumentModuleController } from '../modules/documentos/DocumentModuleController.js';
 import {
   getDrawerReviewPayload,
   renderDrawerHeader,
@@ -754,21 +754,21 @@ import {
   setDrawerOpen,
   setDrawerReviewVisible,
   setDrawerTab,
-} from '../modules/documents/DocumentDrawer.js';
-import { SignatureService } from '../modules/documents/SignatureService.js';
+} from '../modules/documentos/DocumentDrawer.js';
+import { SignatureService } from '../modules/documentos/SignatureService.js';
 import {
   createDocumentUploader,
   setDocumentCardUploading,
   triggerDocumentUpload,
-} from '../modules/documents/DocumentUploadActions.js';
+} from '../modules/documentos/DocumentUploadActions.js';
 import {
   renderDocumentCard,
   renderDocumentHub,
   renderDocumentRequestsBanner,
   renderDocumentTimeline,
   renderSignaturePendingCards,
-} from '../modules/documents/DocumentUi.js';
-import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/documents/DocumentWorkflowActions.js';
+} from '../modules/documentos/DocumentUi.js';
+import { applyDocumentReview, notifyDocumentWorkflow } from '../modules/documentos/DocumentWorkflowActions.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const controller = new DocumentModuleController({ supabase });

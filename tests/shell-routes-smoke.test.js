@@ -12,7 +12,7 @@ function readWorkspaceFile(...parts) {
 
 describe('authenticated route shell smoke', () => {
   it('keeps sidebar fallback connected to the canonical seven modules', () => {
-    const sidebarHtml = readWorkspaceFile('components', 'sidebar.html');
+    const sidebarHtml = readWorkspaceFile('shell', 'sidebar', 'sidebar.html');
 
     sidebarKeys.forEach(key => {
       expect(sidebarHtml).toContain(`data-page="${key}"`);

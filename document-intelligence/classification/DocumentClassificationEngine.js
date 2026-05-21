@@ -26,7 +26,7 @@ export class DocumentClassificationEngine {
       type: payload.type,
       category: payload.category || resolveDocumentCategory(payload.type) || 'juridico',
       tenant_id: payload.tenant_id || 'hmadv',
-      actor_id: payload.actor_id || 'workflow-engine',
+      actor_id: payload.actor_id || 'tarefas',
       workflow_id: payload.workflow_id || null,
     });
   }

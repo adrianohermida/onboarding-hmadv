@@ -1,0 +1,19 @@
+{
+  "module": "financeiro",
+  "key": "financial-dashboard",
+  "title": "Financeiro",
+  "menuLabel": "Financas",
+  "route": "/pages/financial-dashboard.html",
+  "icon": "chart-column",
+  "permissions": ["cliente", "admin"],
+  "feature": "financialDashboard",
+  "lazy": true,
+  "order": 30,
+  "visible": true,
+  "contract": {
+    "events": {
+      "emits": ["financial.updated", "financial.plan.calculated"],
+      "listens": ["auth.changed", "debt.created", "debt.updated"]
+    }
+  }
+}

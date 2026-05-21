@@ -6,7 +6,7 @@
 -- EXISTS e CREATE OR REPLACE.
 -- =============================================================================
 
--- ─── 1. Campos consumidos pelo módulo /modules/documents ─────────────────────
+-- ─── 1. Campos consumidos pelo módulo /modules/documentos ─────────────────────
 ALTER TABLE portal_documentos
   ADD COLUMN IF NOT EXISTS workflow_status    text NOT NULL DEFAULT 'pendente_envio',
   ADD COLUMN IF NOT EXISTS category           text,
