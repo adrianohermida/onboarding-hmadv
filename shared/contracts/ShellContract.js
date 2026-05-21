@@ -19,6 +19,7 @@ import { observabilityFoundation } from '../../observability/ObservabilityFounda
 import { integrationHub } from '../../integrations/IntegrationHub.js';
 import { workflowAutomationFoundation } from '../../workflow-engine/WorkflowAutomationFoundation.js';
 import { documentIntelligenceFoundation } from '../../document-intelligence/DocumentIntelligenceFoundation.js';
+import { financialIntelligenceFoundation } from '../../financial-intelligence/FinancialIntelligenceFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -110,6 +111,18 @@ export const knowledge = {
   refresh: () => documentIntelligenceFoundation.snapshot(),
 };
 
+// ── Financial API ───────────────────────────────────────────────────────────
+export const financial = {
+  getSnapshot: () => store.get('financial') || {},
+  getCommitment: () => store.get('financial')?.commitment || {},
+  getDiagnosis: () => store.get('financial')?.diagnosis || {},
+  getAlerts: () => store.get('financial')?.alerts || { total: 0, alerts: [] },
+  getTelemetry: () => store.get('financial')?.telemetry || {},
+  getTimeline: () => store.get('financial')?.timeline || { total: 0, list: [] },
+  getScore: () => store.get('financial')?.diagnosis?.score || {},
+  refresh: () => financialIntelligenceFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -132,4 +145,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, tenant, shellStore, billing };
