@@ -23,7 +23,8 @@ jobs:
           supabase secrets set \
             RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" \
             FRESHDESK_API_KEY="${{ secrets.FRESHDESK_API_KEY }}" \
-            FRESHDESK_DOMAIN="hmdesk" \
+            FRESHDESK_DOMAIN="${{ secrets.FRESHDESK_DOMAIN }}" \
+            FRESHDESK_SUPPORT_EMAIL="suporte@hermidamaia.adv.br" \
             FROM_EMAIL="Portal Hermida Maia <contato@hermidamaia.adv.br>" \
             OFFICE_EMAIL="contato@hermidamaia.adv.br" \
             DIRECTDATA_TOKEN="${{ secrets.DIRECTDATA_TOKEN }}" \

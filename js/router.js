@@ -25,12 +25,13 @@ export class Router {
     const current = this.getCurrentPage();
     document.querySelectorAll('.nav-link').forEach(link => {
       const href = link.getAttribute('href') || '';
-      const name = href.replace('.html', '').split('/').pop();
+      const name = link.dataset.page || href.replace('.html', '').split('/').pop();
       if (name === current) {
         link.classList.add('active');
         link.setAttribute('aria-current', 'page');
       } else {
         link.classList.remove('active');
+        link.removeAttribute('aria-current');
       }
     });
   }

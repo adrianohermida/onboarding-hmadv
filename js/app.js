@@ -15,7 +15,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521i';
+const SHELL_VERSION = '20260521j';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -189,6 +189,67 @@ function setRouteFailure(routeUrl, error) {
   try {
     window.__shellRouteFailure = detail;
   } catch (_) {}
+}
+
+function validateShellReady() {
+  const sidebarHost = document.querySelector('[data-component="sidebar"]');
+  const headerHost = document.querySelector('[data-component="header"]');
+  const sidebar = sidebarHost?.querySelector('.sidebar') || document.querySelector('.sidebar');
+  const header = headerHost?.querySelector('.portal-header') || document.querySelector('.portal-header');
+  const main = document.querySelector('main.page-content');
+  const navLinks = document.querySelectorAll('#sidebar-nav-links .nav-link[data-page]');
+
+  return Boolean(sidebar && header && main && main.children.length > 0 && navLinks.length >= 7);
+}
+
+function revealAppWhenReady() {
+  const ready = validateShellReady();
+  document.body.classList.toggle('app-loaded', ready);
+  return ready;
+}
+
+function escapeShellHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderRouteFailureFallback(routeUrl, error) {
+  setRouteFailure(routeUrl, error);
+
+  const main = document.querySelector('main.page-content');
+  if (!main) {
+    window.location.href = routeUrl;
+    return;
+  }
+
+  const message = escapeShellHtml(error?.message || 'Nao foi possivel carregar este modulo.');
+  const safeRouteUrl = escapeShellHtml(routeUrl);
+  main.innerHTML = `
+    <section class="shell-route-fallback" role="alert" aria-live="polite">
+      <div class="shell-route-fallback-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 9v4m0 4h.01M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="shell-route-fallback-copy">
+        <h1>Modulo indisponivel</h1>
+        <p>${message}</p>
+      </div>
+      <div class="shell-route-fallback-actions">
+        <button type="button" class="btn btn-primary" data-shell-action="reload-route">Recarregar</button>
+        <a class="btn btn-ghost" href="${safeRouteUrl}">Abrir rota</a>
+      </div>
+    </section>
+  `;
+
+  initRouter();
+  initToast();
+  document.dispatchEvent(new CustomEvent('app:route-changed'));
+  revealAppWhenReady();
 }
 
 function getServiceErrorState() {
@@ -497,8 +558,7 @@ async function navigateModule(url, { pushState = true } = {}) {
       },
     });
     if (!res.ok) {
-      window.location.href = absolute;
-      return;
+      throw new Error(`Falha HTTP ${res.status} ao carregar o modulo.`);
     }
 
     const html = await res.text();
@@ -517,8 +577,7 @@ async function navigateModule(url, { pushState = true } = {}) {
     syncPageStyles(parsedDoc, absolute);
     const swapped = syncMainContent(parsedDoc);
     if (!swapped) {
-      window.location.href = absolute;
-      return;
+      throw new Error('A rota nao possui conteudo principal valido.');
     }
 
     await runPageScripts(parsedDoc, absolute);
@@ -537,9 +596,9 @@ async function navigateModule(url, { pushState = true } = {}) {
     }
     document.dispatchEvent(new CustomEvent('app:ready'));
     document.dispatchEvent(new CustomEvent('app:route-changed'));
+    revealAppWhenReady();
   } catch (error) {
-    setRouteFailure(absolute, error);
-    window.location.href = absolute;
+    renderRouteFailureFallback(absolute, error);
   } finally {
     runtimeIsolation.cleanupModuleListeners();
     runtimeIsolation.cleanupModuleTimers();
@@ -556,6 +615,13 @@ function setupShellNavigation() {
     if (shellAction?.dataset.shellAction === 'logout') {
       event.preventDefault();
       window.handleLogout?.();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'reload-route') {
+      event.preventDefault();
+      const routeUrl = shellRouteFailure?.routeUrl || window.location.href;
+      navigateModule(routeUrl, { pushState: false });
       return;
     }
 
@@ -930,8 +996,8 @@ async function init() {
   window.showToast = showToast;
   document.dispatchEvent(new CustomEvent('app:ready'));
 
-  // Reveal page after everything loaded (removes skeleton shimmer)
-  document.body.classList.add('app-loaded');
+  // Reveal only when shell, sidebar and page content are valid.
+  revealAppWhenReady();
 }
 
 nativeDocumentAddEventListener('DOMContentLoaded', init);

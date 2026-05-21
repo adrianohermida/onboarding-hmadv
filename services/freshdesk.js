@@ -17,6 +17,24 @@ export const FD_PRIORITY = {
 
 export const TICKET_URL = 'https://hmdesk.freshdesk.com/support/tickets';
 
+async function currentEmail() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.email || null;
+}
+
+function normalizeTicketResponse(response) {
+  if (!response) return null;
+  const ticket = response.ticket || response;
+  const id = response.fd_ticket_id || response.id || ticket.id;
+  return {
+    ...ticket,
+    id,
+    fd_ticket_id: id,
+    requester_email: response.requester_email || ticket.requester_email,
+    support_email: response.support_email || ticket.support_email,
+  };
+}
+
 export const FreshdeskService = {
   STATUS:   FD_STATUS,
   PRIORITY: FD_PRIORITY,
@@ -24,7 +42,7 @@ export const FreshdeskService = {
   async listTickets() {
     const { data, error } = await supabase
       .from('freshdesk_tickets')
-      .select('fd_ticket_id, subject, status, priority, tags, created_at, updated_at')
+      .select('fd_ticket_id, subject, status, priority, tags, requester_email, support_email, created_at, updated_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error) throw error;
@@ -32,27 +50,32 @@ export const FreshdeskService = {
   },
 
   async getContact() {
+    const email = await currentEmail();
+    if (!email) return null;
+
     const { data, error } = await supabase
       .from('freshdesk_contacts')
       .select('name, email, phone, cpf, status, lifecycle_stage, tickets_count')
+      .eq('email', email)
       .maybeSingle();
     if (error) throw error;
     return data;
   },
 
   async createTicket({ subject, description, tags = [] }) {
-    if (!subject?.trim()) throw new Error('Assunto obrigatorio');
-    if (!description?.trim()) throw new Error('Descricao obrigatoria');
+    if (!subject?.trim()) throw new Error('Assunto obrigatório');
+    if (!description?.trim()) throw new Error('Descrição obrigatória');
 
     try {
-      return await invokeEdgeFunction('freshdesk-proxy', {
+      const response = await invokeEdgeFunction('freshdesk-proxy', {
         method: 'POST',
         body: { action: 'create_ticket', subject, description, tags },
-        timeoutMs: 15000,
-        retries: 2,
+        timeoutMs: 20000,
+        retries: 1,
       });
+      return normalizeTicketResponse(response);
     } catch (error) {
-      const friendly = toFriendlyMessage(error, 'Nao foi possivel criar o chamado agora. Tente novamente.');
+      const friendly = toFriendlyMessage(error, 'Não foi possível criar o chamado agora. Tente novamente.');
       throw new Error(friendly);
     }
   },

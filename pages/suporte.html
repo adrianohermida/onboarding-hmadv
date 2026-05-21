@@ -154,7 +154,7 @@
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
-<script type="module" src="../js/app.js?v=20260521i"></script>
+<script type="module" src="../js/app.js?v=20260521j"></script>
 <script type="module">
 import { showToast }        from '../utils/helpers.js';
 import { FreshdeskService } from '../services/freshdesk.js';
@@ -293,7 +293,7 @@ window.submitTicket = async function() {
           type:        'ticket_created',
           clientEmail: currentUser.email,
           clientName:  currentCaso?.full_name || '',
-          payload:     { ticketId: ticket.id, subject },
+          payload:     { ticketId: ticket.fd_ticket_id || ticket.id, subject },
         },
         retries: 1,
         timeoutMs: 10000,
@@ -303,12 +303,16 @@ window.submitTicket = async function() {
     closeNewTicketModal();
     document.getElementById('t-subject').value = '';
     document.getElementById('t-desc').value    = '';
-    showToast(`Chamado #${ticket.id} criado! Nossa equipe responderá em breve.`, 'ok');
+
+    const ticketId = ticket.fd_ticket_id || ticket.id;
+    showToast(`Chamado #${ticketId} criado! Nossa equipe responderá em breve.`, 'ok');
+
     await init();
   } catch (err) {
     console.error(err);
-    showToast('Erro ao criar chamado. Tente novamente.', 'error');
+    showToast(err?.message || 'Erro ao criar chamado. Tente novamente.', 'error');
   } finally {
+
     btn.disabled = false; btn.textContent = 'Enviar chamado';
   }
 };
