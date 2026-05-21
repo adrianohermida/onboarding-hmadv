@@ -2,6 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installRuntimeIsolation } from '../js/shell-runtime-isolation.js';
 
+const REAL_SET_TIMEOUT = globalThis.setTimeout;
+const REAL_SET_INTERVAL = globalThis.setInterval;
+const REAL_CLEAR_TIMEOUT = globalThis.clearTimeout;
+const REAL_CLEAR_INTERVAL = globalThis.clearInterval;
+
 describe('shell runtime isolation', () => {
   let enabled;
   let capture;
@@ -27,13 +32,20 @@ describe('shell runtime isolation', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+
+    // Restore globals first so jsdom teardown never sees missing timer APIs.
+    if (typeof REAL_SET_TIMEOUT === 'function') globalThis.setTimeout = REAL_SET_TIMEOUT;
+    if (typeof REAL_SET_INTERVAL === 'function') globalThis.setInterval = REAL_SET_INTERVAL;
+    if (typeof REAL_CLEAR_TIMEOUT === 'function') globalThis.clearTimeout = REAL_CLEAR_TIMEOUT;
+    if (typeof REAL_CLEAR_INTERVAL === 'function') globalThis.clearInterval = REAL_CLEAR_INTERVAL;
+
     document.addEventListener = originalDocumentAddEventListener;
     window.addEventListener = originalWindowAddEventListener;
-    window.setTimeout = originalSetTimeout;
-    window.setInterval = originalSetInterval;
-    window.clearTimeout = originalClearTimeout;
-    window.clearInterval = originalClearInterval;
-    vi.useRealTimers();
+    window.setTimeout = originalSetTimeout || REAL_SET_TIMEOUT;
+    window.setInterval = originalSetInterval || REAL_SET_INTERVAL;
+    window.clearTimeout = originalClearTimeout || REAL_CLEAR_TIMEOUT;
+    window.clearInterval = originalClearInterval || REAL_CLEAR_INTERVAL;
   });
 
   it('prevents listeners from a previous route token from firing after route swap', () => {
