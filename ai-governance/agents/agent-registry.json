@@ -1,0 +1,87 @@
+{
+  "version": "0.3.0",
+  "updated_at": "2026-05-21",
+  "agents": [
+    {
+      "name": "Claude Architect",
+      "role": "architecture-governance",
+      "ownership": ["architecture", "governance", "reasoning", "reviews"],
+      "scope": ["boundaries", "contracts", "policies", "adrs"],
+      "permissions": ["read", "propose", "review"],
+      "boundaries": ["no-prod-direct-change", "no-secrets-access"],
+      "escalation": "Security Review Agent"
+    },
+    {
+      "name": "Codex Implementer",
+      "role": "implementation",
+      "ownership": ["codegen", "scaffolding", "pipelines", "automation"],
+      "scope": ["feature-branches", "non-prod"],
+      "permissions": ["read", "write", "test"],
+      "boundaries": ["respect-shell-boundaries", "respect-tenant-boundaries"],
+      "escalation": "Claude Architect"
+    },
+    {
+      "name": "UI Refactor Agent",
+      "role": "ui-acceleration",
+      "ownership": ["ui", "responsive", "accessibility"],
+      "scope": ["styles", "components", "module-ui"],
+      "permissions": ["read", "write"],
+      "boundaries": ["no-global-provider-duplication"],
+      "escalation": "Claude Architect"
+    },
+    {
+      "name": "Financial Engine Agent",
+      "role": "domain-specialist",
+      "ownership": ["financial-engine", "plans", "simulations"],
+      "scope": ["modules/financial", "modules/debt-engine"],
+      "permissions": ["read", "write", "test"],
+      "boundaries": ["no-shell-internal-change"],
+      "escalation": "Security Review Agent"
+    },
+    {
+      "name": "Documents Agent",
+      "role": "domain-specialist",
+      "ownership": ["documents", "workflow"],
+      "scope": ["modules/documents", "pages/documentos"],
+      "permissions": ["read", "write", "test"],
+      "boundaries": ["no-storage-policy-change-without-review"],
+      "escalation": "Security Review Agent"
+    },
+    {
+      "name": "PromptOps Agent",
+      "role": "prompts-governance",
+      "ownership": ["prompts", "templates", "playbooks"],
+      "scope": ["ai-governance/prompts", "ai-governance/templates"],
+      "permissions": ["read", "write", "review"],
+      "boundaries": ["must-follow-prompt-standard"],
+      "escalation": "Claude Architect"
+    },
+    {
+      "name": "Security Review Agent",
+      "role": "security",
+      "ownership": ["security-review", "threat-assessment"],
+      "scope": ["auth", "rls", "supabase", "secrets-boundaries"],
+      "permissions": ["read", "review", "block"],
+      "boundaries": ["no-direct-implementation"],
+      "escalation": "human-security-owner"
+    },
+    {
+      "name": "MultiTenant Review Agent",
+      "role": "tenant-safety",
+      "ownership": ["tenant-isolation", "branding-isolation", "ownership-rules"],
+      "scope": ["tenant", "policies/multi-tenant"],
+      "permissions": ["read", "review", "block"],
+      "boundaries": ["no-cross-tenant-data-leak"],
+      "escalation": "Claude Architect"
+    },
+    {
+      "name": "Supabase Governance Agent",
+      "role": "data-platform-governance",
+      "ownership": ["migrations-safe", "edge-functions", "rls-safety"],
+      "scope": ["supabase/", "services/"],
+      "permissions": ["read", "review", "propose"],
+      "boundaries": ["no-prod-apply-without-approval"],
+      "escalation": "Security Review Agent"
+    }
+  ]
+}
