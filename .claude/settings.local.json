@@ -43,7 +43,9 @@
       "Bash(pendente_correcao)",
       "Bash(em_analise)",
       "Bash(gh api *)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/documentos.html)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/documentos.html)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" diff --stat)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/dashboard.html)"
     ]
   }
 }
