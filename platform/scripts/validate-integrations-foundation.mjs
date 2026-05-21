@@ -45,6 +45,7 @@ const required = [
   'governance/integrations/observability-standards.md',
   'governance/integrations/tenant-safety.md',
   'governance/integrations/ai-integration-governance.md',
+  'governance/integrations/module-requirements.md',
   'admin/integrations/index.html',
 ];
 
