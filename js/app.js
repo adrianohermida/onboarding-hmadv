@@ -322,7 +322,14 @@ async function runPageScripts(parsedDoc, targetUrl) {
     .filter(s => {
       const type = (s.getAttribute('type') || '').trim();
       const src = s.getAttribute('src') || '';
-      if (src.endsWith('/js/app.js') || src.endsWith('js/app.js')) return false;
+      if (src) {
+        try {
+          const srcUrl = new URL(src, targetUrl);
+          if (srcUrl.pathname.endsWith('/js/app.js')) return false;
+        } catch (_) {
+          if (src.includes('/js/app.js') || src.includes('js/app.js')) return false;
+        }
+      }
       if (!type || type === 'text/javascript' || type === 'application/javascript' || type === 'module') {
         return true;
       }
