@@ -17,6 +17,7 @@
       theme: { extend: { colors: { navy:'#1A3A5C', blue2:'#2E6DA4', ice:'#EBF3FC', gold:'#F5A623' } } }
     };
   </script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script type="module" src="../js/app.js"></script>
 
   <style>
@@ -78,7 +79,8 @@
     content:''; position:absolute; bottom:0; left:0; right:0;
     height:3px; background:var(--kpi-c, var(--blue)); border-radius:0 0 12px 12px;
   }
-  .doc-kpi-icon  { font-size:18px; margin-bottom:4px; }
+  .doc-kpi-icon  { width:20px;height:20px;margin-bottom:4px;display:flex;align-items:center; }
+  .doc-kpi-icon svg { width:100%;height:100%; }
   .doc-kpi-label { font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
   .doc-kpi-value { font-size:22px; font-weight:800; color:var(--ink); margin:3px 0 1px; }
   .doc-kpi-hint  { font-size:10px; color:var(--muted); }
@@ -95,7 +97,8 @@
     display:flex; align-items:center; gap:14px; margin-bottom:20px;
     flex-wrap:wrap;
   }
-  .requests-banner-icon { font-size:24px; flex-shrink:0; }
+  .requests-banner-icon { flex-shrink:0;width:24px;height:24px; }
+  .requests-banner-icon svg { width:24px;height:24px; }
   .requests-banner-body { flex:1; }
   .requests-banner-title { font-size:14px; font-weight:700; margin-bottom:3px; }
   .requests-banner-sub   { font-size:12px; opacity:.8; }
@@ -475,31 +478,31 @@
           <!-- KPI Grid -->
           <div class="doc-kpi-grid">
             <div class="doc-kpi doc-kpi-warn">
-              <div class="doc-kpi-icon">⏳</div>
+              <div class="doc-kpi-icon"><i data-lucide="clock" style="width:18px;height:18px;stroke:#d97706;stroke-width:1.5"></i></div>
               <div class="doc-kpi-label">Pendentes</div>
               <div class="doc-kpi-value" id="kpi-pendentes">—</div>
               <div class="doc-kpi-hint">Aguardando envio</div>
             </div>
             <div class="doc-kpi" style="--kpi-c:#d97706;">
-              <div class="doc-kpi-icon">🔍</div>
+              <div class="doc-kpi-icon"><i data-lucide="search" style="width:18px;height:18px;stroke:#d97706;stroke-width:1.5"></i></div>
               <div class="doc-kpi-label">Em análise</div>
               <div class="doc-kpi-value" id="kpi-analise">—</div>
               <div class="doc-kpi-hint">Aguardando revisão</div>
             </div>
             <div class="doc-kpi doc-kpi-green">
-              <div class="doc-kpi-icon">✅</div>
+              <div class="doc-kpi-icon"><i data-lucide="check-circle" style="width:18px;height:18px;stroke:#16a34a;stroke-width:1.5"></i></div>
               <div class="doc-kpi-label">Aprovados</div>
               <div class="doc-kpi-value" id="kpi-aprovados">—</div>
               <div class="doc-kpi-hint">Verificados</div>
             </div>
             <div class="doc-kpi doc-kpi-red">
-              <div class="doc-kpi-icon">❌</div>
+              <div class="doc-kpi-icon"><i data-lucide="x-circle" style="width:18px;height:18px;stroke:#dc2626;stroke-width:1.5"></i></div>
               <div class="doc-kpi-label">Rejeitados</div>
               <div class="doc-kpi-value" id="kpi-rejeitados">—</div>
               <div class="doc-kpi-hint">Reenvio necessário</div>
             </div>
             <div class="doc-kpi" style="--kpi-c:#7c3aed;">
-              <div class="doc-kpi-icon">✍️</div>
+              <div class="doc-kpi-icon"><i data-lucide="pen-line" style="width:18px;height:18px;stroke:#7c3aed;stroke-width:1.5"></i></div>
               <div class="doc-kpi-label">Assinatura</div>
               <div class="doc-kpi-value" id="kpi-assinatura">—</div>
               <div class="doc-kpi-hint">Pendente de assinar</div>
@@ -512,7 +515,7 @@
           <!-- Awaiting Signature Section -->
           <div id="sig-section" style="display:none;">
             <div class="cat-section-header" style="margin-bottom:12px;">
-              <div class="cat-icon">✍️</div>
+              <div class="cat-icon"><i data-lucide="pen-line" style="width:16px;height:16px;stroke:#7c3aed;stroke-width:1.5"></i></div>
               <div class="cat-title" style="color:#7c3aed;">Assinatura Pendente</div>
             </div>
             <div id="sig-cards"></div>

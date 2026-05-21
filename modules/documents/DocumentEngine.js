@@ -22,40 +22,40 @@ import { bus } from '../events/EventBus.js';
 
 // ── Workflow States ────────────────────────────────────────────────────────────
 export const WORKFLOW_STATES = {
-  pendente_envio:          { label: 'Pendente',          color: '#94a3b8', bg: '#f8fafc', icon: '⏺',  clientAction: 'upload' },
-  enviado:                 { label: 'Enviado',           color: '#2E6DA4', bg: '#eff6ff', icon: '📤', clientAction: null },
-  recebido:                { label: 'Recebido',          color: '#0891b2', bg: '#ecfeff', icon: '📥', clientAction: null },
-  em_analise:              { label: 'Em análise',        color: '#d97706', bg: '#fffbeb', icon: '🔍', clientAction: null },
-  pendente_correcao:       { label: 'Correção necessária', color: '#ea580c', bg: '#fff7ed', icon: '✏️', clientAction: 'reupload' },
-  aprovado:                { label: 'Aprovado',          color: '#16a34a', bg: '#f0fdf4', icon: '✅', clientAction: null },
-  rejeitado:               { label: 'Rejeitado',         color: '#dc2626', bg: '#fef2f2', icon: '❌', clientAction: 'reupload' },
-  aguardando_assinatura:   { label: 'Aguard. assinatura', color: '#7c3aed', bg: '#f5f3ff', icon: '✍️', clientAction: 'sign' },
-  assinado:                { label: 'Assinado',          color: '#16a34a', bg: '#f0fdf4', icon: '🔏', clientAction: null },
-  arquivado:               { label: 'Arquivado',         color: '#6b7280', bg: '#f9fafb', icon: '📦', clientAction: null },
+  pendente_envio:          { label: 'Pendente',             color: '#94a3b8', bg: '#f8fafc', icon: 'clock',        clientAction: 'upload' },
+  enviado:                 { label: 'Enviado',              color: '#2E6DA4', bg: '#eff6ff', icon: 'upload-cloud', clientAction: null },
+  recebido:                { label: 'Recebido',             color: '#0891b2', bg: '#ecfeff', icon: 'inbox',        clientAction: null },
+  em_analise:              { label: 'Em análise',           color: '#d97706', bg: '#fffbeb', icon: 'search',       clientAction: null },
+  pendente_correcao:       { label: 'Correção necessária',  color: '#ea580c', bg: '#fff7ed', icon: 'edit-2',       clientAction: 'reupload' },
+  aprovado:                { label: 'Aprovado',             color: '#16a34a', bg: '#f0fdf4', icon: 'check-circle', clientAction: null },
+  rejeitado:               { label: 'Rejeitado',            color: '#dc2626', bg: '#fef2f2', icon: 'x-circle',     clientAction: 'reupload' },
+  aguardando_assinatura:   { label: 'Aguard. assinatura',   color: '#7c3aed', bg: '#f5f3ff', icon: 'pen-line',     clientAction: 'sign' },
+  assinado:                { label: 'Assinado',             color: '#16a34a', bg: '#f0fdf4', icon: 'shield-check', clientAction: null },
+  arquivado:               { label: 'Arquivado',            color: '#6b7280', bg: '#f9fafb', icon: 'archive',      clientAction: null },
 };
 
 // ── Document Categories ────────────────────────────────────────────────────────
 export const DOCUMENT_CATEGORIES = {
-  identidade:     { label: 'Identidade',      icon: '🪪', color: '#2E6DA4' },
-  residencia:     { label: 'Residência',      icon: '🏠', color: '#0891b2' },
-  financeiro:     { label: 'Financeiro',      icon: '💰', color: '#16a34a' },
-  dividas:        { label: 'Dívidas',         icon: '💳', color: '#dc2626' },
-  contratos:      { label: 'Contratos',       icon: '📋', color: '#7c3aed' },
-  assinatura:     { label: 'Assinatura',      icon: '✍️', color: '#d97706' },
-  cnj:            { label: 'CNJ',             icon: '⚖️', color: '#1A3A5C' },
-  judiciais:      { label: 'Judiciais',       icon: '🏛️', color: '#1A3A5C' },
-  complementares: { label: 'Complementares',  icon: '📁', color: '#6b7280' },
+  identidade:     { label: 'Identidade',      icon: 'id-card',     color: '#2E6DA4' },
+  residencia:     { label: 'Residência',      icon: 'home',        color: '#0891b2' },
+  financeiro:     { label: 'Financeiro',      icon: 'bar-chart-2', color: '#16a34a' },
+  dividas:        { label: 'Dívidas',         icon: 'credit-card', color: '#dc2626' },
+  contratos:      { label: 'Contratos',       icon: 'file-text',   color: '#7c3aed' },
+  assinatura:     { label: 'Assinatura',      icon: 'pen-line',    color: '#d97706' },
+  cnj:            { label: 'CNJ',             icon: 'scale',       color: '#1A3A5C' },
+  judiciais:      { label: 'Judiciais',       icon: 'landmark',    color: '#1A3A5C' },
+  complementares: { label: 'Complementares',  icon: 'folder',      color: '#6b7280' },
 };
 
 // ── Document Types (extends legacy DOCUMENT_TYPES) ────────────────────────────
 export const DOCUMENT_TYPE_MAP = {
-  rg_cnh:                    { label: 'RG ou CNH',                     category: 'identidade',  required: true,  icon: '🪪' },
-  cpf:                       { label: 'CPF',                           category: 'identidade',  required: true,  icon: '🪪' },
-  comprovante_residencia:    { label: 'Comprovante de residência',     category: 'residencia',  required: true,  icon: '🏠' },
-  comprovante_renda:         { label: 'Comprovante de renda',         category: 'financeiro',  required: true,  icon: '💰' },
-  extratos_bancarios:        { label: 'Extratos bancários (3 meses)', category: 'financeiro',  required: true,  icon: '🏦' },
-  contratos_dividas:         { label: 'Contratos de dívidas',        category: 'dividas',     required: false, icon: '💳' },
-  correspondencias_cobranca: { label: 'Correspondências de cobrança', category: 'dividas',     required: false, icon: '📬' },
+  rg_cnh:                    { label: 'RG ou CNH',                     category: 'identidade',  required: true,  icon: 'id-card'     },
+  cpf:                       { label: 'CPF',                           category: 'identidade',  required: true,  icon: 'id-card'     },
+  comprovante_residencia:    { label: 'Comprovante de residência',     category: 'residencia',  required: true,  icon: 'home'        },
+  comprovante_renda:         { label: 'Comprovante de renda',         category: 'financeiro',  required: true,  icon: 'banknote'    },
+  extratos_bancarios:        { label: 'Extratos bancários (3 meses)', category: 'financeiro',  required: true,  icon: 'landmark'    },
+  contratos_dividas:         { label: 'Contratos de dívidas',        category: 'dividas',     required: false, icon: 'credit-card' },
+  correspondencias_cobranca: { label: 'Correspondências de cobrança', category: 'dividas',     required: false, icon: 'mail'        },
 };
 
 export class DocumentEngine {
