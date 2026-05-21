@@ -212,8 +212,8 @@ function syncMainContent(parsedDoc) {
     currentFooter.replaceWith(nextFooter.cloneNode(true));
   }
 
-  document.querySelectorAll('.fd-save-bar, .fd-modal-backdrop').forEach(node => node.remove());
-  parsedDoc.querySelectorAll('.fd-save-bar, .fd-modal-backdrop').forEach(node => {
+  document.querySelectorAll('.fd-save-bar, .fd-modal-backdrop, .doc-drawer-backdrop').forEach(node => node.remove());
+  parsedDoc.querySelectorAll('.fd-save-bar, .fd-modal-backdrop, .doc-drawer-backdrop').forEach(node => {
     const clone = node.cloneNode(true);
     clone.setAttribute('data-shell-dynamic', '1');
     document.body.appendChild(clone);
