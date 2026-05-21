@@ -19,6 +19,10 @@ body.app-loaded .sk { display: none !important; }
   min-height: 100vh;
 }
 
+.portal-shell.sidebar-collapsed {
+  --sidebar-w: 76px;
+}
+
 /* ── SIDEBAR ──────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
@@ -31,6 +35,48 @@ body.app-loaded .sk { display: none !important; }
   flex-direction: column;
   z-index: 100;
   transition: width .25s ease;
+}
+
+.portal-shell.sidebar-collapsed .sidebar-brand {
+  padding: 18px 12px 14px;
+}
+
+.portal-shell.sidebar-collapsed .nav-section-label,
+.portal-shell.sidebar-collapsed .nav-link,
+.portal-shell.sidebar-collapsed .case-pill-label,
+.portal-shell.sidebar-collapsed .case-pill-value,
+.portal-shell.sidebar-collapsed .case-pill-hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.portal-shell.sidebar-collapsed .nav-link {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+  font-size: 0;
+}
+
+.portal-shell.sidebar-collapsed .nav-link .nav-icon {
+  width: 18px;
+}
+
+.portal-shell.sidebar-collapsed .nav-section-label {
+  padding-left: 0;
+  padding-right: 0;
+  text-indent: -9999px;
+  height: 10px;
+}
+
+.portal-shell.sidebar-collapsed .case-pill {
+  padding: 10px 8px;
+  min-height: 38px;
+}
+
+.portal-shell.sidebar-collapsed .sidebar-footer .nav-link {
+  justify-content: center;
 }
 
 .sidebar-brand {
@@ -183,6 +229,8 @@ body.app-loaded .sk { display: none !important; }
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: calc(100% - var(--sidebar-w));
+  transition: margin-left .25s ease, width .25s ease;
 }
 
 /* ── PORTAL HEADER ────────────────────────────── */
@@ -345,6 +393,10 @@ body.app-loaded .sk { display: none !important; }
 @media (max-width: 768px) {
   .portal-shell { display: block; }
 
+  .portal-shell.sidebar-collapsed {
+    --sidebar-w: 260px;
+  }
+
   /* Sidebar becomes a slide-in drawer on mobile */
   .sidebar {
     position: fixed;
@@ -372,6 +424,7 @@ body.app-loaded .sk { display: none !important; }
 
   .main-area {
     margin-left: 0;
+    width: 100%;
     padding-bottom: 56px;
   }
 

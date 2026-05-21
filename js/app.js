@@ -8,6 +8,7 @@ const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 const PUBLIC_PAGES = ['login', 'auth-callback'];
 const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
+const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
 
 let appUserDetail = null;
 let shellNavInFlight = false;
@@ -267,8 +268,9 @@ function updateHeaderUser(user) {
 
 function setupSidebarMobile() {
   const toggle = document.getElementById('sidebar-toggle');
+  const shell = document.querySelector('.portal-shell');
   const sidebar = document.querySelector('.sidebar');
-  if (!toggle || !sidebar) return;
+  if (!toggle || !sidebar || !shell) return;
 
   let overlay = document.getElementById('sidebar-overlay');
   if (!overlay) {
@@ -284,11 +286,14 @@ function setupSidebarMobile() {
     document.body.appendChild(overlay);
   }
 
+  const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
   const closeSidebar = () => {
     sidebar.classList.remove('sidebar-open');
     overlay.style.opacity = '0';
     overlay.style.pointerEvents = 'none';
     document.body.style.overflow = '';
+    toggle.setAttribute('aria-expanded', 'false');
   };
 
   const openSidebar = () => {
@@ -296,12 +301,47 @@ function setupSidebarMobile() {
     overlay.style.opacity = '1';
     overlay.style.pointerEvents = 'auto';
     document.body.style.overflow = 'hidden';
+    toggle.setAttribute('aria-expanded', 'true');
+  };
+
+  const setDesktopCollapsed = (collapsed) => {
+    shell.classList.toggle('sidebar-collapsed', collapsed);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch (_) {}
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute('title', collapsed ? 'Expandir menu' : 'Recolher menu');
+  };
+
+  const getDesktopCollapsed = () => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const syncForViewport = () => {
+    if (isMobile()) {
+      closeSidebar();
+      shell.classList.remove('sidebar-collapsed');
+      toggle.setAttribute('title', 'Abrir menu');
+      return;
+    }
+    closeSidebar();
+    setDesktopCollapsed(getDesktopCollapsed());
   };
 
   toggle.addEventListener('click', e => {
     e.stopPropagation();
-    if (sidebar.classList.contains('sidebar-open')) closeSidebar();
-    else openSidebar();
+    if (isMobile()) {
+      if (sidebar.classList.contains('sidebar-open')) closeSidebar();
+      else openSidebar();
+      return;
+    }
+
+    const collapsed = shell.classList.contains('sidebar-collapsed');
+    setDesktopCollapsed(!collapsed);
   });
 
   overlay.addEventListener('click', closeSidebar);
@@ -309,6 +349,9 @@ function setupSidebarMobile() {
     if (e.key === 'Escape') closeSidebar();
   });
   document.addEventListener('app:route-changed', closeSidebar);
+
+  window.addEventListener('resize', syncForViewport);
+  syncForViewport();
 }
 
 /* ── Page guard ──────────────────────────────────── */
