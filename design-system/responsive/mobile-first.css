@@ -1,0 +1,13 @@
+@media (max-width: 1023px) {
+  .ds-card { padding: var(--ds-space-3); }
+  .ds-h1 { font-size: 24px; }
+  .ds-h2 { font-size: 20px; }
+}
+
+@supports (padding: max(0px)) {
+  .ds-safe-area {
+    padding-left: max(var(--ds-space-3), env(safe-area-inset-left));
+    padding-right: max(var(--ds-space-3), env(safe-area-inset-right));
+    padding-bottom: max(var(--ds-space-3), env(safe-area-inset-bottom));
+  }
+}
