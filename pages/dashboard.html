@@ -281,6 +281,7 @@ const FASE_LABEL = {
 let isAdminUser = false;
 const DEMO_EMAIL = 'suporte@hermidamaia.adv.br';
 let demoUserId   = null;   // populated once admin clients are loaded
+const byId = (id) => document.getElementById(id);
 
 /* ── Listen for user identity ───────────────────────── */
 document.addEventListener('app:user-loaded', async e => {
@@ -288,17 +289,22 @@ document.addEventListener('app:user-loaded', async e => {
   isAdminUser = !!isAdmin;
 
   if (isAdmin) {
-    document.getElementById('admin-bar').style.display      = 'flex';
-    document.getElementById('btn-onboarding').style.display = 'none';
+    const adminBar = byId('admin-bar');
+    const onboardingBtn = byId('btn-onboarding');
+    if (adminBar) adminBar.style.display = 'flex';
+    if (onboardingBtn) onboardingBtn.style.display = 'none';
   }
 });
 
 /* ── Bootstrap data after app is ready ─────────────── */
 document.addEventListener('app:ready', async () => {
+  const clientViewEl = byId('client-view');
+  if (!clientViewEl) return;
+
   if (isAdminUser) {
     await loadAdminOverview();
   } else {
-    document.getElementById('client-view').style.display = '';
+    clientViewEl.style.display = '';
     loadProgressBar();
     await loadClientData(null);
   }
@@ -306,27 +312,37 @@ document.addEventListener('app:ready', async () => {
 
 /* ── Admin overview ─────────────────────────────────── */
 async function loadAdminOverview() {
-  document.getElementById('admin-overview').style.display = '';
-  document.getElementById('client-view').style.display    = 'none';
+  const adminOverviewEl = byId('admin-overview');
+  const clientViewEl = byId('client-view');
+  if (!adminOverviewEl || !clientViewEl) return;
+
+  adminOverviewEl.style.display = '';
+  clientViewEl.style.display    = 'none';
 
   try {
     const stats = await AdminService.getStats();
-    document.getElementById('adm-kpi-clientes').textContent   = stats.total_clientes   ?? '—';
-    document.getElementById('adm-kpi-dividas').textContent    = formatCurrency(stats.total_dividas ?? 0);
-    document.getElementById('adm-kpi-docs').textContent       = stats.docs_review      ?? '—';
-    document.getElementById('adm-kpi-onboarding').textContent = stats.onboarding_done  ?? '—';
+    const kpiClientes = byId('adm-kpi-clientes');
+    const kpiDividas = byId('adm-kpi-dividas');
+    const kpiDocs = byId('adm-kpi-docs');
+    const kpiOnboarding = byId('adm-kpi-onboarding');
+    if (kpiClientes) kpiClientes.textContent = stats.total_clientes ?? '—';
+    if (kpiDividas) kpiDividas.textContent = formatCurrency(stats.total_dividas ?? 0);
+    if (kpiDocs) kpiDocs.textContent = stats.docs_review ?? '—';
+    if (kpiOnboarding) kpiOnboarding.textContent = stats.onboarding_done ?? '—';
   } catch (_) {}
 
   try {
     const clients = await AdminService.getClients();
     const count   = clients.length;
-    document.getElementById('adm-clients-count').textContent = count + ' cliente' + (count !== 1 ? 's' : '');
+    const clientsCountEl = byId('adm-clients-count');
+    if (clientsCountEl) clientsCountEl.textContent = count + ' cliente' + (count !== 1 ? 's' : '');
 
     // Cache demo user ID for mode switcher
     const demoClient = clients.find(c => c.email === DEMO_EMAIL);
     if (demoClient) demoUserId = demoClient.user_id;
 
-    const tbody = document.getElementById('adm-clients-tbody');
+    const tbody = byId('adm-clients-tbody');
+    if (!tbody) return;
     if (count === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Nenhum cliente cadastrado</td></tr>';
     } else {
