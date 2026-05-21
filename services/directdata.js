@@ -1,5 +1,5 @@
 import { supabase }    from './supabase.js';
-import { FUNCTIONS_URL } from '../utils/config.js';
+import { invokeEdgeFunction } from './edge.js';
 
 /* ── ViaCEP ──────────────────────────────────────── */
 export async function lookupCEP(cep) {
@@ -25,20 +25,12 @@ export async function lookupCPF(cpf) {
   const clean = cpf.replace(/\D/g, '');
   if (clean.length !== 11) return null;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return null;
-
-    const r = await fetch(`${FUNCTIONS_URL}/directdata-proxy`, {
-      method:  'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({ cpf: clean }),
+    const payload = await invokeEdgeFunction('directdata-proxy', {
+      method: 'POST',
+      body: { cpf: clean },
+      timeoutMs: 12000,
+      retries: 1,
     });
-    if (!r.ok) return null;
-
-    const payload = await r.json();
     const d = payload?.retorno;
     if (!d) return null;
 

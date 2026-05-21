@@ -150,8 +150,7 @@
 <script type="module">
 import { showToast }        from '../utils/helpers.js';
 import { FreshdeskService } from '../services/freshdesk.js';
-import { supabase }         from '../services/supabase.js';
-import { FUNCTIONS_URL }    from '../utils/config.js';
+import { invokeEdgeFunction } from '../services/edge.js';
 
 window.showToast = showToast;
 
@@ -279,17 +278,17 @@ window.submitTicket = async function() {
   try {
     const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'] });
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session && currentUser) {
-      fetch(`${FUNCTIONS_URL}/portal-notify`, {
+    if (currentUser) {
+      invokeEdgeFunction('portal-notify', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           type:        'ticket_created',
           clientEmail: currentUser.email,
           clientName:  currentCaso?.full_name || '',
           payload:     { ticketId: ticket.id, subject },
-        }),
+        },
+        retries: 1,
+        timeoutMs: 10000,
       }).catch(console.warn);
     }
 

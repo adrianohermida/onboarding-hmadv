@@ -384,14 +384,29 @@ async function loadData() {
 
   // 3. Load financial data for diagnostics
   try {
-    const caso = await supabase.from('portal_casos').select('renda,renda_familiar,n_dependentes,despesas,credores_cnj').eq('user_id', (await supabase.auth.getUser()).data.user?.id).maybeSingle();
+    const caso = await supabase
+      .from('portal_casos')
+      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj')
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .maybeSingle();
     if (caso.data) {
       const d = caso.data;
+      let despesas = {};
+      if (d.despesas && typeof d.despesas === 'object') {
+        despesas = d.despesas;
+      } else if (typeof d.despesas_json === 'string' && d.despesas_json.trim()) {
+        try {
+          despesas = JSON.parse(d.despesas_json);
+        } catch (_) {
+          despesas = {};
+        }
+      }
+
       diagnostico = FinancialCalculator.diagnosticar({
-        renda:         Number(d.renda) || 0,
+        renda:         Number(d.renda_mensal ?? d.renda) || 0,
         rendaFamiliar: Number(d.renda_familiar) || 0,
-        nDependentes:  d.n_dependentes || 0,
-        despesas:      d.despesas || {},
+        nDependentes:  Number(d.numero_dependentes ?? d.n_dependentes) || 0,
+        despesas,
         dividas:       Array.isArray(d.credores_cnj) ? d.credores_cnj : [],
       });
     }

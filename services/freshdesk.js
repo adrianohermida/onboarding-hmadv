@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { FUNCTIONS_URL } from '../utils/config.js';
+import { invokeEdgeFunction, toFriendlyMessage } from './edge.js';
 
 export const FD_STATUS = {
   2: { label: 'Aberto',    cls: 'chip-warn' },
@@ -41,20 +41,20 @@ export const FreshdeskService = {
   },
 
   async createTicket({ subject, description, tags = [] }) {
-    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
-    if (sessErr || !session) throw new Error('Sessão expirada');
+    if (!subject?.trim()) throw new Error('Assunto obrigatorio');
+    if (!description?.trim()) throw new Error('Descricao obrigatoria');
 
-    const res = await fetch(`${FUNCTIONS_URL}/freshdesk-proxy`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ action: 'create_ticket', subject, description, tags }),
-    });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    try {
+      return await invokeEdgeFunction('freshdesk-proxy', {
+        method: 'POST',
+        body: { action: 'create_ticket', subject, description, tags },
+        timeoutMs: 15000,
+        retries: 2,
+      });
+    } catch (error) {
+      const friendly = toFriendlyMessage(error, 'Nao foi possivel criar o chamado agora. Tente novamente.');
+      throw new Error(friendly);
+    }
   },
 
   ticketUrl(id) {

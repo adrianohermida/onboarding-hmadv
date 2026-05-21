@@ -22,6 +22,12 @@
  */
 import { bus } from '../events/EventBus.js';
 
+const EDGE_TIMEOUT_MS = 12000;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Autentique signature status mapping
 export const AUTENTIQUE_STATUS = {
   pending:    { label: 'Aguardando assinatura', color: '#d97706', icon: 'PEND' },
@@ -39,6 +45,43 @@ export class SignatureService {
   constructor(functionsUrl, getToken) {
     this._baseUrl  = functionsUrl;
     this._getToken = getToken;
+  }
+
+  async _edgeFetch(path, options = {}, retries = 1) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort('timeout'), EDGE_TIMEOUT_MS);
+      try {
+        const response = await fetch(`${this._baseUrl}/${path}`.replace(/([^:]\/)\/+/, '$1'), {
+          ...options,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          const err = new Error(payload?.message || `HTTP ${response.status}`);
+          err.status = response.status;
+          if ((response.status === 408 || response.status === 429 || response.status >= 500) && attempt < retries) {
+            lastError = err;
+            await wait(300 * (attempt + 1));
+            continue;
+          }
+          throw err;
+        }
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        lastError = error;
+        const retryable = error?.name === 'AbortError' || error instanceof TypeError;
+        if (retryable && attempt < retries) {
+          await wait(300 * (attempt + 1));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError || new Error('Falha ao chamar portal-signature');
   }
 
   // ── Request Signature ─────────────────────────────────────────────────────────
@@ -63,7 +106,7 @@ export class SignatureService {
 
     try {
       const token = await this._getToken();
-      const resp  = await fetch(`${this._baseUrl}/portal-signature`, {
+      const resp  = await this._edgeFetch('portal-signature', {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',
@@ -79,12 +122,7 @@ export class SignatureService {
           message:      message || `Por favor, assine o documento: ${documentName || 'documento jurídico'}`,
           expires_in:   expiresIn,
         }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${resp.status}`);
-      }
+      }, 2);
 
       const result = await resp.json();
 
@@ -105,10 +143,9 @@ export class SignatureService {
   async checkStatus(autentiqueId) {
     try {
       const token = await this._getToken();
-      const resp  = await fetch(`${this._baseUrl}/portal-signature?id=${autentiqueId}`, {
+      const resp  = await this._edgeFetch(`portal-signature?id=${autentiqueId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      }, 1);
       return await resp.json();
     } catch (e) {
       console.warn('[SignatureService] checkStatus error:', e.message);
@@ -120,14 +157,14 @@ export class SignatureService {
   async resend(autentiqueId, documentId) {
     try {
       const token = await this._getToken();
-      await fetch(`${this._baseUrl}/portal-signature`, {
+      await this._edgeFetch('portal-signature', {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ action: 'resend', autentique_id: autentiqueId }),
-      });
+      }, 1);
       bus.emit('signature.resent', { autentiqueId, documentId });
     } catch (e) {
       console.warn('[SignatureService] resend error:', e.message);
@@ -138,11 +175,11 @@ export class SignatureService {
   async cancel(autentiqueId) {
     try {
       const token = await this._getToken();
-      await fetch(`${this._baseUrl}/portal-signature`, {
+      await this._edgeFetch('portal-signature', {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ autentique_id: autentiqueId }),
-      });
+      }, 1);
     } catch (e) {
       console.warn('[SignatureService] cancel error:', e.message);
     }

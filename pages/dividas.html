@@ -177,7 +177,7 @@ import { DebtService, CaseService } from '../services/database.js';
 window.showToast = showToast;
 
 let dividas = [];
-let renda = null;
+let rendaTotal = 0;
 let dividasBooting = false;
 let isAdminUser = false;
 let unmountModeSelector = null;
@@ -197,7 +197,7 @@ async function init() {
     CaseService.get().catch(() => null),
   ]);
   dividas = rows;
-  renda = caso?.renda || null;
+  rendaTotal = Number(caso?.renda_total ?? ((caso?.renda_mensal || 0) + (caso?.renda_familiar || 0))) || 0;
   renderTable();
   dividasBooting = false;
 }
@@ -259,10 +259,10 @@ function updateKPIs() {
   maiorCredorEl.textContent = maior.credor || '—';
   footerEl.textContent = total ? 'Total: ' + formatCurrency(total) : '';
 
-  if (renda && total) {
-    const pct = ((total / renda) * 100).toFixed(0);
-    const pctEl = byId('kpi-comprometida');
-    if (pctEl) pctEl.textContent = pct + '%';
+  const pctEl = byId('kpi-comprometida');
+  if (pctEl) {
+    const pct = rendaTotal > 0 ? Math.round((total / rendaTotal) * 100) : null;
+    pctEl.textContent = pct == null ? '—%' : `${pct}%`;
   }
 }
 

@@ -618,6 +618,7 @@
 import { supabase }        from '../services/supabase.js';
 import { DocumentService, AdminService } from '../services/database.js';
 import { FUNCTIONS_URL }   from '../utils/config.js';
+import { invokeEdgeFunction } from '../services/edge.js';
 import { bus }             from '../modules/events/EventBus.js';
 import { Shell }           from '../modules/ui/Shell.js';
 import { Toast }           from '../modules/ui/Toast.js';
@@ -1137,8 +1138,6 @@ window.confirmReview = async () => {
 // ── Freshdesk / notify integration ───────────────────────────────────────────
 async function _notifyDocUpdate(docId, workflowStatus, obs) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
     const doc = engine.getAll().find(d => d.id === docId);
     const tipo = doc?.tipo || docId;
     const EVENT_MAP = {
@@ -1151,13 +1150,9 @@ async function _notifyDocUpdate(docId, workflowStatus, obs) {
     const notifyType = EVENT_MAP[workflowStatus];
     if (!notifyType) return;
 
-    await fetch(`${FUNCTIONS_URL}/portal-notify`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
+    await invokeEdgeFunction('portal-notify', {
+      method: 'POST',
+      body: {
         type:        notifyType,
         payload: {
           tipo,
@@ -1167,7 +1162,9 @@ async function _notifyDocUpdate(docId, workflowStatus, obs) {
         },
         // If viewing client, pass their user context
         ...(viewingUid ? { targetUserId: viewingUid } : {}),
-      }),
+      },
+      retries: 1,
+      timeoutMs: 10000,
     });
   } catch (e) {
     console.warn('[Documentos] notify error:', e.message);

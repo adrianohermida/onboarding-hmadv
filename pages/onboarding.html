@@ -849,8 +849,7 @@
 import { showToast }                      from '../utils/helpers.js';
 import { CaseService }                    from '../services/database.js';
 import { lookupCPF, lookupCEP }           from '../services/directdata.js';
-import { supabase }                       from '../services/supabase.js';
-import { FUNCTIONS_URL }                  from '../utils/config.js';
+import { invokeEdgeFunction, toFriendlyMessage } from '../services/edge.js';
 import {
   calcAnaliseGlobal, calcPlanoPagamento,
   buildCNJJson, fmtBRL, parseBRL,
@@ -1357,8 +1356,10 @@ function collectAll() {
     enderecos:       getAddresses(),
     /* Step 2 */
     situacao_profissional: document.getElementById('situacao_profissional')?.value || '',
+    renda_mensal:    parseBRL(document.getElementById('renda')?.value),
     renda:           parseBRL(document.getElementById('renda')?.value),
     renda_familiar:  parseBRL(document.getElementById('renda_familiar')?.value),
+    numero_dependentes: +(document.getElementById('n_dependentes')?.value || 0),
     n_dependentes:   +(document.getElementById('n_dependentes')?.value || 0),
     conjugue:        getConjugue(),
     dependentes:     getDependents(),
@@ -1583,21 +1584,13 @@ window.finalizarCadastro = async function() {
     let fdTicketId = null;
     try {
       btn.textContent = 'Criando chamado...';
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const res = await fetch(`${FUNCTIONS_URL}/portal-cnj-complete`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}),
-        });
-        if (res.ok) {
-          const result = await res.json();
-          fdTicketId = result.fd_ticket_id;
-        }
-      }
+      const result = await invokeEdgeFunction('portal-cnj-complete', {
+        method: 'POST',
+        body: {},
+        retries: 1,
+        timeoutMs: 12000,
+      });
+      fdTicketId = result?.fd_ticket_id || null;
     } catch (notifyErr) {
       console.warn('portal-cnj-complete falhou (não bloqueia):', notifyErr);
     }
@@ -1607,7 +1600,7 @@ window.finalizarCadastro = async function() {
     document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: { ...payload, fd_ticket_id: fdTicketId } }));
     setTimeout(() => { window.location.href = 'dashboard.html'; }, 2800);
   } catch (e) {
-    showToast('Erro ao salvar: ' + e.message, 'error');
+    showToast(toFriendlyMessage(e, 'Erro ao salvar seus dados. Tente novamente.'), 'error');
     btn.disabled = false;
     btn.textContent = 'Enviar formulario ao escritorio';
   }
