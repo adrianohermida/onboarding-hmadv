@@ -1,0 +1,64 @@
+
+name = "hmadv-process-ai"
+main = "src/index.ts"
+compatibility_date = "2026-03-31"
+workers_dev = false
+
+# Rotas customizadas
+routes = [
+  { pattern = "ai.hermidamaia.adv.br", custom_domain = true }
+]
+
+# Bindings de IA
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "dotobot-ai"
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS_ENGINE"
+dataset = "HMADV"
+
+# Banco D1
+[[d1_databases]]
+binding = "hmadv_process_ai"
+database_name = "hmadv-process-ai"
+database_id = "1d61b217-289f-468d-9d29-40abb8a23a85"
+
+# Bucket R2
+[[r2_buckets]]
+binding = "hmadv_process_ai_logs"
+bucket_name = "hmadv-process-ai-logs"
+
+# KV Namespace
+[[kv_namespaces]]
+binding = "CLOUDFLARE_KV_NAMESPACE"
+id = "1e0740f44693445cbc798c0fe6e45a98"
+
+# Durable Object
+[[durable_objects.bindings]]
+name = "COPILOT_CONVERSATIONS_DO_V2"
+class_name = "CopilotConversationRoomV2"
+
+# Migrações D1
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["CopilotConversationRoomV2"]
+
+[triggers]
+crons = ["*/15 * * * *", "0 7 * * *"]
+
+[vars]
+CLOUDFLARE_WORKERS_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct"
+CLOUDFLARE_R2_ACCOUNT_ID = "b32bcc487dfca3a70fe57a75fa5ac482"
+CLOUDFLARE_KV_NAMESPACE_ID = "1e0740f44693445cbc798c0fe6e45a98"
+# CLOUDFLARE_S3_API is intentionally left as a runtime secret or dashboard variable.
+# Runtime secrets esperados no worker HMADV IA:
+# - HMDAV_AI_SHARED_SECRET (ou HMADV_AI_SHARED_SECRET / LAWDESK_AI_SHARED_SECRET)
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
+# - FRESHSALES_API_BASE
+# - FRESHSALES_API_KEY
+

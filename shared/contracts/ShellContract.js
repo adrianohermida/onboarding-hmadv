@@ -25,6 +25,10 @@ import { clientExperienceFoundation } from '../../client-experience/ClientExperi
 import { aiOsFoundation } from '../../ai-os/AIOSFoundation.js';
 import { complianceOsFoundation } from '../../compliance-os/ComplianceOSFoundation.js';
 import { analyticsOsFoundation } from '../../analytics-os/AnalyticsOSFoundation.js';
+import { platformOsFoundation } from '../../platform-os/PlatformOSFoundation.js';
+import { uiOsFoundation } from '../../ui-os/UIOSFoundation.js';
+import { workspaceOsFoundation } from '../../workspace-os/WorkspaceOSFoundation.js';
+import { billingOsFoundation } from '../../billing-os/BillingOSFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -207,6 +211,107 @@ export const analytics = {
   refresh: () => analyticsOsFoundation.snapshot(),
 };
 
+// ── Platform OS API ───────────────────────────────────────────────────────
+export const platformOs = {
+  getSnapshot: () => store.get('platformOs') || {},
+  getRuntime: () => store.get('platformOs')?.runtime || {},
+  getDeployments: () => store.get('platformOs')?.deployments || { total: 0, failed: 0, list: [] },
+  getScaling: () => store.get('platformOs')?.scaling || {},
+  getPerformance: () => store.get('platformOs')?.performance || {},
+  getQueues: () => store.get('platformOs')?.queues || { total: 0, queued: 0, processing: 0, failed: 0, dead_letter: 0, throttled: 0, retries: 0, list: [] },
+  getWorkers: () => store.get('platformOs')?.workers || { total: 0, online: 0, degraded: 0, failed: 0, retries: 0, isolated: 0, list: [] },
+  getResilience: () => store.get('platformOs')?.resilience || {},
+  getMonitoring: () => store.get('platformOs')?.monitoring || {},
+  getTelemetry: () => store.get('platformOs')?.telemetry || {},
+  getAnalytics: () => store.get('platformOs')?.analytics || {},
+  getGovernance: () => store.get('platformOs')?.governance || {},
+  getObservability: () => store.get('platformOs')?.observability || {},
+  refresh: () => platformOsFoundation.snapshot(),
+};
+
+// ── UI OS API ─────────────────────────────────────────────────────────────
+export const uiOs = {
+  getSnapshot: () => store.get('uiOs') || {},
+  getTokens: () => store.get('uiOs')?.tokens || {},
+  getTheme: () => store.get('uiOs')?.theme || {},
+  getTypography: () => store.get('uiOs')?.typography || {},
+  getLayouts: () => store.get('uiOs')?.layouts || {},
+  getNavigation: () => store.get('uiOs')?.navigation || {},
+  getWorkspace: () => store.get('uiOs')?.workspace || {},
+  getCommandCenter: () => store.get('uiOs')?.command_center || { total: 0, navigation: 0, workflow: 0, client: 0, list: [] },
+  getModals: () => store.get('uiOs')?.modals || {},
+  getDrawers: () => store.get('uiOs')?.drawers || {},
+  getTables: () => store.get('uiOs')?.tables || {},
+  getForms: () => store.get('uiOs')?.forms || {},
+  getCards: () => store.get('uiOs')?.cards || {},
+  getTimelines: () => store.get('uiOs')?.timelines || {},
+  getStates: () => store.get('uiOs')?.states || {},
+  getFeedback: () => store.get('uiOs')?.feedback || {},
+  getAnimations: () => store.get('uiOs')?.animations || {},
+  getMobile: () => store.get('uiOs')?.mobile || {},
+  getAccessibility: () => store.get('uiOs')?.accessibility || {},
+  getBranding: () => store.get('uiOs')?.branding || {},
+  getTelemetry: () => store.get('uiOs')?.telemetry || {},
+  getObservability: () => store.get('uiOs')?.observability || {},
+  getGovernance: () => store.get('uiOs')?.governance || {},
+  refresh: () => uiOsFoundation.snapshot(),
+};
+
+// ── Workspace OS API ─────────────────────────────────────────────────────
+export const workspaceOs = {
+  getSnapshot: () => store.get('workspaceOs') || {},
+  getCommandCenter: () => store.get('workspaceOs')?.command_center || { total: 0, navigation: 0, workflow: 0, copilot: 0, quick_actions: 0, list: [] },
+  getSearch: () => store.get('workspaceOs')?.search || { total: 0, results: 0, by_type: {}, list: [] },
+  getContext: () => store.get('workspaceOs')?.context || {},
+  getCopilot: () => store.get('workspaceOs')?.copilot || {},
+  getActivities: () => store.get('workspaceOs')?.activities || { total: 0, uploads: 0, onboarding: 0, workflows: 0, approvals: 0, ai_suggestions: 0, list: [] },
+  getPanels: () => store.get('workspaceOs')?.panels || {},
+  getWorkspace: () => store.get('workspaceOs')?.workspace || {},
+  getNavigation: () => store.get('workspaceOs')?.navigation || {},
+  getActions: () => store.get('workspaceOs')?.actions || {},
+  getShortcuts: () => store.get('workspaceOs')?.shortcuts || {},
+  getAssistant: () => store.get('workspaceOs')?.assistant || {},
+  getNotifications: () => store.get('workspaceOs')?.notifications || {},
+  getStreams: () => store.get('workspaceOs')?.streams || {},
+  getInspector: () => store.get('workspaceOs')?.inspector || {},
+  getQuickActions: () => store.get('workspaceOs')?.quick_actions || { total: 0, list: [], smart_actions_ready: true },
+  getDock: () => store.get('workspaceOs')?.dock || {},
+  getMobile: () => store.get('workspaceOs')?.mobile || {},
+  getAnalytics: () => store.get('workspaceOs')?.analytics || {},
+  getTelemetry: () => store.get('workspaceOs')?.telemetry || {},
+  getObservability: () => store.get('workspaceOs')?.observability || {},
+  getGovernance: () => store.get('workspaceOs')?.governance || {},
+  refresh: () => workspaceOsFoundation.snapshot(),
+};
+
+// ── Billing OS API ───────────────────────────────────────────────────────
+export const billingOs = {
+  getSnapshot: () => store.get('billingOs') || {},
+  getPlans: () => store.get('billingOs')?.plans || { current: 'starter', catalog: [] },
+  getSubscriptions: () => store.get('billingOs')?.subscriptions || {},
+  getCheckout: () => store.get('billingOs')?.checkout || {},
+  getCustomers: () => store.get('billingOs')?.customers || {},
+  getPayments: () => store.get('billingOs')?.payments || {},
+  getInvoices: () => store.get('billingOs')?.invoices || { total: 0, paid: 0, overdue: 0, pending: 0, list: [] },
+  getUsage: () => store.get('billingOs')?.usage || {},
+  getQuotas: () => store.get('billingOs')?.quotas || {},
+  getCredits: () => store.get('billingOs')?.credits || {},
+  getWallet: () => store.get('billingOs')?.wallet || {},
+  getCommerce: () => store.get('billingOs')?.commerce || {},
+  getCatalog: () => store.get('billingOs')?.catalog || {},
+  getPricing: () => store.get('billingOs')?.pricing || {},
+  getDiscounts: () => store.get('billingOs')?.discounts || {},
+  getCoupons: () => store.get('billingOs')?.coupons || {},
+  getEntitlements: () => store.get('billingOs')?.entitlements || {},
+  getMetering: () => store.get('billingOs')?.metering || {},
+  getAnalytics: () => store.get('billingOs')?.analytics || {},
+  getInsights: () => store.get('billingOs')?.insights || {},
+  getTelemetry: () => store.get('billingOs')?.telemetry || {},
+  getObservability: () => store.get('billingOs')?.observability || {},
+  getGovernance: () => store.get('billingOs')?.governance || {},
+  refresh: () => billingOsFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -229,4 +334,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, analytics, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, analytics, platformOs, uiOs, workspaceOs, billingOs, tenant, shellStore, billing };

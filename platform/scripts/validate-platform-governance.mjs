@@ -22,6 +22,10 @@ const checks = [
   ['ai os governance', 'governance/ai-os/module-requirements.md'],
   ['compliance governance', 'governance/compliance/module-requirements.md'],
   ['analytics governance', 'governance/analytics/module-requirements.md'],
+  ['platform os governance', 'governance/platform/module-requirements.md'],
+  ['ui os governance', 'governance/ui-os/module-requirements.md'],
+  ['workspace os governance', 'governance/workspace-os/module-requirements.md'],
+  ['billing os governance', 'governance/billing-os/module-requirements.md'],
   ['platform readme', 'platform/README.md'],
   ['workflow static deploy', '.github/workflows/static.yml'],
   ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
@@ -52,7 +56,11 @@ const requiredScripts = [
   'validate:client-experience',
   'validate:ai-os',
   'validate:compliance-os',
-  'validate:analytics-os'
+  'validate:analytics-os',
+  'validate:platform-os',
+  'validate:ui-os',
+  'validate:workspace-os',
+  'validate:billing-os'
 ];
 const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
 if (missingScripts.length) {

@@ -47,6 +47,14 @@ import { mountComplianceOSFoundation } from '../compliance-os/ComplianceOSFounda
 import { mountComplianceShellVisibility } from '../compliance-os/ShellComplianceVisibility.js';
 import { mountAnalyticsOSFoundation } from '../analytics-os/AnalyticsOSFoundation.js';
 import { mountAnalyticsShellVisibility } from '../analytics-os/ShellAnalyticsVisibility.js';
+import { mountPlatformOSFoundation } from '../platform-os/PlatformOSFoundation.js';
+import { mountPlatformOsShellVisibility } from '../platform-os/ShellPlatformOSVisibility.js';
+import { mountUIOSFoundation } from '../ui-os/UIOSFoundation.js';
+import { mountUiOsShellVisibility } from '../ui-os/ShellUIOSVisibility.js';
+import { mountWorkspaceOSFoundation } from '../workspace-os/WorkspaceOSFoundation.js';
+import { mountWorkspaceOsShellVisibility } from '../workspace-os/ShellWorkspaceOSVisibility.js';
+import { mountBillingOSFoundation } from '../billing-os/BillingOSFoundation.js';
+import { mountBillingOsShellVisibility } from '../billing-os/ShellBillingOSVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -102,6 +110,14 @@ export class AuthenticatedShell {
       mountComplianceShellVisibility();
       mountAnalyticsOSFoundation();
       mountAnalyticsShellVisibility();
+      mountPlatformOSFoundation();
+      mountPlatformOsShellVisibility();
+      mountUIOSFoundation();
+      mountUiOsShellVisibility();
+      mountWorkspaceOSFoundation();
+      mountWorkspaceOsShellVisibility();
+      mountBillingOSFoundation();
+      mountBillingOsShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
