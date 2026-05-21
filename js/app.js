@@ -134,7 +134,11 @@ function syncPageStyles(parsedDoc, targetUrl) {
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = absHref;
+    const styleUrl = new URL(absHref, window.location.href);
+    if (styleUrl.origin === window.location.origin) {
+      styleUrl.searchParams.set('_shellv', String(activeModuleToken));
+    }
+    link.href = styleUrl.toString();
     link.setAttribute(SHELL_STYLE_ATTR, '1');
     document.head.appendChild(link);
   });
@@ -199,7 +203,11 @@ async function runPageScripts(parsedDoc, targetUrl) {
 
     const src = script.getAttribute('src');
     if (src) {
-      el.src = new URL(src, targetUrl).toString();
+      const scriptUrl = new URL(src, targetUrl);
+      if (scriptUrl.origin === window.location.origin) {
+        scriptUrl.searchParams.set('_shellv', String(activeModuleToken));
+      }
+      el.src = scriptUrl.toString();
     } else {
       el.textContent = script.textContent || '';
     }
@@ -225,7 +233,17 @@ async function navigateModule(url, { pushState = true } = {}) {
   try {
     document.dispatchEvent(new CustomEvent('app:route-will-change'));
 
-    const res = await fetch(absolute, { credentials: 'same-origin' });
+    const fetchUrl = new URL(absolute, window.location.href);
+    fetchUrl.searchParams.set('_shellv', String(Date.now()));
+
+    const res = await fetch(fetchUrl.toString(), {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    });
     if (!res.ok) {
       window.location.href = absolute;
       return;
