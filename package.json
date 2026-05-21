@@ -6,7 +6,8 @@
     "dev":    "npx serve . -l 3000",
     "build":  "echo 'Site estático — sem build step necessário'",
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
-    "test":   "node platform/scripts/run-portal-tests.mjs"
+    "test":   "node platform/scripts/run-portal-tests.mjs",
+    "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1"
   },
   "repository": {
     "type": "git",
