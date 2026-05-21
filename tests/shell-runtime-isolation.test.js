@@ -28,7 +28,6 @@ describe('shell runtime isolation', () => {
     originalSetInterval = window.setInterval;
     originalClearTimeout = window.clearTimeout;
     originalClearInterval = window.clearInterval;
-    vi.useFakeTimers();
   });
 
   afterEach(() => {
@@ -66,6 +65,14 @@ describe('shell runtime isolation', () => {
   });
 
   it('cleans up timers captured for the previous route during navigation teardown', () => {
+    const clearTimeoutSpy = vi.fn();
+    const clearIntervalSpy = vi.fn();
+
+    window.setTimeout = vi.fn(() => 101);
+    window.setInterval = vi.fn(() => 202);
+    window.clearTimeout = clearTimeoutSpy;
+    window.clearInterval = clearIntervalSpy;
+
     const runtimeIsolation = installRuntimeIsolation({
       isEnabled: () => enabled,
       isCaptureEnabled: () => capture,
@@ -80,8 +87,9 @@ describe('shell runtime isolation', () => {
     window.setInterval(intervalFn, 50);
 
     runtimeIsolation.cleanupModuleTimers();
-    vi.advanceTimersByTime(200);
 
+    expect(clearTimeoutSpy).toHaveBeenCalledWith(101);
+    expect(clearIntervalSpy).toHaveBeenCalledWith(202);
     expect(timeoutFn).not.toHaveBeenCalled();
     expect(intervalFn).not.toHaveBeenCalled();
   });

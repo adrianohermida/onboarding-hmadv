@@ -2061,6 +2061,27 @@ window.finalizarCadastro = async function() {
 
     clearDraft(_userId);
 
+    // Registra formulário online em portal_documentos para workflow de aprovação
+    try {
+      const { data: casoDoc } = await supabase
+        .from('portal_casos')
+        .select('id, workspace_id')
+        .eq('user_id', _userId)
+        .maybeSingle();
+      await supabase.from('portal_documentos').upsert({
+        user_id:         _userId,
+        tipo:            'formulario_cnj_online',
+        nome_arquivo:    'Formulário CNJ Online',
+        workflow_status: 'em_analise',
+        direction:       'client_to_office',
+        caso_id:         casoDoc?.id  ?? null,
+        workspace_id:    casoDoc?.workspace_id ?? null,
+        updated_at:      new Date().toISOString(),
+      }, { onConflict: 'user_id,tipo' });
+    } catch (docErr) {
+      console.warn('[onboarding] portal_documentos upsert failed:', docErr);
+    }
+
     // Chama portal-cnj-complete: cria ticket Freshdesk + e-mails + timeline
     let fdTicketId = null;
     try {
@@ -2097,6 +2118,19 @@ window.finalizarCadastro = async function() {
 document.addEventListener('app:user-loaded', ({ detail }) => {
   const { user, caso } = detail;
   _userId = user?.id;
+
+  // Show already-submitted banner if form was previously completed
+  if (caso?.onboarding_done) {
+    const banner = document.getElementById('form-submitted-banner');
+    const detail2 = document.getElementById('form-submitted-detail');
+    const backLink = document.getElementById('form-back-journey-link');
+    if (banner) banner.style.display = '';
+    if (detail2) detail2.textContent = 'Seu formulário foi enviado ao escritório Hermida Maia Advocacia. Você pode revisar suas respostas abaixo.';
+    if (backLink && _fromJourney) backLink.style.display = '';
+    // Disable the submit button to prevent re-submission
+    const btn = document.getElementById('btn-finalizar');
+    if (btn) { btn.textContent = 'Formulário já enviado'; btn.disabled = true; }
+  }
 
   const emailEl = document.getElementById('email');
   if (emailEl) emailEl.value = user?.email || '';

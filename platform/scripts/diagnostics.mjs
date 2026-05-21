@@ -17,4 +17,15 @@ if (missing.length) {
   process.exit(1);
 }
 
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const summary = {
+  packageName: packageJson.name,
+  scriptCount: Object.keys(packageJson.scripts || {}).length,
+  hasDesignSystem: fs.existsSync(path.join(root, 'design-system/README.md')),
+  hasDesignDocs: fs.existsSync(path.join(root, 'docs/design-system/README.md')),
+  hasDesignGovernance: fs.existsSync(path.join(root, 'governance/design/design-review-checklist.md')),
+};
+
 console.log('[diagnostics] platform engineering artifacts look healthy');
+console.log('diagnostics:platform summary');
+console.log(JSON.stringify(summary, null, 2));

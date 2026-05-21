@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meu Dashboard Financeiro</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <main class="page-content" style="max-width:1080px;margin:0 auto;padding:24px;">
+    <h1 class="ds-h1">Meu Dashboard Financeiro</h1>
+    <p class="ds-body">Renda, despesas, comprometimento, mínimo existencial, evolução e alertas.</p>
+    <section class="status-cards-grid" style="margin-top:20px;">
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Renda total</div><div class="status-card-value" id="fi-income">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Despesas totais</div><div class="status-card-value" id="fi-expenses">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Comprometimento</div><div class="status-card-value" id="fi-commitment">0%</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Mínimo existencial</div><div class="status-card-value" id="fi-minimum">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Score</div><div class="status-card-value" id="fi-score">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Alertas</div><div class="status-card-value" id="fi-alerts">0</div></div></article>
+    </section>
+  </main>
+  <script type="module">
+    import { financialIntelligenceFoundation } from '../financial-intelligence/FinancialIntelligenceFoundation.js';
+    const s = financialIntelligenceFoundation.snapshot();
+    document.getElementById('fi-income').textContent = String(s.commitment?.income_total || 0);
+    document.getElementById('fi-expenses').textContent = String(s.commitment?.expense_total || 0);
+    document.getElementById('fi-commitment').textContent = `${Math.round((s.commitment?.commitment_after_minimum || 0) * 100)}%`;
+    document.getElementById('fi-minimum').textContent = String(s.minimum_existential?.minimum_existential || 0);
+    document.getElementById('fi-score').textContent = String(s.diagnosis?.score?.vulnerability || 0);
+    document.getElementById('fi-alerts').textContent = String(s.alerts?.total || 0);
+  </script>
+</body>
+</html>

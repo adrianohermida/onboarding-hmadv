@@ -853,7 +853,7 @@ function renderCnjFormSection() {
   const badge    = byId('cnj-form-section-badge');
   if (!section || !body) return;
 
-  const isAdmin  = controller.isAdmin?.() ?? false;
+  const isAdmin  = (typeof controller.isAdmin === 'function' ? controller.isAdmin() : controller.isAdmin) === true;
   const allDocs  = controller.engine.getAll();
   const CNJ_TIPOS = ['formulario_cnj_online', 'formulario_cnj_anexo_ii'];
   const formDocs = allDocs.filter(d => CNJ_TIPOS.includes(d.tipo));

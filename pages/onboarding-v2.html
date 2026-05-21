@@ -334,6 +334,7 @@ let activePlayer = null; // VideoPlayer instance
 let autosaveTimer = null;
 let uploadedFile  = null;
 let diagnostico   = null;  // financial diagnosis
+let casoState     = null;  // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let isAdminUser = false;
 let unmountModeSelector = null;
 let casoState = null;   // { onboarding_done, cnj_step_atual } — synced from DB on boot
@@ -430,15 +431,22 @@ async function loadData() {
     console.warn('[Journey] Could not load video progress:', e.message);
   }
 
-  // 3. Load financial data for diagnostics
+  // 3. Load financial data, onboarding state and diagnostics
   try {
     const caso = await supabase
       .from('portal_casos')
-      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj')
+      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj,onboarding_done,cnj_step_atual')
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .maybeSingle();
     if (caso.data) {
       const d = caso.data;
+
+      // Store form completion state for step rendering — engine.setState synced in section 6
+      casoState = {
+        onboarding_done: !!d.onboarding_done,
+        cnj_step_atual:  Number(d.cnj_step_atual) || 0,
+      };
+
       let despesas = {};
       if (d.despesas && typeof d.despesas === 'object') {
         despesas = d.despesas;
@@ -460,7 +468,8 @@ async function loadData() {
     }
   } catch {}
 
-  // 4. Initialise engine with video progress
+  // 4. Initialise engine with video progress — must come before DB state sync
+  // so _restoreSession() runs first and DB truth can override stale sessionStorage
   engine.init(progressList);
 
   // 5. Load caso state + form doc from DB (overrides stale sessionStorage)

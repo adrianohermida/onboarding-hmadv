@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin FinOps</title>
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body class="theme-light">
+  <main class="page-content" style="padding:24px;max-width:1200px;margin:0 auto;">
+    <h1 class="ds-h1">Admin FinOps Panel</h1>
+    <p class="ds-body" style="margin-top:8px;">Visao executiva de consumo e custos por tenant.</p>
+
+    <section class="status-cards-grid" style="margin-top:20px;">
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Tenants ativos</div><div class="status-card-value" id="finops-tenants">-</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Consumo storage</div><div class="status-card-value" id="finops-storage">-</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Custo operacional</div><div class="status-card-value" id="finops-cost">-</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Alertas billing</div><div class="status-card-value" id="finops-alerts">-</div></div></article>
+    </section>
+  </main>
+
+  <script type="module">
+    const byId = (id) => document.getElementById(id);
+    byId('finops-tenants').textContent = '1';
+    byId('finops-storage').textContent = '0 MB';
+    byId('finops-cost').textContent = 'R$ 0,00';
+    byId('finops-alerts').textContent = '0';
+  </script>
+</body>
+</html>

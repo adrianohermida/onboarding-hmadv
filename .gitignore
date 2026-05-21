@@ -33,6 +33,14 @@ bld/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
+# Keep source-code logger modules inside sprint module directories
+!events/logs/
+!observability/logs/
+!integrations/logs/
+!billing/logs/
+!ai/logs/
+!compliance/logs/
+!workflows/logs/
 
 # Build results on 'Bin' directories
 **/[Bb]in/*
@@ -272,6 +280,9 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Keep sprint module backup directories (lowercase — distinct from VS build artifacts)
+!platform-os/backup/
+!platform-os/recovery/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

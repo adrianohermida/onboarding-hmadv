@@ -1,0 +1,27 @@
+{
+  "version": "0.7.0",
+  "events": [
+    { "event": "onboarding.started", "domain": "onboarding", "owner": "onboarding", "payload": "OnboardingStarted", "subscribers": ["notifications", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "onboarding.completed", "domain": "onboarding", "owner": "onboarding", "payload": "OnboardingCompleted", "subscribers": ["support", "notifications", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "document.uploaded", "domain": "documents", "owner": "documents", "payload": "DocumentUploaded", "subscribers": ["onboarding", "notifications", "support", "analytics"], "retries": { "max": 5 }, "observability": true, "deadLetter": true },
+    { "event": "debt.updated", "domain": "financial", "owner": "financial", "payload": "DebtUpdated", "subscribers": ["analytics", "plans", "notifications"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "plan.generated", "domain": "plans", "owner": "plans", "payload": "PlanGenerated", "subscribers": ["support", "notifications", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "notification.created", "domain": "notifications", "owner": "shell", "payload": "NotificationCreated", "subscribers": ["notification-center"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "subscription.created", "domain": "billing", "owner": "billing", "payload": "SubscriptionCreated", "subscribers": ["finops", "notifications"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "subscription.updated", "domain": "billing", "owner": "billing", "payload": "SubscriptionUpdated", "subscribers": ["finops", "notifications"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "quota.exceeded", "domain": "billing", "owner": "billing", "payload": "QuotaExceeded", "subscribers": ["finops", "notifications", "support"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "storage.limit.reached", "domain": "billing", "owner": "billing", "payload": "StorageLimitReached", "subscribers": ["finops", "notifications"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "feature.enabled", "domain": "billing", "owner": "billing", "payload": "FeatureEnabled", "subscribers": ["finops", "notifications"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "feature.disabled", "domain": "billing", "owner": "billing", "payload": "FeatureDisabled", "subscribers": ["finops", "notifications"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "invoice.generated", "domain": "billing", "owner": "billing", "payload": "InvoiceGenerated", "subscribers": ["finops", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "payment.received", "domain": "billing", "owner": "billing", "payload": "PaymentReceived", "subscribers": ["finops", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "workflow.failed", "domain": "workflows", "owner": "platform", "payload": "WorkflowFailed", "subscribers": ["alerts", "incidents"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "onboarding.abandoned", "domain": "onboarding", "owner": "onboarding", "payload": "OnboardingAbandoned", "subscribers": ["analytics", "support"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "ai.workflow.started", "domain": "ai", "owner": "platform", "payload": "AiWorkflowStarted", "subscribers": ["analytics", "finops"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "integration.requested", "domain": "integrations", "owner": "platform", "payload": "IntegrationRequested", "subscribers": ["telemetry", "logs"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "integration.completed", "domain": "integrations", "owner": "platform", "payload": "IntegrationCompleted", "subscribers": ["telemetry", "sync"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "integration.failed", "domain": "integrations", "owner": "platform", "payload": "IntegrationFailed", "subscribers": ["alerts", "incidents"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "integration.webhook.received", "domain": "integrations", "owner": "platform", "payload": "IntegrationWebhookReceived", "subscribers": ["webhooks", "telemetry"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "integration.webhook.failed", "domain": "integrations", "owner": "platform", "payload": "IntegrationWebhookFailed", "subscribers": ["alerts", "incidents"], "retries": { "max": 3 }, "observability": true, "deadLetter": true }
+  ]
+}

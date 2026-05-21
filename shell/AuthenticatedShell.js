@@ -18,19 +18,43 @@
  */
 import { store }               from './state/ShellStore.js';
 import { authProvider }        from './auth/AuthProvider.js';
+import { tenantProvider }      from './tenant/TenantProvider.js';
 import { moduleRegistry }      from './module-registry/ModuleRegistry.js';
 import { globalModal }         from './modals/GlobalModalRoot.js';
 import { globalSlideover }     from './slideovers/SlideoverRoot.js';
 import { notificationCenter }  from './notifications/NotificationCenter.js';
 import { loadingLayer }        from './layout/GlobalLoadingLayer.js';
-import { globalErrorBoundary } from './layout/GlobalErrorBoundary.js';
-import { SuspenseBoundary }    from './layout/SuspenseBoundary.js';
 import { obs }                 from './observability/Observability.js';
-import { shellProviders }      from './providers/ShellProviders.js';
-import { routeGuards }         from './guards/RouteGuards.js';
-import { responsiveService }   from './responsive/ResponsiveService.js';
-import { shellAnalytics }      from './analytics/ShellAnalytics.js';
 import { bus }                 from '../modules/events/EventBus.js';
+import { mountEventOrchestration } from '../events/orchestrators/bootstrap.js';
+import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration.js';
+import { mountObservabilityFoundation, observabilityFoundation } from '../observability/ObservabilityFoundation.js';
+import { mountIntegrationHub } from '../integrations/IntegrationHub.js';
+import { mountIntegrationShellVisibility } from '../integrations/ShellIntegrationVisibility.js';
+import { mountWorkflowAutomationFoundation } from '../workflow-engine/WorkflowAutomationFoundation.js';
+import { mountWorkflowShellVisibility } from '../workflow-engine/ShellWorkflowVisibility.js';
+import { mountDocumentIntelligenceFoundation } from '../document-intelligence/DocumentIntelligenceFoundation.js';
+import { mountKnowledgeShellVisibility } from '../document-intelligence/ShellKnowledgeVisibility.js';
+import { mountFinancialIntelligenceFoundation } from '../financial-intelligence/FinancialIntelligenceFoundation.js';
+import { mountFinancialShellVisibility } from '../financial-intelligence/ShellFinancialVisibility.js';
+import { mountLegalOperationsFoundation } from '../legal-operations/LegalOperationsFoundation.js';
+import { mountLegalOperationsShellVisibility } from '../legal-operations/ShellLegalOperationsVisibility.js';
+import { mountClientExperienceFoundation } from '../client-experience/ClientExperienceFoundation.js';
+import { mountClientExperienceShellVisibility } from '../client-experience/ShellClientExperienceVisibility.js';
+import { mountAiOsFoundation } from '../ai-os/AIOSFoundation.js';
+import { mountAiOsShellVisibility } from '../ai-os/ShellAiOsVisibility.js';
+import { mountComplianceOSFoundation } from '../compliance-os/ComplianceOSFoundation.js';
+import { mountComplianceShellVisibility } from '../compliance-os/ShellComplianceVisibility.js';
+import { mountAnalyticsOSFoundation } from '../analytics-os/AnalyticsOSFoundation.js';
+import { mountAnalyticsShellVisibility } from '../analytics-os/ShellAnalyticsVisibility.js';
+import { mountPlatformOSFoundation } from '../platform-os/PlatformOSFoundation.js';
+import { mountPlatformOsShellVisibility } from '../platform-os/ShellPlatformOSVisibility.js';
+import { mountUIOSFoundation } from '../ui-os/UIOSFoundation.js';
+import { mountUiOsShellVisibility } from '../ui-os/ShellUIOSVisibility.js';
+import { mountWorkspaceOSFoundation } from '../workspace-os/WorkspaceOSFoundation.js';
+import { mountWorkspaceOsShellVisibility } from '../workspace-os/ShellWorkspaceOSVisibility.js';
+import { mountBillingOSFoundation } from '../billing-os/BillingOSFoundation.js';
+import { mountBillingOsShellVisibility } from '../billing-os/ShellBillingOSVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -39,7 +63,6 @@ export class AuthenticatedShell {
       componentBase:opts.componentBase || (window.location.pathname.includes('/pages/') ? '../' : './'),
     };
     this._booted = false;
-    this._suspenseBoundary = null;
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
@@ -48,14 +71,14 @@ export class AuthenticatedShell {
     this._booted = true;
 
     obs.init();
-    globalErrorBoundary.mount();
-    shellAnalytics.init();
     loadingLayer.mount();
     loadingLayer.start();
 
     try {
-      const { auth: authDetail } = await shellProviders.init();
+      await tenantProvider.init();
       await this._loadComponents();
+
+      const authDetail = await authProvider.init();
 
       if (!authDetail) {
         const page = this._getCurrentPage();
@@ -66,15 +89,48 @@ export class AuthenticatedShell {
       }
 
       moduleRegistry.init();
+      mountEventOrchestration();
+      mountBillingShellIntegration();
+      mountObservabilityFoundation();
+      mountIntegrationHub();
+      mountIntegrationShellVisibility();
+      mountWorkflowAutomationFoundation();
+      mountWorkflowShellVisibility();
+      mountDocumentIntelligenceFoundation();
+      mountKnowledgeShellVisibility();
+      mountFinancialIntelligenceFoundation();
+      mountFinancialShellVisibility();
+      mountLegalOperationsFoundation();
+      mountLegalOperationsShellVisibility();
+      mountClientExperienceFoundation();
+      mountClientExperienceShellVisibility();
+      mountAiOsFoundation();
+      mountAiOsShellVisibility();
+      mountComplianceOSFoundation();
+      mountComplianceShellVisibility();
+      mountAnalyticsOSFoundation();
+      mountAnalyticsShellVisibility();
+      mountPlatformOSFoundation();
+      mountPlatformOsShellVisibility();
+      mountUIOSFoundation();
+      mountUiOsShellVisibility();
+      mountWorkspaceOSFoundation();
+      mountWorkspaceOsShellVisibility();
+      mountBillingOSFoundation();
+      mountBillingOsShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
       globalSlideover.mount();
       notificationCenter.mount('.header-actions');
 
+      bus.on('modal.opened', () => obs._log('shell.modal_activity', { state: 'opened' }));
+      bus.on('modal.closed', () => obs._log('shell.modal_activity', { state: 'closed' }));
+      bus.on('slideover.opened', () => obs._log('shell.slideover_activity', { state: 'opened' }));
+      bus.on('slideover.closed', () => obs._log('shell.slideover_activity', { state: 'closed' }));
+
       // Sidebar collapse state
       this._initSidebar();
-      responsiveService.bind();
 
       // Shell navigation (intercept clicks, history)
       this._bindShellNavigation();
@@ -88,6 +144,10 @@ export class AuthenticatedShell {
 
       loadingLayer.finish();
       document.body.classList.add('app-loaded');
+      const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+      if (navEntry?.domContentLoadedEventEnd) {
+        observabilityFoundation.telemetryEngine.trackRenderTiming('shell.hydration', Math.round(navEntry.domContentLoadedEventEnd), { module: 'shell' });
+      }
       document.dispatchEvent(new CustomEvent('app:ready'));
       bus.emit('shell.ready', { authDetail });
 
@@ -140,17 +200,21 @@ export class AuthenticatedShell {
       if (isMobile()) {
         const isOpen = store.get('sidebar').open;
         store.setSidebarOpen(!isOpen);
+        obs._log('shell.mobile_navigation', { open: !isOpen });
       } else {
         store.toggleSidebarCollapsed();
         toggle.setAttribute('title', store.get('sidebar').collapsed ? 'Expandir menu' : 'Recolher menu');
+        obs._log('shell.sidebar_state', { collapsed: store.get('sidebar').collapsed });
       }
     });
 
     // Overlay click
     document.getElementById('sidebar-overlay')?.addEventListener('click', () => store.setSidebarOpen(false));
+    document.getElementById('sidebar-overlay')?.addEventListener('click', () => obs._log('shell.sidebar_overlay_close', {}));
 
     // ESC
     document.addEventListener('keydown', e => { if (e.key === 'Escape') store.setSidebarOpen(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') obs._log('shell.sidebar_escape_close', {}); });
 
     // Route change → close mobile drawer
     document.addEventListener('app:route-changed', () => { if (isMobile()) store.setSidebarOpen(false); });
@@ -197,21 +261,9 @@ export class AuthenticatedShell {
   }
 
   async _navigate(url, pushState = true) {
-    if (!routeGuards.canAccessRoute(url)) {
-      obs.authFailure('route_access_denied');
-      return;
-    }
-
-    const module = moduleRegistry.getByRoute(url);
-    if (module?.lazy) {
-      await moduleRegistry.preload(module.key);
-    }
-
     obs.routeStart(url);
-    store.setRouteLoading(true);
+    const navStart = performance.now();
     loadingLayer.start();
-    this._suspenseBoundary = this._suspenseBoundary || new SuspenseBoundary(document.querySelector('.portal-shell'));
-    this._suspenseBoundary.show();
 
     try {
       const fetchUrl = new URL(url, window.location.href);
@@ -265,8 +317,10 @@ export class AuthenticatedShell {
 
       store.setCurrentRoute(url);
       obs.routeEnd(url);
+      const routeMs = Math.round(performance.now() - navStart);
+      observabilityFoundation.telemetryEngine.trackRouteTiming(url, routeMs, { module: 'shell' });
+      observabilityFoundation.telemetryEngine.trackRenderTiming('shell.layout', routeMs, { module: 'shell' });
       loadingLayer.finish();
-      this._suspenseBoundary?.hide();
 
       if (store.get('auth')) {
         document.dispatchEvent(new CustomEvent('app:user-loaded', { detail: store.get('auth') }));
@@ -277,10 +331,7 @@ export class AuthenticatedShell {
     } catch (err) {
       obs.error('Navigation failed', { url, err: String(err) });
       loadingLayer.error();
-      this._suspenseBoundary?.hide();
       window.location.href = url;
-    } finally {
-      store.setRouteLoading(false);
     }
   }
 
