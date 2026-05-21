@@ -12,6 +12,7 @@
  *   slideovers: { stack: [] }
  *   notifications: { items: [], unreadCount: 0 }
  *   billing   : { subscription, usage, quotas, entitlements, cost, economics }
+ *   integrations: { providers, health, telemetry, queue_depth, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -43,6 +44,13 @@ const _initialState = () => ({
     entitlements: null,
     cost: null,
     economics: null,
+  },
+  integrations: {
+    providers: [],
+    health: { global: 'unknown', providers: {} },
+    telemetry: { total: 0, failures: 0, retries: 0, sla_violations: 0, degraded: 0, list: [] },
+    queue_depth: 0,
+    generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
   viewMode: 'cliente',
@@ -142,6 +150,18 @@ class ShellStore extends EventTarget {
       entitlements: snapshot.entitlements || null,
       cost: snapshot.cost || null,
       economics: snapshot.economics || null,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Integrations ───────────────────────────────────────────────────────────
+  setIntegrationSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('integrations', {
+      providers: Array.isArray(snapshot.providers) ? snapshot.providers : [],
+      health: snapshot.health || { global: 'unknown', providers: {} },
+      telemetry: snapshot.telemetry || { total: 0, failures: 0, retries: 0, sla_violations: 0, degraded: 0, list: [] },
+      queue_depth: Number(snapshot.queue_depth) || 0,
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }
