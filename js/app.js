@@ -1165,6 +1165,7 @@ async function loadUser() {
 
   const detail = { user, caso, isAdmin };
   appUserDetail = detail;
+  setRuntimeTenantConfig(detail);
 
   // Update UI immediately
   renderSidebarNavigation(isAdmin);
@@ -1597,7 +1598,9 @@ function renderMobileWorkspaceNav() {
     document.body.appendChild(dock);
   }
 
-  const preferred = ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
+  const preferred = !!appUserDetail?.isAdmin
+    ? ['painel', 'documentos', 'processos', 'analytics']
+    : ['meu-caso', 'meus-documentos', 'mensagens', 'ajuda'];
   const modules = getShellModules().filter(module => preferred.includes(module.key));
   dock.innerHTML = modules.map(module => `
     <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">
