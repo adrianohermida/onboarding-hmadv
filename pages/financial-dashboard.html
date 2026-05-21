@@ -725,6 +725,17 @@ import {
   DESPESAS_VARIAVEIS_KEYS,
 } from '../modules/financial/calculator.js';
 
+const REQUIRED_SHELL_VERSION = '20260521f';
+
+if (window.history?.state?.shell && window.__shellVersion !== REQUIRED_SHELL_VERSION) {
+  const hardReloadUrl = new URL(window.location.href);
+  if (hardReloadUrl.searchParams.get('_shellhard') !== REQUIRED_SHELL_VERSION) {
+    hardReloadUrl.searchParams.set('_shellhard', REQUIRED_SHELL_VERSION);
+    hardReloadUrl.searchParams.set('_t', String(Date.now()));
+    window.location.replace(hardReloadUrl.toString());
+  }
+}
+
 // ── State ──────────────────────────────────────────────────────────────
 let engine       = new DebtEngine();
 let caso         = null;
