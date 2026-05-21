@@ -5,6 +5,7 @@ import { toFriendlyMessage } from './error-messages.js';
 const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_RETRIES = 2;
 const DEFAULT_BACKOFF_MS = 350;
+const TOKEN_REFRESH_SKEW_SECONDS = 90;
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -22,6 +23,39 @@ function parseErrorPayload(payload, status) {
   return payload.message || payload.error || `HTTP ${status}`;
 }
 
+function isSessionExpiring(session) {
+  const expiresAt = Number(session?.expires_at || 0);
+  if (!expiresAt) return false;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return expiresAt - nowSeconds <= TOKEN_REFRESH_SKEW_SECONDS;
+}
+
+async function getFreshAccessToken(path) {
+  const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+  if (sessErr || !session?.access_token) {
+    const err = new Error('Sessao expirada');
+    emitServiceTelemetry({ type: 'edge', path, stage: 'session', message: err.message });
+    throw err;
+  }
+
+  if (!isSessionExpiring(session)) return session.access_token;
+
+  const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+  const freshSession = refreshed?.session || session;
+  if (refreshErr || !freshSession?.access_token) {
+    const err = new Error('Sessao expirada');
+    emitServiceTelemetry({
+      type: 'edge',
+      path,
+      stage: 'session-refresh',
+      message: refreshErr?.message || err.message,
+    });
+    throw err;
+  }
+
+  return freshSession.access_token;
+}
+
 export { toFriendlyMessage };
 
 export async function invokeEdgeFunction(path, {
@@ -32,13 +66,7 @@ export async function invokeEdgeFunction(path, {
   backoffMs = DEFAULT_BACKOFF_MS,
   headers = {},
 } = {}) {
-  const { data: { session }, error: sessErr } = await supabase.auth.getSession();
-  if (sessErr || !session) {
-    const err = new Error('Sessao expirada');
-    emitServiceTelemetry({ type: 'edge', path, stage: 'session', message: err.message });
-    throw err;
-  }
-
+  let accessToken = await getFreshAccessToken(path);
   let lastError = null;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -49,7 +77,7 @@ export async function invokeEdgeFunction(path, {
       const response = await fetch(`${FUNCTIONS_URL}/${path}`, {
         method,
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           ...headers,
         },
@@ -65,6 +93,18 @@ export async function invokeEdgeFunction(path, {
         const message = parseErrorPayload(payload, response.status);
         const err = new Error(message);
         err.status = response.status;
+
+        if (response.status === 401 && attempt < retries) {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session?.access_token && refreshed.session.access_token !== accessToken) {
+              accessToken = refreshed.session.access_token;
+              lastError = err;
+              await delay(backoffMs * (attempt + 1));
+              continue;
+            }
+          } catch (_) {}
+        }
 
         // Retry only transient statuses
         if ((response.status === 408 || response.status === 429 || response.status >= 500) && attempt < retries) {

@@ -4,6 +4,7 @@ import { installRuntimeIsolation }   from './shell-runtime-isolation.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';
+import { bus }                       from '../modules/events/EventBus.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
@@ -15,14 +16,16 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521j';
+const SHELL_VERSION = '20260521k';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
 const SHELL_SERVICE_ERRORS_MAX = 80;
 const FRESHCHAT_SCRIPT_ID = 'freshchat-private-widget';
 const FRESHCHAT_SCRIPT_SRC = 'https://eu.fw-cdn.com/10713913/375987.js';
-const FRESHCHAT_WIDGET_ID = '2bb07572-34a4-4ea6-9708-4ec2ed23589d';
+const FRESHCHAT_WIDGET_ID = 'ffefb5e9-3f8f-457f-8036-1b33e057e3f2';
+const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
+const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 
 window.__shellVersion = SHELL_VERSION;
 
@@ -35,6 +38,7 @@ const portalViewModeSubscribers = new Set();
 let shellRouteFailure = null;
 let serviceErrorBannerListenerBound = false;
 let unmountShellModeSelector = null;
+let freshchatWatchdogTimer = null;
 
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
@@ -762,6 +766,7 @@ function getFreshchatIdentity(user, caso) {
       cf_portal_caso_id: caso?.id || null,
       cf_cpf: caso?.cpf || null,
       cf_onboarding_done: !!caso?.onboarding_done,
+      cf_portal_role: user?.app_metadata?.role || user?.role || 'authenticated',
     },
   };
 }
@@ -802,19 +807,61 @@ function waitAndApplyFreshchatIdentity(user, caso, attempt = 0) {
   setTimeout(() => waitAndApplyFreshchatIdentity(user, caso, attempt + 1), 500);
 }
 
+function ensureFreshchatVisible() {
+  if (!document.getElementById(FRESHCHAT_VISIBLE_STYLE_ID)) {
+    const style = document.createElement('style');
+    style.id = FRESHCHAT_VISIBLE_STYLE_ID;
+    style.textContent = `
+      iframe[src*="fw-cdn.com"],
+      iframe[src*="freshchat"],
+      iframe[src*="freshworks"],
+      #fc_frame,
+      .fc-widget-normal,
+      .fc-widget-small,
+      .fc-widget-open {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 2147483000 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  try {
+    if (window.fcWidget && typeof window.fcWidget.show === 'function') window.fcWidget.show();
+  } catch (_) {}
+}
+
+function startFreshchatWatchdog(user, caso) {
+  if (freshchatWatchdogTimer) clearInterval(freshchatWatchdogTimer);
+  freshchatWatchdogTimer = setInterval(() => {
+    if (PUBLIC_PAGES.includes(getCurrentPage())) return;
+    ensureFreshchatVisible();
+    waitAndApplyFreshchatIdentity(user, caso, 26);
+  }, FRESHCHAT_WATCHDOG_INTERVAL_MS);
+}
+
 function removeFreshchatWidget() {
+  if (freshchatWatchdogTimer) {
+    clearInterval(freshchatWatchdogTimer);
+    freshchatWatchdogTimer = null;
+  }
   document.getElementById(FRESHCHAT_SCRIPT_ID)?.remove();
+  document.getElementById(FRESHCHAT_VISIBLE_STYLE_ID)?.remove();
   document.querySelectorAll('iframe[src*="fw-cdn.com"], iframe[src*="freshchat"], iframe[src*="freshworks"]').forEach(el => el.remove());
   try {
     if (window.fcWidget && typeof window.fcWidget.destroy === 'function') window.fcWidget.destroy();
   } catch (_) {}
 }
 
-function mountClientFreshchatWidget({ user, caso, isAdmin } = {}) {
-  if (!user || isAdmin || PUBLIC_PAGES.includes(getCurrentPage())) {
+function mountClientFreshchatWidget({ user, caso } = {}) {
+  if (!user || PUBLIC_PAGES.includes(getCurrentPage())) {
     removeFreshchatWidget();
     return;
   }
+
+  ensureFreshchatVisible();
 
   if (!document.getElementById(FRESHCHAT_SCRIPT_ID)) {
     const script = document.createElement('script');
@@ -823,11 +870,15 @@ function mountClientFreshchatWidget({ user, caso, isAdmin } = {}) {
     script.async = true;
     script.setAttribute('chat', 'true');
     script.setAttribute('widgetId', FRESHCHAT_WIDGET_ID);
-    script.onload = () => waitAndApplyFreshchatIdentity(user, caso);
+    script.onload = () => {
+      ensureFreshchatVisible();
+      waitAndApplyFreshchatIdentity(user, caso);
+    };
     document.body.appendChild(script);
   }
 
   waitAndApplyFreshchatIdentity(user, caso);
+  startFreshchatWatchdog(user, caso);
 }
 
 function setupSidebarMobile() {
@@ -1094,6 +1145,9 @@ async function init() {
 
   window.showToast = showToast;
   document.dispatchEvent(new CustomEvent('app:ready'));
+
+  // Notify shell subsystems (NotificationCenter, Observability, etc.)
+  bus.emit('shell.ready', { authDetail: appUserDetail });
 
   // Reveal only when shell, sidebar and page content are valid.
   revealAppWhenReady();
