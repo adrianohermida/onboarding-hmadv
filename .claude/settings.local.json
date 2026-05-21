@@ -21,7 +21,13 @@
       "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_tables",
       "Bash(xargs git log --oneline -1)",
       "Bash(git rebase *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(gh api *)",
+      "Bash(ls events/logs/)",
+      "Bash(ls observability/logs/)",
+      "Bash(ls integrations/logs/)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)"
     ]
   }
 }
