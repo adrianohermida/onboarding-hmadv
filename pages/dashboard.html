@@ -282,6 +282,11 @@ let isAdminUser = false;
 const DEMO_EMAIL = 'suporte@hermidamaia.adv.br';
 let demoUserId   = null;   // populated once admin clients are loaded
 const byId = (id) => document.getElementById(id);
+const setText = (id, value) => {
+  const el = byId(id);
+  if (el) el.textContent = value;
+  return el;
+};
 
 /* ── Listen for user identity ───────────────────────── */
 document.addEventListener('app:user-loaded', async e => {
@@ -420,6 +425,7 @@ window.switchView = async function(userId, name, email) {
 
 /* ── Client data (own or specific userId for admin) ─── */
 async function loadClientData(userId) {
+  if (!byId('client-view') && !byId('admin-overview')) return;
 
   // Admin visualizando cliente específico: usar queries diretas
   if (userId) {
@@ -455,32 +461,32 @@ async function loadClientData(userId) {
   if (casoFull) {
     const credoresCNJ = casoFull.credores_cnj || [];
     const totalCNJ    = credoresCNJ.reduce((s, c) => s + (Number(c.valorDeclarado) || 0), 0);
-    if (totalCNJ)           document.getElementById('kpi-divida').textContent    = formatCurrency(totalCNJ);
-    if (credoresCNJ.length) document.getElementById('kpi-credores').textContent  = credoresCNJ.length;
-    document.getElementById('kpi-fase').textContent = FASE_LABEL[casoFull.fase] || casoFull.fase || 'Cadastro';
+    if (totalCNJ) setText('kpi-divida', formatCurrency(totalCNJ));
+    if (credoresCNJ.length) setText('kpi-credores', credoresCNJ.length);
+    setText('kpi-fase', FASE_LABEL[casoFull.fase] || casoFull.fase || 'Cadastro');
     updateTrackerState(casoFull.fase === 'analise' ? 'analise' : casoFull.fase === 'negociacao' ? 'proposta' : 'cadastro');
-    document.getElementById('footer-case-id').textContent = 'ID: ' + casoFull.id.slice(0, 8).toUpperCase();
+    setText('footer-case-id', 'ID: ' + casoFull.id.slice(0, 8).toUpperCase());
   }
 
   // Docs: preferir dados do RPC, fallback para lista local
   const aprovados  = rpcData ? Number(rpcData.docs_aprovados) : docs.filter(d => d.status === 'aprovado').length;
   const pendentes  = rpcData ? Number(rpcData.docs_pendentes) : docs.filter(d => d.status === 'pendente').length;
   const totalTypes = DocumentService.TYPES.length;
-  document.getElementById('kpi-docs').textContent      = aprovados + ' / ' + totalTypes;
-  document.getElementById('sc-docs-ok').textContent    = aprovados;
-  document.getElementById('sc-docs-total').textContent = totalTypes;
+  setText('kpi-docs', aprovados + ' / ' + totalTypes);
+  setText('sc-docs-ok', aprovados);
+  setText('sc-docs-total', totalTypes);
 
   const pendTotal = pendentes + (casoFull && !casoFull.onboarding_done ? 1 : 0);
-  document.getElementById('sc-pendencias').textContent = pendTotal || '—';
+  setText('sc-pendencias', pendTotal || '—');
 
   // Próxima ação
   const proxima = rpcData?.proxima_acao || casoFull?.proxima_acao;
   if (proxima) {
-    document.getElementById('sc-next-action').textContent = proxima;
-    document.getElementById('sc-next-hint').textContent   = '';
+    setText('sc-next-action', proxima);
+    setText('sc-next-hint', '');
   } else if (casoFull && !casoFull.onboarding_done) {
-    document.getElementById('sc-next-action').textContent = 'Completar cadastro CNJ';
-    document.getElementById('sc-next-hint').textContent   = 'Acesse a aba Formulário';
+    setText('sc-next-action', 'Completar cadastro CNJ');
+    setText('sc-next-hint', 'Acesse a aba Formulário');
   }
 
   // CNJ step bar
@@ -502,20 +508,21 @@ async function loadClientData(userId) {
 
 /* ── Render KPIs para visão admin de cliente ────────── */
 function renderClientKPIs({ caso, dividas, docs }) {
+  if (!byId('client-view') && !byId('admin-overview')) return;
   if (!caso) return;
   const totalDividas = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
-  if (totalDividas)   document.getElementById('kpi-divida').textContent   = formatCurrency(totalDividas);
-  if (dividas.length) document.getElementById('kpi-credores').textContent = dividas.length;
-  document.getElementById('kpi-fase').textContent = FASE_LABEL[caso.fase] || caso.fase;
+  if (totalDividas) setText('kpi-divida', formatCurrency(totalDividas));
+  if (dividas.length) setText('kpi-credores', dividas.length);
+  setText('kpi-fase', FASE_LABEL[caso.fase] || caso.fase);
   updateTrackerState(caso.fase === 'analise' ? 'analise' : caso.fase === 'negociacao' ? 'proposta' : 'cadastro');
   const aprovados = docs.filter(d => d.status === 'aprovado').length;
   const total     = DocumentService.TYPES.length;
-  document.getElementById('kpi-docs').textContent      = aprovados + ' / ' + total;
-  document.getElementById('sc-docs-ok').textContent    = aprovados;
-  document.getElementById('sc-docs-total').textContent = total;
+  setText('kpi-docs', aprovados + ' / ' + total);
+  setText('sc-docs-ok', aprovados);
+  setText('sc-docs-total', total);
   const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
-  document.getElementById('sc-pendencias').textContent = pendTotal || '—';
-  if (caso) document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
+  setText('sc-pendencias', pendTotal || '—');
+  if (caso) setText('footer-case-id', 'ID: ' + caso.id.slice(0, 8).toUpperCase());
   buildActivityFeedLegacy(caso, dividas, docs);
 }
 
@@ -577,8 +584,10 @@ const EVENTO_ICON = {
 };
 
 function buildTimelineFeed(timeline) {
-  const list = document.getElementById('activity-list');
-  document.getElementById('activity-count').textContent = timeline.length + ' evento' + (timeline.length !== 1 ? 's' : '');
+  const list = byId('activity-list');
+  const countEl = byId('activity-count');
+  if (!list || !countEl) return;
+  countEl.textContent = timeline.length + ' evento' + (timeline.length !== 1 ? 's' : '');
   list.innerHTML = timeline.map(ev => {
     const meta  = EVENTO_ICON[ev.tipo] || { icon: 'EV', type: 'muted' };
     const date  = ev.created_at ? new Date(ev.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
@@ -600,9 +609,11 @@ function buildActivityFeedLegacy(caso, dividas, docs) {
   dividas.slice(-3).forEach(d  => items.push({ icon: 'DIV', label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor),          type: 'warn' }));
   docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ icon: 'OK', label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
 
-  const list = document.getElementById('activity-list');
+  const list = byId('activity-list');
+  const countEl = byId('activity-count');
+  if (!list || !countEl) return;
   if (items.length === 0) return;
-  document.getElementById('activity-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
   list.innerHTML = items.map(it => `
     <div class="activity-item">
       <div class="activity-dot dot-${it.type}">${it.icon || ''}</div>
