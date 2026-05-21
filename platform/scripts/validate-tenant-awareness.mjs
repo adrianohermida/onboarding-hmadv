@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -24,3 +25,6 @@ for (const relativePath of requiredFiles) {
 }
 
 console.log('[validate-tenant-awareness] OK');
+=======
+console.log('validate-tenant-awareness: tenant awareness checks are deferred to runtime modules');
+>>>>>>> b0f6a91 (feat(platform): add scripts for bootstrap, validation, and diagnostics; update styles and themes)
