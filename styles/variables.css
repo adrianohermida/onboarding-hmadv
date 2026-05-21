@@ -1,52 +1,55 @@
+@import '../design-system/tokens/core.css';
+@import '../design-system/themes/light.css';
+
 :root {
-  /* Brand Colors */
-  --navy:    #1A3A5C;
-  --blue:    #2E6DA4;
+  /* Legacy aliases backed by design-system tokens */
+  --navy:    var(--ds-color-brand-900);
+  --blue:    var(--ds-color-brand-700);
   --ice:     #EBF3FC;
 
   /* Semantic Colors */
-  --red:     #C0392B;
+  --red:     var(--ds-color-danger-500);
   --red-bg:  #fef2f2;
   --red-lt:  #ffebee;
 
-  --gold:    #B7860B;
+  --gold:    var(--ds-color-accent-500);
   --gold-bg: #fef9e7;
 
-  --ok:      #1a7a4a;
+  --ok:      var(--ds-color-ok-500);
   --ok-bg:   #e8f5ee;
 
-  --warn:    #b45309;
+  --warn:    var(--ds-color-warn-500);
   --warn-bg: #fef3c7;
 
   /* Text */
-  --ink:    #0f1923;
-  --ink2:   #3d4f63;
-  --muted:  #94a3b8;
+  --ink:    var(--ds-color-ink-900);
+  --ink2:   var(--ds-color-ink-700);
+  --muted:  var(--ds-color-ink-500);
 
   /* Surfaces */
-  --line:   #e2e8f0;
+  --line:   var(--ds-color-line-200);
   --line2:  #f0f4f8;
-  --bg:     #edf1f7;
-  --white:  #ffffff;
+  --bg:     var(--theme-bg);
+  --white:  var(--theme-surface);
 
   /* Brand — Hermida Maia */
-  --brand-gold:    #F5A623;
+  --brand-gold:    var(--ds-color-accent-500);
   --brand-gold-bg: rgba(245,166,35,.12);
   --brand-gold-lt: rgba(245,166,35,.22);
 
   /* Typography */
-  --serif: 'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
-  --sans:  'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
+  --serif: var(--ds-font-family-serif);
+  --sans:  var(--ds-font-family-sans);
 
   /* Radii */
-  --r:    12px;
-  --r-sm:  8px;
-  --r-lg: 16px;
+  --r:    var(--ds-radius-md);
+  --r-sm: var(--ds-radius-sm);
+  --r-lg: var(--ds-radius-lg);
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(15,25,35,.06);
-  --shadow-md: 0 4px 16px rgba(15,25,35,.10);
-  --shadow-lg: 0 8px 32px rgba(15,25,35,.18);
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-md: var(--ds-shadow-md);
+  --shadow-lg: var(--ds-shadow-lg);
 
   /* Layout */
   --sidebar-w:  260px;

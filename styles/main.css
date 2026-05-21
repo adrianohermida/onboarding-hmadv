@@ -1,4 +1,8 @@
 @import './variables.css';
+@import '../design-system/typography/typography.css';
+@import '../design-system/components/base.css';
+@import '../design-system/animations/animation-system.css';
+@import '../design-system/responsive/mobile-first.css';
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -11,6 +15,12 @@ body {
   color: var(--ink);
   background: var(--bg);
   min-height: 100vh;
+}
+
+body.theme-light {
+  background:
+    radial-gradient(circle at top right, rgba(79,142,200,.12), transparent 24%),
+    linear-gradient(180deg, var(--theme-surface-soft), var(--theme-bg));
 }
 
 h1, h2, h3, h4 { font-family: var(--sans); font-weight: 700; color: var(--navy); }
