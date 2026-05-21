@@ -60,7 +60,7 @@
         </div>
 
         <div id="dividas-empty" class="empty-state">
-          <div class="empty-state-icon">💳</div>
+          <div class="empty-state-icon">DIV</div>
           <h3>Nenhuma dívida cadastrada</h3>
           <p>Adicione suas dívidas para que a equipe possa analisar seu caso.</p>
           <button class="btn btn-primary" onclick="showAddModal()">+ Adicionar dívida</button>
@@ -215,7 +215,7 @@ function renderTable() {
       <td><span class="chip chip-warn">${d.situacao}</span></td>
       <td>${d.negativado ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Não</span>'}</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="removeDivida('${d.id}')" title="Remover">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeDivida('${d.id}')" title="Remover">Remover</button>
       </td>
     </tr>
   `).join('');

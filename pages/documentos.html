@@ -451,8 +451,8 @@
             <span id="doc-admin-context" style="font-size:13px;opacity:.8;">Modo administrador</span>
             <div style="flex:1;"></div>
             <div class="view-switcher" id="view-switcher">
-              <button class="vm-btn active" data-mode="admin"   onclick="setViewMode('admin')">👤 Admin</button>
-              <button class="vm-btn"        data-mode="cliente" onclick="setViewMode('cliente')">👥 Cliente</button>
+              <button class="vm-btn active" data-mode="admin"   onclick="setViewMode('admin')">Admin</button>
+              <button class="vm-btn"        data-mode="cliente" onclick="setViewMode('cliente')">Cliente</button>
             </div>
             <button class="btn-ghost-sm" id="btn-back-client" onclick="window.location.href='dashboard.html'" style="display:none;">← Voltar</button>
           </div>
@@ -461,7 +461,7 @@
           <div class="doc-hero">
             <div class="doc-hero-inner">
               <div>
-                <div class="doc-hero-label">📋 Central de Documentos</div>
+                <div class="doc-hero-label">Central de Documentos</div>
                 <div class="doc-hero-title" id="hero-title">Gestão Documental do Caso</div>
                 <div class="doc-hero-sub">Envie, acompanhe e gerencie todos os documentos do seu processo de recuperação financeira.</div>
               </div>
@@ -533,7 +533,7 @@
           <!-- Drop Zone (client mode) -->
           <div id="drop-zone-global" class="drop-zone" style="display:none;"
                onclick="document.getElementById('drop-zone-input').click()">
-            <div class="drop-zone-icon">📤</div>
+            <div class="drop-zone-icon">UP</div>
             <div class="drop-zone-title">Arraste um arquivo aqui ou clique para selecionar</div>
             <div class="drop-zone-sub">PDF, JPG, PNG, WebP — máximo 10 MB</div>
             <div class="drop-zone-hint" id="drop-zone-tipo-hint">Selecione abaixo qual documento está enviando</div>
@@ -557,7 +557,7 @@
         <div class="drawer-title" id="drawer-title">Documento</div>
         <div style="font-size:11px;color:var(--muted);" id="drawer-subtitle">—</div>
       </div>
-      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+      <button class="drawer-close" onclick="closeDrawer()">X</button>
     </div>
     <div class="drawer-tabs" id="drawer-tabs">
       <div class="drawer-tab active" data-tab="view" onclick="switchDrawerTab('view')">Visualizar</div>
@@ -568,12 +568,12 @@
     <div class="drawer-panel active" data-tab-panel="view" id="panel-view">
       <div class="pdf-viewer-toolbar" id="viewer-toolbar">
         <span id="viewer-filename" style="font-size:12px;font-weight:700;color:var(--ink);flex:1;"></span>
-        <button class="pdf-toolbar-btn" onclick="openFullscreen()">⛶ Tela cheia</button>
-        <button class="pdf-toolbar-btn" id="btn-download-doc" onclick="downloadDoc()">⬇ Baixar</button>
+        <button class="pdf-toolbar-btn" onclick="openFullscreen()">Tela cheia</button>
+        <button class="pdf-toolbar-btn" id="btn-download-doc" onclick="downloadDoc()">Baixar</button>
       </div>
       <iframe id="pdf-frame" class="pdf-viewer-frame" src="about:blank"></iframe>
       <div id="no-preview" style="display:none;text-align:center;padding:40px;color:var(--muted);">
-        <div style="font-size:40px;margin-bottom:12px;">📄</div>
+        <div style="font-size:20px;margin-bottom:12px;">DOC</div>
         <div>Arquivo não disponível para pré-visualização.</div>
         <button class="btn-primary-sm" style="margin-top:12px;" onclick="downloadDoc()">Baixar arquivo</button>
       </div>
@@ -588,11 +588,11 @@
         <div style="margin-bottom:16px;">
           <div class="field-label">Ação</div>
           <div class="review-workflow-btns">
-            <button class="rwf-btn success" data-ws="aprovado" onclick="selectWorkflow('aprovado')">✅ Aprovar</button>
-            <button class="rwf-btn danger"  data-ws="rejeitado" onclick="selectWorkflow('rejeitado')">❌ Rejeitar</button>
-            <button class="rwf-btn warn"    data-ws="pendente_correcao" onclick="selectWorkflow('pendente_correcao')">✏️ Pedir correção</button>
-            <button class="rwf-btn blue"    data-ws="em_analise" onclick="selectWorkflow('em_analise')">🔍 Em análise</button>
-            <button class="rwf-btn purple"  data-ws="aguardando_assinatura" onclick="selectWorkflow('aguardando_assinatura')">✍️ Solicitar assinatura</button>
+            <button class="rwf-btn success" data-ws="aprovado" onclick="selectWorkflow('aprovado')">Aprovar</button>
+            <button class="rwf-btn danger"  data-ws="rejeitado" onclick="selectWorkflow('rejeitado')">Rejeitar</button>
+            <button class="rwf-btn warn"    data-ws="pendente_correcao" onclick="selectWorkflow('pendente_correcao')">Pedir correção</button>
+            <button class="rwf-btn blue"    data-ws="em_analise" onclick="selectWorkflow('em_analise')">Em análise</button>
+            <button class="rwf-btn purple"  data-ws="aguardando_assinatura" onclick="selectWorkflow('aguardando_assinatura')">Solicitar assinatura</button>
           </div>
         </div>
         <div class="field-mb">
@@ -801,16 +801,16 @@ function renderSignaturePending() {
   sec.style.display = 'block';
   cards.innerHTML = sigDocs.map(d => `
     <div class="sig-card">
-      <div class="sig-card-icon">✍️</div>
+      <div class="sig-card-icon">SIG</div>
       <div class="sig-card-body">
         <div class="sig-card-title">${esc(d.label)}</div>
         <div class="sig-card-meta">${d.autentique_id ? `ID Autentique: ${d.autentique_id}` : 'Aguardando link de assinatura'}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${d.autentique_id
-          ? `<a href="https://app.autentique.com.br/documento/assinar/${d.autentique_id}" target="_blank" class="doc-act-btn purple">✍️ Assinar agora</a>`
+          ? `<a href="https://app.autentique.com.br/documento/assinar/${d.autentique_id}" target="_blank" class="doc-act-btn purple">Assinar agora</a>`
           : ''}
-        <button class="doc-act-btn" onclick="openDrawer('${d.id}')">🔍 Ver detalhes</button>
+        <button class="doc-act-btn" onclick="openDrawer('${d.id}')">Ver detalhes</button>
       </div>
     </div>
   `).join('');
@@ -1055,17 +1055,17 @@ function renderTimeline(events, doc) {
     events = [{ evento_tipo: doc.workflow_status, descricao: `Status atual: ${ws?.label || '—'}`, created_at: doc.updated_at }];
   }
   const TL_ICONS = {
-    'document.enviado':      '📤',
-    'document.aprovado':     '✅',
-    'document.rejeitado':    '❌',
-    'document.em_analise':   '🔍',
-    'document.arquivado':    '📦',
-    'signature.requested':   '✍️',
-    'signature.completed':   '🔏',
+    'document.enviado':      'UP',
+    'document.aprovado':     'OK',
+    'document.rejeitado':    'NO',
+    'document.em_analise':   'AN',
+    'document.arquivado':    'ARQ',
+    'signature.requested':   'SIG',
+    'signature.completed':   'DONE',
   };
   el.innerHTML = events.map(e => `
     <div class="timeline-item">
-      <div class="tl-dot">${TL_ICONS[e.evento_tipo] || '📋'}</div>
+      <div class="tl-dot">${TL_ICONS[e.evento_tipo] || 'LOG'}</div>
       <div class="tl-body">
         <div class="tl-event">${esc(e.descricao)}</div>
         <div class="tl-meta">${e.author_name ? `${esc(e.author_name)} · ` : ''}${timeAgo(e.created_at)}</div>
@@ -1252,7 +1252,7 @@ function handleError(err) {
   if (!loadingEl) return;
   loadingEl.innerHTML =
     `<div style="text-align:center;color:var(--red);">
-      <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:20px;margin-bottom:8px;">ERRO</div>
       <div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div>
     </div>`;
 }

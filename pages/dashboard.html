@@ -160,7 +160,7 @@
 
         <!-- Freshdesk ticket card -->
         <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
-          <div style="font-size:20px">🎫</div>
+          <div style="font-size:12px;font-weight:700;color:var(--blue)">FD</div>
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--navy)">Chamado Freshdesk aberto</div>
             <div style="font-size:12px;color:var(--muted)" id="fd-ticket-info">—</div>
@@ -243,7 +243,7 @@
           </div>
           <div class="activity-list" id="activity-list">
             <div class="empty-state">
-              <div class="empty-state-icon">📋</div>
+              <div class="empty-state-icon">CNJ</div>
               <h3>Nenhuma atividade ainda</h3>
               <p>As atualizações do seu caso aparecerão aqui.</p>
               <a href="onboarding.html" class="btn btn-primary btn-sm">Iniciar cadastro</a>
@@ -531,26 +531,26 @@ function renderFDTicketCard(ticketId) {
 
 /* ── Timeline real (portal_cnj_timeline) ────────────── */
 const EVENTO_ICON = {
-  formulario_enviado:   { icon: '📋', type: 'ok'   },
-  ticket_criado:        { icon: '🎫', type: 'ok'   },
-  ticket_atualizado:    { icon: '🔄', type: 'muted' },
-  documento_aprovado:   { icon: '✅', type: 'ok'   },
-  documento_rejeitado:  { icon: '❌', type: 'red'  },
-  documento_enviado:    { icon: '📎', type: 'warn' },
-  fase_alterada:        { icon: '⚡', type: 'blue' },
-  step_concluido:       { icon: '✔',  type: 'ok'   },
-  notificacao_enviada:  { icon: '📧', type: 'muted' },
-  comentario_admin:     { icon: '💬', type: 'blue' },
-  conciliacao_agendada: { icon: '📅', type: 'ok'   },
-  acordo_formalizado:   { icon: '🤝', type: 'ok'   },
-  encerrado:            { icon: '🏁', type: 'muted' },
+  formulario_enviado:   { icon: 'CNJ', type: 'ok'   },
+  ticket_criado:        { icon: 'FD', type: 'ok'   },
+  ticket_atualizado:    { icon: 'AT', type: 'muted' },
+  documento_aprovado:   { icon: 'OK', type: 'ok'   },
+  documento_rejeitado:  { icon: 'NO', type: 'red'  },
+  documento_enviado:    { icon: 'UP', type: 'warn' },
+  fase_alterada:        { icon: 'FS', type: 'blue' },
+  step_concluido:       { icon: 'ET',  type: 'ok'   },
+  notificacao_enviada:  { icon: 'NT', type: 'muted' },
+  comentario_admin:     { icon: 'AD', type: 'blue' },
+  conciliacao_agendada: { icon: 'AG', type: 'ok'   },
+  acordo_formalizado:   { icon: 'AC', type: 'ok'   },
+  encerrado:            { icon: 'END', type: 'muted' },
 };
 
 function buildTimelineFeed(timeline) {
   const list = document.getElementById('activity-list');
   document.getElementById('activity-count').textContent = timeline.length + ' evento' + (timeline.length !== 1 ? 's' : '');
   list.innerHTML = timeline.map(ev => {
-    const meta  = EVENTO_ICON[ev.tipo] || { icon: '🔵', type: 'muted' };
+    const meta  = EVENTO_ICON[ev.tipo] || { icon: 'EV', type: 'muted' };
     const date  = ev.created_at ? new Date(ev.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
     return `
       <div class="activity-item">
@@ -566,9 +566,9 @@ function buildTimelineFeed(timeline) {
 /* ── Fallback feed (quando timeline vazia) ──────────── */
 function buildActivityFeedLegacy(caso, dividas, docs) {
   const items = [];
-  if (caso?.onboarding_done) items.push({ icon: '📋', label: 'Cadastro CNJ concluído',   hint: formatDate(caso.updated_at), type: 'ok' });
-  dividas.slice(-3).forEach(d  => items.push({ icon: '💳', label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor),          type: 'warn' }));
-  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ icon: '✅', label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
+  if (caso?.onboarding_done) items.push({ icon: 'CNJ', label: 'Cadastro CNJ concluído',   hint: formatDate(caso.updated_at), type: 'ok' });
+  dividas.slice(-3).forEach(d  => items.push({ icon: 'DIV', label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor),          type: 'warn' }));
+  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ icon: 'OK', label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
 
   const list = document.getElementById('activity-list');
   if (items.length === 0) return;
