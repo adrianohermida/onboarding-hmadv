@@ -1113,14 +1113,14 @@ function setupSidebarMobile() {
     sidebar.classList.remove('sidebar-open');
     overlay.classList.remove('visible');
     document.body.style.overflow = '';
-    toggle.setAttribute('aria-expanded', 'false');
+    renderSidebarToggleButton({ mobile: isMobile(), expanded: false });
   };
 
   const openSidebar = () => {
     sidebar.classList.add('sidebar-open');
     overlay.classList.add('visible');
     document.body.style.overflow = 'hidden';
-    toggle.setAttribute('aria-expanded', 'true');
+    renderSidebarToggleButton({ mobile: isMobile(), expanded: true });
   };
 
   const setDesktopCollapsed = (collapsed) => {
@@ -1128,8 +1128,7 @@ function setupSidebarMobile() {
     try {
       localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
     } catch (_) {}
-    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    toggle.setAttribute('title', collapsed ? 'Expandir menu' : 'Recolher menu');
+    renderSidebarToggleButton({ mobile: false, expanded: !collapsed });
   };
 
   const getDesktopCollapsed = () => {
@@ -1144,7 +1143,7 @@ function setupSidebarMobile() {
     if (isMobile()) {
       closeSidebar();
       shell.classList.remove('sidebar-collapsed');
-      toggle.setAttribute('title', 'Abrir menu');
+      renderSidebarToggleButton({ mobile: true, expanded: false });
       return;
     }
     closeSidebar();
