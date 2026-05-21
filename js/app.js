@@ -9,6 +9,7 @@ const PUBLIC_PAGES = ['login', 'auth-callback'];
 const SHELL_SCRIPT_ATTR = 'data-shell-page-script';
 const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
+const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 
 let appUserDetail = null;
 let shellNavInFlight = false;
@@ -26,16 +27,52 @@ const nativeSetInterval = window.setInterval.bind(window);
 const nativeClearInterval = window.clearInterval.bind(window);
 const capturedModuleTimers = [];
 
+function inferModuleFromStack(stack = '') {
+  if (!stack) return 'unknown';
+  const normalized = String(stack).replaceAll('\\', '/');
+  const pageMatch = normalized.match(/pages\/[\w-]+\.html/i);
+  if (pageMatch?.[0]) return pageMatch[0].toLowerCase();
+  const jsMatch = normalized.match(/js\/[\w-]+\.js/i);
+  if (jsMatch?.[0]) return jsMatch[0].toLowerCase();
+  return 'unknown';
+}
+
+function reportSuppressedCallback(kind, error, source = 'listener') {
+  const message = error?.message || String(error || 'unknown error');
+  const stack = error?.stack || '';
+  const module = inferModuleFromStack(stack);
+  const detail = {
+    kind,
+    source,
+    message,
+    module,
+    ts: Date.now(),
+  };
+
+  try {
+    if (!Array.isArray(window.__shellSuppressedCallbacks)) {
+      window.__shellSuppressedCallbacks = [];
+    }
+    window.__shellSuppressedCallbacks.push(detail);
+    if (window.__shellSuppressedCallbacks.length > 20) {
+      window.__shellSuppressedCallbacks.shift();
+    }
+    window.dispatchEvent(new CustomEvent(SHELL_SUPPRESSED_EVENT, { detail }));
+  } catch (_) {}
+}
+
 function runSafely(kind, fn, ctx, args) {
   try {
     const result = fn.apply(ctx, args);
     if (result && typeof result.then === 'function' && typeof result.catch === 'function') {
       result.catch(error => {
+        reportSuppressedCallback(kind, error, 'async');
         console.warn(`[shell:${kind}] async listener/timer error suppressed`, error);
       });
     }
     return result;
   } catch (error) {
+    reportSuppressedCallback(kind, error, 'sync');
     console.warn(`[shell:${kind}] listener/timer error suppressed`, error);
     return undefined;
   }
@@ -149,6 +186,7 @@ window.addEventListener('unhandledrejection', event => {
 
   if (knownNullStyle) {
     event.preventDefault();
+    reportSuppressedCallback('unhandledrejection', reason, 'global');
     console.warn('[shell] stale dashboard callback rejected; suppressed', reason);
   }
 });
