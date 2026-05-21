@@ -332,14 +332,14 @@ async function loadAdminOverview() {
     } else {
       tbody.innerHTML = clients.map(c => `
         <tr>
-          <td style="font-size:13px;">${c.email}</td>
+          <td style="font-size:13px;">${c.email || '—'}</td>
           <td>${c.full_name || '—'}</td>
           <td><span class="chip">${FASE_LABEL[c.fase] || c.fase || 'Cadastro'}</span></td>
           <td style="text-align:center;">${c.n_credores || 0}</td>
           <td style="font-size:12px;color:var(--muted);">${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</td>
           <td style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm"
-              onclick="window.switchView('${c.user_id}','${(c.full_name||c.email).replace(/'/g,'&#39;')}','${c.email}')">
+              onclick="window.switchView('${c.user_id}','${(c.full_name||c.email||c.user_id).replace(/'/g,'&#39;')}','${c.email || ''}')">
               Dashboard
             </button>
             <a class="btn btn-ghost btn-sm" href="documentos.html?uid=${c.user_id}">Docs</a>

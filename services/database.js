@@ -37,8 +37,36 @@ export const AdminService = {
   },
   async getClients() {
     const { data, error } = await supabase.rpc('admin_get_clients');
-    if (error) throw error;
-    return data || [];
+    if (!error) return data || [];
+
+    // Fallback de compatibilidade: quando o RPC nao existe/falha no projeto remoto,
+    // carregamos os casos diretamente para manter o painel admin operacional.
+    console.warn('[AdminService.getClients] RPC admin_get_clients failed, using fallback query:', error);
+
+    const { data: casos, error: casosError } = await supabase
+      .from('portal_casos')
+      .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
+      .order('created_at', { ascending: false });
+
+    if (casosError) throw casosError;
+
+    return (casos || []).map((c) => ({
+      user_id: c.user_id,
+      email: null,
+      full_name: c.full_name,
+      cpf: c.cpf,
+      fase: c.fase,
+      onboarding_done: c.onboarding_done,
+      cnj_step_atual: c.cnj_step_atual,
+      n_credores: c.n_credores,
+      fd_ticket_id: c.fd_ticket_id,
+      workspace_id: c.workspace_id,
+      workspace_slug: null,
+      total_dividas: 0,
+      docs_aprovados: 0,
+      docs_pendentes: 0,
+      created_at: c.created_at,
+    }));
   },
   async getClientCaso(userId) {
     const { data, error } = await supabase
