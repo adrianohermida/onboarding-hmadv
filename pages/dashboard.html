@@ -281,6 +281,7 @@ const FASE_LABEL = {
 let isAdminUser = false;
 const DEMO_EMAIL = 'suporte@hermidamaia.adv.br';
 let demoUserId   = null;   // populated once admin clients are loaded
+let dashboardUnmounted = false;
 const byId = (id) => document.getElementById(id);
 const setText = (id, value) => {
   const el = byId(id);
@@ -303,6 +304,7 @@ document.addEventListener('app:user-loaded', async e => {
 
 /* ── Bootstrap data after app is ready ─────────────── */
 document.addEventListener('app:ready', async () => {
+  dashboardUnmounted = false;
   const clientViewEl = byId('client-view');
   if (!clientViewEl) return;
 
@@ -317,6 +319,7 @@ document.addEventListener('app:ready', async () => {
 
 /* ── Admin overview ─────────────────────────────────── */
 async function loadAdminOverview() {
+  if (dashboardUnmounted) return;
   const adminOverviewEl = byId('admin-overview');
   const clientViewEl = byId('client-view');
   if (!adminOverviewEl || !clientViewEl) return;
@@ -326,6 +329,7 @@ async function loadAdminOverview() {
 
   try {
     const stats = await AdminService.getStats();
+    if (dashboardUnmounted) return;
     const kpiClientes = byId('adm-kpi-clientes');
     const kpiDividas = byId('adm-kpi-dividas');
     const kpiDocs = byId('adm-kpi-docs');
@@ -338,6 +342,7 @@ async function loadAdminOverview() {
 
   try {
     const clients = await AdminService.getClients();
+    if (dashboardUnmounted) return;
     const count   = clients.length;
     const clientsCountEl = byId('adm-clients-count');
     if (clientsCountEl) clientsCountEl.textContent = count + ' cliente' + (count !== 1 ? 's' : '');
@@ -425,6 +430,7 @@ window.switchView = async function(userId, name, email) {
 
 /* ── Client data (own or specific userId for admin) ─── */
 async function loadClientData(userId) {
+  if (dashboardUnmounted) return;
   if (!byId('client-view') && !byId('admin-overview')) return;
 
   // Admin visualizando cliente específico: usar queries diretas
@@ -450,6 +456,7 @@ async function loadClientData(userId) {
       CaseService.get(),
       DocumentService.list(),
     ]);
+    if (dashboardUnmounted) return;
     rpcData  = rpcRes.data?.[0] ?? null;
     casoFull = casoRes;
     docs     = docsRes;
@@ -650,6 +657,10 @@ function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('pt-BR');
 }
+
+document.addEventListener('app:route-will-change', () => {
+  dashboardUnmounted = true;
+});
 </script>
 
 </body>
