@@ -164,7 +164,7 @@
         <div id="state-form">
           <h2 class="auth-form-title">Acesso ao Portal</h2>
           <p class="auth-form-lead">
-            Informe seu e-mail cadastrado. Enviaremos um link de acesso seguro e válido por 15 minutos.
+            Informe seu e-mail cadastrado. Enviaremos um código de 6 dígitos para acesso seguro.
           </p>
 
           <div class="form-group" style="margin-bottom:18px;">
@@ -178,14 +178,14 @@
           </div>
 
           <button class="btn btn-primary btn-full btn-lg" id="btn-send" onclick="handleSend()">
-            Enviar link de acesso
+            Enviar código de acesso
           </button>
 
           <div class="divider"></div>
 
           <div class="callout callout-blue" style="font-size:12px;">
-            <strong>Acesso seguro e sem senha.</strong> Você receberá um link único —
-            clique nele para entrar no portal. Nenhuma senha é armazenada.
+            <strong>Acesso seguro e sem senha.</strong> Você receberá um código de 6 dígitos por e-mail —
+            válido por 15 minutos. Nenhuma senha é armazenada.
           </div>
         </div>
 
@@ -278,18 +278,28 @@ window.handleSend = async function() {
   currentEmail = email;
   setState('state-loading');
 
-  const result = await AuthService.sendOTP(email);
-
-  if (result.ok || email === ADMIN_EMAIL) {
-    document.getElementById('code-email').textContent = email;
-    if (email === ADMIN_EMAIL) {
-      document.getElementById('dev-hint').style.display = '';
-      document.getElementById('dev-code').textContent  = ADMIN_DEV_CODE;
-    }
+  // Dev bypass: admin skips the Supabase OTP call entirely
+  if (email === ADMIN_EMAIL) {
+    document.getElementById('code-email').textContent  = email;
+    document.getElementById('dev-hint').style.display  = '';
+    document.getElementById('dev-code').textContent    = ADMIN_DEV_CODE;
     setState('state-code');
     setTimeout(() => document.getElementById('otp-code').focus(), 80);
-  } else {
-    document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o código.';
+    return;
+  }
+
+  try {
+    const result = await AuthService.sendOTP(email);
+    if (result.ok) {
+      document.getElementById('code-email').textContent = email;
+      setState('state-code');
+      setTimeout(() => document.getElementById('otp-code').focus(), 80);
+    } else {
+      document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o código.';
+      setState('state-error');
+    }
+  } catch (err) {
+    document.getElementById('error-msg').textContent = 'Erro inesperado. Tente novamente.';
     setState('state-error');
   }
 };
