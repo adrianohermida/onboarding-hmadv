@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operacoes Juridicas</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <main class="page-content" style="max-width:1080px;margin:0 auto;padding:24px;">
+    <h1 class="ds-h1">Operacoes Juridicas</h1>
+    <p class="ds-body">Progresso do caso, timeline, onboarding, negociacoes e proximos passos.</p>
+    <section class="status-cards-grid" style="margin-top:20px;">
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Casos ativos</div><div class="status-card-value" id="lo-active">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Timeline</div><div class="status-card-value" id="lo-timeline">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Onboarding parado</div><div class="status-card-value" id="lo-onboarding">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Negociacoes</div><div class="status-card-value" id="lo-negotiations">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Acordos</div><div class="status-card-value" id="lo-agreements">0</div></div></article>
+      <article class="status-card"><div class="status-card-body"><div class="status-card-label">Proximos passos</div><div class="status-card-value" id="lo-tasks">0</div></div></article>
+    </section>
+  </main>
+  <script type="module">
+    import { legalOperationsFoundation } from '../legal-operations/LegalOperationsFoundation.js';
+    const s = legalOperationsFoundation.snapshot();
+    document.getElementById('lo-active').textContent = String(s.lifecycle?.active || 0);
+    document.getElementById('lo-timeline').textContent = String(s.timeline?.total || 0);
+    document.getElementById('lo-onboarding').textContent = String(s.monitoring?.onboarding_stalled || 0);
+    document.getElementById('lo-negotiations').textContent = String((s.negotiations || []).length);
+    document.getElementById('lo-agreements').textContent = String((s.agreements || []).length);
+    document.getElementById('lo-tasks').textContent = String(s.tasks?.open || 0);
+  </script>
+</body>
+</html>

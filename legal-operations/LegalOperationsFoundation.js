@@ -71,10 +71,10 @@ export function mountLegalOperationsFoundation() {
       taskEngine.updateStatus(payload.task_id, payload.status, envelope.actor_id || 'system');
       trace('task.updated', payload, envelope);
     }),
-    bus.on('document.uploaded', trace),
-    bus.on('negotiation.updated', trace),
-    bus.on('agreement.signed', trace),
-    bus.on('hearing.scheduled', trace),
+    bus.on('document.uploaded', (payload, envelope) => trace('document.uploaded', payload, envelope)),
+    bus.on('negotiation.updated', (payload, envelope) => trace('negotiation.updated', payload, envelope)),
+    bus.on('agreement.signed', (payload, envelope) => trace('agreement.signed', payload, envelope)),
+    bus.on('hearing.scheduled', (payload, envelope) => trace('hearing.scheduled', payload, envelope)),
     bus.on('sla.breached', (payload, envelope) => {
       legalSlaEngine.track({ ...payload, status: 'overdue' });
       trace('sla.breached', payload, envelope);

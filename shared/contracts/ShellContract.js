@@ -20,6 +20,7 @@ import { integrationHub } from '../../integrations/IntegrationHub.js';
 import { workflowAutomationFoundation } from '../../workflow-engine/WorkflowAutomationFoundation.js';
 import { documentIntelligenceFoundation } from '../../document-intelligence/DocumentIntelligenceFoundation.js';
 import { financialIntelligenceFoundation } from '../../financial-intelligence/FinancialIntelligenceFoundation.js';
+import { legalOperationsFoundation } from '../../legal-operations/LegalOperationsFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -123,6 +124,19 @@ export const financial = {
   refresh: () => financialIntelligenceFoundation.snapshot(),
 };
 
+// ── Legal Operations API ───────────────────────────────────────────────────
+export const legalOperations = {
+  getSnapshot: () => store.get('legalOperations') || {},
+  getLifecycle: () => store.get('legalOperations')?.lifecycle || {},
+  getTimeline: () => store.get('legalOperations')?.timeline || { total: 0, list: [] },
+  getSla: () => store.get('legalOperations')?.sla || {},
+  getRisk: () => store.get('legalOperations')?.risk || {},
+  getProductivity: () => store.get('legalOperations')?.productivity || {},
+  getMonitoring: () => store.get('legalOperations')?.monitoring || {},
+  getTelemetry: () => store.get('legalOperations')?.telemetry || {},
+  refresh: () => legalOperationsFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -145,4 +159,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, tenant, shellStore, billing };
