@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules } from '../js/navigation.js';
 
 const root = process.cwd();
-const clientKeys = ['meu-caso', 'meus-documentos', 'minhas-dividas', 'meu-plano', 'mensagens', 'ajuda'];
+const clientKeys = ['meu-caso', 'meus-documentos', 'minhas-dividas', 'meu-plano', 'mensagens', 'ajuda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'];
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
 }
 
 describe('portal do cliente contract', () => {
-  it('connects the six human client modules to the canonical sidebar', () => {
+  it('connects the client workspace modules to the canonical sidebar', () => {
     const modules = getSidebarModules({ isAdmin: false });
     const routes = getRoutes();
 

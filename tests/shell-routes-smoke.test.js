@@ -19,7 +19,7 @@ describe('authenticated route shell smoke', () => {
       expect(sidebarHtml).toContain(`href="${key}.html"`);
     });
 
-    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(6);
+    expect((sidebarHtml.match(/data-page="/g) || []).length).toBe(sidebarKeys.length);
   });
 
   it('keeps every authenticated route mounted inside the shared shell', () => {

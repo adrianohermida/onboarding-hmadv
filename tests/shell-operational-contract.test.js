@@ -31,9 +31,12 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('function openNotificationsPanel');
     expect(app).toContain('function openWorkspacePanel');
     expect(app).toContain('function openAccountModal');
+    expect(app).toContain('function getEffectiveIsAdmin');
+    expect(app).toContain('function syncShellViewMode');
     expect(app).toContain('function renderAccountModal');
     expect(app).toContain('function renderSidebarToggleButton');
     expect(app).toContain('function renderMobileWorkspaceNav');
+    expect(app).toContain('window.addEventListener(VIEW_MODE_EVENT');
     expect(app).toContain("window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer }");
     expect(app).toContain("window.shellModal = { open: openShellModal, close: closeShellModal }");
     expect(app).toContain('currentMain.replaceWith(clonedMain)');

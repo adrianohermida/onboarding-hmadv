@@ -8,6 +8,10 @@ const expectedSidebarKeys = [
   'meu-plano',
   'mensagens',
   'ajuda',
+  'onboarding-v2',
+  'financial-dashboard',
+  'suporte',
+  'onboarding',
 ];
 
 describe('navigation contract', () => {
@@ -15,7 +19,7 @@ describe('navigation contract', () => {
     const modules = getSidebarModules({ isAdmin: false });
 
     expect(modules.map(module => module.key)).toEqual(expectedSidebarKeys);
-    expect(new Set(modules.map(module => module.key)).size).toBe(6);
+    expect(new Set(modules.map(module => module.key)).size).toBe(expectedSidebarKeys.length);
     expect(modules.every(module => module.visible)).toBe(true);
   });
 
