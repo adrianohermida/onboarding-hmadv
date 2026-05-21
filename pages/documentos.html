@@ -1038,9 +1038,12 @@ window.closeDrawer = () => {
 };
 
 // Close on backdrop click
-document.getElementById('doc-drawer').addEventListener('click', (e) => {
-  if (e.target === document.getElementById('doc-drawer')) closeDrawer();
-});
+const drawerEl = document.getElementById('doc-drawer');
+if (drawerEl) {
+  drawerEl.addEventListener('click', (e) => {
+    if (e.target === drawerEl) closeDrawer();
+  });
+}
 
 window.switchDrawerTab = (tab) => {
   document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
