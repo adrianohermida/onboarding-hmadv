@@ -139,6 +139,20 @@ window.clearInterval = function patchedClearInterval(id) {
   return nativeClearInterval(id);
 };
 
+window.addEventListener('unhandledrejection', event => {
+  const reason = event?.reason;
+  const message = reason?.message || String(reason || '');
+  const stack = reason?.stack || '';
+  const knownNullStyle =
+    message.includes("Cannot read properties of null (reading 'style')") &&
+    (stack.includes('dashboard.html') || stack.includes('loadAdminOverview'));
+
+  if (knownNullStyle) {
+    event.preventDefault();
+    console.warn('[shell] stale dashboard callback rejected; suppressed', reason);
+  }
+});
+
 /* ── Session cache helpers ───────────────────────── */
 function getCached() {
   try { return JSON.parse(sessionStorage.getItem('portal:user') || 'null'); } catch { return null; }
