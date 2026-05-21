@@ -1,0 +1,19 @@
+{
+  "module": "financial-dashboard",
+  "key": "financial-dashboard",
+  "title": "Diagnóstico Financeiro",
+  "menuLabel": "Finanças",
+  "route": "/pages/financial-dashboard.html",
+  "icon": "chart-column",
+  "permissions": ["cliente", "admin"],
+  "feature": "financialDashboard",
+  "lazy": true,
+  "order": 30,
+  "visible": true,
+  "contract": {
+    "events": {
+      "emits": ["debt.created", "debt.updated", "debt.deleted"],
+      "listens": ["auth.changed", "shell:viewmode-changed"]
+    }
+  }
+}
