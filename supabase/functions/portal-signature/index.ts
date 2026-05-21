@@ -14,7 +14,7 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
 
-type JsonRecord = Record<string, unknown>;
+type JsonRecord = Record<string, any>;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

@@ -75,6 +75,7 @@ export class SignatureService {
           storage_path: storagePath,
           signer_email: signerEmail,
           signer_name:  signerName,
+          document_name: documentName,
           message:      message || `Por favor, assine o documento: ${documentName || 'documento jurídico'}`,
           expires_in:   expiresIn,
         }),
@@ -96,14 +97,7 @@ export class SignatureService {
 
     } catch (e) {
       console.warn('[SignatureService] requestSignature error:', e.message);
-      // Graceful degradation: return mock for demo/development
-      const mockId = `mock_${Date.now()}`;
-      bus.emit('signature.requested', {
-        documentId, signerEmail, signerName,
-        autentiqueId: mockId,
-        mock: true,
-      });
-      return { autentique_id: mockId, status: 'pending', mock: true };
+      throw e;
     }
   }
 
@@ -173,8 +167,9 @@ export class SignatureService {
       event:        event?.name,          // SIGN, REJECT, VIEW, etc.
       allSigned,
       signers: signatures.map(s => ({
-        email:  s.public_id,
-        signed: s.action?.name === 'SIGNED',
+        email:  s.email,
+        publicId: s.public_id,
+        signed: !!s.signed || s.action?.name === 'SIGNED',
         signedAt: s.action?.created_at,
     })),
     };

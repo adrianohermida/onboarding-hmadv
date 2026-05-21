@@ -174,7 +174,17 @@ export const DocumentService = {
   async upload(tipo, file) {
     const uid  = await getUserId();
     const ext  = file.name.split('.').pop();
-    const path = `${uid}/${tipo}/${Date.now()}.${ext}`;
+    const { data: caso } = await supabase
+      .from('portal_casos')
+      .select('id, workspace_id')
+      .eq('user_id', uid)
+      .maybeSingle();
+    const typeMeta = DOCUMENT_TYPES.find(d => d.tipo === tipo);
+    const category = (typeMeta?.categoria || 'uploads')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    const tenantSegment = caso?.workspace_id || 'default-tenant';
+    const path = `${tenantSegment}/${uid}/documents/${category}/${tipo}/${Date.now()}.${ext}`;
 
     const { data, error } = await supabase.storage
       .from('portal-documentos')
@@ -187,6 +197,9 @@ export const DocumentService = {
       .upsert({
         user_id:         uid,
         tipo,
+        caso_id:         caso?.id ?? null,
+        workspace_id:    caso?.workspace_id ?? null,
+        category,
         status:          'em_analise',
         workflow_status: 'em_analise',
         storage_path:    data.path,

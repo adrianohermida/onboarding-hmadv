@@ -1097,8 +1097,10 @@ window.confirmReview = async () => {
 
   try {
     if (reviewWorkflow === 'aguardando_assinatura' && sigEmail) {
+      const doc = engine.getAll().find(d => d.id === drawerDocId);
       await sigService.requestSignature({
         documentId:   drawerDocId,
+        storagePath:  doc?.storage_path,
         signerEmail:  sigEmail,
         signerName:   sigEmail,
         documentName: document.getElementById('drawer-title').textContent,
