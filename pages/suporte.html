@@ -149,6 +149,9 @@ window.showToast = showToast;
 
 let currentUser = null;
 let currentCaso = null;
+let suporteBooting = false;
+
+const byId = (id) => document.getElementById(id);
 
 document.addEventListener('app:user-loaded', e => {
   currentUser = e.detail?.user;
@@ -156,6 +159,13 @@ document.addEventListener('app:user-loaded', e => {
 });
 
 async function init() {
+  if (suporteBooting) return;
+  suporteBooting = true;
+
+  const tbody = byId('tickets-tbody');
+  const count = byId('ticket-count');
+  if (!tbody || !count) { suporteBooting = false; return; }
+
   const [tickets, contact] = await Promise.all([
     FreshdeskService.listTickets().catch(() => []),
     FreshdeskService.getContact().catch(() => null),
@@ -163,11 +173,13 @@ async function init() {
   renderContact(contact);
   renderTickets(tickets);
   updateKPIs(tickets);
+  suporteBooting = false;
 }
 
 function renderContact(contact) {
   if (!contact) return;
-  const bar = document.getElementById('contact-bar');
+  const bar = byId('contact-bar');
+  if (!bar) return;
   bar.style.display = '';
   bar.className = 'callout callout-blue';
   bar.innerHTML = `<strong>${contact.name || contact.email}</strong>`
@@ -176,11 +188,13 @@ function renderContact(contact) {
 }
 
 function renderTickets(tickets) {
-  const tbody = document.getElementById('tickets-tbody');
-  const empty = document.getElementById('tickets-empty');
-  const wrap  = document.getElementById('tickets-table-wrap');
+  const tbody = byId('tickets-tbody');
+  const empty = byId('tickets-empty');
+  const wrap  = byId('tickets-table-wrap');
+  const countEl = byId('ticket-count');
+  if (!tbody || !empty || !wrap || !countEl) return;
 
-  document.getElementById('ticket-count').textContent =
+  countEl.textContent =
     tickets.length + ' chamado' + (tickets.length !== 1 ? 's' : '');
 
   if (tickets.length === 0) {
@@ -206,9 +220,14 @@ function renderTickets(tickets) {
 }
 
 function updateKPIs(tickets) {
-  document.getElementById('kpi-abertos').textContent    = tickets.filter(t => t.status === 2 || t.status === 3).length;
-  document.getElementById('kpi-resolvidos').textContent = tickets.filter(t => t.status === 4 || t.status === 5).length;
-  document.getElementById('kpi-total-tickets').textContent = tickets.length;
+  const abertosEl = byId('kpi-abertos');
+  const resolvidosEl = byId('kpi-resolvidos');
+  const totalEl = byId('kpi-total-tickets');
+  if (!abertosEl || !resolvidosEl || !totalEl) return;
+
+  abertosEl.textContent = tickets.filter(t => t.status === 2 || t.status === 3).length;
+  resolvidosEl.textContent = tickets.filter(t => t.status === 4 || t.status === 5).length;
+  totalEl.textContent = tickets.length;
 }
 
 window.showNewTicketModal  = () => document.getElementById('modal-new-ticket').classList.add('show');
@@ -254,6 +273,9 @@ window.submitTicket = async function() {
 };
 
 document.addEventListener('app:ready', init);
+document.addEventListener('app:route-will-change', () => {
+  suporteBooting = false;
+});
 </script>
 
 </body>

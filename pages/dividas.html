@@ -170,8 +170,18 @@ window.showToast = showToast;
 
 let dividas = [];
 let renda = null;
+let dividasBooting = false;
+
+const byId = (id) => document.getElementById(id);
 
 async function init() {
+  if (dividasBooting) return;
+  dividasBooting = true;
+
+  const tbody = byId('dividas-tbody');
+  const count = byId('dividas-count');
+  if (!tbody || !count) { dividasBooting = false; return; }
+
   const [rows, caso] = await Promise.all([
     DebtService.list().catch(() => []),
     CaseService.get().catch(() => null),
@@ -179,13 +189,15 @@ async function init() {
   dividas = rows;
   renda = caso?.renda || null;
   renderTable();
+  dividasBooting = false;
 }
 
 function renderTable() {
-  const tbody = document.getElementById('dividas-tbody');
-  const empty = document.getElementById('dividas-empty');
-  const wrap  = document.getElementById('dividas-table-wrap');
-  const count = document.getElementById('dividas-count');
+  const tbody = byId('dividas-tbody');
+  const empty = byId('dividas-empty');
+  const wrap  = byId('dividas-table-wrap');
+  const count = byId('dividas-count');
+  if (!tbody || !empty || !wrap || !count) return;
 
   count.textContent = dividas.length + ' dívida' + (dividas.length !== 1 ? 's' : '');
 
@@ -215,15 +227,23 @@ function updateKPIs() {
   const total = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
   const maior = dividas.reduce((m, d) => (Number(d.valor) > Number(m.valor) ? d : m), { valor: 0, credor: '—' });
 
-  document.getElementById('kpi-total-dividas').textContent = formatCurrency(total);
-  document.getElementById('kpi-n-credores').textContent    = dividas.length;
-  document.getElementById('kpi-maior-divida').textContent  = maior.valor ? formatCurrency(maior.valor) : 'R$ —';
-  document.getElementById('kpi-maior-credor').textContent  = maior.credor || '—';
-  document.getElementById('footer-total').textContent      = total ? 'Total: ' + formatCurrency(total) : '';
+  const totalEl = byId('kpi-total-dividas');
+  const credoresEl = byId('kpi-n-credores');
+  const maiorDivEl = byId('kpi-maior-divida');
+  const maiorCredorEl = byId('kpi-maior-credor');
+  const footerEl = byId('footer-total');
+  if (!totalEl || !credoresEl || !maiorDivEl || !maiorCredorEl || !footerEl) return;
+
+  totalEl.textContent = formatCurrency(total);
+  credoresEl.textContent = dividas.length;
+  maiorDivEl.textContent = maior.valor ? formatCurrency(maior.valor) : 'R$ —';
+  maiorCredorEl.textContent = maior.credor || '—';
+  footerEl.textContent = total ? 'Total: ' + formatCurrency(total) : '';
 
   if (renda && total) {
     const pct = ((total / renda) * 100).toFixed(0);
-    document.getElementById('kpi-comprometida').textContent = pct + '%';
+    const pctEl = byId('kpi-comprometida');
+    if (pctEl) pctEl.textContent = pct + '%';
   }
 }
 
@@ -274,6 +294,9 @@ window.removeDivida = async function(id) {
 };
 
 document.addEventListener('app:ready', init);
+document.addEventListener('app:route-will-change', () => {
+  dividasBooting = false;
+});
 </script>
 
 </body>
