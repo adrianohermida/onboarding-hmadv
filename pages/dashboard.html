@@ -325,9 +325,22 @@ function setAdminAlert(message = '', type = 'warn') {
 
   const retryEl = byId('adm-alert-retry');
   if (retryEl) {
-    retryEl.addEventListener('click', () => {
+    retryEl.addEventListener('click', async () => {
       if (dashboardUnmounted) return;
-      loadAdminOverview();
+      if (retryEl.dataset.loading === '1') return;
+
+      retryEl.dataset.loading = '1';
+      retryEl.disabled = true;
+      const originalText = retryEl.textContent;
+      retryEl.textContent = 'Tentando...';
+
+      try {
+        await loadAdminOverview();
+      } finally {
+        retryEl.dataset.loading = '0';
+        retryEl.disabled = false;
+        retryEl.textContent = originalText || 'Tentar novamente';
+      }
     });
   }
 }
