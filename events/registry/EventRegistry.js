@@ -35,6 +35,11 @@ export const EVENT_REGISTRY = {
   'workflow.failed': { domain: 'workflows', owner: 'platform', version: '1.0.0', tenantAware: true },
   'onboarding.abandoned': { domain: 'onboarding', owner: 'onboarding', version: '1.0.0', tenantAware: true },
   'ai.workflow.started': { domain: 'ai', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'integration.requested': { domain: 'integrations', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'integration.completed': { domain: 'integrations', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'integration.failed': { domain: 'integrations', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'integration.webhook.received': { domain: 'integrations', owner: 'platform', version: '1.0.0', tenantAware: true },
+  'integration.webhook.failed': { domain: 'integrations', owner: 'platform', version: '1.0.0', tenantAware: true },
 
   // Existing app events kept for backward compatibility
   'journey.step.state_changed': { domain: 'journey', owner: 'journey', version: '1.0.0', tenantAware: true },

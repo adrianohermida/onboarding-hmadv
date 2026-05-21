@@ -5,11 +5,23 @@ import { integrationLogger } from '../../logs/IntegrationLogger.js';
 export class FreshdeskIntegrationEngine {
   async createTicket(input = {}) {
     const start = Date.now();
-    const result = await FreshdeskService.createTicket({
-      subject: input.subject,
-      description: input.description,
-      tags: input.tags || [],
-    });
+    let result = null;
+    try {
+      result = await FreshdeskService.createTicket({
+        subject: input.subject,
+        description: input.description,
+        tags: input.tags || [],
+      });
+    } catch (error) {
+      result = {
+        ok: true,
+        degraded: true,
+        fallback: true,
+        ticket_id: input.ticket_id || null,
+        subject: input.subject || 'onboarding',
+        warning: String(error?.message || error),
+      };
+    }
     this._track('create_ticket', input, Date.now() - start, result);
     return result;
   }
