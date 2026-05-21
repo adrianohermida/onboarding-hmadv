@@ -624,12 +624,17 @@
           <!-- Drop Zone (client mode) -->
           <div id="drop-zone-global" class="drop-zone" style="display:none;"
                onclick="document.getElementById('drop-zone-input').click()">
+<<<<<<< HEAD
             <div class="drop-zone-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
+=======
+            <div class="drop-zone-icon" style="display:flex;align-items:center;justify-content:center;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".45"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+>>>>>>> c46c0d6 (feat(journey): Sprint 0.3 — Jornada + Formulário integration)
             </div>
             <div class="drop-zone-title">Arraste um arquivo aqui ou clique para selecionar</div>
             <div class="drop-zone-sub">PDF, JPG, PNG, WebP — máximo 10 MB</div>
@@ -637,6 +642,7 @@
           </div>
           <input type="file" id="drop-zone-input" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;" />
 
+<<<<<<< HEAD
           <!-- ── CNJ Form pinned section ────────────────────── -->
           <div id="cnj-form-section" class="cnj-form-section" style="display:none;">
             <div class="cnj-form-section-header">
@@ -649,6 +655,20 @@
             <div class="cnj-form-section-body" id="cnj-form-section-body">
               <!-- Rendered by renderCnjFormSection() -->
             </div>
+=======
+          <!-- ── Formulário CNJ Section ─── -->
+          <div id="cnj-form-section" style="display:none;margin-bottom:24px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);">
+              <div style="width:30px;height:30px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#2E6DA4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="1" width="12" height="14" rx="1.5"/><path d="M4 5h8M4 8h8M4 11h5"/></svg>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)">Formulário CNJ</div>
+                <div style="font-size:12px;color:var(--ink2)">Formulário de superendividamento · Aprovação do escritório</div>
+              </div>
+            </div>
+            <div id="cnj-form-cards"></div>
+>>>>>>> c46c0d6 (feat(journey): Sprint 0.3 — Jornada + Formulário integration)
           </div>
 
           <!-- Document Hub (grouped by category) -->
@@ -686,6 +706,7 @@
       </div>
       <iframe id="pdf-frame" class="pdf-viewer-frame" src="about:blank"></iframe>
       <div id="no-preview" class="no-preview" hidden>
+<<<<<<< HEAD
         <div class="no-preview-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -693,6 +714,10 @@
             <line x1="10" y1="11" x2="14" y2="15"/>
             <line x1="14" y1="11" x2="10" y2="15"/>
           </svg>
+=======
+        <div class="no-preview-icon" style="display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".45"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="12" y1="12" x2="12" y2="18"/></svg>
+>>>>>>> c46c0d6 (feat(journey): Sprint 0.3 — Jornada + Formulário integration)
         </div>
         <div>Arquivo não disponível para pré-visualização.</div>
         <button class="btn-primary-sm no-preview-action" onclick="downloadDoc()">Baixar arquivo</button>
@@ -846,6 +871,7 @@ function renderAll() {
   renderDocHub();
 }
 
+<<<<<<< HEAD
 // ── CNJ Form Section ──────────────────────────────────────────────────────────
 function renderCnjFormSection() {
   const section  = byId('cnj-form-section');
@@ -951,6 +977,84 @@ function openDocDrawer(docId) {
   const isAdmin = (typeof controller.isAdmin === 'function' ? controller.isAdmin() : controller.isAdmin) ?? false;
   window.openDrawer(docId, isAdmin);
 }
+=======
+function renderCnjFormSection() {
+  const section  = byId('cnj-form-section');
+  const cardsEl  = byId('cnj-form-cards');
+  if (!section || !cardsEl) return;
+
+  const CNJ_TIPOS = ['formulario_cnj_online', 'formulario_cnj_anexo_ii'];
+  const allDocs   = controller.engine.getAll();
+  const cnjDocs   = allDocs.filter(d => CNJ_TIPOS.includes(d.tipo));
+
+  if (cnjDocs.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const isAdmin = controller.isAdmin && controller.viewMode === 'admin';
+
+  const WF_LABELS = {
+    pendente_envio:    { label: 'Pendente',        color: '#94a3b8', bg: '#f1f5f9' },
+    em_analise:        { label: 'Em análise',       color: '#c07b00', bg: '#fffbeb' },
+    aprovado:          { label: 'Aprovado',         color: '#16a34a', bg: '#f0fdf4' },
+    rejeitado:         { label: 'Correção solicitada', color: '#dc2626', bg: '#fef2f2' },
+    pendente_correcao: { label: 'Correção pendente', color: '#dc2626', bg: '#fef2f2' },
+  };
+
+  cardsEl.innerHTML = cnjDocs.map(d => {
+    const wf   = WF_LABELS[d.workflow_status] || WF_LABELS['em_analise'];
+    const tipo = d.tipo === 'formulario_cnj_online' ? 'Formulário Online (Portal)' : 'Formulário Anexo II (PDF)';
+    const obs  = d.observacao_admin || d.observacao || '';
+    const sent = d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '—';
+
+    return `
+    <div style="border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff;margin-bottom:10px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">${tipo}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:${wf.bg};color:${wf.color}">${wf.label}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">Enviado em ${sent}</div>
+          ${obs ? `<div style="font-size:12px;color:var(--ink2);background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:8px;padding:8px 12px;margin-top:10px;line-height:1.5"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#c07b00">Nota do escritório:</strong><br>${obs}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+          ${d.tipo === 'formulario_cnj_online' ? `<a href="onboarding.html" class="btn btn-ghost btn-sm">Ver formulário →</a>` : ''}
+          ${isAdmin ? `
+            <button class="btn btn-ghost btn-sm" onclick="openCnjFormReview('${d.id}','${d.tipo}','${d.workflow_status}')">Avaliar</button>
+          ` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openCnjFormReview = async function(docId, tipo, currentWf) {
+  const wf = prompt(
+    `Alterar status do formulário CNJ:\n\n` +
+    `1 = Aprovar\n2 = Solicitar correção\n3 = Em análise\n\n` +
+    `Status atual: ${currentWf}\nDigite 1, 2 ou 3:`,
+    '3'
+  );
+  if (!wf || !['1','2','3'].includes(wf)) return;
+
+  const statusMap = { '1': 'aprovado', '2': 'rejeitado', '3': 'em_analise' };
+  const newStatus = statusMap[wf];
+
+  const notes = wf !== '3' ? prompt('Nota para o cliente (opcional):') : null;
+
+  try {
+    await DocumentService.adminUpdateWorkflow(docId, newStatus, notes, notes);
+    Toast.success('Status atualizado com sucesso.');
+    // Reload docs
+    const svc = controller.resolveDocumentService(DocumentService);
+    await controller.engine.init(svc);
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    Toast.error('Erro ao atualizar status.');
+  }
+};
+>>>>>>> c46c0d6 (feat(journey): Sprint 0.3 — Jornada + Formulário integration)
 
 function renderKPIs(stats) {
   const pendEl = byId('kpi-pendentes');
