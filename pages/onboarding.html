@@ -1715,6 +1715,7 @@ window.finalizarCadastro = async function() {
         user_id:         _u.id,
         tipo:            'formulario_cnj_online',
         nome_arquivo:    'Formulário CNJ Online',
+        status:          'em_analise',       // legacy field used by dashboard KPI/activity aggregations
         workflow_status: 'em_analise',
         direction:       'client_to_office',
         caso_id:         _caso?.id      ?? null,

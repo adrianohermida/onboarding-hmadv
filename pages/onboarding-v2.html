@@ -972,6 +972,7 @@ window.confirmAnexoWebGenerated = async function(stepId) {
       user_id:         user.id,
       tipo:            'formulario_cnj_anexo_ii',
       nome_arquivo:    'Formulário CNJ Anexo II (gerado online)',
+      status:          'em_analise',       // legacy field used by dashboard KPI/activity aggregations
       workflow_status: 'em_analise',
       direction:       'client_to_office',
       caso_id:         caso?.id ?? null,
