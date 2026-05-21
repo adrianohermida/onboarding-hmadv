@@ -23,6 +23,7 @@ import { financialIntelligenceFoundation } from '../../financial-intelligence/Fi
 import { legalOperationsFoundation } from '../../legal-operations/LegalOperationsFoundation.js';
 import { clientExperienceFoundation } from '../../client-experience/ClientExperienceFoundation.js';
 import { aiOsFoundation } from '../../ai-os/AIOSFoundation.js';
+import { complianceOsFoundation } from '../../compliance-os/ComplianceOSFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -167,6 +168,21 @@ export const aiOs = {
   refresh: () => aiOsFoundation.snapshot(),
 };
 
+// ── Compliance API ────────────────────────────────────────────────────────
+export const compliance = {
+  getSnapshot: () => store.get('compliance') || {},
+  getLgpd: () => store.get('compliance')?.lgpd || {},
+  getConsents: () => store.get('compliance')?.consents || { total: 0, accepted: 0, revoked: 0, list: [] },
+  getAudit: () => store.get('compliance')?.audit || { total: 0, list: [] },
+  getRisk: () => store.get('compliance')?.risk || { total: 0, high: 0, list: [] },
+  getAccess: () => store.get('compliance')?.access || { total: 0, suspicious: 0, list: [] },
+  getIncidents: () => store.get('compliance')?.incidents || { total: 0, open: 0, list: [] },
+  getMonitoring: () => store.get('compliance')?.monitoring || {},
+  getTelemetry: () => store.get('compliance')?.telemetry || {},
+  getAnalytics: () => store.get('compliance')?.analytics || {},
+  refresh: () => complianceOsFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -189,4 +205,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, knowledge, financial, legalOperations, clientExperience, aiOs, compliance, tenant, shellStore, billing };

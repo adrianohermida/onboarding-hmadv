@@ -19,6 +19,7 @@
  *   legalOperations: { lifecycle, timeline, sla, risk, productivity, monitoring, analytics, telemetry, generated_at }
  *   clientExperience: { journeys, engagement, notifications, progress, retention, satisfaction, observability, analytics, telemetry, generated_at }
  *   aiOs      : { agents, copilot, retrieval, actions, human_review, telemetry, observability, analytics, generated_at }
+ *   compliance: { lgpd, consents, audit, risk, access, incidents, monitoring, telemetry, analytics, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -152,6 +153,26 @@ const _initialState = () => ({
     human_review: { total: 0, pending: 0, list: [] },
     telemetry: { total: 0, failures: 0, retries: 0, escalations: 0, human_review: 0, avg_latency_ms: 0, list: [] },
     observability: { hallucination_risk: 0, workflow_misuse: 0, unsafe_actions: 0, tenant_violations: 0, prompt_failures: 0, degraded_responses: 0 },
+    analytics: null,
+    generated_at: null,
+  },
+  compliance: {
+    lgpd: null,
+    consents: { total: 0, accepted: 0, revoked: 0, list: [] },
+    privacy: null,
+    retention: null,
+    classification: { total: 0, list: [] },
+    lineage: { total: 0, list: [] },
+    audit: { total: 0, list: [] },
+    risk: { total: 0, high: 0, list: [] },
+    access: { total: 0, suspicious: 0, list: [] },
+    incidents: { total: 0, open: 0, list: [] },
+    monitoring: { sensitive_access: 0, suspicious_access: 0, missing_audit_trails: 0, missing_consents: 0, tenant_violations: 0, retention_failures: 0, open_incidents: 0, audit_health: 0 },
+    security: null,
+    reports: null,
+    data_subject_foundation: null,
+    governance: null,
+    telemetry: { total: 0, consent_events: 0, access_events: 0, audit_events: 0, violations: 0, anomalies: 0, list: [] },
     analytics: null,
     generated_at: null,
   },
@@ -391,6 +412,31 @@ class ShellStore extends EventTarget {
       human_review: snapshot.human_review || { total: 0, pending: 0, list: [] },
       telemetry: snapshot.telemetry || { total: 0, failures: 0, retries: 0, escalations: 0, human_review: 0, avg_latency_ms: 0, list: [] },
       observability: snapshot.observability || { hallucination_risk: 0, workflow_misuse: 0, unsafe_actions: 0, tenant_violations: 0, prompt_failures: 0, degraded_responses: 0 },
+      analytics: snapshot.analytics || null,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Compliance ───────────────────────────────────────────────────────────
+  setComplianceSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('compliance', {
+      lgpd: snapshot.lgpd || null,
+      consents: snapshot.consents || { total: 0, accepted: 0, revoked: 0, list: [] },
+      privacy: snapshot.privacy || null,
+      retention: snapshot.retention || null,
+      classification: snapshot.classification || { total: 0, list: [] },
+      lineage: snapshot.lineage || { total: 0, list: [] },
+      audit: snapshot.audit || { total: 0, list: [] },
+      risk: snapshot.risk || { total: 0, high: 0, list: [] },
+      access: snapshot.access || { total: 0, suspicious: 0, list: [] },
+      incidents: snapshot.incidents || { total: 0, open: 0, list: [] },
+      monitoring: snapshot.monitoring || { sensitive_access: 0, suspicious_access: 0, missing_audit_trails: 0, missing_consents: 0, tenant_violations: 0, retention_failures: 0, open_incidents: 0, audit_health: 0 },
+      security: snapshot.security || null,
+      reports: snapshot.reports || null,
+      data_subject_foundation: snapshot.data_subject_foundation || null,
+      governance: snapshot.governance || null,
+      telemetry: snapshot.telemetry || { total: 0, consent_events: 0, access_events: 0, audit_events: 0, violations: 0, anomalies: 0, list: [] },
       analytics: snapshot.analytics || null,
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
