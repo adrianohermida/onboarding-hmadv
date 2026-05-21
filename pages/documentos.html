@@ -1,393 +1,1149 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Documentos — Hermida Maia Advocacia</title>
-<link rel="stylesheet" href="../styles/variables.css">
-<link rel="stylesheet" href="../styles/main.css">
-<link rel="stylesheet" href="../styles/layout.css">
-<link rel="stylesheet" href="../styles/components.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Documentos · Portal HMADV</title>
+
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      corePlugins: { preflight: false },
+      theme: { extend: { colors: { navy:'#1A3A5C', blue2:'#2E6DA4', ice:'#EBF3FC', gold:'#F5A623' } } }
+    };
+  </script>
+  <script type="module" src="../js/app.js"></script>
+
+  <style>
+  /* ── Shell ──────────────────────────────────────────── */
+  .portal-shell  { display:flex; height:100dvh; overflow:hidden; }
+  .main-wrap     { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+  .page-content  { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+  .sidebar       { transition:transform .28s cubic-bezier(.4,0,.2,1); }
+  @media (max-width:1023px) {
+    .sidebar               { position:fixed; inset:0 auto 0 0; z-index:50; transform:translateX(-100%); }
+    .sidebar.sidebar--open { transform:translateX(0); box-shadow:0 0 40px rgba(0,0,0,.4); }
+    .sidebar-toggle        { display:flex !important; }
+  }
+
+  /* ── Page layout ─────────────────────────────────────── */
+  .doc-page { max-width:1100px; margin:0 auto; padding:24px 20px 96px; }
+  @media (max-width:640px) { .doc-page { padding:16px 12px 80px; } }
+
+  /* ── Hero ────────────────────────────────────────────── */
+  .doc-hero {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2E6DA4 60%, #1e5a8e 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .doc-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(245,166,35,.08) 0%, transparent 60%);
+  }
+  .doc-hero-inner  { position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .doc-hero-label  { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; opacity:.65; margin-bottom:6px; }
+  .doc-hero-title  { font-family:var(--serif); font-size:24px; font-weight:700; margin-bottom:4px; }
+  .doc-hero-sub    { font-size:13px; opacity:.75; max-width:440px; line-height:1.5; }
+  .doc-progress-wrap { min-width:220px; }
+  .doc-progress-bar  {
+    height:8px; background:rgba(255,255,255,.15); border-radius:99px;
+    overflow:hidden; margin-top:10px;
+  }
+  .doc-progress-fill { height:100%; background:var(--gold,#F5A623); border-radius:99px; transition:width .6s ease; }
+  .doc-progress-label{ font-size:12px; opacity:.75; margin-top:5px; }
+
+  /* ── ViewMode switcher ───────────────────────────────── */
+  .view-switcher {
+    display:flex; background:var(--line2); border-radius:8px; padding:3px; gap:1px;
+    width:fit-content;
+  }
+  .vm-btn {
+    padding:6px 14px; border-radius:6px; border:none; cursor:pointer;
+    font-size:12px; font-weight:600; background:transparent; color:var(--ink2);
+    transition:background .15s, color .15s;
+  }
+  .vm-btn.active { background:#fff; color:var(--navy); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+
+  /* ── KPI Grid ────────────────────────────────────────── */
+  .doc-kpi-grid {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
+    gap:12px; margin-bottom:24px;
+  }
+  .doc-kpi {
+    background:#fff; border-radius:12px; padding:14px 16px;
+    border:1px solid var(--line); box-shadow:var(--shadow-sm);
+    position:relative; overflow:hidden;
+  }
+  .doc-kpi::after {
+    content:''; position:absolute; bottom:0; left:0; right:0;
+    height:3px; background:var(--kpi-c, var(--blue)); border-radius:0 0 12px 12px;
+  }
+  .doc-kpi-icon  { font-size:18px; margin-bottom:4px; }
+  .doc-kpi-label { font-size:10px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+  .doc-kpi-value { font-size:22px; font-weight:800; color:var(--ink); margin:3px 0 1px; }
+  .doc-kpi-hint  { font-size:10px; color:var(--muted); }
+  .doc-kpi-warn  { --kpi-c:#d97706; } .doc-kpi-warn  .doc-kpi-value { color:#d97706; }
+  .doc-kpi-green { --kpi-c:#16a34a; } .doc-kpi-green .doc-kpi-value { color:#16a34a; }
+  .doc-kpi-red   { --kpi-c:#dc2626; } .doc-kpi-red   .doc-kpi-value { color:#dc2626; }
+  .doc-kpi-purple{ --kpi-c:#7c3aed; } .doc-kpi-purple.doc-kpi-value { color:#7c3aed; }
+  .doc-kpi-navy  { --kpi-c:#1A3A5C; }
+
+  /* ── Requests banner ─────────────────────────────────── */
+  .requests-banner {
+    background: linear-gradient(90deg, #1A3A5C, #2E6DA4);
+    border-radius: 12px; padding:16px 20px; color:#fff;
+    display:flex; align-items:center; gap:14px; margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+  .requests-banner-icon { font-size:24px; flex-shrink:0; }
+  .requests-banner-body { flex:1; }
+  .requests-banner-title { font-size:14px; font-weight:700; margin-bottom:3px; }
+  .requests-banner-sub   { font-size:12px; opacity:.8; }
+  .request-pill {
+    background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
+    border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:background .15s;
+  }
+  .request-pill:hover { background:rgba(255,255,255,.25); }
+  .request-pill.urgent { background:rgba(220,38,38,.35); border-color:rgba(248,113,113,.4); }
+
+  /* ── Filter bar ──────────────────────────────────────── */
+  .doc-filter-bar {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:20px;
+  }
+  .filter-chip {
+    padding:5px 14px; border-radius:20px; border:1px solid var(--line);
+    font-size:12px; font-weight:600; background:#fff; color:var(--ink2);
+    cursor:pointer; transition:background .15s, border-color .15s, color .15s;
+    white-space:nowrap;
+  }
+  .filter-chip:hover { background:var(--ice); border-color:var(--blue); color:var(--blue); }
+  .filter-chip.active { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .filter-chip-count { font-size:10px; opacity:.7; margin-left:4px; }
+
+  /* ── Drop Zone ───────────────────────────────────────── */
+  .drop-zone {
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    padding: 28px 20px;
+    text-align: center;
+    background: #fafbfc;
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--blue);
+    background: var(--ice);
+  }
+  .drop-zone.drag-over { border-style: solid; }
+  .drop-zone-icon  { font-size:32px; margin-bottom:10px; }
+  .drop-zone-title { font-size:14px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .drop-zone-sub   { font-size:12px; color:var(--muted); }
+  .drop-zone-hint  { font-size:11px; color:var(--muted); margin-top:6px; }
+  .drop-zone-select-btn {
+    display:inline-block; margin-top:12px;
+    padding:8px 18px; background:var(--navy); color:#fff; border:none;
+    border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;
+    transition:background .15s;
+  }
+  .drop-zone-select-btn:hover { background:#152e4a; }
+
+  /* ── Category Section ────────────────────────────────── */
+  .cat-section { margin-bottom:20px; }
+  .cat-section-header {
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+    padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .cat-icon  { font-size:18px; }
+  .cat-title { font-size:14px; font-weight:700; color:var(--ink); flex:1; }
+  .cat-count { font-size:11px; color:var(--muted); }
+  .cat-progress-bar {
+    flex:1; height:4px; background:var(--line); border-radius:99px; overflow:hidden;
+    max-width:120px;
+  }
+  .cat-progress-fill { height:100%; background:var(--blue); border-radius:99px; }
+
+  /* ── Document Cards ──────────────────────────────────── */
+  .doc-cards-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px;
+  }
+  @media (max-width:640px) { .doc-cards-grid { grid-template-columns:1fr; } }
+
+  .doc-card {
+    background:#fff; border-radius:14px; border:1px solid var(--line);
+    box-shadow:var(--shadow-sm); padding:18px;
+    transition:box-shadow .2s, border-color .2s;
+    position:relative; overflow:hidden;
+  }
+  .doc-card:hover { box-shadow:var(--shadow-md); border-color:#c8d8ea; }
+  .doc-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background:var(--card-accent, var(--blue));
+  }
+  .doc-card.status-aprovado    { --card-accent: #16a34a; }
+  .doc-card.status-rejeitado   { --card-accent: #dc2626; }
+  .doc-card.status-em_analise  { --card-accent: #d97706; }
+  .doc-card.status-assinado    { --card-accent: #16a34a; }
+  .doc-card.status-aguardando_assinatura { --card-accent: #7c3aed; }
+  .doc-card.status-pendente_correcao { --card-accent: #ea580c; }
+
+  .doc-card-top      { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .doc-card-icon     { font-size:24px; flex-shrink:0; }
+  .doc-card-header   { flex:1; min-width:0; }
+  .doc-card-title    { font-size:13px; font-weight:700; color:var(--ink); line-height:1.3; }
+  .doc-card-cat      { font-size:11px; color:var(--muted); margin-top:2px; }
+  .doc-card-filename { font-size:11px; color:var(--blue); margin-top:4px; word-break:break-all; }
+  .doc-card-size     { font-size:10px; color:var(--muted); }
+
+  /* Status badge */
+  .doc-status-badge {
+    font-size:10px; font-weight:700; padding:3px 8px; border-radius:10px;
+    white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px;
+  }
+
+  /* Required pill */
+  .doc-required-pill {
+    font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px;
+    background:var(--red-bg); color:var(--red); border:1px solid #fca5a5;
+    letter-spacing:.3px;
+  }
+  .doc-optional-pill {
+    font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px;
+    background:var(--line2); color:var(--muted);
+  }
+
+  /* Notes */
+  .doc-card-note {
+    font-size:11px; line-height:1.5; padding:8px 10px;
+    background:var(--gold-bg,#fffbeb); border-radius:6px; border:1px solid #fde68a;
+    color:#92400e; margin:8px 0;
+  }
+  .doc-card-note.is-admin { background:var(--red-bg); border-color:#fca5a5; color:#991b1b; }
+
+  /* Divider */
+  .doc-card-divider { height:1px; background:var(--line); margin:12px 0; }
+
+  /* Meta row */
+  .doc-card-meta { font-size:11px; color:var(--muted); margin-bottom:10px; display:flex; gap:12px; flex-wrap:wrap; }
+
+  /* Actions */
+  .doc-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .doc-act-btn {
+    padding:6px 12px; border-radius:7px; border:1px solid var(--line);
+    font-size:11px; font-weight:700; cursor:pointer; background:#fff; color:var(--ink2);
+    transition:background .15s, border-color .15s; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .doc-act-btn:hover { background:var(--line2); border-color:#c0cfe0; }
+  .doc-act-btn.primary  { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .doc-act-btn.primary:hover { background:#152e4a; }
+  .doc-act-btn.success  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
+  .doc-act-btn.danger   { background:#fef2f2; color:#dc2626; border-color:#fca5a5; }
+  .doc-act-btn.warn     { background:#fffbeb; color:#d97706; border-color:#fde68a; }
+  .doc-act-btn.purple   { background:#f5f3ff; color:#7c3aed; border-color:#c4b5fd; }
+  .doc-act-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* Upload progress bar on card */
+  .doc-upload-progress {
+    height:4px; background:var(--line); border-radius:99px; overflow:hidden;
+    margin-top:8px; display:none;
+  }
+  .doc-upload-progress.active { display:block; }
+  .doc-upload-fill { height:100%; background:var(--blue); border-radius:99px; width:0; transition:width .3s; }
+
+  /* ── Document Viewer Drawer ──────────────────────────── */
+  .doc-drawer-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:70;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+    backdrop-filter:blur(4px);
+  }
+  .doc-drawer-backdrop.open { opacity:1; pointer-events:auto; }
+  .doc-drawer {
+    position:fixed; right:0; top:0; bottom:0; width:min(640px, 100vw);
+    background:#fff; box-shadow:var(--shadow-lg); z-index:71;
+    display:flex; flex-direction:column;
+    transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .doc-drawer-backdrop.open .doc-drawer { transform:translateX(0); }
+
+  .drawer-header {
+    padding:20px 24px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:12px;
+  }
+  .drawer-title  { font-size:15px; font-weight:700; color:var(--ink); flex:1; }
+  .drawer-close  {
+    width:32px; height:32px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--ink2);
+  }
+  .drawer-close:hover { background:var(--line2); }
+
+  .drawer-tabs {
+    display:flex; border-bottom:1px solid var(--line);
+    padding:0 24px;
+  }
+  .drawer-tab {
+    padding:10px 14px; font-size:12px; font-weight:700; color:var(--muted);
+    border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap;
+    transition:color .15s, border-color .15s;
+  }
+  .drawer-tab.active { color:var(--navy); border-bottom-color:var(--navy); }
+
+  .drawer-body { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  .drawer-panel { flex:1; overflow:auto; padding:0; display:none; }
+  .drawer-panel.active { display:flex; flex-direction:column; }
+
+  /* PDF viewer */
+  .pdf-viewer-frame {
+    flex:1; border:none; width:100%; min-height:0;
+  }
+  .pdf-viewer-toolbar {
+    background:var(--line2); padding:10px 16px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+  }
+  .pdf-toolbar-btn {
+    padding:5px 12px; border-radius:6px; border:1px solid var(--line);
+    font-size:11px; font-weight:700; cursor:pointer; background:#fff; color:var(--ink2);
+    transition:background .15s;
+  }
+  .pdf-toolbar-btn:hover { background:var(--line2); }
+
+  /* Timeline panel */
+  .timeline-list { padding:16px 20px; }
+  .timeline-item {
+    display:flex; gap:12px; padding-bottom:16px; position:relative;
+  }
+  .timeline-item::before {
+    content:''; position:absolute; left:15px; top:24px; bottom:0;
+    width:2px; background:var(--line);
+  }
+  .timeline-item:last-child::before { display:none; }
+  .tl-dot {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; background:var(--line2); border:2px solid var(--line); position:relative; z-index:1;
+  }
+  .tl-body  { flex:1; min-width:0; }
+  .tl-event { font-size:12px; font-weight:700; color:var(--ink); }
+  .tl-meta  { font-size:11px; color:var(--muted); margin-top:2px; }
+  .tl-note  { font-size:11px; color:var(--ink2); margin-top:4px; padding:6px 8px; background:var(--line2); border-radius:6px; }
+
+  /* Admin review panel */
+  .drawer-review-form { padding:20px 24px; }
+  .review-workflow-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .rwf-btn {
+    padding:10px; border-radius:8px; border:1px solid var(--line); background:#fff;
+    font-size:12px; font-weight:700; cursor:pointer; text-align:center;
+    transition:background .15s, border-color .15s; color:var(--ink2);
+  }
+  .rwf-btn:hover { border-color:currentColor; }
+  .rwf-btn.active { border-width:2px; }
+  .rwf-btn.success { color:#16a34a; } .rwf-btn.success.active { background:#f0fdf4; border-color:#16a34a; }
+  .rwf-btn.danger  { color:#dc2626; } .rwf-btn.danger.active  { background:#fef2f2; border-color:#dc2626; }
+  .rwf-btn.warn    { color:#d97706; } .rwf-btn.warn.active    { background:#fffbeb; border-color:#d97706; }
+  .rwf-btn.blue    { color:#2E6DA4; } .rwf-btn.blue.active    { background:#eff6ff; border-color:#2E6DA4; }
+  .rwf-btn.purple  { color:#7c3aed; } .rwf-btn.purple.active  { background:#f5f3ff; border-color:#7c3aed; }
+
+  /* ── Approve / action modal ──────────────────────────── */
+  .doc-modal-backdrop {
+    position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .doc-modal-backdrop.open { opacity:1; pointer-events:auto; }
+  .doc-modal {
+    background:#fff; border-radius:16px; box-shadow:var(--shadow-lg);
+    width:100%; max-width:480px; max-height:90dvh; overflow-y:auto;
+    transform:translateY(20px) scale(.97); transition:transform .25s;
+  }
+  .doc-modal-backdrop.open .doc-modal { transform:translateY(0) scale(1); }
+  .doc-modal-header { padding:20px 22px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+  .doc-modal-title  { font-size:15px; font-weight:700; color:var(--ink); }
+  .doc-modal-close  { width:28px; height:28px; border-radius:6px; border:none; background:var(--line2); cursor:pointer; font-size:13px; }
+  .doc-modal-body   { padding:20px 22px; }
+  .doc-modal-footer { padding:14px 22px 20px; border-top:1px solid var(--line); display:flex; gap:10px; justify-content:flex-end; }
+
+  .field-label { font-size:12px; font-weight:700; color:var(--ink2); margin-bottom:5px; display:block; }
+  .field-input, .field-select, .field-textarea {
+    width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:13px; color:var(--ink); background:#fff;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .field-input:focus, .field-select:focus, .field-textarea:focus {
+    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(46,109,164,.12);
+  }
+  .field-mb { margin-bottom:14px; }
+
+  /* ── Signature section ───────────────────────────────── */
+  .sig-card {
+    background:linear-gradient(135deg,#f5f3ff,#ede9fe); border:1px solid #c4b5fd;
+    border-radius:12px; padding:16px 18px; margin-bottom:12px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .sig-card-icon { font-size:24px; flex-shrink:0; }
+  .sig-card-body { flex:1; min-width:0; }
+  .sig-card-title { font-size:13px; font-weight:700; color:#4c1d95; }
+  .sig-card-meta  { font-size:11px; color:#6d28d9; margin-top:2px; }
+
+  /* ── Empty state ─────────────────────────────────────── */
+  .doc-empty { text-align:center; padding:40px 20px; color:var(--muted); }
+  .doc-empty-icon { font-size:40px; margin-bottom:10px; }
+
+  /* ── Utilities ───────────────────────────────────────── */
+  .btn-primary-sm {
+    background:var(--navy); color:#fff; border:none; border-radius:8px;
+    padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;
+    transition:background .15s;
+  }
+  .btn-primary-sm:hover { background:#152e4a; }
+  .btn-ghost-sm {
+    background:transparent; color:var(--ink2); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer;
+    transition:background .15s;
+  }
+  .btn-ghost-sm:hover { background:var(--line2); }
+
+  .fd-spinner-inline {
+    display:inline-block; width:14px; height:14px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.3); border-top-color:#fff;
+    animation:spin .7s linear infinite; vertical-align:middle;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .admin-bar-doc {
+    background:var(--navy); color:#fff; border-radius:12px; padding:12px 18px;
+    display:flex; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .admin-badge { background:var(--gold,#F5A623); color:#1A3A5C; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:800; letter-spacing:1px; }
+
+  .doc-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:360px; color:var(--muted); gap:12px; }
+  .doc-spinner { width:36px; height:36px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--blue); animation:spin .8s linear infinite; }
+  </style>
 </head>
 <body>
 
 <div class="portal-shell">
   <div data-component="sidebar"></div>
 
-  <div class="main-area">
+  <div class="main-wrap">
     <div data-component="header"></div>
 
     <main class="page-content">
+      <div class="doc-page">
 
-      <div class="page-header page-header-row">
-        <div>
-          <h1 id="docs-page-title">Documentos</h1>
-          <p id="docs-page-sub">Gerencie os documentos do seu caso.</p>
+        <!-- Loading -->
+        <div id="doc-loading" class="doc-loading">
+          <div class="doc-spinner"></div>
+          <span>Carregando central de documentos…</span>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <a id="btn-back-admin" href="dashboard.html" class="btn btn-ghost btn-sm" style="display:none;">← Voltar</a>
-          <button class="btn btn-primary btn-sm" id="btn-upload-hint"
-                  onclick="showToast('Use o botão Enviar ao lado de cada documento.','ok')">
-            + Enviar documento
-          </button>
-        </div>
+
+        <!-- Main content -->
+        <div id="doc-main" style="display:none;">
+
+          <!-- Admin bar -->
+          <div id="doc-admin-bar" class="admin-bar-doc" style="display:none;">
+            <span class="admin-badge">ADMIN</span>
+            <span id="doc-admin-context" style="font-size:13px;opacity:.8;">Modo administrador</span>
+            <div style="flex:1;"></div>
+            <div class="view-switcher" id="view-switcher">
+              <button class="vm-btn active" data-mode="admin"   onclick="setViewMode('admin')">👤 Admin</button>
+              <button class="vm-btn"        data-mode="cliente" onclick="setViewMode('cliente')">👥 Cliente</button>
+            </div>
+            <button class="btn-ghost-sm" id="btn-back-client" onclick="window.location.href='dashboard.html'" style="display:none;">← Voltar</button>
+          </div>
+
+          <!-- Hero -->
+          <div class="doc-hero">
+            <div class="doc-hero-inner">
+              <div>
+                <div class="doc-hero-label">📋 Central de Documentos</div>
+                <div class="doc-hero-title" id="hero-title">Gestão Documental do Caso</div>
+                <div class="doc-hero-sub">Envie, acompanhe e gerencie todos os documentos do seu processo de recuperação financeira.</div>
+              </div>
+              <div class="doc-progress-wrap">
+                <div style="font-size:11px;opacity:.75;text-align:right;">Progresso documental</div>
+                <div class="doc-progress-bar">
+                  <div class="doc-progress-fill" id="hero-progress-fill" style="width:0%"></div>
+                </div>
+                <div class="doc-progress-label" id="hero-progress-label">0 de 0 aprovados</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Grid -->
+          <div class="doc-kpi-grid">
+            <div class="doc-kpi doc-kpi-warn">
+              <div class="doc-kpi-icon">⏳</div>
+              <div class="doc-kpi-label">Pendentes</div>
+              <div class="doc-kpi-value" id="kpi-pendentes">—</div>
+              <div class="doc-kpi-hint">Aguardando envio</div>
+            </div>
+            <div class="doc-kpi" style="--kpi-c:#d97706;">
+              <div class="doc-kpi-icon">🔍</div>
+              <div class="doc-kpi-label">Em análise</div>
+              <div class="doc-kpi-value" id="kpi-analise">—</div>
+              <div class="doc-kpi-hint">Aguardando revisão</div>
+            </div>
+            <div class="doc-kpi doc-kpi-green">
+              <div class="doc-kpi-icon">✅</div>
+              <div class="doc-kpi-label">Aprovados</div>
+              <div class="doc-kpi-value" id="kpi-aprovados">—</div>
+              <div class="doc-kpi-hint">Verificados</div>
+            </div>
+            <div class="doc-kpi doc-kpi-red">
+              <div class="doc-kpi-icon">❌</div>
+              <div class="doc-kpi-label">Rejeitados</div>
+              <div class="doc-kpi-value" id="kpi-rejeitados">—</div>
+              <div class="doc-kpi-hint">Reenvio necessário</div>
+            </div>
+            <div class="doc-kpi" style="--kpi-c:#7c3aed;">
+              <div class="doc-kpi-icon">✍️</div>
+              <div class="doc-kpi-label">Assinatura</div>
+              <div class="doc-kpi-value" id="kpi-assinatura">—</div>
+              <div class="doc-kpi-hint">Pendente de assinar</div>
+            </div>
+          </div>
+
+          <!-- Document Requests Banner -->
+          <div id="requests-banner" style="display:none;"></div>
+
+          <!-- Awaiting Signature Section -->
+          <div id="sig-section" style="display:none;">
+            <div class="cat-section-header" style="margin-bottom:12px;">
+              <div class="cat-icon">✍️</div>
+              <div class="cat-title" style="color:#7c3aed;">Assinatura Pendente</div>
+            </div>
+            <div id="sig-cards"></div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="doc-filter-bar" id="filter-bar">
+            <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">Todos</button>
+            <button class="filter-chip" data-filter="pendente_envio" onclick="setFilter('pendente_envio')">Pendentes</button>
+            <button class="filter-chip" data-filter="em_analise" onclick="setFilter('em_analise')">Em análise</button>
+            <button class="filter-chip" data-filter="aprovado" onclick="setFilter('aprovado')">Aprovados</button>
+            <button class="filter-chip" data-filter="rejeitado" onclick="setFilter('rejeitado')">Rejeitados</button>
+          </div>
+
+          <!-- Drop Zone (client mode) -->
+          <div id="drop-zone-global" class="drop-zone" style="display:none;"
+               onclick="document.getElementById('drop-zone-input').click()">
+            <div class="drop-zone-icon">📤</div>
+            <div class="drop-zone-title">Arraste um arquivo aqui ou clique para selecionar</div>
+            <div class="drop-zone-sub">PDF, JPG, PNG, WebP — máximo 10 MB</div>
+            <div class="drop-zone-hint" id="drop-zone-tipo-hint">Selecione abaixo qual documento está enviando</div>
+          </div>
+          <input type="file" id="drop-zone-input" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none;" />
+
+          <!-- Document Hub (grouped by category) -->
+          <div id="doc-hub"></div>
+
+        </div><!-- /doc-main -->
       </div>
-
-      <!-- Pipeline de aprovação (admin) -->
-      <div id="pipeline-bar" style="display:none; margin-bottom:16px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Pipeline:</span>
-          <span class="chip chip-warn" id="pipe-pendentes">— pendentes</span>
-          <span class="chip chip-blue" id="pipe-analise">— em análise</span>
-          <span class="chip chip-ok"   id="pipe-aprovados">— aprovados</span>
-          <span class="chip chip-red"  id="pipe-recusados">— recusados</span>
-        </div>
-      </div>
-
-      <!-- KPIs -->
-      <div class="kpi-grid" style="margin-bottom:16px;">
-        <div class="kpi kpi-warn">
-          <span class="kpi-label">Pendentes</span>
-          <div class="kpi-value" id="kpi-pendentes">—</div>
-          <div class="kpi-hint">Aguardando envio</div>
-        </div>
-        <div class="kpi kpi-ok">
-          <span class="kpi-label">Aprovados</span>
-          <div class="kpi-value" id="kpi-aprovados">—</div>
-          <div class="kpi-hint">Verificados pela equipe</div>
-        </div>
-        <div class="kpi">
-          <span class="kpi-label">Em análise</span>
-          <div class="kpi-value" id="kpi-analise">—</div>
-          <div class="kpi-hint">Aguardando revisão</div>
-        </div>
-        <div class="kpi kpi-muted">
-          <span class="kpi-label">Total</span>
-          <div class="kpi-value" id="kpi-total">—</div>
-          <div class="kpi-hint">Documentos necessários</div>
-        </div>
-      </div>
-
-      <!-- Documents Table -->
-      <div class="sec">
-        <div class="sec-header">
-          <div class="sec-num">1</div>
-          <h2 class="sec-title">Lista de Documentos</h2>
-          <span class="sec-tag" id="docs-count">—</span>
-        </div>
-
-        <div style="overflow-x:auto;">
-          <table class="table" style="width:100%;min-width:560px;" id="docs-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Documento</th>
-                <th>Categoria</th>
-                <th>Obrigatório</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="docs-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Como enviar (client only) -->
-      <div class="sec" id="how-to-send">
-        <div class="sec-header">
-          <div class="sec-num">2</div>
-          <h2 class="sec-title">Como enviar</h2>
-        </div>
-        <div class="callout callout-blue" style="margin-bottom:0;">
-          Use o botão <strong>Enviar</strong> ao lado de cada documento.
-          Formatos aceitos: PDF, JPG, PNG, WebP — máximo <strong>10 MB</strong>.
-          Após o envio o status muda para <em>Em análise</em> e nossa equipe será notificada.
-        </div>
-      </div>
-
     </main>
-
-    <footer class="portal-page-footer">
-      <span>Portal do Superendividado</span>
-      <span>Documentos protegidos por criptografia</span>
-    </footer>
   </div>
 </div>
 
-<!-- Admin: modal de aprovação -->
-<div class="modal-overlay" id="modal-approve" onclick="if(event.target===this)closeApproveModal()">
-  <div class="modal" style="text-align:left;max-width:480px;">
-    <h3 style="margin-bottom:4px;" id="approve-modal-title">Atualizar documento</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="approve-modal-doc">—</p>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <label class="form-label">Novo status</label>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-sm" id="btn-aprovar"
-                style="flex:1;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);"
-                onclick="setApproveStatus('aprovado')">✅ Aprovar</button>
-        <button class="btn btn-sm" id="btn-recusar"
-                style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid var(--red);"
-                onclick="setApproveStatus('recusado')">❌ Recusar</button>
-        <button class="btn btn-sm" id="btn-analise"
-                style="flex:1;background:var(--ice);color:var(--blue);border:1px solid var(--blue);"
-                onclick="setApproveStatus('em_analise')">🔍 Em análise</button>
+<!-- ── Document Viewer Drawer ─────────────────────────────────────────────── -->
+<div class="doc-drawer-backdrop" id="doc-drawer">
+  <div class="doc-drawer" id="drawer-panel">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title" id="drawer-title">Documento</div>
+        <div style="font-size:11px;color:var(--muted);" id="drawer-subtitle">—</div>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-tabs" id="drawer-tabs">
+      <div class="drawer-tab active" data-tab="view" onclick="switchDrawerTab('view')">Visualizar</div>
+      <div class="drawer-tab" data-tab="timeline" onclick="switchDrawerTab('timeline')">Timeline</div>
+      <div class="drawer-tab" data-tab="review" id="drawer-tab-review" onclick="switchDrawerTab('review')" style="display:none;">Avaliar</div>
+    </div>
+    <!-- View panel -->
+    <div class="drawer-panel active" data-tab-panel="view" id="panel-view">
+      <div class="pdf-viewer-toolbar" id="viewer-toolbar">
+        <span id="viewer-filename" style="font-size:12px;font-weight:700;color:var(--ink);flex:1;"></span>
+        <button class="pdf-toolbar-btn" onclick="openFullscreen()">⛶ Tela cheia</button>
+        <button class="pdf-toolbar-btn" id="btn-download-doc" onclick="downloadDoc()">⬇ Baixar</button>
+      </div>
+      <iframe id="pdf-frame" class="pdf-viewer-frame" src="about:blank"></iframe>
+      <div id="no-preview" style="display:none;text-align:center;padding:40px;color:var(--muted);">
+        <div style="font-size:40px;margin-bottom:12px;">📄</div>
+        <div>Arquivo não disponível para pré-visualização.</div>
+        <button class="btn-primary-sm" style="margin-top:12px;" onclick="downloadDoc()">Baixar arquivo</button>
       </div>
     </div>
-
-    <div class="form-group" style="margin-bottom:20px;">
-      <label class="form-label" for="approve-obs">Observação para o cliente (opcional)</label>
-      <textarea class="form-textarea" id="approve-obs" rows="3"
-                placeholder="Ex: Documento ilegível, reenvie em melhor resolução..."></textarea>
+    <!-- Timeline panel -->
+    <div class="drawer-panel" data-tab-panel="timeline" id="panel-timeline">
+      <div class="timeline-list" id="timeline-items"></div>
     </div>
-
-    <div class="btn-group" style="justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeApproveModal()">Cancelar</button>
-      <button class="btn btn-primary" id="btn-confirm-approve" onclick="confirmApprove()" disabled>
-        Confirmar
-      </button>
+    <!-- Admin review panel -->
+    <div class="drawer-panel" data-tab-panel="review" id="panel-review">
+      <div class="drawer-review-form">
+        <div style="margin-bottom:16px;">
+          <div class="field-label">Ação</div>
+          <div class="review-workflow-btns">
+            <button class="rwf-btn success" data-ws="aprovado" onclick="selectWorkflow('aprovado')">✅ Aprovar</button>
+            <button class="rwf-btn danger"  data-ws="rejeitado" onclick="selectWorkflow('rejeitado')">❌ Rejeitar</button>
+            <button class="rwf-btn warn"    data-ws="pendente_correcao" onclick="selectWorkflow('pendente_correcao')">✏️ Pedir correção</button>
+            <button class="rwf-btn blue"    data-ws="em_analise" onclick="selectWorkflow('em_analise')">🔍 Em análise</button>
+            <button class="rwf-btn purple"  data-ws="aguardando_assinatura" onclick="selectWorkflow('aguardando_assinatura')">✍️ Solicitar assinatura</button>
+          </div>
+        </div>
+        <div class="field-mb">
+          <label class="field-label" for="review-obs">Observação para o cliente</label>
+          <textarea class="field-textarea" id="review-obs" rows="3" placeholder="Explique a decisão ao cliente…"></textarea>
+        </div>
+        <div class="field-mb" id="review-sig-wrap" style="display:none;">
+          <label class="field-label">Email do signatário</label>
+          <input class="field-input" id="review-sig-email" type="email" placeholder="email@cliente.com" />
+        </div>
+        <div class="field-mb">
+          <label class="field-label" for="review-admin-notes">Nota interna (visível só para admin)</label>
+          <textarea class="field-textarea" id="review-admin-notes" rows="2" placeholder="Anotação interna…"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn-ghost-sm" onclick="closeDrawer()">Cancelar</button>
+          <button class="btn-primary-sm" id="btn-confirm-review" onclick="confirmReview()" disabled>Confirmar</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"><span id="toast-msg"></span></div>
-
-<script type="module" src="../js/app.js"></script>
+<!-- ── Module Script ────────────────────────────────────────────────────────── -->
 <script type="module">
-import { showToast }                        from '../utils/helpers.js';
-import { DocumentService, AdminService }    from '../services/database.js';
-import { supabase }                         from '../services/supabase.js';
-import { FUNCTIONS_URL }                    from '../utils/config.js';
+import { supabase }        from '../services/supabase.js';
+import { DocumentService, AdminService } from '../services/database.js';
+import { FUNCTIONS_URL }   from '../utils/config.js';
+import { bus }             from '../modules/events/EventBus.js';
+import { Shell }           from '../modules/ui/Shell.js';
+import { Toast }           from '../modules/ui/Toast.js';
+import { DocumentEngine, WORKFLOW_STATES, DOCUMENT_CATEGORIES } from '../modules/documents/DocumentEngine.js';
+import { UploadEngine }    from '../modules/documents/UploadEngine.js';
+import { SignatureService } from '../modules/documents/SignatureService.js';
 
-window.showToast = showToast;
+// ── State ─────────────────────────────────────────────────────────────────────
+const shell    = new Shell();
+let engine     = new DocumentEngine();
+let uploader   = null;
+let sigService = null;
 
-const CAT_CHIP    = { Identidade:'chip-blue', Residência:'chip-muted', Financeiro:'chip-muted', Dívidas:'chip-warn' };
-const STATUS_CHIP = { pendente:'chip-warn', em_analise:'chip-blue', aprovado:'chip-ok', recusado:'chip-red' };
-const STATUS_LABEL= { pendente:'Pendente', em_analise:'Em análise', aprovado:'Aprovado', recusado:'Recusado' };
+let currentUser    = null;
+let currentCaso    = null;
+let isAdmin        = false;
+let viewMode       = 'cliente';        // 'cliente' | 'admin'
+let viewingUid     = null;             // admin viewing a client
+let activeFilter   = 'all';
+let drawerDocId    = null;
+let reviewWorkflow = null;
+let drawerSignedUrl = null;
 
-let currentUser  = null;
-let currentCaso  = null;
-let isAdminMode  = false;
-let viewingUID   = null;   // set when admin is viewing a specific client
-let approveDocId = null;
-let approveStatus = null;
-
-/* ── Detect admin + uid param ─────────────────────── */
-document.addEventListener('app:user-loaded', e => {
-  const { user, caso, isAdmin } = e.detail || {};
-  currentUser = user;
-  currentCaso = caso;
-  isAdminMode = !!isAdmin;
-});
-
-document.addEventListener('app:ready', async () => {
-  const params = new URLSearchParams(window.location.search);
-  viewingUID   = params.get('uid') || null;
-
-  if (isAdminMode && viewingUID) {
-    // Admin viewing a specific client's docs
-    document.getElementById('btn-back-admin').style.display = '';
-    document.getElementById('btn-upload-hint').style.display = 'none';
-    document.getElementById('how-to-send').style.display = 'none';
-    document.getElementById('pipeline-bar').style.display = '';
-    document.getElementById('docs-page-title').textContent = 'Documentos — Revisão';
-    document.getElementById('docs-page-sub').textContent   = 'Aprovação pelo escritório';
-    await loadAdminDocs(viewingUID);
-  } else {
-    await loadClientDocs();
-  }
-});
-
-/* ── Client: own docs ────────────────────────────── */
-async function loadClientDocs() {
-  const rows = await DocumentService.list().catch(() => []);
-  const docs  = DocumentService.TYPES.map(t => ({ ...t, ...(rows.find(r => r.tipo === t.tipo) || {}) }));
-  renderTable(docs, false);
-  updateKPIs(docs);
-}
-
-/* ── Admin: specific client docs ────────────────── */
-async function loadAdminDocs(uid) {
-  const rows = await AdminService.getClientDocs(uid).catch(() => []);
-  const docs  = DocumentService.TYPES.map(t => ({ ...t, ...(rows.find(r => r.tipo === t.tipo) || {}) }));
-  // Need IDs from DB rows for admin actions
-  const docsWithId = DocumentService.TYPES.map(t => {
-    const row = rows.find(r => r.tipo === t.tipo);
-    return { ...t, ...(row || {}), db_id: row?.id };
-  });
-  renderTable(docsWithId, true);
-  updateKPIs(docsWithId);
-  updatePipeline(docsWithId);
-}
-
-function updatePipeline(docs) {
-  document.getElementById('pipe-pendentes').textContent = docs.filter(d => !d.status || d.status === 'pendente').length + ' pendentes';
-  document.getElementById('pipe-analise').textContent   = docs.filter(d => d.status === 'em_analise').length + ' em análise';
-  document.getElementById('pipe-aprovados').textContent = docs.filter(d => d.status === 'aprovado').length + ' aprovados';
-  document.getElementById('pipe-recusados').textContent = docs.filter(d => d.status === 'recusado').length + ' recusados';
-}
-
-/* ── Render table ────────────────────────────────── */
-function renderTable(docs, adminMode) {
-  const tbody = document.getElementById('docs-tbody');
-  tbody.innerHTML = docs.map((d, i) => {
-    const statusChip = `<span class="chip ${STATUS_CHIP[d.status]||'chip-warn'}">${STATUS_LABEL[d.status]||'Pendente'}</span>`;
-    const obsHtml    = d.observacao_admin
-      ? `<br><small style="color:var(--muted);font-size:11px;">Obs: ${d.observacao_admin}</small>` : '';
-
-    let actionBtn = '';
-    if (adminMode) {
-      actionBtn = `<button class="btn btn-ghost btn-sm" onclick="openApproveModal('${d.db_id || ''}','${d.label}','${d.status||'pendente'}')">Avaliar</button>`;
-    } else {
-      const canUpload = !d.status || d.status === 'pendente' || d.status === 'recusado';
-      actionBtn = canUpload
-        ? `<button class="btn btn-ghost btn-sm" data-upload-tipo="${d.tipo}" onclick="triggerUpload('${d.tipo}')">Enviar</button>`
-        : `<button class="btn btn-ghost btn-sm" disabled>${d.status === 'em_analise' ? 'Em análise' : 'Aprovado'}</button>`;
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+document.addEventListener('app:ready', () => bootstrap().catch(handleError));
+if (document.readyState === 'complete') {
+  setTimeout(() => {
+    if (document.getElementById('doc-loading').style.display !== 'none') {
+      bootstrap().catch(handleError);
     }
+  }, 1500);
+}
 
-    return `<tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td>${d.label}${d.nome_arquivo ? `<br><small style="color:var(--muted)">${d.nome_arquivo}</small>` : ''}${obsHtml}</td>
-      <td><span class="chip ${CAT_CHIP[d.categoria]||'chip-muted'}">${d.categoria}</span></td>
-      <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Rec.</span>'}</td>
-      <td>${statusChip}</td>
-      <td>${actionBtn}</td>
-    </tr>`;
+async function bootstrap() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  currentUser = session.user;
+  shell.init();
+
+  // Check admin status
+  const { data: adminRow } = await supabase
+    .from('admin_users').select('user_id').eq('user_id', currentUser.id).maybeSingle();
+  isAdmin = !!adminRow;
+
+  // Check URL params for admin viewing client
+  const params   = new URLSearchParams(window.location.search);
+  viewingUid     = params.get('uid') || null;
+
+  if (isAdmin) {
+    viewMode = viewingUid ? 'admin' : 'admin';
+    document.getElementById('doc-admin-bar').style.display = 'flex';
+    if (viewingUid) {
+      document.getElementById('btn-back-client').style.display = '';
+      document.getElementById('doc-admin-context').textContent = `Revisando documentos do cliente`;
+    }
+  }
+
+  // Init signature service
+  sigService = new SignatureService(FUNCTIONS_URL, async () => {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    return s?.access_token || '';
+  });
+
+  // Init document engine
+  const svc = viewingUid && isAdmin
+    ? { ...DocumentService, list: () => DocumentService.listForUser(viewingUid) }
+    : DocumentService;
+
+  await engine.init(svc);
+  await engine.loadRequests();
+
+  // Init upload engine
+  const dropZone = document.getElementById('drop-zone-global');
+  uploader = new UploadEngine(dropZone, {
+    onUpload:   (file, tipo) => engine.upload(tipo, file),
+    onProgress: (pct, tipo)  => updateProgress(tipo, pct),
+    onSuccess:  (res, tipo)  => { Toast.success(`${tipo} enviado com sucesso!`); },
+    onError:    (err, tipo)  => Toast.error(err.message || 'Erro ao enviar documento.'),
+    onPreview:  (url, tipo)  => {},
+  });
+  uploader.mount();
+
+  // Listen for list changes
+  bus.on('document.list.changed', () => renderAll());
+  bus.on('upload.started', ({ tipo }) => setCardUploading(tipo, true));
+
+  renderAll();
+  document.getElementById('doc-loading').style.display = 'none';
+  document.getElementById('doc-main').style.display    = 'block';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  const stats = engine.getStats();
+  renderKPIs(stats);
+  renderProgress(stats);
+  renderRequestsBanner();
+  renderSignaturePending();
+  renderDocHub();
+}
+
+function renderKPIs(stats) {
+  document.getElementById('kpi-pendentes').textContent  = stats.pending;
+  document.getElementById('kpi-analise').textContent    = stats.inReview;
+  document.getElementById('kpi-aprovados').textContent  = stats.approved;
+  const rejected = engine.getByStatus('rejeitado').length;
+  document.getElementById('kpi-rejeitados').textContent = rejected;
+  document.getElementById('kpi-assinatura').textContent = stats.sigPend;
+}
+
+function renderProgress(stats) {
+  const pct = stats.progress;
+  document.getElementById('hero-progress-fill').style.width = `${pct}%`;
+  document.getElementById('hero-progress-label').textContent =
+    `${stats.approved} de ${stats.total} aprovados (${pct}%)`;
+}
+
+function renderRequestsBanner() {
+  const requests = engine.getRequests();
+  const el = document.getElementById('requests-banner');
+  if (!requests.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="requests-banner">
+      <div class="requests-banner-icon">📩</div>
+      <div class="requests-banner-body">
+        <div class="requests-banner-title">O escritório solicitou ${requests.length} documento${requests.length > 1 ? 's' : ''}</div>
+        <div class="requests-banner-sub">Envie os documentos pendentes para agilizar seu processo.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${requests.slice(0,3).map(r => `
+          <span class="request-pill ${r.priority==='urgent'?'urgent':''}" onclick="scrollToDoc('${r.document_tipo}')">
+            ${r.priority === 'urgent' ? '🚨 ' : ''}${esc(r.document_label)}
+          </span>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSignaturePending() {
+  const sigDocs = engine.getAwaitingSignature();
+  const sec = document.getElementById('sig-section');
+  const cards = document.getElementById('sig-cards');
+  if (!sigDocs.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  cards.innerHTML = sigDocs.map(d => `
+    <div class="sig-card">
+      <div class="sig-card-icon">✍️</div>
+      <div class="sig-card-body">
+        <div class="sig-card-title">${esc(d.label)}</div>
+        <div class="sig-card-meta">${d.autentique_id ? `ID Autentique: ${d.autentique_id}` : 'Aguardando link de assinatura'}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${d.autentique_id
+          ? `<a href="https://app.autentique.com.br/documento/assinar/${d.autentique_id}" target="_blank" class="doc-act-btn purple">✍️ Assinar agora</a>`
+          : ''}
+        <button class="doc-act-btn" onclick="openDrawer('${d.id}')">🔍 Ver detalhes</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDocHub() {
+  const hub = document.getElementById('doc-hub');
+  const allDocs = engine.getAll();
+  const filtered = activeFilter === 'all'
+    ? allDocs
+    : allDocs.filter(d => d.workflow_status === activeFilter ||
+        (activeFilter === 'aprovado' && d.workflow_status === 'assinado'));
+
+  // Group by category
+  const cats = {};
+  for (const d of filtered) {
+    const cat = d.category || 'complementares';
+    if (!cats[cat]) cats[cat] = [];
+    cats[cat].push(d);
+  }
+
+  if (!Object.keys(cats).length) {
+    hub.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">📋</div><div>Nenhum documento encontrado.</div></div>`;
+    return;
+  }
+
+  const catOrder = ['identidade','residencia','financeiro','dividas','contratos','cnj','judiciais','complementares'];
+  const sortedCats = catOrder.filter(c => cats[c]);
+
+  hub.innerHTML = sortedCats.map(catKey => {
+    const catMeta  = DOCUMENT_CATEGORIES[catKey] || { label: catKey, icon: '📁' };
+    const docs     = cats[catKey];
+    const approved = docs.filter(d => ['aprovado','assinado'].includes(d.workflow_status)).length;
+    const catPct   = docs.length > 0 ? Math.round((approved / docs.length) * 100) : 0;
+
+    return `
+      <div class="cat-section" id="cat-${catKey}">
+        <div class="cat-section-header">
+          <div class="cat-icon">${catMeta.icon}</div>
+          <div class="cat-title">${catMeta.label}</div>
+          <div class="cat-progress-bar">
+            <div class="cat-progress-fill" style="width:${catPct}%;background:${catMeta.color || 'var(--blue)'}"></div>
+          </div>
+          <div class="cat-count">${approved}/${docs.length}</div>
+        </div>
+        <div class="doc-cards-grid">
+          ${docs.map(d => renderDocCard(d)).join('')}
+        </div>
+      </div>
+    `;
   }).join('');
 
-  document.getElementById('docs-count').textContent = docs.length + ' documentos';
+  // Show/hide drop zone for client mode
+  const dz = document.getElementById('drop-zone-global');
+  dz.style.display = (!isAdmin || viewMode === 'cliente') ? 'none' : 'none'; // hidden globally, per-card upload used
 }
 
-function updateKPIs(docs) {
-  document.getElementById('kpi-pendentes').textContent = docs.filter(d => !d.status || d.status === 'pendente').length;
-  document.getElementById('kpi-aprovados').textContent = docs.filter(d => d.status === 'aprovado').length;
-  document.getElementById('kpi-analise').textContent   = docs.filter(d => d.status === 'em_analise').length;
-  document.getElementById('kpi-total').textContent     = docs.length;
-}
+function renderDocCard(d) {
+  const ws      = WORKFLOW_STATES[d.workflow_status] || WORKFLOW_STATES.pendente_envio;
+  const canUpload = ['pendente_envio','pendente_correcao','rejeitado'].includes(d.workflow_status) && (!isAdmin || viewMode === 'cliente');
+  const canView   = !!d.storage_path;
+  const adminMode = isAdmin && viewMode === 'admin';
 
-/* ── Client upload ───────────────────────────────── */
-window.triggerUpload = function(tipo) {
-  let inp = document.getElementById('_fi_' + tipo);
-  if (!inp) {
-    inp = Object.assign(document.createElement('input'), {
-      type: 'file', id: '_fi_' + tipo,
-      accept: '.pdf,.jpg,.jpeg,.png,.webp',
-    });
-    inp.style.display = 'none';
-    inp.addEventListener('change', () => { if (inp.files[0]) handleUpload(tipo, inp.files[0]); inp.value = ''; });
-    document.body.appendChild(inp);
+  const noteHtml = d.observacao_admin
+    ? `<div class="doc-card-note">${esc(d.observacao_admin)}</div>` : '';
+  const adminNoteHtml = adminMode && d.admin_notes
+    ? `<div class="doc-card-note is-admin">🔒 ${esc(d.admin_notes)}</div>` : '';
+
+  const metaHtml = d.nome_arquivo
+    ? `<div class="doc-card-filename">📎 ${esc(d.nome_arquivo)} ${d.file_size ? `<span class="doc-card-size">(${fmtSize(d.file_size)})</span>` : ''}</div>` : '';
+  const metaDate = d.updated_at
+    ? `<span>Atualizado: ${timeAgo(d.updated_at)}</span>` : '';
+  const version = d.version > 1 ? `<span>v${d.version}</span>` : '';
+
+  let actions = '';
+
+  if (canUpload) {
+    actions += `<button class="doc-act-btn primary" onclick="triggerUpload('${d.tipo}')">📤 Enviar</button>`;
   }
-  inp.click();
-};
-
-async function handleUpload(tipo, file) {
-  if (file.size > 10 * 1024 * 1024) { showToast('Arquivo muito grande (máx 10 MB).', 'warn'); return; }
-  const btn = document.querySelector(`[data-upload-tipo="${tipo}"]`);
-  if (btn) { btn.disabled = true; btn.textContent = '...'; }
-  try {
-    await DocumentService.upload(tipo, file);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session && currentUser) {
-      const tipoMeta = DocumentService.TYPES.find(t => t.tipo === tipo);
-      fetch(`${FUNCTIONS_URL}/portal-notify`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'document_upload',
-          clientEmail: currentUser.email,
-          clientName:  currentCaso?.full_name || '',
-          payload:     { tipoLabel: tipoMeta?.label || tipo },
-        }),
-      }).catch(console.warn);
-    }
-    showToast('Documento enviado! Status: Em análise.', 'ok');
-    await loadClientDocs();
-  } catch (err) {
-    console.error(err);
-    showToast('Erro ao enviar. Tente novamente.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Enviar'; }
+  if (canView) {
+    actions += `<button class="doc-act-btn" onclick="openDrawer('${d.id || d.tipo}')">👁 Ver</button>`;
   }
+  if (adminMode) {
+    actions += `<button class="doc-act-btn warn" onclick="openDrawer('${d.id || d.tipo}', true)">⚖️ Avaliar</button>`;
+    if (d.storage_path && d.workflow_status === 'aprovado') {
+      actions += `<button class="doc-act-btn purple" onclick="openSigModal('${d.id}')">✍️ Assinar</button>`;
+    }
+  }
+  if (!actions) {
+    actions = `<span style="font-size:11px;color:var(--muted);">Nenhuma ação disponível</span>`;
+  }
+
+  return `
+    <div class="doc-card status-${d.workflow_status}" id="card-${d.tipo}">
+      <div class="doc-card-top">
+        <div class="doc-card-icon">${d.icon || '📄'}</div>
+        <div class="doc-card-header">
+          <div class="doc-card-title">${esc(d.label)}</div>
+          <div class="doc-card-cat">${DOCUMENT_CATEGORIES[d.category]?.label || d.category || '—'}</div>
+          ${metaHtml}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+          <div class="doc-status-badge" style="background:${ws.bg};color:${ws.color};">
+            ${ws.icon} ${ws.label}
+          </div>
+          <span class="${d.required ? 'doc-required-pill' : 'doc-optional-pill'}">${d.required ? 'Obrigatório' : 'Opcional'}</span>
+        </div>
+      </div>
+      ${noteHtml}${adminNoteHtml}
+      ${metaDate || version ? `<div class="doc-card-meta">${metaDate}${version}</div>` : ''}
+      <div class="doc-upload-progress" id="prog-${d.tipo}">
+        <div class="doc-upload-fill" id="prog-fill-${d.tipo}"></div>
+      </div>
+      <div class="doc-card-divider"></div>
+      <div class="doc-card-actions">${actions}</div>
+    </div>
+  `;
 }
 
-/* ── Admin approval modal ────────────────────────── */
-window.openApproveModal = function(docId, docLabel, currentStatus) {
-  approveDocId  = docId;
-  approveStatus = null;
-  document.getElementById('approve-modal-title').textContent = 'Avaliar documento';
-  document.getElementById('approve-modal-doc').textContent   = docLabel;
-  document.getElementById('approve-obs').value = '';
-  document.getElementById('btn-confirm-approve').disabled = true;
-  // Highlight current status button
-  ['btn-aprovar','btn-recusar','btn-analise'].forEach(id => {
-    document.getElementById(id).style.opacity = '1';
+// ── Upload ────────────────────────────────────────────────────────────────────
+window.triggerUpload = (tipo) => {
+  const input = document.createElement('input');
+  input.type   = 'file';
+  input.accept = '.pdf,.jpg,.jpeg,.png,.webp';
+  input.onchange = () => {
+    if (input.files?.[0]) uploader._handleFile(input.files[0], tipo);
+  };
+  input.click();
+};
+
+function setCardUploading(tipo, active) {
+  const prog = document.getElementById(`prog-${tipo}`);
+  if (prog) prog.classList.toggle('active', active);
+}
+
+function updateProgress(tipo, pct) {
+  const fill = document.getElementById(`prog-fill-${tipo}`);
+  if (fill) fill.style.width = `${pct}%`;
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+window.setFilter = (filter) => {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.filter === filter);
   });
-  document.getElementById('modal-approve').classList.add('show');
+  renderDocHub();
 };
 
-window.setApproveStatus = function(status) {
-  approveStatus = status;
-  document.getElementById('btn-confirm-approve').disabled = false;
-  const map = { aprovado: 'btn-aprovar', recusado: 'btn-recusar', em_analise: 'btn-analise' };
-  ['btn-aprovar','btn-recusar','btn-analise'].forEach(id => {
-    document.getElementById(id).style.opacity = id === map[status] ? '1' : '0.4';
+window.scrollToDoc = (tipo) => {
+  const el = document.getElementById(`card-${tipo}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+// ── View Mode ─────────────────────────────────────────────────────────────────
+window.setViewMode = (mode) => {
+  viewMode = mode;
+  document.querySelectorAll('.vm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  renderAll();
+};
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+window.openDrawer = async (docIdOrTipo, adminReview = false) => {
+  const doc = engine.getAll().find(d => d.id === docIdOrTipo || d.tipo === docIdOrTipo);
+  if (!doc) return;
+  drawerDocId     = doc.id;
+  drawerSignedUrl = null;
+
+  document.getElementById('drawer-title').textContent    = doc.label;
+  document.getElementById('drawer-subtitle').textContent = `${DOCUMENT_CATEGORIES[doc.category]?.label || '—'} · ${WORKFLOW_STATES[doc.workflow_status]?.label || '—'}`;
+
+  // Show/hide review tab
+  const reviewTab = document.getElementById('drawer-tab-review');
+  reviewTab.style.display = (isAdmin && viewMode === 'admin') ? '' : 'none';
+
+  // Reset review state
+  reviewWorkflow = null;
+  document.getElementById('btn-confirm-review').disabled = true;
+  document.querySelectorAll('.rwf-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('review-obs').value        = doc.observacao_admin || '';
+  document.getElementById('review-admin-notes').value = doc.admin_notes      || '';
+
+  // Load signed URL for viewer
+  if (doc.storage_path) {
+    try {
+      drawerSignedUrl = await DocumentService.getSignedUrl(doc.storage_path);
+      const frame     = document.getElementById('pdf-frame');
+      const noPreview = document.getElementById('no-preview');
+      document.getElementById('viewer-filename').textContent = doc.nome_arquivo || doc.label;
+      if (doc.mime_type?.startsWith('image/')) {
+        frame.src = drawerSignedUrl;
+        noPreview.style.display = 'none';
+        frame.style.display     = 'block';
+      } else {
+        frame.src = drawerSignedUrl + '#toolbar=1&navpanes=0&view=FitH';
+        noPreview.style.display = 'none';
+        frame.style.display     = 'block';
+      }
+    } catch {
+      document.getElementById('pdf-frame').style.display    = 'none';
+      document.getElementById('no-preview').style.display   = 'block';
+    }
+  } else {
+    document.getElementById('pdf-frame').src              = 'about:blank';
+    document.getElementById('pdf-frame').style.display    = 'none';
+    document.getElementById('no-preview').style.display   = 'block';
+  }
+
+  // Load timeline
+  const timeline = drawerDocId ? await engine.getTimeline(drawerDocId) : [];
+  renderTimeline(timeline, doc);
+
+  // Open to appropriate tab
+  switchDrawerTab(adminReview ? 'review' : 'view');
+  document.getElementById('doc-drawer').classList.add('open');
+};
+
+window.closeDrawer = () => {
+  document.getElementById('doc-drawer').classList.remove('open');
+  drawerDocId = null;
+  drawerSignedUrl = null;
+};
+
+// Close on backdrop click
+document.getElementById('doc-drawer').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('doc-drawer')) closeDrawer();
+});
+
+window.switchDrawerTab = (tab) => {
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.drawer-panel').forEach(p => p.classList.toggle('active', p.dataset.tabPanel === tab));
+};
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function renderTimeline(events, doc) {
+  const el = document.getElementById('timeline-items');
+  if (!events.length) {
+    const ws = WORKFLOW_STATES[doc.workflow_status];
+    events = [{ evento_tipo: doc.workflow_status, descricao: `Status atual: ${ws?.label || '—'}`, created_at: doc.updated_at }];
+  }
+  const TL_ICONS = {
+    'document.enviado':      '📤',
+    'document.aprovado':     '✅',
+    'document.rejeitado':    '❌',
+    'document.em_analise':   '🔍',
+    'document.arquivado':    '📦',
+    'signature.requested':   '✍️',
+    'signature.completed':   '🔏',
+  };
+  el.innerHTML = events.map(e => `
+    <div class="timeline-item">
+      <div class="tl-dot">${TL_ICONS[e.evento_tipo] || '📋'}</div>
+      <div class="tl-body">
+        <div class="tl-event">${esc(e.descricao)}</div>
+        <div class="tl-meta">${e.author_name ? `${esc(e.author_name)} · ` : ''}${timeAgo(e.created_at)}</div>
+        ${e.payload?.observacao ? `<div class="tl-note">${esc(e.payload.observacao)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Admin Review ──────────────────────────────────────────────────────────────
+window.selectWorkflow = (ws) => {
+  reviewWorkflow = ws;
+  document.querySelectorAll('.rwf-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.ws === ws);
   });
+  document.getElementById('btn-confirm-review').disabled = false;
+  document.getElementById('review-sig-wrap').style.display = ws === 'aguardando_assinatura' ? '' : 'none';
 };
 
-window.closeApproveModal = function() {
-  document.getElementById('modal-approve').classList.remove('show');
-  approveDocId = null; approveStatus = null;
-};
+window.confirmReview = async () => {
+  if (!reviewWorkflow || !drawerDocId) return;
+  const btn = document.getElementById('btn-confirm-review');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="fd-spinner-inline"></span> Salvando…';
 
-window.confirmApprove = async function() {
-  if (!approveDocId || !approveStatus) return;
-  const obs = document.getElementById('approve-obs').value.trim();
-  const btn = document.getElementById('btn-confirm-approve');
-  btn.disabled = true; btn.textContent = 'Salvando...';
+  const obs        = document.getElementById('review-obs').value.trim() || null;
+  const adminNotes = document.getElementById('review-admin-notes').value.trim() || null;
+  const sigEmail   = document.getElementById('review-sig-email').value.trim() || null;
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    // Call admin RPC
-    const { data: result, error } = await supabase.rpc('admin_update_doc_status', {
-      p_doc_id:     approveDocId,
-      p_status:     approveStatus,
-      p_observacao: obs || null,
-    });
-    if (error) throw error;
-
-    // Notify client via portal-notify
-    if (session && result?.user_email) {
-      const LABEL = { aprovado:'Aprovado', recusado:'Recusado', em_analise:'Em análise' };
-      const tipoMeta = DocumentService.TYPES.find(t => t.tipo === result.tipo);
-      fetch(`${FUNCTIONS_URL}/portal-notify`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type:        'document_status_update',
-          clientEmail: result.user_email,
-          clientName:  result.user_name || '',
-          payload: {
-            tipoLabel:  tipoMeta?.label || result.tipo,
-            status:     approveStatus,
-            observacao: obs || null,
-          },
-        }),
-      }).catch(console.warn);
+    if (reviewWorkflow === 'aguardando_assinatura' && sigEmail) {
+      await sigService.requestSignature({
+        documentId:   drawerDocId,
+        signerEmail:  sigEmail,
+        signerName:   sigEmail,
+        documentName: document.getElementById('drawer-title').textContent,
+      });
+      await engine._adminWorkflow(drawerDocId, 'aguardando_assinatura', obs, adminNotes);
+    } else {
+      await engine._adminWorkflow(drawerDocId, reviewWorkflow, obs, adminNotes);
     }
 
-    closeApproveModal();
-    showToast(`Documento ${approveStatus === 'aprovado' ? 'aprovado' : approveStatus === 'recusado' ? 'recusado' : 'atualizado'}. Cliente notificado.`, 'ok');
-    await loadAdminDocs(viewingUID);
-  } catch (err) {
-    console.error(err);
-    showToast('Erro ao atualizar. Tente novamente.', 'error');
+    const label = WORKFLOW_STATES[reviewWorkflow]?.label || reviewWorkflow;
+    Toast.success(`Documento atualizado: ${label}`);
+    closeDrawer();
+
+  } catch (e) {
+    Toast.error('Erro ao atualizar: ' + (e.message || e));
   } finally {
-    btn.disabled = false; btn.textContent = 'Confirmar';
+    btn.disabled = false;
+    btn.textContent = 'Confirmar';
   }
 };
+
+// ── Viewer actions ────────────────────────────────────────────────────────────
+window.openFullscreen = () => {
+  const frame = document.getElementById('pdf-frame');
+  if (frame.requestFullscreen) frame.requestFullscreen();
+};
+
+window.downloadDoc = () => {
+  if (drawerSignedUrl) window.open(drawerSignedUrl, '_blank');
+};
+
+// ── Signature modal ───────────────────────────────────────────────────────────
+window.openSigModal = (docId) => {
+  drawerDocId = docId;
+  openDrawer(docId, true);
+  setTimeout(() => selectWorkflow('aguardando_assinatura'), 100);
+};
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'agora mesmo';
+  if (m < 60) return `${m}min atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  const d = Math.floor(h / 24);
+  return `${d}d atrás`;
+}
+
+function fmtSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1048576) return `${(bytes/1024).toFixed(0)}KB`;
+  return `${(bytes/1048576).toFixed(1)}MB`;
+}
+
+function handleError(err) {
+  console.error('[Documentos] bootstrap error:', err);
+  Toast.error('Erro ao carregar documentos. Tente recarregar.');
+  document.getElementById('doc-loading').innerHTML =
+    `<div style="text-align:center;color:var(--red);">
+      <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+      <div>Erro ao carregar. <a href="" onclick="location.reload()" style="color:var(--blue);text-decoration:underline;">Recarregar</a></div>
+    </div>`;
+}
 </script>
 
 </body>
