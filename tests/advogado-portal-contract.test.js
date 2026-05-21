@@ -5,7 +5,7 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
 const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
