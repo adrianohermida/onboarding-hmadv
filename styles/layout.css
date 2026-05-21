@@ -106,10 +106,33 @@ body.app-loaded .sk { display: none !important; }
 }
 
 .sidebar-brand {
-  padding: 24px 20px 20px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Collapsed: center the logo mark, hide picture */
+.portal-shell.sidebar-collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 16px 0 14px;
+}
+
+.portal-shell.sidebar-collapsed #sidebar-logo-picture {
+  display: none !important;
+}
+
+.portal-shell.sidebar-collapsed #sidebar-logo-fb {
+  display: flex !important;
+}
+
+/* When image is loaded AND sidebar is collapsed, show only the mark */
+.portal-shell.sidebar-collapsed #sidebar-logo-fb .sidebar-brand-text {
+  display: none !important;
 }
 
 .sidebar-brand::after {
