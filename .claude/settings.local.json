@@ -18,7 +18,9 @@
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__list_edge_functions",
       "Bash(git commit -m 'docs: add Sprint 8.5 QA entry to roadmap *)",
       "mcp__fbe53453-458f-4915-8236-5810b2d9efd1__list_migrations",
-      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_tables"
+      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_tables",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline -5)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" show HEAD:js/app.js)"
     ]
   }
 }
