@@ -36,13 +36,6 @@ export const AdminService = {
     return row;
   },
   async getClients() {
-    const { data, error } = await supabase.rpc('admin_get_clients');
-    if (!error) return data || [];
-
-    // Fallback de compatibilidade: quando o RPC nao existe/falha no projeto remoto,
-    // carregamos os casos diretamente para manter o painel admin operacional.
-    console.warn('[AdminService.getClients] RPC admin_get_clients failed, using fallback query:', error);
-
     const mapCasesToAdminRows = (casos = []) => (casos || []).map((c) => ({
       user_id: c.user_id,
       email: null,
@@ -61,31 +54,51 @@ export const AdminService = {
       created_at: c.created_at,
     }));
 
-    const { data: casos, error: casosError } = await supabase
-      .from('portal_casos')
-      .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
-      .order('created_at', { ascending: false });
+    const queryFallbackCases = async () => {
+      const { data: casos, error: casosError } = await supabase
+        .from('portal_casos')
+        .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
+        .order('created_at', { ascending: false });
 
-    if (!casosError) {
-      return mapCasesToAdminRows(casos);
+      if (!casosError) {
+        return mapCasesToAdminRows(casos);
+      }
+
+      // Fallback extra: alguns ambientes podem nao ter todas as colunas acima.
+      // Nesse caso, usamos uma selecao minima para manter o dashboard funcional.
+      console.warn('[AdminService.getClients] full fallback query failed, trying minimal query:', casosError);
+
+      const { data: casosMin, error: casosMinError } = await supabase
+        .from('portal_casos')
+        .select('user_id, full_name, fase, onboarding_done, created_at')
+        .order('created_at', { ascending: false });
+
+      if (!casosMinError) {
+        return mapCasesToAdminRows(casosMin);
+      }
+
+      // Ultima protecao: nao quebrar a tela admin por divergencia de ambiente.
+      console.warn('[AdminService.getClients] minimal fallback query failed; returning empty list:', casosMinError);
+      return [];
+    };
+
+    const skipRpc = sessionStorage.getItem('portal:rpc-admin-get-clients-broken') === '1';
+    if (skipRpc) {
+      return queryFallbackCases();
     }
 
-    // Fallback extra: alguns ambientes podem nao ter todas as colunas acima.
-    // Nesse caso, usamos uma selecao minima para manter o dashboard funcional.
-    console.warn('[AdminService.getClients] full fallback query failed, trying minimal query:', casosError);
+    const { data, error } = await supabase.rpc('admin_get_clients');
+    if (!error) return data || [];
 
-    const { data: casosMin, error: casosMinError } = await supabase
-      .from('portal_casos')
-      .select('user_id, full_name, fase, onboarding_done, created_at')
-      .order('created_at', { ascending: false });
+    // Fallback de compatibilidade: quando o RPC nao existe/falha no projeto remoto,
+    // carregamos os casos diretamente para manter o painel admin operacional.
+    console.warn('[AdminService.getClients] RPC admin_get_clients failed, using fallback query:', error);
 
-    if (!casosMinError) {
-      return mapCasesToAdminRows(casosMin);
+    if (error?.code === '42702') {
+      sessionStorage.setItem('portal:rpc-admin-get-clients-broken', '1');
     }
 
-    // Ultima protecao: nao quebrar a tela admin por divergencia de ambiente.
-    console.warn('[AdminService.getClients] minimal fallback query failed; returning empty list:', casosMinError);
-    return [];
+    return queryFallbackCases();
   },
   async getClientCaso(userId) {
     const { data, error } = await supabase
