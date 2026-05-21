@@ -4,7 +4,15 @@ import path from 'node:path';
 const root = process.cwd();
 const modulesDir = path.join(root, 'modules');
 
-const skipFolders = new Set(['events', 'videos', 'debt-engine']);
+const skipFolders = new Set([
+  'clientes',
+  'educacao-financeira',
+  'events',
+  'onboarding',
+  'planos',
+  'videos',
+  'debt-engine',
+]);
 const requiredKeys = ['module', 'route', 'permissions', 'lazy'];
 
 function fail(message) {

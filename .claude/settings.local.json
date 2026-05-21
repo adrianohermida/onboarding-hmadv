@@ -58,7 +58,8 @@
       "Bash(grep -c *)",
       "Bash(echo \"exit:$?\")",
       "Bash(git rebase *)",
-      "Bash(awk '{print $4}')"
+      "Bash(awk '{print $4}')",
+      "Bash(GIT_EDITOR=true git rebase --continue)"
     ]
   }
 }

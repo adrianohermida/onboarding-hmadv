@@ -31,6 +31,8 @@ import { routeGuards }         from './guards/RouteGuards.js';
 import { responsiveService }   from './responsive/ResponsiveService.js';
 import { shellAnalytics }      from './analytics/ShellAnalytics.js';
 import { bus }                 from '../modules/events/EventBus.js';
+import { mountEventOrchestration } from '../events/orchestrators/bootstrap.js';
+import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -66,6 +68,8 @@ export class AuthenticatedShell {
       }
 
       moduleRegistry.init();
+      mountEventOrchestration();
+      mountBillingShellIntegration();
 
       // Mount shell subsystems
       globalModal.mount();

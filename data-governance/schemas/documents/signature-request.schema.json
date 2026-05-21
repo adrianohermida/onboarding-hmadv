@@ -1,0 +1,1 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","title":"SignatureRequest","type":"object","required":["id","tenant_id","document_id","status"],"properties":{"id":{"type":"string"},"tenant_id":{"type":"string"},"document_id":{"type":"string"},"status":{"type":"string"}}}
