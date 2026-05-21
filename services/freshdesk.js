@@ -35,18 +35,52 @@ function normalizeTicketResponse(response) {
   };
 }
 
+function normalizeListParams(params = {}) {
+  const page = Math.max(parseInt(params.page || 1, 10), 1);
+  const pageSize = Math.min(Math.max(parseInt(params.pageSize || 10, 10), 5), 50);
+  return {
+    page,
+    pageSize,
+    status: params.status ? Number(params.status) : null,
+    priority: params.priority ? Number(params.priority) : null,
+    search: String(params.search || '').trim(),
+    from: params.from || null,
+    to: params.to || null,
+  };
+}
+
 export const FreshdeskService = {
   STATUS:   FD_STATUS,
   PRIORITY: FD_PRIORITY,
 
-  async listTickets() {
-    const { data, error } = await supabase
+  async listTickets(params = {}) {
+    const { page, pageSize, status, priority, search, from, to } = normalizeListParams(params);
+    const fromRow = (page - 1) * pageSize;
+    const toRow = fromRow + pageSize - 1;
+
+    let query = supabase
       .from('freshdesk_tickets')
-      .select('fd_ticket_id, subject, status, priority, tags, requester_email, support_email, created_at, updated_at')
+      .select('fd_ticket_id, portal_caso_id, subject, status, priority, tags, requester_email, support_email, created_at, updated_at, last_synced_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(fromRow, toRow);
+
+    if (status) query = query.eq('status', status);
+    if (priority) query = query.eq('priority', priority);
+    if (from) query = query.gte('created_at', `${from}T00:00:00.000Z`);
+    if (to) query = query.lte('created_at', `${to}T23:59:59.999Z`);
+    if (search) query = query.ilike('subject', `%${search.replace(/[%_]/g, '\\$&')}%`);
+
+    const { data, error, count } = await query;
     if (error) throw error;
-    return data || [];
+
+    const total = count || 0;
+    return {
+      data: data || [],
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
+    };
   },
 
   async getContact() {
