@@ -13,10 +13,12 @@ const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
 const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
+const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
 const SHELL_VERSION = '20260521f';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
+const SHELL_SERVICE_ERRORS_MAX = 80;
 
 window.__shellVersion = SHELL_VERSION;
 
@@ -27,6 +29,7 @@ let runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 let activeModuleToken = 0;
 const portalViewModeSubscribers = new Set();
 let shellRouteFailure = null;
+let serviceErrorBannerListenerBound = false;
 
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
@@ -177,6 +180,98 @@ function setRouteFailure(routeUrl, error) {
   try {
     window.__shellRouteFailure = detail;
   } catch (_) {}
+}
+
+function getServiceErrorState() {
+  if (!window.__shellServiceErrors || typeof window.__shellServiceErrors !== 'object') {
+    window.__shellServiceErrors = {
+      total: 0,
+      byRoute: {},
+      recent: [],
+    };
+  }
+  return window.__shellServiceErrors;
+}
+
+function ensureAdminServiceErrorBanner() {
+  if (!appUserDetail?.isAdmin) {
+    document.getElementById('shell-service-error-banner')?.remove();
+    return null;
+  }
+
+  const main = document.querySelector('main.page-content');
+  if (!main) return null;
+
+  let banner = document.getElementById('shell-service-error-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'shell-service-error-banner';
+    banner.className = 'shell-service-banner';
+    banner.innerHTML = `
+      <div class="shell-service-banner-title">Diagnostico tecnico (admin)</div>
+      <div class="shell-service-banner-text" data-role="summary"></div>
+      <div class="shell-service-banner-text" data-role="latest"></div>
+    `;
+    main.prepend(banner);
+  }
+
+  return banner;
+}
+
+function renderAdminServiceErrorBanner() {
+  const banner = ensureAdminServiceErrorBanner();
+  if (!banner) return;
+
+  const state = getServiceErrorState();
+  const route = getCurrentPage();
+  const routeCount = state.byRoute?.[route] || 0;
+  const latest = state.recent[state.recent.length - 1] || null;
+
+  const summaryEl = banner.querySelector('[data-role="summary"]');
+  const latestEl = banner.querySelector('[data-role="latest"]');
+  if (summaryEl) {
+    summaryEl.textContent = `Rota atual: ${routeCount} falha(s) | Sessao: ${state.total} falha(s)`;
+  }
+
+  if (latestEl) {
+    if (!latest) {
+      latestEl.textContent = 'Sem falhas recentes de servico.';
+    } else {
+      const stage = latest.stage || 'unknown-stage';
+      const path = latest.path || latest.type || 'edge';
+      const message = latest.message || 'erro sem mensagem';
+      latestEl.textContent = `Ultima falha: ${path} [${stage}] - ${message}`;
+    }
+  }
+}
+
+function setupServiceErrorBannerListener() {
+  if (serviceErrorBannerListenerBound) return;
+  serviceErrorBannerListenerBound = true;
+
+  nativeWindowAddEventListener(SHELL_SERVICE_ERROR_EVENT, (event) => {
+    if (!appUserDetail?.isAdmin) return;
+    const detail = event?.detail || {};
+    const route = getCurrentPage();
+    const state = getServiceErrorState();
+
+    state.total += 1;
+    state.byRoute[route] = (state.byRoute[route] || 0) + 1;
+    state.recent.push({ ...detail, route, ts: Date.now() });
+    if (state.recent.length > SHELL_SERVICE_ERRORS_MAX) {
+      state.recent.shift();
+    }
+
+    renderAdminServiceErrorBanner();
+  });
+
+  nativeDocumentAddEventListener('app:route-changed', () => {
+    renderAdminServiceErrorBanner();
+  });
+
+  nativeDocumentAddEventListener('app:user-loaded', () => {
+    renderAdminServiceErrorBanner();
+  });
 }
 
 /* ── Session cache helpers ───────────────────────── */
@@ -754,6 +849,7 @@ async function init() {
 
   await loadComponents();
   await loadUser();
+  setupServiceErrorBannerListener();
   setupShellNavigation();
 
   initRouter();
