@@ -11,12 +11,15 @@ const SHELL_STYLE_ATTR = 'data-shell-page-style';
 const SIDEBAR_COLLAPSED_KEY = 'portal:sidebar-collapsed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_VERSION = '20260521f';
+const SHELL_TELEMETRY_MAX = 100;
+const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 
 window.__shellVersion = SHELL_VERSION;
 
 let appUserDetail = null;
 let shellNavInFlight = false;
 let captureModuleListeners = true;
+let runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 const capturedModuleListeners = [];
 let activeModuleToken = 0;
 
@@ -51,6 +54,8 @@ function routeKeyFromModule(moduleName = '') {
 }
 
 function reportSuppressedCallback(kind, error, source = 'listener') {
+  if (Math.random() > SHELL_TELEMETRY_SAMPLE_RATE) return;
+
   const message = error?.message || String(error || 'unknown error');
   const stack = error?.stack || '';
   const module = inferModuleFromStack(stack);
@@ -72,7 +77,7 @@ function reportSuppressedCallback(kind, error, source = 'listener') {
       window.__shellSuppressedByRoute = {};
     }
     window.__shellSuppressedCallbacks.push(detail);
-    if (window.__shellSuppressedCallbacks.length > 20) {
+    if (window.__shellSuppressedCallbacks.length > SHELL_TELEMETRY_MAX) {
       window.__shellSuppressedCallbacks.shift();
     }
     window.__shellSuppressedByRoute[route] = (window.__shellSuppressedByRoute[route] || 0) + 1;
@@ -125,6 +130,11 @@ function cleanupModuleTimers() {
 }
 
 document.addEventListener = function patchedDocumentAddEventListener(type, listener, options) {
+  if (!runtimeIsolationEnabled) {
+    nativeDocumentAddEventListener(type, listener, options);
+    return;
+  }
+
   if (!captureModuleListeners || typeof listener !== 'function') {
     nativeDocumentAddEventListener(type, listener, options);
     return;
@@ -141,6 +151,11 @@ document.addEventListener = function patchedDocumentAddEventListener(type, liste
 };
 
 window.addEventListener = function patchedWindowAddEventListener(type, listener, options) {
+  if (!runtimeIsolationEnabled) {
+    nativeWindowAddEventListener(type, listener, options);
+    return;
+  }
+
   if (!captureModuleListeners || typeof listener !== 'function') {
     nativeWindowAddEventListener(type, listener, options);
     return;
@@ -157,6 +172,10 @@ window.addEventListener = function patchedWindowAddEventListener(type, listener,
 };
 
 window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
+  if (!runtimeIsolationEnabled) {
+    return nativeSetTimeout(handler, timeout, ...args);
+  }
+
   if (!captureModuleListeners || typeof handler !== 'function') {
     return nativeSetTimeout(handler, timeout, ...args);
   }
@@ -177,6 +196,10 @@ window.clearTimeout = function patchedClearTimeout(id) {
 };
 
 window.setInterval = function patchedSetInterval(handler, timeout, ...args) {
+  if (!runtimeIsolationEnabled) {
+    return nativeSetInterval(handler, timeout, ...args);
+  }
+
   if (!captureModuleListeners || typeof handler !== 'function') {
     return nativeSetInterval(handler, timeout, ...args);
   }
@@ -361,38 +384,40 @@ async function runPageScripts(parsedDoc, targetUrl) {
       return false;
     });
 
-  for (const script of scripts) {
-    const el = document.createElement('script');
-    el.setAttribute(SHELL_SCRIPT_ATTR, '1');
+  try {
+    for (const script of scripts) {
+      const el = document.createElement('script');
+      el.setAttribute(SHELL_SCRIPT_ATTR, '1');
 
-    const type = (script.getAttribute('type') || '').trim();
-    if (type === 'module') {
-      el.type = 'module';
-    } else if (type) {
-      el.type = type;
-    }
-
-    const src = script.getAttribute('src');
-    if (src) {
-      const scriptUrl = new URL(src, targetUrl);
-      if (scriptUrl.origin === window.location.origin) {
-        scriptUrl.searchParams.set('_shellv', String(activeModuleToken));
+      const type = (script.getAttribute('type') || '').trim();
+      if (type === 'module') {
+        el.type = 'module';
+      } else if (type) {
+        el.type = type;
       }
-      el.src = scriptUrl.toString();
-    } else {
-      el.textContent = script.textContent || '';
-    }
 
-    document.body.appendChild(el);
-    if (el.src) {
-      await new Promise(resolve => {
-        el.addEventListener('load', resolve, { once: true });
-        el.addEventListener('error', resolve, { once: true });
-      });
+      const src = script.getAttribute('src');
+      if (src) {
+        const scriptUrl = new URL(src, targetUrl);
+        if (scriptUrl.origin === window.location.origin) {
+          scriptUrl.searchParams.set('_shellv', String(activeModuleToken));
+        }
+        el.src = scriptUrl.toString();
+      } else {
+        el.textContent = script.textContent || '';
+      }
+
+      document.body.appendChild(el);
+      if (el.src) {
+        await new Promise(resolve => {
+          el.addEventListener('load', resolve, { once: true });
+          el.addEventListener('error', resolve, { once: true });
+        });
+      }
     }
+  } finally {
+    captureModuleListeners = false;
   }
-
-  captureModuleListeners = false;
 }
 
 async function navigateModule(url, { pushState = true } = {}) {
@@ -459,6 +484,9 @@ async function navigateModule(url, { pushState = true } = {}) {
   } catch (_) {
     window.location.href = absolute;
   } finally {
+    cleanupModuleListeners();
+    cleanupModuleTimers();
+    captureModuleListeners = false;
     shellNavInFlight = false;
   }
 }
@@ -485,6 +513,37 @@ function setupShellNavigation() {
     if (!isEligibleModulePath(window.location.href)) return;
     navigateModule(window.location.href, { pushState: false });
   });
+}
+
+function getNavIcon(moduleKey) {
+  const icons = {
+    dashboard: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".5"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity=".8"/></svg>',
+    'onboarding-v2': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    'financial-dashboard': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M2 14h14M2 10h4v4H2zM6 7h4v7H6zM10 4h6v10h-6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    documentos: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M11 1H4a1 1 0 00-1 1v14a1 1 0 001 1h10a1 1 0 001-1V5l-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 1v4h4M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    dividas: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 8h16M5 12h3M12 12h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 2h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>',
+    onboarding: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="3" y="1" width="12" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 6h6M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    suporte: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  };
+
+  return icons[moduleKey] || icons.dashboard;
+}
+
+function renderSidebarNavigation(isAdmin = false) {
+  const navRoot = document.getElementById('sidebar-nav-links');
+  if (!navRoot) return;
+
+  const router = new Router();
+  const modules = router.getSidebarModules({ isAdmin });
+  navRoot.innerHTML = modules.map(module => {
+    const label = module.menuLabel || module.title;
+    return `
+      <a href="${module.key}.html" class="nav-link" data-page="${module.key}" title="${label}">
+        ${getNavIcon(module.key)}
+        <span class="nav-link-label">${label}</span>
+      </a>
+    `;
+  }).join('');
 }
 
 /* ── Sidebar / Header update (scripts don't run via innerHTML) ─── */
@@ -641,6 +700,8 @@ async function loadComponents() {
     loadComponent('[data-component="header"]',  'components/header.html'),
   ]);
 
+  renderSidebarNavigation(cached?.isAdmin || false);
+
   // Wire up interactions (scripts in injected HTML don't execute via innerHTML)
   window.handleLogout = () => {
     try { sessionStorage.removeItem('portal:user'); } catch (_) {}
@@ -672,6 +733,7 @@ async function loadUser() {
   appUserDetail = detail;
 
   // Update UI immediately
+  renderSidebarNavigation(isAdmin);
   updateSidebarUser(user, caso, isAdmin);
   updateHeaderUser(user);
 
@@ -728,6 +790,8 @@ async function init() {
 
   const allowed = await guardAuth();
   if (!allowed) return;
+
+  runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 
   await loadComponents();
   await loadUser();
