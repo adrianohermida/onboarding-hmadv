@@ -16,6 +16,7 @@
  *   workflows: { definitions, lifecycle, telemetry, sla, tasks, approvals, escalations, queue, generated_at }
  *   knowledge: { metadata, lifecycle, classifications, timeline, knowledge, generated_at }
  *   financial: { debts, expenses, income, commitment, diagnosis, alerts, telemetry, generated_at }
+ *   legalOperations: { lifecycle, timeline, sla, risk, productivity, monitoring, analytics, telemetry, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -105,6 +106,18 @@ const _initialState = () => ({
     timeline: { total: 0, list: [] },
     telemetry: { total: 0, updates: 0, renegotiations: 0, payments: 0, simulations: 0, plans: 0, list: [] },
     analytics: null,
+    generated_at: null,
+  },
+  legalOperations: {
+    lifecycle: { total: 0, active: 0, completed: 0, archived: 0, list: [] },
+    timeline: { total: 0, list: [] },
+    tasks: { total: 0, open: 0, overdue: 0, list: [] },
+    sla: { total: 0, overdue: 0, policies: {}, list: [] },
+    risk: { total: 0, critical: 0, list: [] },
+    productivity: { tasks_total: 0, completed: 0, open: 0, active_owners: 0, throughput: 0, bottlenecks: [] },
+    monitoring: { critical_cases: 0, onboarding_stalled: 0, negotiation_stalled: 0, pending_documents: 0, pending_agreements: 0, overdue_deadlines: 0, open_tasks: 0 },
+    analytics: null,
+    telemetry: { total: 0, transitions: 0, uploads: 0, revisions: 0, negotiations: 0, approvals: 0, tasks: 0, sla: 0, list: [] },
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -284,6 +297,23 @@ class ShellStore extends EventTarget {
       timeline: snapshot.timeline || { total: 0, list: [] },
       telemetry: snapshot.telemetry || { total: 0, updates: 0, renegotiations: 0, payments: 0, simulations: 0, plans: 0, list: [] },
       analytics: snapshot.analytics || null,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Legal Operations ──────────────────────────────────────────────────────
+  setLegalOperationsSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('legalOperations', {
+      lifecycle: snapshot.lifecycle || { total: 0, active: 0, completed: 0, archived: 0, list: [] },
+      timeline: snapshot.timeline || { total: 0, list: [] },
+      tasks: snapshot.tasks || { total: 0, open: 0, overdue: 0, list: [] },
+      sla: snapshot.sla || { total: 0, overdue: 0, policies: {}, list: [] },
+      risk: snapshot.risk || { total: 0, critical: 0, list: [] },
+      productivity: snapshot.productivity || { tasks_total: 0, completed: 0, open: 0, active_owners: 0, throughput: 0, bottlenecks: [] },
+      monitoring: snapshot.monitoring || { critical_cases: 0, onboarding_stalled: 0, negotiation_stalled: 0, pending_documents: 0, pending_agreements: 0, overdue_deadlines: 0, open_tasks: 0 },
+      analytics: snapshot.analytics || null,
+      telemetry: snapshot.telemetry || { total: 0, transitions: 0, uploads: 0, revisions: 0, negotiations: 0, approvals: 0, tasks: 0, sla: 0, list: [] },
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }
