@@ -125,9 +125,21 @@
       border: 1px solid #b7e4c9;
     }
     .cnj-progress-req-warn {
-      color: #8a5a00;
-      background: #fff4de;
-      border: 1px solid #f1d39a;
+      color: #6b3f00;
+      background: #fff1d6;
+      border: 1px solid #d39a2c;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .step-validation-bar {
@@ -137,9 +149,9 @@
       margin: -8px 0 16px;
       padding: 9px 11px;
       border-radius: 8px;
-      border: 1px solid #f1d39a;
-      background: #fff7e8;
-      color: #6b4a0a;
+      border: 1px solid #d9a441;
+      background: #fff4de;
+      color: #5a3a00;
       font-size: 12px;
       line-height: 1.3;
       animation: validationReveal .2s ease;
@@ -173,6 +185,18 @@
     .form-control {
       transition: all .2s ease;
     }
+
+    .btn:focus-visible,
+    .form-control:focus-visible,
+    .causa-chip:focus-visible,
+    .toggle-label input:focus-visible {
+      outline: 3px solid rgba(30, 64, 175, .32);
+      outline-offset: 2px;
+    }
+
+    .cnj-step:focus-within .cnj-step-dot {
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, .2);
+    }
     .cnj-step:not(.active):hover .cnj-step-dot {
       transform: translateY(-1px);
       border-color: #9fb8d4;
@@ -186,15 +210,15 @@
     }
 
     .field-invalid {
-      border-color: #dc2626 !important;
-      box-shadow: 0 0 0 3px rgba(220, 38, 38, .12) !important;
-      background: #fff8f8;
+      border-color: #b42318 !important;
+      box-shadow: 0 0 0 3px rgba(180, 35, 24, .16) !important;
+      background: #fff5f5;
       animation: fieldPulse .18s ease;
     }
     .field-invalid-label {
       border-radius: 6px;
-      background: rgba(220, 38, 38, .08);
-      outline: 1px solid rgba(220, 38, 38, .28);
+      background: rgba(180, 35, 24, .08);
+      outline: 1px solid rgba(180, 35, 24, .34);
       padding: 4px 6px;
     }
     .field-invalid-ring {
@@ -497,10 +521,11 @@
         <div class="cnj-progress-pct" id="cnj-progress-pct">14%</div>
       </div>
 
-      <div class="step-validation-bar" id="step-validation-bar" aria-live="polite">
+      <div class="step-validation-bar" id="step-validation-bar" role="status" aria-live="polite" aria-atomic="true">
         <span class="step-validation-dot"></span>
         <span id="step-validation-text">Campos obrigatorios pendentes.</span>
       </div>
+      <div class="sr-only" id="step-validation-live" aria-live="assertive" aria-atomic="true"></div>
 
       <!-- ════════════════════════════════════════════
            STEP 1 — IDENTIFICAÇÃO (CNJ §1)
@@ -1793,10 +1818,36 @@ function clearStepValidationStyles() {
   document.querySelectorAll('.field-invalid').forEach(el => el.classList.remove('field-invalid'));
   document.querySelectorAll('.field-invalid-label').forEach(el => el.classList.remove('field-invalid-label'));
   document.querySelectorAll('.field-invalid-ring').forEach(el => el.classList.remove('field-invalid-ring'));
+  document.querySelectorAll('[aria-invalid="true"]').forEach(el => el.removeAttribute('aria-invalid'));
+  document.querySelectorAll('[aria-describedby]').forEach(el => removeDescribedBy(el, 'step-validation-live'));
 }
 
 function hideStepValidationBar() {
   document.getElementById('step-validation-bar')?.classList.remove('show');
+}
+
+function addDescribedBy(el, id) {
+  if (!el || !id) return;
+  const tokens = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+  if (!tokens.includes(id)) tokens.push(id);
+  if (tokens.length) el.setAttribute('aria-describedby', tokens.join(' '));
+}
+
+function removeDescribedBy(el, id) {
+  if (!el || !id) return;
+  const tokens = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+  const next = tokens.filter(token => token !== id);
+  if (next.length) el.setAttribute('aria-describedby', next.join(' '));
+  else el.removeAttribute('aria-describedby');
+}
+
+function announceValidation(message) {
+  const live = document.getElementById('step-validation-live');
+  if (!live) return;
+  live.textContent = '';
+  setTimeout(() => {
+    live.textContent = message;
+  }, 20);
 }
 
 function showStepValidationBar(message) {
@@ -1805,6 +1856,7 @@ function showStepValidationBar(message) {
   if (!bar || !text) return;
   text.textContent = message;
   bar.classList.add('show');
+  announceValidation(message);
 }
 
 function validateStepRequired(step, { focusFirst = true, notify = false } = {}) {
@@ -1823,6 +1875,11 @@ function validateStepRequired(step, { focusFirst = true, notify = false } = {}) 
 
     if (el.classList.contains('form-control') || (el.matches('input, textarea, select') && el.type !== 'checkbox')) {
       el.classList.add('field-invalid');
+    }
+
+    if (el.matches('input, textarea, select')) {
+      el.setAttribute('aria-invalid', 'true');
+      addDescribedBy(el, 'step-validation-live');
     }
 
     if (el.type === 'checkbox') {
@@ -1861,12 +1918,36 @@ function validateStepRequired(step, { focusFirst = true, notify = false } = {}) 
 function clearValidationOnInteraction(target) {
   if (!target) return;
   target.classList?.remove('field-invalid');
+  target.removeAttribute?.('aria-invalid');
+  removeDescribedBy(target, 'step-validation-live');
   if (target.type === 'checkbox') {
     target.closest('.toggle-label')?.classList.remove('field-invalid-label');
   }
   if (String(target.id || '').startsWith('cr_')) {
     document.getElementById('credores-list')?.classList.remove('field-invalid-ring');
   }
+}
+
+function setupCausaChipAccessibility() {
+  document.querySelectorAll('.causa-chip').forEach(chip => {
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('tabindex', '0');
+    chip.setAttribute('aria-pressed', chip.classList.contains('selected') ? 'true' : 'false');
+
+    chip.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        chip.click();
+      }
+    });
+
+    chip.addEventListener('click', () => {
+      queueMicrotask(() => {
+        chip.setAttribute('aria-pressed', chip.classList.contains('selected') ? 'true' : 'false');
+        updateProgressMeta(_currentStep);
+      });
+    });
+  });
 }
 
 async function doAutosave() {
@@ -2156,6 +2237,7 @@ document.addEventListener('change', event => {
   clearValidationOnInteraction(event.target);
   updateProgressMeta(_currentStep);
 });
+setupCausaChipAccessibility();
 updateProgressMeta(1);
 </script>
 </body>
