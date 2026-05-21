@@ -1,5 +1,7 @@
 import { retryEngine } from '../retries/RetryEngine.js';
 import { eventLogger } from '../logs/EventLogger.js';
+import { workflowObservability } from '../../observability/workflows/WorkflowObservability.js';
+import { telemetryEngine } from '../../observability/telemetry/TelemetryEngine.js';
 
 export class WorkflowEngine {
   constructor() {
@@ -17,6 +19,11 @@ export class WorkflowEngine {
     if (!definition) throw new Error(`workflow not registered: ${name}`);
 
     const workflowId = context.workflow_id || `${name}_${Date.now()}`;
+    workflowObservability.start(name, {
+      ...context,
+      workflow_id: workflowId,
+      source_module: context.source_module || 'workflow-engine',
+    });
     const state = { workflowId, name, context, steps: [] };
     const startedAt = Date.now();
 
@@ -32,11 +39,21 @@ export class WorkflowEngine {
         state.steps.push(item);
         this._audit.push({ workflowId, ...item });
         eventLogger.log('workflow.failed', `${name}.${step.name}`, { workflowId, error: String(error) });
+        workflowObservability.fail(workflowId, error);
+        telemetryEngine.trackWorkflowTiming(name, Date.now() - startedAt, {
+          tenant_id: context.tenant_id || 'hmadv',
+          trace_id: context.trace_id || context.correlation_id || null,
+        });
         throw error;
       }
     }
 
     eventLogger.log('workflow.completed', name, { workflowId, ms: Date.now() - startedAt });
+    workflowObservability.complete(workflowId);
+    telemetryEngine.trackWorkflowTiming(name, Date.now() - startedAt, {
+      tenant_id: context.tenant_id || 'hmadv',
+      trace_id: context.trace_id || context.correlation_id || null,
+    });
     return state;
   }
 

@@ -15,6 +15,7 @@
  */
 import { supabase } from '../../services/supabase.js';
 import { store }    from '../state/ShellStore.js';
+import { observabilityFoundation } from '../../observability/ObservabilityFoundation.js';
 
 const IS_DEV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -30,6 +31,7 @@ export class Observability {
     this._bindErrors();
     this._bindPerformance();
     this._scheduleFlush();
+    observabilityFoundation.runtimeIntelligence.captureMemory({ path: window.location.pathname });
     return this;
   }
 
@@ -48,6 +50,12 @@ export class Observability {
   // ── Module ──────────────────────────────────────────────────────────────────
   moduleLoad(name, ms) {
     this._log('module.load', { name, ms });
+    observabilityFoundation.moduleObservability.record(name, {
+      load_time_ms: ms,
+      memory_usage_bytes: performance?.memory?.usedJSHeapSize || 0,
+      event_throughput: 1,
+    });
+    observabilityFoundation.telemetryEngine.trackModuleLoad(name, ms, { module: name });
     if (ms > 3000) this._log('module.slow', { name, ms }, 'warn');
   }
 
@@ -73,6 +81,13 @@ export class Observability {
     if (IS_DEV) {
       const style = level === 'error' ? 'color:red' : level === 'warn' ? 'color:orange' : 'color:gray';
       console.debug(`%c[Obs] ${event}`, style, data);
+    }
+
+    if (level === 'error') {
+      observabilityFoundation.runtimeIntelligence.reportIssue('module.failure', {
+        event,
+        message: data?.message || event,
+      });
     }
 
     this._buffer.push(entry);

@@ -13,7 +13,8 @@
     "diagnostics:platform": "node platform/scripts/diagnostics.mjs",
     "validate:events": "node platform/scripts/validate-events-foundation.mjs",
     "validate:data-governance": "node platform/scripts/validate-data-governance-foundation.mjs",
-    "validate:finops": "node platform/scripts/validate-finops-foundation.mjs"
+    "validate:finops": "node platform/scripts/validate-finops-foundation.mjs",
+    "validate:observability": "node platform/scripts/validate-observability-foundation.mjs"
   },
   "repository": {
     "type": "git",

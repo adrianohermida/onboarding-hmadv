@@ -14,6 +14,9 @@
     { "event": "feature.enabled", "domain": "billing", "owner": "billing", "payload": "FeatureEnabled", "subscribers": ["finops", "notifications"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
     { "event": "feature.disabled", "domain": "billing", "owner": "billing", "payload": "FeatureDisabled", "subscribers": ["finops", "notifications"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
     { "event": "invoice.generated", "domain": "billing", "owner": "billing", "payload": "InvoiceGenerated", "subscribers": ["finops", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
-    { "event": "payment.received", "domain": "billing", "owner": "billing", "payload": "PaymentReceived", "subscribers": ["finops", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true }
+    { "event": "payment.received", "domain": "billing", "owner": "billing", "payload": "PaymentReceived", "subscribers": ["finops", "analytics"], "retries": { "max": 3 }, "observability": true, "deadLetter": true },
+    { "event": "workflow.failed", "domain": "workflows", "owner": "platform", "payload": "WorkflowFailed", "subscribers": ["alerts", "incidents"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "onboarding.abandoned", "domain": "onboarding", "owner": "onboarding", "payload": "OnboardingAbandoned", "subscribers": ["analytics", "support"], "retries": { "max": 2 }, "observability": true, "deadLetter": true },
+    { "event": "ai.workflow.started", "domain": "ai", "owner": "platform", "payload": "AiWorkflowStarted", "subscribers": ["analytics", "finops"], "retries": { "max": 2 }, "observability": true, "deadLetter": true }
   ]
 }

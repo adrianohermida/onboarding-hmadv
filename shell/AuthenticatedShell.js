@@ -28,6 +28,7 @@ import { obs }                 from './observability/Observability.js';
 import { bus }                 from '../modules/events/EventBus.js';
 import { mountEventOrchestration } from '../events/orchestrators/bootstrap.js';
 import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration.js';
+import { mountObservabilityFoundation, observabilityFoundation } from '../observability/ObservabilityFoundation.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -64,11 +65,17 @@ export class AuthenticatedShell {
       moduleRegistry.init();
       mountEventOrchestration();
       mountBillingShellIntegration();
+      mountObservabilityFoundation();
 
       // Mount shell subsystems
       globalModal.mount();
       globalSlideover.mount();
       notificationCenter.mount('.header-actions');
+
+      bus.on('modal.opened', () => obs._log('shell.modal_activity', { state: 'opened' }));
+      bus.on('modal.closed', () => obs._log('shell.modal_activity', { state: 'closed' }));
+      bus.on('slideover.opened', () => obs._log('shell.slideover_activity', { state: 'opened' }));
+      bus.on('slideover.closed', () => obs._log('shell.slideover_activity', { state: 'closed' }));
 
       // Sidebar collapse state
       this._initSidebar();
@@ -85,6 +92,10 @@ export class AuthenticatedShell {
 
       loadingLayer.finish();
       document.body.classList.add('app-loaded');
+      const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+      if (navEntry?.domContentLoadedEventEnd) {
+        observabilityFoundation.telemetryEngine.trackRenderTiming('shell.hydration', Math.round(navEntry.domContentLoadedEventEnd), { module: 'shell' });
+      }
       document.dispatchEvent(new CustomEvent('app:ready'));
       bus.emit('shell.ready', { authDetail });
 
@@ -137,17 +148,21 @@ export class AuthenticatedShell {
       if (isMobile()) {
         const isOpen = store.get('sidebar').open;
         store.setSidebarOpen(!isOpen);
+        obs._log('shell.mobile_navigation', { open: !isOpen });
       } else {
         store.toggleSidebarCollapsed();
         toggle.setAttribute('title', store.get('sidebar').collapsed ? 'Expandir menu' : 'Recolher menu');
+        obs._log('shell.sidebar_state', { collapsed: store.get('sidebar').collapsed });
       }
     });
 
     // Overlay click
     document.getElementById('sidebar-overlay')?.addEventListener('click', () => store.setSidebarOpen(false));
+    document.getElementById('sidebar-overlay')?.addEventListener('click', () => obs._log('shell.sidebar_overlay_close', {}));
 
     // ESC
     document.addEventListener('keydown', e => { if (e.key === 'Escape') store.setSidebarOpen(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') obs._log('shell.sidebar_escape_close', {}); });
 
     // Route change → close mobile drawer
     document.addEventListener('app:route-changed', () => { if (isMobile()) store.setSidebarOpen(false); });
@@ -195,6 +210,7 @@ export class AuthenticatedShell {
 
   async _navigate(url, pushState = true) {
     obs.routeStart(url);
+    const navStart = performance.now();
     loadingLayer.start();
 
     try {
@@ -249,6 +265,9 @@ export class AuthenticatedShell {
 
       store.setCurrentRoute(url);
       obs.routeEnd(url);
+      const routeMs = Math.round(performance.now() - navStart);
+      observabilityFoundation.telemetryEngine.trackRouteTiming(url, routeMs, { module: 'shell' });
+      observabilityFoundation.telemetryEngine.trackRenderTiming('shell.layout', routeMs, { module: 'shell' });
       loadingLayer.finish();
 
       if (store.get('auth')) {
