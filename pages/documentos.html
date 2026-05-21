@@ -6,7 +6,7 @@
   <title>Documentos · Portal HMADV</title>
 
   <link rel="stylesheet" href="../styles/variables.css" />
-  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
   <link rel="stylesheet" href="../styles/components.css" />
   <link rel="stylesheet" href="../styles/layout.css" />
 
@@ -809,7 +809,7 @@ function renderDocHub() {
     cats[cat].push(d);
   }
 
-  if (!Object.keys(cats).length) {
+  if (!Object.keys(cats).length && !allDocs.filter(d=>d.direction==='office_to_client').length) {
     hub.innerHTML = `<div class="doc-empty"><div class="doc-empty-icon">📋</div><div>Nenhum documento encontrado.</div></div>`;
     return;
   }
@@ -817,7 +817,7 @@ function renderDocHub() {
   const catOrder = ['identidade','residencia','financeiro','dividas','contratos','cnj','judiciais','complementares'];
   const sortedCats = catOrder.filter(c => cats[c]);
 
-  hub.innerHTML = sortedCats.map(catKey => {
+  hub.innerHTML = renderOfficeDocsSection(allDocs) + sortedCats.map(catKey => {
     const catMeta  = DOCUMENT_CATEGORIES[catKey] || { label: catKey, icon: '📁' };
     const docs     = cats[catKey];
     const approved = docs.filter(d => ['aprovado','assinado'].includes(d.workflow_status)).length;
@@ -1084,6 +1084,10 @@ window.confirmReview = async () => {
 
     const label = WORKFLOW_STATES[reviewWorkflow]?.label || reviewWorkflow;
     Toast.success(`Documento atualizado: ${label}`);
+
+    // Freshdesk / email notification (fire-and-forget)
+    _notifyDocUpdate(drawerDocId, reviewWorkflow, obs).catch(console.warn);
+
     closeDrawer();
 
   } catch (e) {
@@ -1093,6 +1097,64 @@ window.confirmReview = async () => {
     btn.textContent = 'Confirmar';
   }
 };
+
+// ── Freshdesk / notify integration ───────────────────────────────────────────
+async function _notifyDocUpdate(docId, workflowStatus, obs) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const doc = engine.getAll().find(d => d.id === docId);
+    const tipo = doc?.tipo || docId;
+    const EVENT_MAP = {
+      aprovado:              'document_approved',
+      rejeitado:             'document_rejected',
+      pendente_correcao:     'document_correction_requested',
+      aguardando_assinatura: 'document_signature_requested',
+      assinado:              'document_signed',
+    };
+    const notifyType = EVENT_MAP[workflowStatus];
+    if (!notifyType) return;
+
+    await fetch(`${FUNCTIONS_URL}/portal-notify`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        type:        notifyType,
+        payload: {
+          tipo,
+          tipoLabel:  doc?.label || tipo,
+          status:     workflowStatus,
+          observacao: obs,
+        },
+        // If viewing client, pass their user context
+        ...(viewingUid ? { targetUserId: viewingUid } : {}),
+      }),
+    });
+  } catch (e) {
+    console.warn('[Documentos] notify error:', e.message);
+  }
+}
+
+// ── Office documents section ──────────────────────────────────────────────────
+function renderOfficeDocsSection(docs) {
+  const officeDocs = docs.filter(d => d.direction === 'office_to_client');
+  if (!officeDocs.length) return '';
+  return `
+    <div class="cat-section" id="cat-office-to-client" style="margin-bottom:24px;">
+      <div class="cat-section-header" style="background:linear-gradient(90deg,#f5f3ff,#ede9fe);border-radius:10px;padding:12px 16px;margin-bottom:12px;border-bottom:none;">
+        <div class="cat-icon">📨</div>
+        <div class="cat-title" style="color:#4c1d95;">Documentos do Escritório para Você</div>
+        <div class="cat-count" style="color:#7c3aed;">${officeDocs.length} doc${officeDocs.length > 1 ? 's' : ''}</div>
+      </div>
+      <div class="doc-cards-grid">
+        ${officeDocs.map(d => renderDocCard(d)).join('')}
+      </div>
+    </div>
+  `;
+}
 
 // ── Viewer actions ────────────────────────────────────────────────────────────
 window.openFullscreen = () => {

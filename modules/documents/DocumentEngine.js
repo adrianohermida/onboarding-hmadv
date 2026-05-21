@@ -76,8 +76,9 @@ export class DocumentEngine {
   async load() {
     try {
       const rows = await this._service.list();
-      // Merge DB rows with canonical type definitions
-      this._docs = Object.entries(DOCUMENT_TYPE_MAP).map(([tipo, meta]) => {
+
+      // 1. Merge canonical types with DB rows
+      const templateDocs = Object.entries(DOCUMENT_TYPE_MAP).map(([tipo, meta]) => {
         const row = rows.find(r => r.tipo === tipo) || {};
         return {
           ...meta, tipo,
@@ -102,6 +103,38 @@ export class DocumentEngine {
           uploaded_by:      row.uploaded_by      || null,
         };
       });
+
+      // 2. Append DB-only docs (office → client, or custom types not in template)
+      const templateTipos = new Set(Object.keys(DOCUMENT_TYPE_MAP));
+      const extraDocs = rows
+        .filter(r => !templateTipos.has(r.tipo))
+        .map(r => ({
+          tipo:             r.tipo,
+          label:            r.nome_arquivo || r.tipo,
+          icon:             r.direction === 'office_to_client' ? '📨' : '📄',
+          category:         r.category || 'contratos',
+          required:         false,
+          id:               r.id,
+          status:           r.status,
+          workflow_status:  r.workflow_status || 'enviado',
+          storage_path:     r.storage_path,
+          nome_arquivo:     r.nome_arquivo,
+          observacao_admin: r.observacao_admin,
+          admin_notes:      r.admin_notes,
+          deadline:         r.deadline,
+          require_signature: r.require_signature || false,
+          autentique_id:    r.autentique_id,
+          autentique_status: r.autentique_status,
+          version:          r.version || 1,
+          file_size:        r.file_size,
+          mime_type:        r.mime_type,
+          direction:        r.direction || 'client_to_office',
+          tags:             r.tags || [],
+          updated_at:       r.updated_at,
+          uploaded_by:      r.uploaded_by,
+        }));
+
+      this._docs   = [...templateDocs, ...extraDocs];
       this._loaded = true;
       bus.emit('document.list.changed', { docs: this._docs });
     } catch (e) {

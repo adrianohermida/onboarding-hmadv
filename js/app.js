@@ -14,15 +14,16 @@ let appUserDetail = null;
 let shellNavInFlight = false;
 let captureModuleListeners = true;
 const capturedModuleListeners = [];
+let activeModuleToken = 0;
 
 const nativeDocumentAddEventListener = document.addEventListener.bind(document);
 const nativeDocumentRemoveEventListener = document.removeEventListener.bind(document);
 const nativeWindowAddEventListener = window.addEventListener.bind(window);
 const nativeWindowRemoveEventListener = window.removeEventListener.bind(window);
 
-function trackModuleListener(target, type, listener, options) {
+function trackModuleListener(target, type, originalListener, listener, options) {
   if (!captureModuleListeners || typeof listener !== 'function') return;
-  capturedModuleListeners.push({ target, type, listener, options });
+  capturedModuleListeners.push({ target, type, originalListener, listener, options });
 }
 
 function cleanupModuleListeners() {
@@ -38,13 +39,35 @@ function cleanupModuleListeners() {
 }
 
 document.addEventListener = function patchedDocumentAddEventListener(type, listener, options) {
-  nativeDocumentAddEventListener(type, listener, options);
-  trackModuleListener(document, type, listener, options);
+  if (!captureModuleListeners || typeof listener !== 'function') {
+    nativeDocumentAddEventListener(type, listener, options);
+    return;
+  }
+
+  const token = activeModuleToken;
+  const wrapped = function wrappedDocumentListener(...args) {
+    if (token !== activeModuleToken) return;
+    return listener.apply(this, args);
+  };
+
+  nativeDocumentAddEventListener(type, wrapped, options);
+  trackModuleListener(document, type, listener, wrapped, options);
 };
 
 window.addEventListener = function patchedWindowAddEventListener(type, listener, options) {
-  nativeWindowAddEventListener(type, listener, options);
-  trackModuleListener(window, type, listener, options);
+  if (!captureModuleListeners || typeof listener !== 'function') {
+    nativeWindowAddEventListener(type, listener, options);
+    return;
+  }
+
+  const token = activeModuleToken;
+  const wrapped = function wrappedWindowListener(...args) {
+    if (token !== activeModuleToken) return;
+    return listener.apply(this, args);
+  };
+
+  nativeWindowAddEventListener(type, wrapped, options);
+  trackModuleListener(window, type, listener, wrapped, options);
 };
 
 /* ── Session cache helpers ───────────────────────── */
@@ -141,19 +164,31 @@ function syncMainContent(parsedDoc) {
 }
 
 async function runPageScripts(parsedDoc, targetUrl) {
+  activeModuleToken += 1;
   cleanupModuleListeners();
   captureModuleListeners = true;
 
-  const scripts = [...parsedDoc.querySelectorAll('script[type="module"]')]
+  const scripts = [...parsedDoc.querySelectorAll('script')]
     .filter(s => {
+      const type = (s.getAttribute('type') || '').trim();
       const src = s.getAttribute('src') || '';
-      return !src.endsWith('/js/app.js') && !src.endsWith('js/app.js');
+      if (src.endsWith('/js/app.js') || src.endsWith('js/app.js')) return false;
+      if (!type || type === 'text/javascript' || type === 'application/javascript' || type === 'module') {
+        return true;
+      }
+      return false;
     });
 
   for (const script of scripts) {
     const el = document.createElement('script');
-    el.type = 'module';
     el.setAttribute(SHELL_SCRIPT_ATTR, '1');
+
+    const type = (script.getAttribute('type') || '').trim();
+    if (type === 'module') {
+      el.type = 'module';
+    } else if (type) {
+      el.type = type;
+    }
 
     const src = script.getAttribute('src');
     if (src) {
