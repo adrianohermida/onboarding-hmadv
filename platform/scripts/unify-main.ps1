@@ -146,13 +146,13 @@ function New-SafetyBackup {
   $backupBranch = "backup/unify-$BaseBranch-$stamp"
   $backupTag = "checkpoint/unify-$BaseBranch-$stamp"
 
-  Invoke-Git -Arguments @('branch', $backupBranch, 'HEAD')
-  Invoke-Git -Arguments @('tag', $backupTag, 'HEAD')
+  $null = Invoke-Git -Arguments @('branch', $backupBranch, 'HEAD')
+  $null = Invoke-Git -Arguments @('tag', $backupTag, 'HEAD')
 
   Write-Log "Safety backup branch created: $backupBranch"
   Write-Log "Safety checkpoint tag created: $backupTag"
 
-  return [ordered]@{
+  return @{
     backupBranch = $backupBranch
     backupTag = $backupTag
   }
