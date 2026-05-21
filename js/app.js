@@ -1,4 +1,5 @@
 import { Router }                    from './router.js';
+import { installRuntimeIsolation }   from './runtime-isolation.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';
@@ -15,6 +16,7 @@ const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_VERSION = '20260521f';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
+const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
 
 window.__shellVersion = SHELL_VERSION;
 
@@ -22,9 +24,9 @@ let appUserDetail = null;
 let shellNavInFlight = false;
 let captureModuleListeners = true;
 let runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
-const capturedModuleListeners = [];
 let activeModuleToken = 0;
 const portalViewModeSubscribers = new Set();
+let shellRouteFailure = null;
 
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
@@ -128,201 +130,17 @@ window.onPortalViewModeChange = (cb) => {
 window.mountPortalViewModeSelector = (containerOrId, options = {}) =>
   mountPortalViewModeSelector(containerOrId, options);
 
-const nativeDocumentAddEventListener = document.addEventListener.bind(document);
-const nativeDocumentRemoveEventListener = document.removeEventListener.bind(document);
-const nativeWindowAddEventListener = window.addEventListener.bind(window);
-const nativeWindowRemoveEventListener = window.removeEventListener.bind(window);
-const nativeSetTimeout = window.setTimeout.bind(window);
-const nativeClearTimeout = window.clearTimeout.bind(window);
-const nativeSetInterval = window.setInterval.bind(window);
-const nativeClearInterval = window.clearInterval.bind(window);
-const capturedModuleTimers = [];
-
-function inferModuleFromStack(stack = '') {
-  if (!stack) return 'unknown';
-  const normalized = String(stack).replaceAll('\\', '/');
-  const pageMatch = normalized.match(/pages\/[\w-]+\.html/i);
-  if (pageMatch?.[0]) return pageMatch[0].toLowerCase();
-  const jsMatch = normalized.match(/js\/[\w-]+\.js/i);
-  if (jsMatch?.[0]) return jsMatch[0].toLowerCase();
-  return 'unknown';
-}
-
-function routeKeyFromModule(moduleName = '') {
-  if (!moduleName || moduleName === 'unknown') return 'unknown';
-  const normalized = String(moduleName).toLowerCase();
-  const pageMatch = normalized.match(/pages\/([\w-]+)\.html/);
-  if (pageMatch?.[1]) return pageMatch[1];
-  const jsMatch = normalized.match(/js\/([\w-]+)\.js/);
-  if (jsMatch?.[1]) return jsMatch[1];
-  return normalized;
-}
-
-function reportSuppressedCallback(kind, error, source = 'listener') {
-  if (Math.random() > SHELL_TELEMETRY_SAMPLE_RATE) return;
-
-  const message = error?.message || String(error || 'unknown error');
-  const stack = error?.stack || '';
-  const module = inferModuleFromStack(stack);
-  const route = routeKeyFromModule(module);
-  const detail = {
-    kind,
-    source,
-    message,
-    module,
-    route,
-    ts: Date.now(),
-  };
-
-  try {
-    if (!Array.isArray(window.__shellSuppressedCallbacks)) {
-      window.__shellSuppressedCallbacks = [];
-    }
-    if (!window.__shellSuppressedByRoute || typeof window.__shellSuppressedByRoute !== 'object') {
-      window.__shellSuppressedByRoute = {};
-    }
-    window.__shellSuppressedCallbacks.push(detail);
-    if (window.__shellSuppressedCallbacks.length > SHELL_TELEMETRY_MAX) {
-      window.__shellSuppressedCallbacks.shift();
-    }
-    window.__shellSuppressedByRoute[route] = (window.__shellSuppressedByRoute[route] || 0) + 1;
-    detail.countsByRoute = { ...window.__shellSuppressedByRoute };
-    window.dispatchEvent(new CustomEvent(SHELL_SUPPRESSED_EVENT, { detail }));
-  } catch (_) {}
-}
-
-function runSafely(kind, fn, ctx, args) {
-  try {
-    const result = fn.apply(ctx, args);
-    if (result && typeof result.then === 'function' && typeof result.catch === 'function') {
-      result.catch(error => {
-        reportSuppressedCallback(kind, error, 'async');
-        console.warn(`[shell:${kind}] async listener/timer error suppressed`, error);
-      });
-    }
-    return result;
-  } catch (error) {
-    reportSuppressedCallback(kind, error, 'sync');
-    console.warn(`[shell:${kind}] listener/timer error suppressed`, error);
-    return undefined;
-  }
-}
-
-function trackModuleListener(target, type, originalListener, listener, options) {
-  if (!captureModuleListeners || typeof listener !== 'function') return;
-  capturedModuleListeners.push({ target, type, originalListener, listener, options });
-}
-
-function cleanupModuleListeners() {
-  while (capturedModuleListeners.length) {
-    const item = capturedModuleListeners.pop();
-    if (!item) continue;
-    if (item.target === document) {
-      nativeDocumentRemoveEventListener(item.type, item.listener, item.options);
-    } else if (item.target === window) {
-      nativeWindowRemoveEventListener(item.type, item.listener, item.options);
-    }
-  }
-}
-
-function cleanupModuleTimers() {
-  while (capturedModuleTimers.length) {
-    const t = capturedModuleTimers.pop();
-    if (!t) continue;
-    if (t.kind === 'timeout') nativeClearTimeout(t.id);
-    if (t.kind === 'interval') nativeClearInterval(t.id);
-  }
-}
-
-document.addEventListener = function patchedDocumentAddEventListener(type, listener, options) {
-  if (!runtimeIsolationEnabled) {
-    nativeDocumentAddEventListener(type, listener, options);
-    return;
-  }
-
-  if (!captureModuleListeners || typeof listener !== 'function') {
-    nativeDocumentAddEventListener(type, listener, options);
-    return;
-  }
-
-  const token = activeModuleToken;
-  const wrapped = function wrappedDocumentListener(...args) {
-    if (token !== activeModuleToken) return;
-    return runSafely('document', listener, this, args);
-  };
-
-  nativeDocumentAddEventListener(type, wrapped, options);
-  trackModuleListener(document, type, listener, wrapped, options);
-};
-
-window.addEventListener = function patchedWindowAddEventListener(type, listener, options) {
-  if (!runtimeIsolationEnabled) {
-    nativeWindowAddEventListener(type, listener, options);
-    return;
-  }
-
-  if (!captureModuleListeners || typeof listener !== 'function') {
-    nativeWindowAddEventListener(type, listener, options);
-    return;
-  }
-
-  const token = activeModuleToken;
-  const wrapped = function wrappedWindowListener(...args) {
-    if (token !== activeModuleToken) return;
-    return runSafely('window', listener, this, args);
-  };
-
-  nativeWindowAddEventListener(type, wrapped, options);
-  trackModuleListener(window, type, listener, wrapped, options);
-};
-
-window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
-  if (!runtimeIsolationEnabled) {
-    return nativeSetTimeout(handler, timeout, ...args);
-  }
-
-  if (!captureModuleListeners || typeof handler !== 'function') {
-    return nativeSetTimeout(handler, timeout, ...args);
-  }
-
-  const token = activeModuleToken;
-  const wrapped = (...cbArgs) => {
-    if (token !== activeModuleToken) return;
-    return runSafely('timeout', handler, window, cbArgs);
-  };
-
-  const id = nativeSetTimeout(wrapped, timeout, ...args);
-  capturedModuleTimers.push({ kind: 'timeout', id });
-  return id;
-};
-
-window.clearTimeout = function patchedClearTimeout(id) {
-  return nativeClearTimeout(id);
-};
-
-window.setInterval = function patchedSetInterval(handler, timeout, ...args) {
-  if (!runtimeIsolationEnabled) {
-    return nativeSetInterval(handler, timeout, ...args);
-  }
-
-  if (!captureModuleListeners || typeof handler !== 'function') {
-    return nativeSetInterval(handler, timeout, ...args);
-  }
-
-  const token = activeModuleToken;
-  const wrapped = (...cbArgs) => {
-    if (token !== activeModuleToken) return;
-    return runSafely('interval', handler, window, cbArgs);
-  };
-
-  const id = nativeSetInterval(wrapped, timeout, ...args);
-  capturedModuleTimers.push({ kind: 'interval', id });
-  return id;
-};
-
-window.clearInterval = function patchedClearInterval(id) {
-  return nativeClearInterval(id);
-};
+const runtimeIsolation = installRuntimeIsolation({
+  isEnabled: () => runtimeIsolationEnabled,
+  isCaptureEnabled: () => captureModuleListeners,
+  getActiveToken: () => activeModuleToken,
+  eventName: SHELL_SUPPRESSED_EVENT,
+  telemetry: {
+    sampleRate: SHELL_TELEMETRY_SAMPLE_RATE,
+    maxEvents: SHELL_TELEMETRY_MAX,
+    maxPerRoute: SHELL_TELEMETRY_MAX_PER_ROUTE,
+  },
+});
 
 window.addEventListener('unhandledrejection', event => {
   const reason = event?.reason;
@@ -334,10 +152,32 @@ window.addEventListener('unhandledrejection', event => {
 
   if (knownNullStyle) {
     event.preventDefault();
-    reportSuppressedCallback('unhandledrejection', reason, 'global');
+    runtimeIsolation.reportSuppressed('unhandledrejection', reason, 'global');
     console.warn('[shell] stale dashboard callback rejected; suppressed', reason);
   }
 });
+
+const nativeDocumentAddEventListener = runtimeIsolation.nativeDocumentAddEventListener;
+const nativeWindowAddEventListener = runtimeIsolation.nativeWindowAddEventListener;
+
+function resetRouteFailure() {
+  shellRouteFailure = null;
+  try {
+    delete window.__shellRouteFailure;
+  } catch (_) {}
+}
+
+function setRouteFailure(routeUrl, error) {
+  const detail = {
+    routeUrl,
+    message: error?.message || String(error || 'unknown error'),
+    ts: Date.now(),
+  };
+  shellRouteFailure = detail;
+  try {
+    window.__shellRouteFailure = detail;
+  } catch (_) {}
+}
 
 /* ── Session cache helpers ───────────────────────── */
 function getCached() {
@@ -467,8 +307,8 @@ function getExpectedShellVersion(parsedDoc, targetUrl) {
 
 async function runPageScripts(parsedDoc, targetUrl) {
   activeModuleToken += 1;
-  cleanupModuleListeners();
-  cleanupModuleTimers();
+  runtimeIsolation.cleanupModuleListeners();
+  runtimeIsolation.cleanupModuleTimers();
   captureModuleListeners = true;
 
   const scripts = [...parsedDoc.querySelectorAll('script')]
@@ -532,6 +372,7 @@ async function navigateModule(url, { pushState = true } = {}) {
   const absolute = toAbsoluteUrl(url);
 
   try {
+    resetRouteFailure();
     document.dispatchEvent(new CustomEvent('app:route-will-change'));
 
     const fetchUrl = new URL(absolute, window.location.href);
@@ -586,11 +427,12 @@ async function navigateModule(url, { pushState = true } = {}) {
     }
     document.dispatchEvent(new CustomEvent('app:ready'));
     document.dispatchEvent(new CustomEvent('app:route-changed'));
-  } catch (_) {
+  } catch (error) {
+    setRouteFailure(absolute, error);
     window.location.href = absolute;
   } finally {
-    cleanupModuleListeners();
-    cleanupModuleTimers();
+    runtimeIsolation.cleanupModuleListeners();
+    runtimeIsolation.cleanupModuleTimers();
     captureModuleListeners = false;
     shellNavInFlight = false;
   }
