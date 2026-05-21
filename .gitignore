@@ -33,6 +33,14 @@ bld/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
+# Keep source-code logger modules inside sprint module directories
+!events/logs/
+!observability/logs/
+!integrations/logs/
+!billing/logs/
+!ai/logs/
+!compliance/logs/
+!workflows/logs/
 
 # Build results on 'Bin' directories
 **/[Bb]in/*
