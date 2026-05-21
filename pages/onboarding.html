@@ -17,7 +17,10 @@
       gap: 0;
       margin-bottom: 28px;
       overflow-x: auto;
-      padding-bottom: 4px;
+      padding: 10px 8px 6px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     }
     .cnj-step {
       display: flex;
@@ -65,9 +68,54 @@
     .cnj-step.active .cnj-step-label { color: var(--navy); }
     .cnj-step.done   .cnj-step-label { color: var(--green); }
 
+    .cnj-progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -16px 0 18px;
+      padding: 10px 12px;
+      border: 1px solid #d8e2ee;
+      border-radius: 10px;
+      background: #f7fbff;
+    }
+    .cnj-progress-copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+    .cnj-progress-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .cnj-progress-desc {
+      font-size: 11px;
+      color: var(--ink2);
+      line-height: 1.25;
+    }
+    .cnj-progress-pct {
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1f4c7a;
+      background: #e5f0fb;
+      border: 1px solid #c8daef;
+      border-radius: 999px;
+      padding: 5px 9px;
+    }
+
     /* ── Step panels ──────────────────────────────── */
     .cnj-panel { display: none; }
-    .cnj-panel.active { display: block; }
+    .cnj-panel.active { display: block; animation: panelIn .22s ease; }
+
+    @keyframes panelIn {
+      from { opacity: .2; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     /* ── Dynamic cards ────────────────────────────── */
     .dyn-card {
@@ -208,6 +256,10 @@
       font-size: 11px;
       color: var(--muted);
       display: flex; align-items: center; gap: 4px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
     }
     #autosave-status.saving { color: var(--blue); }
     #autosave-status.saved  { color: var(--green); }
@@ -238,6 +290,27 @@
     @media (max-width: 600px) {
       .cnj-step-label { display: none; }
       .analise-grid { grid-template-columns: 1fr 1fr; }
+      .cnj-progress-meta { margin-top: -14px; padding: 9px 10px; }
+      .step-nav { gap: 8px; }
+      .step-nav .btn { flex: 1; justify-content: center; }
+    }
+
+    @media (max-width: 375px) {
+      .cnj-tracker { padding: 8px 6px 4px; margin-bottom: 24px; }
+      .cnj-step { min-width: 62px; }
+      .cnj-step-dot { width: 28px; height: 28px; font-size: 10px; }
+      .cnj-progress-meta { margin: -14px 0 14px; }
+      .cnj-progress-title { font-size: 11px; }
+      .cnj-progress-desc { font-size: 10px; }
+      #autosave-status { padding: 5px 8px; font-size: 10px; }
+      .step-nav-info { display: none; }
+    }
+
+    @media (max-width: 320px) {
+      .cnj-step { min-width: 54px; }
+      .cnj-step-dot { width: 26px; height: 26px; }
+      .cnj-progress-pct { min-width: 42px; padding: 4px 7px; }
+      .cnj-progress-desc { display: none; }
     }
   </style>
 </head>
@@ -317,6 +390,14 @@
           <div class="cnj-step-dot">7</div>
           <div class="cnj-step-label">Documentos</div>
         </div>
+      </div>
+
+      <div class="cnj-progress-meta" id="cnj-progress-meta" aria-live="polite">
+        <div class="cnj-progress-copy">
+          <span class="cnj-progress-title" id="cnj-progress-title">Etapa 1 de 7</span>
+          <span class="cnj-progress-desc" id="cnj-progress-desc">Identificação do requerente</span>
+        </div>
+        <div class="cnj-progress-pct" id="cnj-progress-pct">14%</div>
       </div>
 
       <!-- ════════════════════════════════════════════
@@ -886,6 +967,15 @@ let depIdx    = 0;
 let credorIdx = 0;
 let _userId   = null;
 let _currentStep = 1;
+const STEP_LABELS = {
+  1: 'Identificacao do requerente',
+  2: 'Dados socioeconomicos',
+  3: 'Despesas e patrimonio',
+  4: 'Causas do endividamento',
+  5: 'Mapa de credores',
+  6: 'Analise e plano de pagamento',
+  7: 'Documentacao e finalizacao',
+};
 
 /* ── Ícones ─────────────────────────── */
 const TRASH = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
@@ -1528,6 +1618,16 @@ function scheduleAutosave() {
   _autosaveTimer = setTimeout(doAutosave, 1500);
 }
 
+function updateProgressMeta(step) {
+  const safeStep = Math.max(1, Math.min(7, Number(step) || 1));
+  const titleEl = document.getElementById('cnj-progress-title');
+  const descEl = document.getElementById('cnj-progress-desc');
+  const pctEl = document.getElementById('cnj-progress-pct');
+  if (titleEl) titleEl.textContent = `Etapa ${safeStep} de 7`;
+  if (descEl) descEl.textContent = STEP_LABELS[safeStep] || 'Preenchimento';
+  if (pctEl) pctEl.textContent = `${Math.round((safeStep / 7) * 100)}%`;
+}
+
 async function doAutosave() {
   const el  = document.getElementById('autosave-status');
   const txt = document.getElementById('autosave-txt');
@@ -1549,6 +1649,7 @@ async function doAutosave() {
    Navegação
 ════════════════════════════════════════════ */
 window.goStep = function(target) {
+  target = Math.max(1, Math.min(7, Number(target) || 1));
   scheduleAutosave();
 
   for (let s = 1; s <= 7; s++) {
@@ -1557,6 +1658,8 @@ window.goStep = function(target) {
     dot.className = 'cnj-step' +
       (s < target  ? ' done'   : '') +
       (s === target ? ' active' : '');
+    if (s === target) dot.setAttribute('aria-current', 'step');
+    else dot.removeAttribute('aria-current');
   }
 
   document.querySelectorAll('.cnj-panel').forEach((p, idx) => {
@@ -1564,6 +1667,7 @@ window.goStep = function(target) {
   });
 
   _currentStep = target;
+  updateProgressMeta(target);
   if (target === 6) populateAnalise();
   if (target === 7) gerarPrevia();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1791,6 +1895,7 @@ window._cnjCalcCredor = _calcCredorFn;
 /* Autosave ao modificar campos */
 document.addEventListener('input',  scheduleAutosave);
 document.addEventListener('change', scheduleAutosave);
+updateProgressMeta(1);
 </script>
 </body>
 </html>
