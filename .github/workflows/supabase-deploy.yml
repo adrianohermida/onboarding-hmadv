@@ -26,6 +26,7 @@ jobs:
             FRESHDESK_DOMAIN="hmdesk" \
             FROM_EMAIL="Portal Hermida Maia <contato@hermidamaia.adv.br>" \
             OFFICE_EMAIL="contato@hermidamaia.adv.br" \
+            DIRECTDATA_TOKEN="${{ secrets.DIRECTDATA_TOKEN }}" \
             --project-ref sspvizogbcyigquqycsz
 
       - name: Deploy portal-notify
@@ -40,4 +41,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy freshdesk-proxy \
+            --project-ref sspvizogbcyigquqycsz
+
+      - name: Deploy directdata-proxy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy directdata-proxy \
             --project-ref sspvizogbcyigquqycsz

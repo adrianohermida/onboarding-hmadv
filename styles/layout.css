@@ -1,3 +1,18 @@
+/* ── PAGE TRANSITION ──────────────────────────── */
+body { opacity: 0; animation: pageReveal .18s ease .04s forwards; }
+body.app-loaded .sk { display: none !important; }
+
+@keyframes pageReveal { to { opacity: 1; } }
+
+/* ── SKELETON ─────────────────────────────────── */
+.sk {
+  background: linear-gradient(90deg, var(--line) 25%, var(--line2) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
 /* ── PORTAL SHELL ─────────────────────────────── */
 .portal-shell {
   display: flex;
@@ -120,6 +135,12 @@
 }
 .nav-link.active .nav-icon,
 .nav-link:hover  .nav-icon { opacity: 1; }
+
+/* ── SIDEBAR DRAWER (mobile overlay) ─────────── */
+.sidebar-open {
+  transform: translateX(0) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
 
 /* ── SIDEBAR FOOTER ───────────────────────────── */
 .sidebar-footer {
@@ -321,52 +342,77 @@
 @media (max-width: 768px) {
   .portal-shell { display: block; }
 
+  /* Sidebar becomes a slide-in drawer on mobile */
   .sidebar {
     position: fixed;
-    bottom: 0; top: auto; left: 0; right: 0;
-    width: 100%; height: auto;
-    height: 60px;
-    flex-direction: row;
-    z-index: 200;
-    overflow: hidden;
+    top: 0; left: 0;
+    width: 260px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform .25s ease, box-shadow .25s ease;
+    z-index: 300;
   }
 
-  .sidebar-brand, .sidebar-footer, .nav-section-label { display: none; }
-
-  .sidebar-nav {
+  /* Bottom navigation bar */
+  .sidebar-nav-mobile {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--navy);
     display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0;
-    flex: 1;
-    align-items: center;
+    align-items: stretch;
+    z-index: 200;
+    border-top: 1px solid rgba(255,255,255,.1);
   }
 
-  .nav-link {
+  .sidebar-toggle { display: flex !important; }
+
+  .main-area {
+    margin-left: 0;
+    padding-bottom: 56px;
+  }
+
+  .page-content { padding: 16px 14px; }
+
+  .portal-header {
+    padding: 0 14px;
+    height: 52px;
+  }
+
+  .portal-page-footer {
+    padding: 10px 14px;
     flex-direction: column;
-    gap: 3px;
-    padding: 8px 14px;
-    font-size: 10px;
-    border-left: none;
-    border-top: 3px solid transparent;
-    flex: 1;
-    justify-content: center;
+    gap: 4px;
     text-align: center;
-    min-width: 60px;
   }
 
-  .nav-link.active {
-    border-left-color: transparent;
-    border-top-color: #AED6F1;
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  .nav-icon { width: auto; margin: 0 auto; }
+  .status-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
 
-  .main-area { margin-left: 0; padding-bottom: 60px; }
-  .page-content { padding: 20px 16px; }
-  .portal-header { padding: 0 16px; }
-  .portal-page-footer { padding: 10px 16px; flex-direction: column; gap: 4px; text-align: center; }
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
   .auth-card { padding: 32px 24px; }
+
+  /* Table horizontal scroll on mobile */
+  .table-wrap, [style*="overflow-x:auto"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { min-width: 480px; }
+}
+
+@media (max-width: 480px) {
+  .page-header-row { flex-direction: column; }
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .auth-card { padding: 24px 16px; }
+  .page-content { padding: 12px; }
 }
 
 @media (max-width: 480px) {

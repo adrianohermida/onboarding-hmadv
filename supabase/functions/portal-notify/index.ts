@@ -38,6 +38,23 @@ Deno.serve(async (req: Request) => {
       html: `<p>O cliente <strong>${clientName || clientEmail}</strong> (${clientEmail}) enviou o documento <strong>${tipoLabel}</strong>.</p>
 <p>Acesse o portal administrativo para revisar.</p>`,
     });
+  } else if (type === 'document_status_update') {
+    const { tipoLabel, status, observacao } = payload;
+    const statusLabel: Record<string,string> = {
+      aprovado:   'aprovado ✅',
+      recusado:   'recusado ❌',
+      em_analise: 'em análise 🔍',
+    };
+    messages.push({
+      to:      clientEmail,
+      subject: `Documento ${statusLabel[status] || status} — Hermida Maia`,
+      html: `<p>Olá${clientName ? ' ' + clientName : ''}!</p>
+<p>O status do documento <strong>${tipoLabel}</strong> foi atualizado para <strong>${statusLabel[status] || status}</strong>.</p>
+${observacao ? `<p><strong>Observação:</strong> ${observacao}</p>` : ''}
+<p>Acesse o portal para acompanhar seu caso.</p>
+<p style="color:#888;font-size:12px;">Hermida Maia — Sociedade Individual de Advocacia</p>`,
+    });
+
   } else if (type === 'ticket_created') {
     const { ticketId, subject } = payload;
     messages.push({

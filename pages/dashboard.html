@@ -310,11 +310,12 @@ async function loadAdminOverview() {
           <td><span class="chip">${FASE_LABEL[c.fase] || c.fase || 'Cadastro'}</span></td>
           <td style="text-align:center;">${c.n_credores || 0}</td>
           <td style="font-size:12px;color:var(--muted);">${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</td>
-          <td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm"
               onclick="document.getElementById('client-selector').value='${c.user_id}';window.switchView('${c.user_id}')">
-              Ver
+              Dashboard
             </button>
+            <a class="btn btn-ghost btn-sm" href="documentos.html?uid=${c.user_id}">Docs</a>
           </td>
         </tr>
       `).join('');

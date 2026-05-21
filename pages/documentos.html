@@ -21,35 +21,50 @@
 
       <div class="page-header page-header-row">
         <div>
-          <h1>Documentos</h1>
-          <p>Gerencie os documentos do seu caso.</p>
+          <h1 id="docs-page-title">Documentos</h1>
+          <p id="docs-page-sub">Gerencie os documentos do seu caso.</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="showToast('Use o botão Enviar ao lado de cada documento.','ok')">
-          + Enviar documento
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a id="btn-back-admin" href="dashboard.html" class="btn btn-ghost btn-sm" style="display:none;">← Voltar</a>
+          <button class="btn btn-primary btn-sm" id="btn-upload-hint"
+                  onclick="showToast('Use o botão Enviar ao lado de cada documento.','ok')">
+            + Enviar documento
+          </button>
+        </div>
       </div>
 
-      <!-- Status Summary -->
+      <!-- Pipeline de aprovação (admin) -->
+      <div id="pipeline-bar" style="display:none; margin-bottom:16px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--muted);">Pipeline:</span>
+          <span class="chip chip-warn" id="pipe-pendentes">— pendentes</span>
+          <span class="chip chip-blue" id="pipe-analise">— em análise</span>
+          <span class="chip chip-ok"   id="pipe-aprovados">— aprovados</span>
+          <span class="chip chip-red"  id="pipe-recusados">— recusados</span>
+        </div>
+      </div>
+
+      <!-- KPIs -->
       <div class="kpi-grid" style="margin-bottom:16px;">
         <div class="kpi kpi-warn">
           <span class="kpi-label">Pendentes</span>
-          <div class="kpi-value" id="kpi-pendentes">7</div>
+          <div class="kpi-value" id="kpi-pendentes">—</div>
           <div class="kpi-hint">Aguardando envio</div>
         </div>
         <div class="kpi kpi-ok">
           <span class="kpi-label">Aprovados</span>
-          <div class="kpi-value" id="kpi-aprovados">0</div>
+          <div class="kpi-value" id="kpi-aprovados">—</div>
           <div class="kpi-hint">Verificados pela equipe</div>
         </div>
         <div class="kpi">
           <span class="kpi-label">Em análise</span>
-          <div class="kpi-value" id="kpi-analise">0</div>
+          <div class="kpi-value" id="kpi-analise">—</div>
           <div class="kpi-hint">Aguardando revisão</div>
         </div>
         <div class="kpi kpi-muted">
-          <span class="kpi-label">Total necessário</span>
-          <div class="kpi-value" id="kpi-total">7</div>
-          <div class="kpi-hint">Para análise completa</div>
+          <span class="kpi-label">Total</span>
+          <div class="kpi-value" id="kpi-total">—</div>
+          <div class="kpi-hint">Documentos necessários</div>
         </div>
       </div>
 
@@ -58,11 +73,11 @@
         <div class="sec-header">
           <div class="sec-num">1</div>
           <h2 class="sec-title">Lista de Documentos</h2>
-          <span class="sec-tag">7 documentos</span>
+          <span class="sec-tag" id="docs-count">—</span>
         </div>
 
-        <div class="table-wrap">
-          <table id="docs-table">
+        <div style="overflow-x:auto;">
+          <table class="table" style="width:100%;min-width:560px;" id="docs-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -80,16 +95,16 @@
         </div>
       </div>
 
-      <!-- Upload Zone info -->
-      <div class="sec">
+      <!-- Como enviar (client only) -->
+      <div class="sec" id="how-to-send">
         <div class="sec-header">
           <div class="sec-num">2</div>
           <h2 class="sec-title">Como enviar</h2>
         </div>
         <div class="callout callout-blue" style="margin-bottom:0;">
-          Use o botão <strong>Enviar</strong> ao lado de cada documento na tabela acima.
-          Formatos aceitos: PDF, JPG, PNG, WebP — máximo <strong>10 MB</strong> por arquivo.
-          Após o envio, o status muda para <em>Em análise</em> e nossa equipe será notificada automaticamente.
+          Use o botão <strong>Enviar</strong> ao lado de cada documento.
+          Formatos aceitos: PDF, JPG, PNG, WebP — máximo <strong>10 MB</strong>.
+          Após o envio o status muda para <em>Em análise</em> e nossa equipe será notificada.
         </div>
       </div>
 
@@ -102,54 +117,148 @@
   </div>
 </div>
 
+<!-- Admin: modal de aprovação -->
+<div class="modal-overlay" id="modal-approve" onclick="if(event.target===this)closeApproveModal()">
+  <div class="modal" style="text-align:left;max-width:480px;">
+    <h3 style="margin-bottom:4px;" id="approve-modal-title">Atualizar documento</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="approve-modal-doc">—</p>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label class="form-label">Novo status</label>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" id="btn-aprovar"
+                style="flex:1;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);"
+                onclick="setApproveStatus('aprovado')">✅ Aprovar</button>
+        <button class="btn btn-sm" id="btn-recusar"
+                style="flex:1;background:var(--red-bg);color:var(--red);border:1px solid var(--red);"
+                onclick="setApproveStatus('recusado')">❌ Recusar</button>
+        <button class="btn btn-sm" id="btn-analise"
+                style="flex:1;background:var(--ice);color:var(--blue);border:1px solid var(--blue);"
+                onclick="setApproveStatus('em_analise')">🔍 Em análise</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:20px;">
+      <label class="form-label" for="approve-obs">Observação para o cliente (opcional)</label>
+      <textarea class="form-textarea" id="approve-obs" rows="3"
+                placeholder="Ex: Documento ilegível, reenvie em melhor resolução..."></textarea>
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeApproveModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirm-approve" onclick="confirmApprove()" disabled>
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
 <script type="module" src="../js/app.js"></script>
 <script type="module">
-import { showToast }                    from '../utils/helpers.js';
-import { DocumentService }              from '../services/database.js';
-import { supabase }                     from '../services/supabase.js';
-import { FUNCTIONS_URL }                from '../utils/config.js';
+import { showToast }                        from '../utils/helpers.js';
+import { DocumentService, AdminService }    from '../services/database.js';
+import { supabase }                         from '../services/supabase.js';
+import { FUNCTIONS_URL }                    from '../utils/config.js';
 
 window.showToast = showToast;
 
-const CAT_CHIP    = { 'Identidade':'chip-blue', 'Residência':'chip-muted', 'Financeiro':'chip-muted', 'Dívidas':'chip-gold' };
+const CAT_CHIP    = { Identidade:'chip-blue', Residência:'chip-muted', Financeiro:'chip-muted', Dívidas:'chip-warn' };
 const STATUS_CHIP = { pendente:'chip-warn', em_analise:'chip-blue', aprovado:'chip-ok', recusado:'chip-red' };
 const STATUS_LABEL= { pendente:'Pendente', em_analise:'Em análise', aprovado:'Aprovado', recusado:'Recusado' };
 
-let currentUser = null;
-let currentCaso = null;
+let currentUser  = null;
+let currentCaso  = null;
+let isAdminMode  = false;
+let viewingUID   = null;   // set when admin is viewing a specific client
+let approveDocId = null;
+let approveStatus = null;
 
+/* ── Detect admin + uid param ─────────────────────── */
 document.addEventListener('app:user-loaded', e => {
-  currentUser = e.detail?.user;
-  currentCaso = e.detail?.caso;
+  const { user, caso, isAdmin } = e.detail || {};
+  currentUser = user;
+  currentCaso = caso;
+  isAdminMode = !!isAdmin;
 });
 
-async function init() {
+document.addEventListener('app:ready', async () => {
+  const params = new URLSearchParams(window.location.search);
+  viewingUID   = params.get('uid') || null;
+
+  if (isAdminMode && viewingUID) {
+    // Admin viewing a specific client's docs
+    document.getElementById('btn-back-admin').style.display = '';
+    document.getElementById('btn-upload-hint').style.display = 'none';
+    document.getElementById('how-to-send').style.display = 'none';
+    document.getElementById('pipeline-bar').style.display = '';
+    document.getElementById('docs-page-title').textContent = 'Documentos — Revisão';
+    document.getElementById('docs-page-sub').textContent   = 'Aprovação pelo escritório';
+    await loadAdminDocs(viewingUID);
+  } else {
+    await loadClientDocs();
+  }
+});
+
+/* ── Client: own docs ────────────────────────────── */
+async function loadClientDocs() {
   const rows = await DocumentService.list().catch(() => []);
   const docs  = DocumentService.TYPES.map(t => ({ ...t, ...(rows.find(r => r.tipo === t.tipo) || {}) }));
-  renderTable(docs);
+  renderTable(docs, false);
   updateKPIs(docs);
 }
 
-function renderTable(docs) {
+/* ── Admin: specific client docs ────────────────── */
+async function loadAdminDocs(uid) {
+  const rows = await AdminService.getClientDocs(uid).catch(() => []);
+  const docs  = DocumentService.TYPES.map(t => ({ ...t, ...(rows.find(r => r.tipo === t.tipo) || {}) }));
+  // Need IDs from DB rows for admin actions
+  const docsWithId = DocumentService.TYPES.map(t => {
+    const row = rows.find(r => r.tipo === t.tipo);
+    return { ...t, ...(row || {}), db_id: row?.id };
+  });
+  renderTable(docsWithId, true);
+  updateKPIs(docsWithId);
+  updatePipeline(docsWithId);
+}
+
+function updatePipeline(docs) {
+  document.getElementById('pipe-pendentes').textContent = docs.filter(d => !d.status || d.status === 'pendente').length + ' pendentes';
+  document.getElementById('pipe-analise').textContent   = docs.filter(d => d.status === 'em_analise').length + ' em análise';
+  document.getElementById('pipe-aprovados').textContent = docs.filter(d => d.status === 'aprovado').length + ' aprovados';
+  document.getElementById('pipe-recusados').textContent = docs.filter(d => d.status === 'recusado').length + ' recusados';
+}
+
+/* ── Render table ────────────────────────────────── */
+function renderTable(docs, adminMode) {
   const tbody = document.getElementById('docs-tbody');
   tbody.innerHTML = docs.map((d, i) => {
-    const canUpload = !d.status || d.status === 'pendente' || d.status === 'recusado';
-    const btn = canUpload
-      ? `<button class="btn btn-ghost btn-sm" data-upload-tipo="${d.tipo}" onclick="triggerUpload('${d.tipo}')">Enviar</button>`
-      : `<button class="btn btn-ghost btn-sm" disabled>${d.status === 'em_analise' ? 'Em análise' : 'Aprovado'}</button>`;
-    return `
-      <tr>
-        <td style="color:var(--muted)">${i + 1}</td>
-        <td>${d.label}${d.nome_arquivo ? `<br><small style="color:var(--muted)">${d.nome_arquivo}</small>` : ''}</td>
-        <td><span class="chip ${CAT_CHIP[d.categoria]||'chip-muted'}">${d.categoria}</span></td>
-        <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Recomendado</span>'}</td>
-        <td><span class="chip ${STATUS_CHIP[d.status]||'chip-warn'}">${STATUS_LABEL[d.status]||'Pendente'}</span></td>
-        <td>${btn}</td>
-      </tr>`;
+    const statusChip = `<span class="chip ${STATUS_CHIP[d.status]||'chip-warn'}">${STATUS_LABEL[d.status]||'Pendente'}</span>`;
+    const obsHtml    = d.observacao_admin
+      ? `<br><small style="color:var(--muted);font-size:11px;">Obs: ${d.observacao_admin}</small>` : '';
+
+    let actionBtn = '';
+    if (adminMode) {
+      actionBtn = `<button class="btn btn-ghost btn-sm" onclick="openApproveModal('${d.db_id || ''}','${d.label}','${d.status||'pendente'}')">Avaliar</button>`;
+    } else {
+      const canUpload = !d.status || d.status === 'pendente' || d.status === 'recusado';
+      actionBtn = canUpload
+        ? `<button class="btn btn-ghost btn-sm" data-upload-tipo="${d.tipo}" onclick="triggerUpload('${d.tipo}')">Enviar</button>`
+        : `<button class="btn btn-ghost btn-sm" disabled>${d.status === 'em_analise' ? 'Em análise' : 'Aprovado'}</button>`;
+    }
+
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td>${d.label}${d.nome_arquivo ? `<br><small style="color:var(--muted)">${d.nome_arquivo}</small>` : ''}${obsHtml}</td>
+      <td><span class="chip ${CAT_CHIP[d.categoria]||'chip-muted'}">${d.categoria}</span></td>
+      <td>${d.obrigatorio ? '<span class="chip chip-red">Sim</span>' : '<span class="chip chip-muted">Rec.</span>'}</td>
+      <td>${statusChip}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
   }).join('');
+
+  document.getElementById('docs-count').textContent = docs.length + ' documentos';
 }
 
 function updateKPIs(docs) {
@@ -157,10 +266,9 @@ function updateKPIs(docs) {
   document.getElementById('kpi-aprovados').textContent = docs.filter(d => d.status === 'aprovado').length;
   document.getElementById('kpi-analise').textContent   = docs.filter(d => d.status === 'em_analise').length;
   document.getElementById('kpi-total').textContent     = docs.length;
-  const tag = document.querySelector('#docs-tbody')?.closest('.sec')?.querySelector('.sec-tag');
-  if (tag) tag.textContent = docs.length + ' documentos';
 }
 
+/* ── Client upload ───────────────────────────────── */
 window.triggerUpload = function(tipo) {
   let inp = document.getElementById('_fi_' + tipo);
   if (!inp) {
@@ -177,20 +285,16 @@ window.triggerUpload = function(tipo) {
 
 async function handleUpload(tipo, file) {
   if (file.size > 10 * 1024 * 1024) { showToast('Arquivo muito grande (máx 10 MB).', 'warn'); return; }
-
   const btn = document.querySelector(`[data-upload-tipo="${tipo}"]`);
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
-
   try {
     await DocumentService.upload(tipo, file);
-
-    // Fire-and-forget email notification
     const { data: { session } } = await supabase.auth.getSession();
     if (session && currentUser) {
       const tipoMeta = DocumentService.TYPES.find(t => t.tipo === tipo);
       fetch(`${FUNCTIONS_URL}/portal-notify`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'document_upload',
           clientEmail: currentUser.email,
@@ -199,9 +303,8 @@ async function handleUpload(tipo, file) {
         }),
       }).catch(console.warn);
     }
-
     showToast('Documento enviado! Status: Em análise.', 'ok');
-    await init();
+    await loadClientDocs();
   } catch (err) {
     console.error(err);
     showToast('Erro ao enviar. Tente novamente.', 'error');
@@ -209,7 +312,82 @@ async function handleUpload(tipo, file) {
   }
 }
 
-document.addEventListener('app:ready', init);
+/* ── Admin approval modal ────────────────────────── */
+window.openApproveModal = function(docId, docLabel, currentStatus) {
+  approveDocId  = docId;
+  approveStatus = null;
+  document.getElementById('approve-modal-title').textContent = 'Avaliar documento';
+  document.getElementById('approve-modal-doc').textContent   = docLabel;
+  document.getElementById('approve-obs').value = '';
+  document.getElementById('btn-confirm-approve').disabled = true;
+  // Highlight current status button
+  ['btn-aprovar','btn-recusar','btn-analise'].forEach(id => {
+    document.getElementById(id).style.opacity = '1';
+  });
+  document.getElementById('modal-approve').classList.add('show');
+};
+
+window.setApproveStatus = function(status) {
+  approveStatus = status;
+  document.getElementById('btn-confirm-approve').disabled = false;
+  const map = { aprovado: 'btn-aprovar', recusado: 'btn-recusar', em_analise: 'btn-analise' };
+  ['btn-aprovar','btn-recusar','btn-analise'].forEach(id => {
+    document.getElementById(id).style.opacity = id === map[status] ? '1' : '0.4';
+  });
+};
+
+window.closeApproveModal = function() {
+  document.getElementById('modal-approve').classList.remove('show');
+  approveDocId = null; approveStatus = null;
+};
+
+window.confirmApprove = async function() {
+  if (!approveDocId || !approveStatus) return;
+  const obs = document.getElementById('approve-obs').value.trim();
+  const btn = document.getElementById('btn-confirm-approve');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // Call admin RPC
+    const { data: result, error } = await supabase.rpc('admin_update_doc_status', {
+      p_doc_id:     approveDocId,
+      p_status:     approveStatus,
+      p_observacao: obs || null,
+    });
+    if (error) throw error;
+
+    // Notify client via portal-notify
+    if (session && result?.user_email) {
+      const LABEL = { aprovado:'Aprovado', recusado:'Recusado', em_analise:'Em análise' };
+      const tipoMeta = DocumentService.TYPES.find(t => t.tipo === result.tipo);
+      fetch(`${FUNCTIONS_URL}/portal-notify`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type:        'document_status_update',
+          clientEmail: result.user_email,
+          clientName:  result.user_name || '',
+          payload: {
+            tipoLabel:  tipoMeta?.label || result.tipo,
+            status:     approveStatus,
+            observacao: obs || null,
+          },
+        }),
+      }).catch(console.warn);
+    }
+
+    closeApproveModal();
+    showToast(`Documento ${approveStatus === 'aprovado' ? 'aprovado' : approveStatus === 'recusado' ? 'recusado' : 'atualizado'}. Cliente notificado.`, 'ok');
+    await loadAdminDocs(viewingUID);
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao atualizar. Tente novamente.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirmar';
+  }
+};
 </script>
 
 </body>
