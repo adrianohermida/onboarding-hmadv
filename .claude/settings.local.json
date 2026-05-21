@@ -36,7 +36,14 @@
       "Bash(git -C \"D:/Github/onboarding-hmadv\" merge-base origin/main origin/sprint/0.2-shell-wiring-ux)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" diff HEAD -- pages/documentos.html)",
       "Bash(git -C \"D:/Github/onboarding-hmadv\" show ac62009 --stat)",
-      "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline -15)"
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" log --oneline -15)",
+      "Bash(app:user-loaded)",
+      "Bash(portal_documentos)",
+      "Bash(rejeitado)",
+      "Bash(pendente_correcao)",
+      "Bash(em_analise)",
+      "Bash(gh api *)",
+      "Bash(git -C \"D:/Github/onboarding-hmadv\" add pages/onboarding-v2.html pages/documentos.html)"
     ]
   }
 }
