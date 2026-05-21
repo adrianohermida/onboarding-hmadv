@@ -23,6 +23,15 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function parseJsonOrRaw(raw: string) {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { raw };
+  }
+}
+
 function adminClient() {
   return createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -67,7 +76,8 @@ async function autentiqueGraphQL(query: string, variables: JsonRecord = {}) {
     },
     body: JSON.stringify({ query, variables }),
   });
-  const body = await resp.json().catch(async () => ({ raw: await resp.text() }));
+  const raw = await resp.text();
+  const body = parseJsonOrRaw(raw);
   if (!resp.ok) throw new HttpError("Erro Autentique", resp.status, body);
   if (Array.isArray(body.errors) && body.errors.length) {
     throw new HttpError("Erro GraphQL Autentique", 400, body.errors);
@@ -88,7 +98,8 @@ async function autentiqueUpload(query: string, variables: JsonRecord, file: Blob
     headers: { "Authorization": `Bearer ${AUTENTIQUE_API_KEY}` },
     body: form,
   });
-  const body = await resp.json().catch(async () => ({ raw: await resp.text() }));
+  const raw = await resp.text();
+  const body = parseJsonOrRaw(raw);
   if (!resp.ok) throw new HttpError("Erro Autentique", resp.status, body);
   if (Array.isArray(body.errors) && body.errors.length) {
     throw new HttpError("Erro GraphQL Autentique", 400, body.errors);
