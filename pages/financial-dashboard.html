@@ -110,7 +110,7 @@
     background: var(--kpi-accent, var(--blue));
     border-radius: 0 0 12px 12px;
   }
-  .fd-kpi-icon  { font-size:20px; margin-bottom:6px; }
+  .fd-kpi-icon  { width:22px; height:22px; margin-bottom:6px; display:flex; align-items:center; }
   .fd-kpi-label { font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
   .fd-kpi-value { font-size:20px; font-weight:800; color:var(--ink); margin:4px 0 2px; line-height:1.1; }
   .fd-kpi-hint  { font-size:11px; color:var(--muted); }
@@ -132,7 +132,7 @@
     border-width: 1px;
     border-style: solid;
   }
-  .fd-diag-icon  { font-size:28px; flex-shrink:0; margin-top:1px; }
+  .fd-diag-icon  { width:32px; height:32px; flex-shrink:0; margin-top:1px; display:flex; align-items:center; }
   .fd-diag-title { font-size:15px; font-weight:700; margin-bottom:3px; }
   .fd-diag-text  { font-size:13px; line-height:1.55; opacity:.85; }
   .fd-diag-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
@@ -193,7 +193,7 @@
   }
   .fd-section-header:hover { background: #fafbfc; }
   .fd-section-header.open  { border-bottom-color: var(--line); }
-  .fd-section-icon   { font-size:20px; flex-shrink:0; }
+  .fd-section-icon   { width:22px; height:22px; flex-shrink:0; display:flex; align-items:center; }
   .fd-section-title  { font-size:14px; font-weight:700; color:var(--ink); flex:1; }
   .fd-section-badge  { font-size:11px; color:var(--muted); background:var(--line2); padding:3px 8px; border-radius:6px; }
   .fd-section-chevron { font-size:12px; color:var(--muted); transition:transform .25s; }
@@ -355,6 +355,10 @@
 
   .fd-renda-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
   @media (max-width:480px) { .fd-renda-row { grid-template-columns:1fr; } }
+
+  /* ── Debt modal form rows — stack on small screens ──────────────── */
+  .fd-input-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:480px) { .fd-input-row { grid-template-columns:1fr; gap:8px; } }
 
   /* Dependentes stepper */
   .dep-stepper { display:flex; align-items:center; gap:10px; }
