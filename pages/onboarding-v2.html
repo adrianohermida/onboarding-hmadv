@@ -230,7 +230,7 @@
 
         <!-- HERO -->
         <div class="journey-hero" id="journey-hero">
-          <div class="hero-badge">⚖️ Lei 14.181/2021 · CNJ 125/2021</div>
+          <div class="hero-badge">Lei 14.181/2021 · CNJ 125/2021</div>
           <h1 class="hero-title">Sua Jornada de Superendividamento</h1>
           <p class="hero-sub" id="hero-subtitle">
             Siga cada etapa com cuidado. O escritório Hermida Maia Advocacia está com você em cada passo desta recuperação financeira.
@@ -369,7 +369,7 @@ function renderTracker() {
     const isDone = ['completed','approved'].includes(state);
     const isActive = currentStep?.id === step.id;
     const cls = isDone ? 'done' : isActive ? 'active' : state === 'rejected' ? 'rejected' : state === 'locked' ? 'locked' : '';
-    const dotLabel = isDone ? '✓' : state === 'rejected' ? '✗' : step.icon;
+    const dotLabel = isDone ? 'OK' : state === 'rejected' ? 'NO' : step.icon;
     return `
       <div class="jt-step ${cls}" data-step="${step.id}"
            onclick="window.journeyGoTo('${step.id}')"
@@ -447,7 +447,7 @@ function renderVideoStep(step, container) {
 
   if (!vid) {
     container.innerHTML = `<div class="jcard"><div class="jcard-body">
-      <p style="color:var(--muted);font-size:13px">⏳ Vídeo sendo preparado. Tente novamente em instantes ou continue para o próximo passo.</p>
+      <p style="color:var(--muted);font-size:13px">Video sendo preparado. Tente novamente em instantes ou continue para o proximo passo.</p>
       <div class="jnav">${navButtons(step, false)}</div>
     </div></div>`;
     return;
@@ -466,7 +466,7 @@ function renderVideoStep(step, container) {
         ${badgeHtml(isDone ? 'completed' : state)}
       </div>
       <div class="jcard-body">
-        ${isDone ? `<div class="done-banner">✅ Vídeo concluído — você pode revisá-lo ou avançar.</div>` : ''}
+        ${isDone ? `<div class="done-banner">Video concluido. Voce pode revisar ou avancar.</div>` : ''}
 
         <div class="video-wrap" id="vwrap-${vid.id}">
           <div class="video-loading" id="vload-${vid.id}">
@@ -484,7 +484,7 @@ function renderVideoStep(step, container) {
         </div>
 
         <div class="glass-info">
-          <div class="glass-info-title">💡 Sobre este vídeo</div>
+          <div class="glass-info-title">Sobre este video</div>
           <ul>
             <li>${vid.description || step.subtitle}</li>
             <li>${vid.allow_skip
@@ -495,7 +495,7 @@ function renderVideoStep(step, container) {
 
         ${!isDone && vid.allow_skip ? `
         <div class="skip-box ${canSkip ? '' : 'disabled'}" id="skipbox-${vid.id}">
-          <h4>⚠️ Pular vídeo com declaração</h4>
+          <h4>Pular video com declaracao</h4>
           <p>Disponível após ${vid.skip_min_pct}% assistidos. Você precisará declarar ciência do conteúdo.</p>
           <label class="skip-declare">
             <input type="checkbox" id="skipcb-${vid.id}"
@@ -590,13 +590,13 @@ async function onVideoCompleted(vid, step) {
   if (head && !document.querySelector('.done-banner')) {
     const banner = document.createElement('div');
     banner.className = 'done-banner';
-    banner.textContent = '✅ Vídeo concluído! Você pode avançar para o próximo passo.';
+    banner.textContent = 'Video concluido. Voce pode avancar para o proximo passo.';
     head.parentNode.insertBefore(banner, head.nextSibling);
   }
 
   const btn = document.getElementById(`btn-next-${step.id}`);
   if (btn) btn.removeAttribute('disabled');
-  triggerAutosave('Etapa concluída ✓');
+  triggerAutosave('Etapa concluida');
 }
 
 window.onSkipCheck = function(videoId, stepId) {
@@ -613,7 +613,7 @@ window.doSkipVideo = async function(videoId, stepId) {
     engine.setState(stepId, 'completed');
     Toast.success('Passo marcado como concluído.');
     renderTracker();
-    triggerAutosave('Etapa pulada ✓');
+    triggerAutosave('Etapa pulada');
     const btn = document.getElementById(`btn-next-${stepId}`);
     if (btn) btn.removeAttribute('disabled');
   } catch { Toast.error('Erro ao salvar. Tente novamente.'); }
@@ -635,10 +635,10 @@ function renderPdfViewStep(step, container) {
         ${badgeHtml(isDone ? 'completed' : state)}
       </div>
       <div class="jcard-body">
-        ${isDone ? `<div class="done-banner">✅ Você já acessou a Cartilha CNJ.</div>` : ''}
+        ${isDone ? `<div class="done-banner">Cartilha CNJ acessada.</div>` : ''}
 
         <div class="glass-info">
-          <div class="glass-info-title">📚 Conteúdo da Cartilha</div>
+          <div class="glass-info-title">Conteudo da Cartilha</div>
           <ul>
             <li>Seus direitos como consumidor superendividado (Lei 14.181/2021)</li>
             <li>O processo de renegociação coletiva perante o Judiciário</li>
@@ -663,12 +663,12 @@ function renderPdfViewStep(step, container) {
         </div>
 
         <div class="pdf-dl-card" onclick="window.downloadCartilha()">
-          <div class="pdf-dl-icon">📥</div>
+          <div class="pdf-dl-icon">PDF</div>
           <div>
             <div class="pdf-dl-name">Baixar Cartilha Superendividamento CNJ</div>
             <div class="pdf-dl-meta">PDF · Conselho Nacional de Justiça · 2024</div>
           </div>
-          <div class="pdf-dl-done" id="dl-cartilha-done">✓ Baixado</div>
+          <div class="pdf-dl-done" id="dl-cartilha-done">Baixado</div>
         </div>
 
         <div class="jnav">
@@ -689,13 +689,13 @@ window.downloadCartilha = async function() {
     'cartilha_superendividamento', 'Cartilha Superendividamento CNJ',
     { cnjStepRef: 5, filename: 'Cartilha-Superendividamento-CNJ.pdf' });
   document.getElementById('dl-cartilha-done')?.classList.add('show');
-  triggerAutosave('Download registrado ✓');
+  triggerAutosave('Download registrado');
 };
 
 window.completeCartilha = function(stepId) {
   engine.setState(stepId, 'completed');
   renderTracker();
-  triggerAutosave('Etapa concluída ✓');
+  triggerAutosave('Etapa concluida');
   const next = engine.nextStep(stepId);
   if (next) navigateTo(next.id);
 };
@@ -716,12 +716,12 @@ function renderAnexoStep(step, container) {
         ${badgeHtml(state)}
       </div>
       <div class="jcard-body">
-        ${state === 'awaiting_review' ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">⏳ Formulário enviado — aguardando análise do escritório.</div>` : ''}
-        ${state === 'approved' ? `<div class="done-banner">✅ Formulário aprovado pelo escritório!</div>` : ''}
-        ${state === 'rejected' ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">❌ Formulário devolvido para correção — reenvie abaixo.</div>` : ''}
+        ${state === 'awaiting_review' ? `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00">Formulario enviado. Aguardando analise do escritorio.</div>` : ''}
+        ${state === 'approved' ? `<div class="done-banner">Formulario aprovado pelo escritorio.</div>` : ''}
+        ${state === 'rejected' ? `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red)">Formulario devolvido para correcao. Reenvie abaixo.</div>` : ''}
 
         <div class="glass-info">
-          <div class="glass-info-title">📄 Formulário Oficial CNJ Anexo II</div>
+          <div class="glass-info-title">Formulario Oficial CNJ Anexo II</div>
           <ul>
             <li>Exigido pela Recomendação CNJ 125/2021 para renegociação coletiva</li>
             <li>Deve conter seus dados pessoais, lista completa de credores e valores devidos</li>
@@ -732,12 +732,12 @@ function renderAnexoStep(step, container) {
         <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0 0 10px">Como prefere preencher?</p>
         <div class="option-grid">
           <div class="option-card selected" id="opt-offline" onclick="window.selectOption('offline')">
-            <div class="option-icon">📥</div>
+            <div class="option-icon">PDF</div>
             <div class="option-title">Baixar e enviar</div>
             <div class="option-desc">Baixe o PDF, preencha e faça upload</div>
           </div>
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
-            <div class="option-icon">💻</div>
+            <div class="option-icon">WEB</div>
             <div class="option-title">Online <span style="font-size:9px;background:rgba(245,166,35,.2);color:#c07b00;padding:1px 6px;border-radius:5px;vertical-align:middle">Em breve</span></div>
             <div class="option-desc">Formulário guiado no portal</div>
           </div>
@@ -745,26 +745,26 @@ function renderAnexoStep(step, container) {
 
         <div id="panel-offline">
           <div class="pdf-dl-card" onclick="window.downloadAnexo()">
-            <div class="pdf-dl-icon">📄</div>
+            <div class="pdf-dl-icon">DOC</div>
             <div>
               <div class="pdf-dl-name">Formulário Oficial CNJ Anexo II</div>
               <div class="pdf-dl-meta">PDF · Recomendação CNJ 125/2021 · 2024</div>
             </div>
-            <div class="pdf-dl-done" id="dl-anexo-done">✓ Baixado</div>
+            <div class="pdf-dl-done" id="dl-anexo-done">Baixado</div>
           </div>
 
           <p style="font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px">Enviar formulário preenchido:</p>
           <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-            <div class="upload-zone-icon">📎</div>
+            <div class="upload-zone-icon">ARQ</div>
             <div class="upload-zone-text">Clique ou arraste o PDF preenchido aqui</div>
             <div class="upload-zone-hint">PDF · máx. 10 MB</div>
           </div>
           <div id="upload-preview" style="display:none">
             <div class="upload-preview">
-              <span>📄</span>
+              <span>PDF</span>
               <span id="upload-fname" style="font-weight:600;flex:1">—</span>
               <span id="upload-fsize" style="color:var(--muted)">—</span>
-              <button class="btn btn-sm" style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px" onclick="window.clearUpload()">✕</button>
+              <button class="btn btn-sm" style="color:var(--red);border-color:rgba(192,57,43,.3);margin-left:8px" onclick="window.clearUpload()">X</button>
             </div>
           </div>
           <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="window.handleFileSelect(this)">
@@ -772,7 +772,7 @@ function renderAnexoStep(step, container) {
 
         <div id="panel-online" style="display:none">
           <div class="glass-info">
-            <div class="glass-info-title">🔧 Em desenvolvimento</div>
+            <div class="glass-info-title">Em desenvolvimento</div>
             <ul><li>O formulário online guiado estará disponível em breve. Por enquanto utilize a opção de PDF.</li></ul>
           </div>
         </div>
@@ -805,7 +805,7 @@ window.downloadAnexo = async function() {
     'anexo_ii_cnj', 'Formulário Oficial CNJ Anexo II',
     { cnjStepRef: 6, filename: 'Formulario-Anexo-II-CNJ.pdf' });
   document.getElementById('dl-anexo-done')?.classList.add('show');
-  triggerAutosave('Download registrado ✓');
+  triggerAutosave('Download registrado');
 };
 
 function setupDropZone() {
@@ -853,7 +853,7 @@ window.submitAnexo = async function(stepId) {
     );
     engine.setState(stepId, 'awaiting_review');
     renderTracker();
-    triggerAutosave('Formulário enviado ✓');
+    triggerAutosave('Formulario enviado');
     Toast.success('Formulário enviado! O escritório analisará em breve.');
     const step = JOURNEY_STEPS.find(s => s.id === stepId);
     if (step) renderAnexoStep(step, document.getElementById('journey-content'));
@@ -878,7 +878,7 @@ function renderCnjFormStep(step, container) {
       </div>
       <div class="jcard-body">
         <div class="glass-info">
-          <div class="glass-info-title">📋 Os 7 passos do formulário CNJ</div>
+          <div class="glass-info-title">Os 7 passos do formulario CNJ</div>
           <ul>
             <li><b>1 – Identificação:</b> dados pessoais e documento</li>
             <li><b>2 – Situação Profissional:</b> renda, emprego, despesas</li>
@@ -892,16 +892,16 @@ function renderCnjFormStep(step, container) {
 
         ${diagnostico ? `
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:14px 18px;margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">📊 Seu Diagnóstico Financeiro</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--navy);margin-bottom:10px">Seu Diagnostico Financeiro</div>
           <div class="fin-grid">${financialSnippet()}</div>
         </div>` : ''}
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-          <div style="font-size:32px;margin-bottom:8px">📝</div>
+          <div style="font-size:20px;margin-bottom:8px">CNJ</div>
           <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Preencher Formulário CNJ</div>
           <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Suas respostas são salvas automaticamente.</div>
           <a href="onboarding.html" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-            🚀 Iniciar Formulário
+            Iniciar Formulario
           </a>
         </div>
 
@@ -924,7 +924,7 @@ function renderCompletion() {
   content.innerHTML = `
     <div class="jcard"><div class="jcard-body">
       <div class="complete-screen">
-        <div class="complete-icon">🎉</div>
+        <div class="complete-icon">OK</div>
         <div class="complete-title">Parabéns — Jornada Concluída!</div>
         <p class="complete-body">Você completou todas as etapas. O escritório Hermida Maia Advocacia irá revisar seu processo e entrar em contato em breve.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
@@ -942,7 +942,7 @@ function renderError(msg) {
   const content = document.getElementById('journey-content');
   if (!content) return;
   content.innerHTML = `<div class="jcard"><div class="jcard-body" style="text-align:center;padding:40px">
-    <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+    <div style="font-size:20px;margin-bottom:12px">ERRO</div>
     <p style="color:var(--red);font-weight:600;margin-bottom:16px">${msg}</p>
     <button class="btn btn-primary" onclick="location.reload()">Recarregar</button>
   </div></div>`;

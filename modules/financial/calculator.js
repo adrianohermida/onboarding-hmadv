@@ -27,21 +27,21 @@ export const DESPESAS_VARIAVEIS_KEYS = [
 ];
 
 export const DESPESAS_CONFIG = {
-  moradia:      { label: 'Moradia (aluguel/prestação)',  icon: '🏠', essencial: true },
-  alimentacao:  { label: 'Alimentação',                  icon: '🛒', essencial: true },
-  energia:      { label: 'Energia elétrica',             icon: '⚡', essencial: true },
-  agua:         { label: 'Água e saneamento',            icon: '💧', essencial: true },
-  transporte:   { label: 'Transporte',                   icon: '🚌', essencial: true },
-  medicamentos: { label: 'Medicamentos',                 icon: '💊', essencial: true },
-  saude:        { label: 'Plano de saúde',               icon: '🏥', essencial: true },
-  educacao:     { label: 'Educação / escola',            icon: '📚', essencial: true },
-  dependentes:  { label: 'Pensão / dependentes',         icon: '👨‍👧', essencial: true },
-  internet:     { label: 'Internet / telefone',          icon: '📱', essencial: false },
-  celular:      { label: 'Celular pré-pago',             icon: '📲', essencial: false },
-  streaming:    { label: 'Streaming / assinaturas',      icon: '📺', essencial: false },
-  lazer:        { label: 'Lazer',                        icon: '🎭', essencial: false },
-  vestuario:    { label: 'Vestuário',                    icon: '👕', essencial: false },
-  outros:       { label: 'Outras despesas',              icon: '📦', essencial: false },
+  moradia:      { label: 'Moradia (aluguel/prestacao)',  icon: 'MOR', essencial: true },
+  alimentacao:  { label: 'Alimentacao',                  icon: 'ALI', essencial: true },
+  energia:      { label: 'Energia eletrica',             icon: 'ENE', essencial: true },
+  agua:         { label: 'Agua e saneamento',            icon: 'AGU', essencial: true },
+  transporte:   { label: 'Transporte',                   icon: 'TRN', essencial: true },
+  medicamentos: { label: 'Medicamentos',                 icon: 'MED', essencial: true },
+  saude:        { label: 'Plano de saude',               icon: 'SAU', essencial: true },
+  educacao:     { label: 'Educacao / escola',            icon: 'EDU', essencial: true },
+  dependentes:  { label: 'Pensao / dependentes',         icon: 'DEP', essencial: true },
+  internet:     { label: 'Internet / telefone',          icon: 'INT', essencial: false },
+  celular:      { label: 'Celular pre-pago',             icon: 'CEL', essencial: false },
+  streaming:    { label: 'Streaming / assinaturas',      icon: 'STR', essencial: false },
+  lazer:        { label: 'Lazer',                        icon: 'LZR', essencial: false },
+  vestuario:    { label: 'Vestuario',                    icon: 'VST', essencial: false },
+  outros:       { label: 'Outras despesas',              icon: 'OUT', essencial: false },
 };
 
 export class FinancialCalculator {
