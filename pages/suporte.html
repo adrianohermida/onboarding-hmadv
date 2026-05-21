@@ -37,16 +37,14 @@
 
       <div class="next-action-bar">
         <div class="next-action-copy">
-          <div class="next-action-label">Proxima acao</div>
+          <div class="next-action-label">Próxima ação</div>
           <div class="next-action-text">Abra um chamado com assunto objetivo e acompanhe resposta na tabela.</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">Novo chamado</button>
       </div>
 
-      <!-- Contact summary bar -->
       <div id="contact-bar" style="display:none; margin-bottom:16px;"></div>
 
-      <!-- KPIs -->
       <div class="kpi-grid" style="margin-bottom:16px;">
         <div class="kpi kpi-warn">
           <span class="kpi-label">Em aberto</span>
@@ -59,9 +57,9 @@
           <div class="kpi-hint">Concluídos</div>
         </div>
         <div class="kpi">
-          <span class="kpi-label">Total</span>
+          <span class="kpi-label">Total filtrado</span>
           <div class="kpi-value" id="kpi-total-tickets">—</div>
-          <div class="kpi-hint">Chamados registrados</div>
+          <div class="kpi-hint">Chamados encontrados</div>
         </div>
         <div class="kpi kpi-muted">
           <span class="kpi-label">Portal externo</span>
@@ -72,7 +70,6 @@
         </div>
       </div>
 
-      <!-- Tickets table -->
       <div class="sec">
         <div class="sec-header">
           <div class="sec-num">1</div>
@@ -80,10 +77,57 @@
           <span class="sec-tag" id="ticket-count">—</span>
         </div>
 
+        <div class="filter-card" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:end;margin-bottom:16px;">
+          <div class="form-group" style="grid-column:span 2;">
+            <label class="form-label" for="filter-search">Buscar assunto</label>
+            <input class="form-input" id="filter-search" type="search" placeholder="Ex: processo, boleto, audiência">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-status">Status</label>
+            <select class="form-input" id="filter-status">
+              <option value="">Todos</option>
+              <option value="2">Aberto</option>
+              <option value="3">Pendente</option>
+              <option value="4">Resolvido</option>
+              <option value="5">Fechado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-priority">Prioridade</label>
+            <select class="form-input" id="filter-priority">
+              <option value="">Todas</option>
+              <option value="1">Baixa</option>
+              <option value="2">Média</option>
+              <option value="3">Alta</option>
+              <option value="4">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-from">De</label>
+            <input class="form-input" id="filter-from" type="date">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-to">Até</label>
+            <input class="form-input" id="filter-to" type="date">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-page-size">Por página</label>
+            <select class="form-input" id="filter-page-size">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;grid-column:span 5;">
+            <button class="btn btn-ghost btn-sm" id="btn-clear-filters" type="button">Limpar filtros</button>
+            <button class="btn btn-primary btn-sm" id="btn-apply-filters" type="button">Aplicar filtros</button>
+          </div>
+        </div>
+
         <div id="tickets-empty" class="empty-state" style="display:none;">
           <div class="empty-state-icon">SUP</div>
-          <h3>Nenhum chamado ainda</h3>
-          <p>Abra um chamado para que nossa equipe possa ajudá-lo.</p>
+          <h3>Nenhum chamado encontrado</h3>
+          <p>Ajuste os filtros ou abra um novo chamado para que nossa equipe possa ajudá-lo.</p>
           <button class="btn btn-primary" onclick="showNewTicketModal()">+ Novo chamado</button>
         </div>
 
@@ -96,17 +140,25 @@
                 <th>Status</th>
                 <th>Prioridade</th>
                 <th>Aberto em</th>
+                <th>Atualizado</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody id="tickets-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Carregando...</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
+
+        <div id="tickets-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;">
+          <span id="tickets-page-info" style="font-size:13px;color:var(--muted);">—</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" id="btn-prev-page" type="button">Anterior</button>
+            <button class="btn btn-ghost btn-sm" id="btn-next-page" type="button">Próxima</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Info section -->
       <div class="sec">
         <div class="sec-header">
           <div class="sec-num">2</div>
@@ -128,7 +180,6 @@
   </div>
 </div>
 
-<!-- New ticket modal -->
 <div class="modal-overlay" id="modal-new-ticket" onclick="if(event.target===this)closeNewTicketModal()">
   <div class="modal" style="text-align:left; max-width:520px;">
     <h3 style="margin-bottom:4px;">Novo Chamado</h3>
@@ -167,8 +218,23 @@ let currentCaso = null;
 let suporteBooting = false;
 let isAdminUser = false;
 let unmountModeSelector = null;
+let ticketState = { page: 1, pageSize: 10, total: 0, totalPages: 1, filters: {} };
+let lastTickets = [];
 
 const byId = (id) => document.getElementById(id);
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const fmtDate = (value) => value ? new Date(value).toLocaleDateString('pt-BR') : '—';
+
+function collectFilters() {
+  return {
+    search: byId('filter-search')?.value.trim() || '',
+    status: byId('filter-status')?.value || '',
+    priority: byId('filter-priority')?.value || '',
+    from: byId('filter-from')?.value || '',
+    to: byId('filter-to')?.value || '',
+    pageSize: Number(byId('filter-page-size')?.value || 10),
+  };
+}
 
 document.addEventListener('app:user-loaded', e => {
   currentUser = e.detail?.user;
@@ -199,22 +265,44 @@ document.addEventListener('app:user-loaded', e => {
   }
 });
 
-async function init() {
+async function init({ page = ticketState.page, reset = false } = {}) {
   if (suporteBooting) return;
   suporteBooting = true;
 
   const tbody = byId('tickets-tbody');
   const count = byId('ticket-count');
   if (!tbody || !count) { suporteBooting = false; return; }
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Carregando chamados...</td></tr>';
 
-  const [tickets, contact] = await Promise.all([
-    FreshdeskService.listTickets().catch(() => []),
-    FreshdeskService.getContact().catch(() => null),
-  ]);
-  renderContact(contact);
-  renderTickets(tickets);
-  updateKPIs(tickets);
-  suporteBooting = false;
+  try {
+    if (reset) page = 1;
+    const filters = collectFilters();
+    const [ticketResult, contact] = await Promise.all([
+      FreshdeskService.listTickets({ ...filters, page }).catch(error => ({ data: [], total: 0, page, pageSize: filters.pageSize, totalPages: 1, error })),
+      FreshdeskService.getContact().catch(() => null),
+    ]);
+
+    if (ticketResult.error) throw ticketResult.error;
+
+    ticketState = {
+      page: ticketResult.page,
+      pageSize: ticketResult.pageSize,
+      total: ticketResult.total,
+      totalPages: ticketResult.totalPages,
+      filters,
+    };
+    lastTickets = ticketResult.data || [];
+    renderContact(contact);
+    renderTickets(lastTickets);
+    updateKPIs(lastTickets, ticketResult.total);
+    renderPagination();
+  } catch (error) {
+    console.error(error);
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Não foi possível carregar os chamados.</td></tr>';
+    showToast(error?.message || 'Não foi possível carregar seus chamados.', 'error');
+  } finally {
+    suporteBooting = false;
+  }
 }
 
 function renderContact(contact) {
@@ -223,9 +311,9 @@ function renderContact(contact) {
   if (!bar) return;
   bar.style.display = '';
   bar.className = 'callout callout-blue';
-  bar.innerHTML = `<strong>${contact.name || contact.email}</strong>`
-    + (contact.lifecycle_stage ? ` &mdash; ${contact.lifecycle_stage}` : '')
-    + (contact.tickets_count   ? ` &mdash; ${contact.tickets_count} chamado(s)` : '');
+  bar.innerHTML = `<strong>${esc(contact.name || contact.email)}</strong>`
+    + (contact.lifecycle_stage ? ` &mdash; ${esc(contact.lifecycle_stage)}` : '')
+    + (contact.tickets_count ? ` &mdash; ${Number(contact.tickets_count)} chamado(s)` : '');
 }
 
 function renderTickets(tickets) {
@@ -235,32 +323,48 @@ function renderTickets(tickets) {
   const countEl = byId('ticket-count');
   if (!tbody || !empty || !wrap || !countEl) return;
 
-  countEl.textContent =
-    tickets.length + ' chamado' + (tickets.length !== 1 ? 's' : '');
+  countEl.textContent = `${ticketState.total} chamado${ticketState.total !== 1 ? 's' : ''}`;
 
   if (tickets.length === 0) {
-    empty.style.display = ''; wrap.style.display = 'none'; return;
+    empty.style.display = '';
+    wrap.style.display = 'none';
+    return;
   }
-  empty.style.display = 'none'; wrap.style.display = '';
+  empty.style.display = 'none';
+  wrap.style.display = '';
 
   const S = FreshdeskService.STATUS;
   const P = FreshdeskService.PRIORITY;
 
   tbody.innerHTML = tickets.map(t => {
-    const s = S[t.status]   || { label: '—', cls: 'chip-muted' };
+    const s = S[t.status] || { label: `Status ${t.status || '—'}`, cls: 'chip-muted' };
     const p = P[t.priority] || { label: '—', cls: 'chip-muted' };
+    const ticketId = t.fd_ticket_id || t.id;
     return `<tr>
-      <td style="color:var(--muted)">#${t.fd_ticket_id}</td>
-      <td><strong>${t.subject || '—'}</strong></td>
+      <td style="color:var(--muted)">#${esc(ticketId)}</td>
+      <td><strong>${esc(t.subject || '—')}</strong></td>
       <td><span class="chip ${s.cls}">${s.label}</span></td>
       <td><span class="chip ${p.cls}">${p.label}</span></td>
-      <td>${new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
-      <td><a href="${FreshdeskService.ticketUrl(t.fd_ticket_id)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Ver →</a></td>
+      <td>${fmtDate(t.created_at)}</td>
+      <td>${fmtDate(t.updated_at || t.last_synced_at)}</td>
+      <td><a href="${FreshdeskService.ticketUrl(ticketId)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Abrir →</a></td>
     </tr>`;
   }).join('');
 }
 
-function updateKPIs(tickets) {
+function renderPagination() {
+  const info = byId('tickets-page-info');
+  const prev = byId('btn-prev-page');
+  const next = byId('btn-next-page');
+  if (!info || !prev || !next) return;
+  const start = ticketState.total === 0 ? 0 : ((ticketState.page - 1) * ticketState.pageSize) + 1;
+  const end = Math.min(ticketState.page * ticketState.pageSize, ticketState.total);
+  info.textContent = `${start}-${end} de ${ticketState.total} chamado(s) · página ${ticketState.page} de ${ticketState.totalPages}`;
+  prev.disabled = ticketState.page <= 1 || suporteBooting;
+  next.disabled = ticketState.page >= ticketState.totalPages || suporteBooting;
+}
+
+function updateKPIs(tickets, total) {
   const abertosEl = byId('kpi-abertos');
   const resolvidosEl = byId('kpi-resolvidos');
   const totalEl = byId('kpi-total-tickets');
@@ -268,7 +372,20 @@ function updateKPIs(tickets) {
 
   abertosEl.textContent = tickets.filter(t => t.status === 2 || t.status === 3).length;
   resolvidosEl.textContent = tickets.filter(t => t.status === 4 || t.status === 5).length;
-  totalEl.textContent = tickets.length;
+  totalEl.textContent = total;
+}
+
+function setupTicketFilters() {
+  byId('btn-apply-filters')?.addEventListener('click', () => init({ reset: true }));
+  byId('btn-clear-filters')?.addEventListener('click', () => {
+    ['filter-search', 'filter-status', 'filter-priority', 'filter-from', 'filter-to'].forEach(id => { const el = byId(id); if (el) el.value = ''; });
+    const pageSize = byId('filter-page-size');
+    if (pageSize) pageSize.value = '10';
+    init({ page: 1, reset: true });
+  });
+  byId('filter-search')?.addEventListener('keydown', event => { if (event.key === 'Enter') init({ reset: true }); });
+  byId('btn-prev-page')?.addEventListener('click', () => init({ page: Math.max(ticketState.page - 1, 1) }));
+  byId('btn-next-page')?.addEventListener('click', () => init({ page: Math.min(ticketState.page + 1, ticketState.totalPages) }));
 }
 
 window.showNewTicketModal  = () => document.getElementById('modal-new-ticket').classList.add('show');
@@ -307,17 +424,17 @@ window.submitTicket = async function() {
     const ticketId = ticket.fd_ticket_id || ticket.id;
     showToast(`Chamado #${ticketId} criado! Nossa equipe responderá em breve.`, 'ok');
 
-    await init();
+    await init({ page: 1, reset: true });
   } catch (err) {
     console.error(err);
     showToast(err?.message || 'Erro ao criar chamado. Tente novamente.', 'error');
   } finally {
-
     btn.disabled = false; btn.textContent = 'Enviar chamado';
   }
 };
 
-document.addEventListener('app:ready', init);
+setupTicketFilters();
+document.addEventListener('app:ready', () => init({ page: 1 }));
 document.addEventListener('app:route-will-change', () => {
   if (typeof unmountModeSelector === 'function') {
     unmountModeSelector();
