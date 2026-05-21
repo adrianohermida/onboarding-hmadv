@@ -852,47 +852,144 @@ window.completeCartilha = function(stepId) {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// HELPER — online panel HTML (state-aware, shared between
-//          renderAnexoStep and renderCnjFormStep)
+// HELPER — WEB panel for Anexo II step (state-aware)
+//   • cnj_form not done → redirect to guided form
+//   • cnj_form done     → generate CNJ Annex II doc + confirm
 // ═══════════════════════════════════════════════════════════════
-function buildOnlinePanelHtml() {
+function buildAnexoWebPanelHtml() {
   const cnjState = engine.getState('cnj_form');
   const done     = casoState?.onboarding_done;
-  const inReview = cnjState === 'awaiting_review' || done;
-  const approved = cnjState === 'approved';
-  const rejected = cnjState === 'rejected';
+  const isReady  = ['awaiting_review', 'approved', 'completed'].includes(cnjState) || done;
+  const isApproved = cnjState === 'approved';
+  const isRejected = cnjState === 'rejected';
   const stepN    = casoState?.cnj_step_atual || 0;
 
-  if (approved) {
-    return `<div class="done-banner">Formulário aprovado pelo escritório. Plano de pagamento em elaboração.</div>`;
+  if (isApproved) {
+    return `
+      <div class="done-banner">Formulário CNJ aprovado pelo escritório. Plano de pagamento em elaboração.</div>`;
   }
-  if (inReview) {
-    return `<div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;">
-      Formulário enviado. Aguardando análise do escritório.
-      <a href="onboarding.html?source=journey" style="margin-left:12px;font-size:12px;color:var(--navy);">Ver →</a>
-    </div>`;
+
+  if (isReady) {
+    // Guided form complete — user can generate the Annex II document
+    return `
+      <div class="done-banner" style="background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3);color:#c07b00;margin-bottom:12px;">
+        ✓ Formulário guiado preenchido. Gere o Formulário Oficial CNJ Anexo II abaixo.
+      </div>
+      <div class="glass-info" style="margin-bottom:12px;">
+        <div class="glass-info-title">Como funciona a opção WEB</div>
+        <ul>
+          <li>Seus dados são usados para pré-preencher o Formulário Oficial CNJ Anexo II</li>
+          <li>O documento abre em uma nova janela — use <strong>Imprimir → Salvar como PDF</strong></li>
+          <li>Após gerar, clique em <strong>Confirmar envio ao escritório</strong> para finalizar</li>
+        </ul>
+      </div>
+      <div id="anexo-web-generate-area">
+        <button class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:8px"
+          onclick="window.generateAnexoIIDoc()">
+          📄 Gerar Formulário CNJ Anexo II
+        </button>
+        <p id="anexo-web-generated-note" style="display:none;font-size:12px;color:#15803d;font-weight:600;margin:4px 0 8px;">
+          ✓ Documento gerado! Salve o PDF na janela que abriu e depois confirme abaixo.
+        </p>
+        <br>
+        <button id="btn-confirm-web-anexo" class="btn btn-outline" disabled
+          style="display:inline-flex;align-items:center;gap:8px;font-size:13px"
+          onclick="window.confirmAnexoWebGenerated('${JOURNEY_STEPS.find(s=>s.type==='pdf_form')?.id}')">
+          Confirmar envio ao escritório →
+        </button>
+      </div>`;
   }
-  if (rejected) {
-    return `<div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
-      Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${escHtml(formDoc.admin_notes)}` : ''} Acesse o formulário para corrigir.
-    </div>
-    <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-      Corrigir formulário →
-    </a>`;
+
+  if (isRejected) {
+    return `
+      <div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
+        Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${escHtml(formDoc.admin_notes)}` : ''} Corrija e reenvie o formulário guiado.
+      </div>
+      <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+        Corrigir formulário →
+      </a>`;
   }
+
+  // Not started or in-progress — redirect to guided form first
   return `
-    <div class="glass-info">
-      <div class="glass-info-title">Formulário guiado — 7 passos</div>
+    <div class="glass-info" style="margin-bottom:12px;">
+      <div class="glass-info-title">Preencha o formulário guiado primeiro</div>
       <ul>
-        <li>Preencha online com autopreenchimento e cálculo automático</li>
-        <li>Suas respostas são salvas a cada passo</li>
-        <li>Tempo estimado: 15–25 minutos</li>
+        <li>O sistema irá pré-preencher o Formulário Oficial CNJ Anexo II com seus dados</li>
+        <li>Preencha os 7 passos do formulário guiado (15–25 minutos)</li>
+        <li>Seus dados são salvos automaticamente a cada passo</li>
+        <li>Após concluir, o Anexo II será gerado automaticamente aqui</li>
       </ul>
     </div>
-    <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
-      ${stepN > 0 ? `Continuar formulário (passo ${stepN}/7) →` : 'Iniciar formulário guiado →'}
+    <a href="onboarding.html?source=journey" class="btn btn-primary"
+       style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
+      ${stepN > 0 ? `Continuar formulário guiado (passo ${stepN}/7) →` : 'Iniciar formulário guiado →'}
     </a>`;
 }
+
+// ── CNJ Annex II — WEB flow handlers ──────────────────────────────────────
+
+window.generateAnexoIIDoc = async function() {
+  const btn = document.querySelector('[onclick*="generateAnexoIIDoc"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando documento…'; }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+    const { data: caso } = await supabase
+      .from('portal_casos')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!caso) throw new Error('Dados do caso não encontrados');
+
+    const win = openCnjAnexoIIPrint(caso);
+    if (!win) {
+      Toast.warn('Pop-up bloqueado. Permita pop-ups para este site e tente novamente.');
+      if (btn) { btn.disabled = false; btn.innerHTML = '📄 Gerar Formulário CNJ Anexo II'; }
+      return;
+    }
+
+    webAnexoGenerated = true;
+    const note  = document.getElementById('anexo-web-generated-note');
+    const conf  = document.getElementById('btn-confirm-web-anexo');
+    if (note) note.style.display = '';
+    if (conf) conf.removeAttribute('disabled');
+    if (btn) { btn.innerHTML = '🔄 Gerar novamente'; btn.disabled = false; }
+  } catch (e) {
+    Toast.error('Erro ao gerar documento: ' + (e.message || 'tente novamente.'));
+    if (btn) { btn.disabled = false; btn.innerHTML = '📄 Gerar Formulário CNJ Anexo II'; }
+  }
+};
+
+window.confirmAnexoWebGenerated = async function(stepId) {
+  if (!webAnexoGenerated) { Toast.warn('Gere o documento antes de confirmar.'); return; }
+  const btn = document.getElementById('btn-confirm-web-anexo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: caso }     = await supabase.from('portal_casos').select('id,workspace_id').eq('user_id', user.id).maybeSingle();
+    await supabase.from('portal_documentos').upsert({
+      user_id:         user.id,
+      tipo:            'formulario_cnj_anexo_ii',
+      nome_arquivo:    'Formulário CNJ Anexo II (gerado online)',
+      workflow_status: 'em_analise',
+      direction:       'client_to_office',
+      caso_id:         caso?.id ?? null,
+      workspace_id:    caso?.workspace_id ?? null,
+      updated_at:      new Date().toISOString(),
+    }, { onConflict: 'user_id,tipo' });
+
+    engine.setState(stepId || 'anexo_ii', 'awaiting_review');
+    renderTracker();
+    triggerAutosave('Formulário CNJ enviado');
+    Toast.success('Formulário CNJ Anexo II enviado ao escritório!');
+    const step = JOURNEY_STEPS.find(s => s.id === (stepId || 'anexo_ii'));
+    if (step) renderAnexoStep(step, document.getElementById('journey-content'));
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar envio ao escritório →'; }
+    Toast.error('Erro ao registrar envio. Tente novamente.');
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // ANEXO II STEP
