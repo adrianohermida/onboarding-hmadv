@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { caseLifecycleMachine } from '../workflow-engine/state-machines/cases/CaseLifecycleMachine.js';
-import { workflowAutomationFoundation } from '../workflow-engine/WorkflowAutomationFoundation.js';
 import { workflowTelemetry } from '../workflow-engine/telemetry/WorkflowTelemetry.js';
+import { listWorkflowDefinitions } from '../workflow-engine/definitions/WorkflowDefinitions.js';
 
 describe('workflow automation foundation', () => {
   it('supports explicit lifecycle transitions', () => {
@@ -15,13 +15,14 @@ describe('workflow automation foundation', () => {
     expect(current.history.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('provides workflow operational snapshot', () => {
+  it('provides workflow definitions and telemetry records', () => {
     workflowTelemetry.record({ workflow: 'onboarding', throughput: 1, tenant_id: 'tenant-test' });
-    const snapshot = workflowAutomationFoundation.snapshot();
+    const definitions = listWorkflowDefinitions();
+    const snapshot = workflowTelemetry.snapshot();
 
-    expect(Array.isArray(snapshot.definitions)).toBe(true);
-    expect(snapshot.lifecycle.total).toBeGreaterThanOrEqual(1);
-    expect(snapshot.telemetry.total).toBeGreaterThanOrEqual(1);
-    expect(snapshot.queue.depth).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(definitions)).toBe(true);
+    expect(definitions.length).toBeGreaterThanOrEqual(5);
+    expect(snapshot.total).toBeGreaterThanOrEqual(1);
+    expect(snapshot.throughput).toBeGreaterThanOrEqual(1);
   });
 });
