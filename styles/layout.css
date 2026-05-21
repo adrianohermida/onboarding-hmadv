@@ -595,7 +595,26 @@ body.app-loaded .sk { display: none !important; }
 }
 
 @media (max-width: 480px) {
-  .page-header-row { flex-direction: column; }
+  .page-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .page-header-row .btn,
+  .next-action-bar .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .next-action-bar {
+    align-items: stretch;
+  }
+
+  .sec {
+    border-radius: 10px;
+  }
+
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .auth-card { padding: 24px 16px; }
   .page-content { padding: 12px; }

@@ -14,7 +14,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521f';
+const SHELL_VERSION = '20260521g';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -575,8 +575,25 @@ function renderSidebarNavigation(isAdmin = false) {
   const navRoot = document.getElementById('sidebar-nav-links');
   if (!navRoot) return;
 
-  const router = new Router();
-  const modules = router.getSidebarModules({ isAdmin });
+  let modules = [];
+  try {
+    const router = new Router();
+    modules = router.getSidebarModules({ isAdmin });
+  } catch (error) {
+    console.warn('[APP] Router failed; using fallback sidebar modules', error);
+  }
+
+  if (!modules.length) {
+    modules = [
+      { key: 'dashboard', menuLabel: 'Inicio' },
+      { key: 'onboarding-v2', menuLabel: 'Jornada' },
+      { key: 'financial-dashboard', menuLabel: 'Financas' },
+      { key: 'documentos', menuLabel: 'Documentos' },
+      { key: 'dividas', menuLabel: 'Dividas' },
+      { key: 'suporte', menuLabel: 'Suporte' },
+    ];
+  }
+
   navRoot.innerHTML = modules.map(module => {
     const label = module.menuLabel || module.title;
     return `
@@ -743,6 +760,7 @@ async function loadComponents() {
   ]);
 
   renderSidebarNavigation(cached?.isAdmin || false);
+  initRouter();
 
   // Wire up interactions (scripts in injected HTML don't execute via innerHTML)
   window.handleLogout = () => {
@@ -848,7 +866,12 @@ async function init() {
   runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 
   await loadComponents();
-  await loadUser();
+  try {
+    await loadUser();
+  } catch (error) {
+    console.warn('[APP] User load failed; preserving shell navigation', error);
+    renderSidebarNavigation(false);
+  }
   setupServiceErrorBannerListener();
   setupShellNavigation();
 
