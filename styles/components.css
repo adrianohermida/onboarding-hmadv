@@ -1,3 +1,5 @@
+@import '../components/ui/index.css';
+
 /* ── BUTTONS ──────────────────────────────────── */
 .btn {
   display: inline-flex;

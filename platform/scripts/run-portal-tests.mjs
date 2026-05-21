@@ -33,8 +33,10 @@ const batches = [
   [
     'tests/navigation-contract.test.js',
     'tests/phase3-contracts.test.js',
+    'tests/shell-operational-contract.test.js',
     'tests/shell-routes-smoke.test.js',
     'tests/shell-runtime-isolation.test.js',
+    'tests/ui-kit-contract.test.js',
   ],
 ];
 
