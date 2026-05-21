@@ -3,11 +3,12 @@ import { integrationQueue } from '../queues/IntegrationQueue.js';
 import { integrationRetryEngine } from '../retries/IntegrationRetryEngine.js';
 import { integrationLogger } from '../logs/IntegrationLogger.js';
 import { integrationTelemetry } from '../telemetry/IntegrationTelemetry.js';
+import { validateWebhookSecurity } from '../security/WebhookSecurity.js';
 
 const DEAD_LETTER_MAX = 300;
 const deadLetter = [];
 
-export async function processWebhook(payload, handler) {
+export async function processWebhook(payload, handler, security = null) {
   const validation = validateWebhookPayload(payload);
   if (!validation.valid) {
     deadLetter.unshift({ payload, errors: validation.errors, reason: 'contract_invalid', timestamp: new Date().toISOString() });
@@ -17,6 +18,27 @@ export async function processWebhook(payload, handler) {
   }
 
   const normalized = validation.payload;
+  if (security) {
+    const secure = validateWebhookSecurity({
+      provider: normalized.provider,
+      tenant_id: normalized.tenant_id,
+      signature: normalized.signature,
+      expectedSignature: security.expectedSignature,
+      timestamp: security.timestamp,
+    });
+    if (!secure.valid) {
+      deadLetter.unshift({ payload: normalized, reason: secure.reason, timestamp: new Date().toISOString() });
+      if (deadLetter.length > DEAD_LETTER_MAX) deadLetter.length = DEAD_LETTER_MAX;
+      integrationLogger.log('webhook.security_failed', {
+        provider: normalized.provider,
+        operation: normalized.event,
+        tenant_id: normalized.tenant_id,
+        failure: secure.reason,
+      });
+      return { ok: false, error: secure.reason };
+    }
+  }
+
   integrationQueue.enqueue('webhook', normalized);
   const started = Date.now();
 
