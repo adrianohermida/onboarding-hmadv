@@ -21,6 +21,17 @@ export function mountSignatureIntegrationOrchestrator() {
       ticket_id: payload?.ticket_id || null,
       pipeline_stage: 'signature_completed',
     });
+
+    bus.emit('workflow.pending.close_requested', {
+      reason: 'signature_completed',
+      case_id: payload?.case_id || null,
+      tenant_id: context.tenant_id,
+    }, {
+      tenant_id: context.tenant_id,
+      trace_id: context.trace_id,
+      workflow_id: context.workflow_id,
+      source_module: 'integrations.signature_orchestrator',
+    });
   });
 
   const offDocumentRejected = bus.on('document.rejected', async (payload, envelope) => {
