@@ -1,10 +1,12 @@
 name: Deploy Supabase Edge Functions
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - '.github/workflows/supabase-deploy.yml'
 
 jobs:
   deploy:
@@ -19,18 +21,34 @@ jobs:
       - name: Set Supabase secrets
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FRESHDESK_API_KEY: ${{ secrets.FRESHDESK_API_KEY }}
+          FRESHDESK_DOMAIN: ${{ secrets.FRESHDESK_DOMAIN }}
+          DIRECTDATA_TOKEN: ${{ secrets.DIRECTDATA_TOKEN }}
+          AUTENTIQUE_WEBHOOK_SECRET_DOC: ${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_DOC }}
+          AUTENTIQUE_WEBHOOK_SECRET_SIGN: ${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_SIGN }}
         run: |
-          supabase secrets set \
-            RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" \
-            FRESHDESK_API_KEY="${{ secrets.FRESHDESK_API_KEY }}" \
-            FRESHDESK_DOMAIN="${{ secrets.FRESHDESK_DOMAIN }}" \
-            FRESHDESK_SUPPORT_EMAIL="suporte@hermidamaia.adv.br" \
-            FROM_EMAIL="Portal Hermida Maia <contato@hermidamaia.adv.br>" \
-            OFFICE_EMAIL="contato@hermidamaia.adv.br" \
-            DIRECTDATA_TOKEN="${{ secrets.DIRECTDATA_TOKEN }}" \
-            AUTENTIQUE_WEBHOOK_SECRET_DOC="${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_DOC }}" \
-            AUTENTIQUE_WEBHOOK_SECRET_SIGN="${{ secrets.AUTENTIQUE_WEBHOOK_SECRET_SIGN }}" \
-            --project-ref sspvizogbcyigquqycsz
+          set -euo pipefail
+
+          secrets_file="$(mktemp)"
+          cleanup() {
+            rm -f "$secrets_file"
+          }
+          trap cleanup EXIT
+
+          {
+            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
+            printf 'FRESHDESK_API_KEY=%s\n' "$FRESHDESK_API_KEY"
+            printf 'FRESHDESK_DOMAIN=%s\n' "$FRESHDESK_DOMAIN"
+            printf 'FRESHDESK_SUPPORT_EMAIL=%s\n' 'suporte@hermidamaia.adv.br'
+            printf 'FROM_EMAIL=%s\n' 'Portal Hermida Maia <contato@hermidamaia.adv.br>'
+            printf 'OFFICE_EMAIL=%s\n' 'contato@hermidamaia.adv.br'
+            printf 'DIRECTDATA_TOKEN=%s\n' "$DIRECTDATA_TOKEN"
+            printf 'AUTENTIQUE_WEBHOOK_SECRET_DOC=%s\n' "$AUTENTIQUE_WEBHOOK_SECRET_DOC"
+            printf 'AUTENTIQUE_WEBHOOK_SECRET_SIGN=%s\n' "$AUTENTIQUE_WEBHOOK_SECRET_SIGN"
+          } > "$secrets_file"
+
+          supabase secrets set --env-file "$secrets_file" --project-ref sspvizogbcyigquqycsz
 
       - name: Deploy portal-notify
         env:
