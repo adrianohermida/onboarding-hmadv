@@ -10,7 +10,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_migrations",
+      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__execute_sql"
     ]
   }
 }
