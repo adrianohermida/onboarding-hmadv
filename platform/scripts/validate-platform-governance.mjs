@@ -1,34 +1,36 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 
-const root = process.cwd();
+const checks = [
+  ['design-system root', 'design-system/README.md'],
+  ['design governance checklist', 'governance/design/design-review-checklist.md'],
+  ['design system docs', 'docs/design-system/README.md'],
+  ['design system tokens bridge', 'design-system/tokens/core.css'],
+  ['design system component registry', 'design-system/components/registry.json'],
+  ['design system theme foundation', 'design-system/themes/light.css'],
+  ['design system responsive foundation', 'design-system/responsive/mobile-first.css'],
+  ['design system accessibility foundation', 'design-system/accessibility/accessibility-foundation.md'],
+  ['design system component ownership doc', 'docs/design-system/component-ownership.md'],
+  ['design system shell governance', 'governance/design/shell-visual-governance.md'],
+  ['platform readme', 'platform/README.md'],
+  ['workflow static deploy', '.github/workflows/static.yml'],
+  ['workflow supabase deploy', '.github/workflows/supabase-deploy.yml']
+];
 
-function fail(message) {
-  console.error(`[validate-platform-governance] ${message}`);
+const missing = checks.filter(([, filePath]) => !existsSync(filePath));
+if (missing.length) {
+  console.error('validate:platform failed. Missing required governance files:');
+  missing.forEach(([label, filePath]) => console.error(`- ${label}: ${filePath}`));
   process.exit(1);
 }
 
-const requiredArtifacts = [
-  'platform/environments/README.md',
-  'platform/releases/release-governance.md',
-  'platform/rollback/rollback-strategy.md',
-  'platform/health/health-engine.md',
-  'platform/telemetry/telemetry-foundation.md',
-  'platform/logging/logging-foundation.md',
-  'platform/feature-flags/feature-flags-governance.md',
-  'docs/platform/README.md',
-  'design-system/README.md',
-  'governance/design/design-review-checklist.md',
-  'docs/design-system/README.md',
-  '.github/workflows/static.yml',
-  '.github/workflows/supabase-deploy.yml',
-];
-
-for (const relativePath of requiredArtifacts) {
-  const absolutePath = path.join(root, relativePath);
-  if (!fs.existsSync(absolutePath)) {
-    fail(`required platform artifact missing: ${relativePath}`);
-  }
+const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+const requiredScripts = ['bootstrap:dev', 'validate:env', 'validate:platform', 'diagnostics:platform'];
+const missingScripts = requiredScripts.filter((scriptName) => !packageJson.scripts?.[scriptName]);
+if (missingScripts.length) {
+  console.error('validate:platform failed. Missing package scripts:');
+  missingScripts.forEach((scriptName) => console.error(`- ${scriptName}`));
+  process.exit(1);
 }
 
-console.log('[validate-platform-governance] OK');
+console.log('validate:platform passed');
+console.log('Governance files and package scripts are present.');

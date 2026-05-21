@@ -57,7 +57,8 @@
       "Bash(cd D:/Github/onboarding-hmadv && git show origin/main:pages/onboarding-v2.html > /tmp/onboarding-v2-main.html && wc -l /tmp/onboarding-v2-main.html)",
       "Bash(grep -c *)",
       "Bash(echo \"exit:$?\")",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "Bash(awk '{print $4}')"
     ]
   }
 }
