@@ -27,7 +27,9 @@
       "Bash(ls observability/logs/)",
       "Bash(ls integrations/logs/)",
       "Bash(gh pr *)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(cat .gitignore)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
