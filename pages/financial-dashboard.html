@@ -448,7 +448,7 @@
 
           <!-- ── Diagnóstico Banner ──────────────────────────────── -->
           <div id="fd-diag-banner" class="fd-diag-banner fd-diag--low" style="display:none;">
-            <div class="fd-diag-icon" id="fd-diag-icon">OK</div>
+            <div class="fd-diag-icon" id="fd-diag-icon"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 7v3.5M10 13.5h.01"/></svg></div>
             <div style="flex:1;">
               <div class="fd-diag-title" id="fd-diag-title">Situação controlada</div>
               <div class="fd-diag-text" id="fd-diag-text">Seu comprometimento de renda está dentro dos limites legais.</div>
@@ -459,43 +459,43 @@
           <!-- ── KPI Grid ───────────────────────────────────────── -->
           <div class="fd-kpi-grid">
             <div class="fd-kpi fd-kpi-navy">
-              <div class="fd-kpi-icon">RT</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#1A3A5C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,13 7,8 11,11 17,5"/><polyline points="14,5 17,5 17,8"/></svg></div>
               <div class="fd-kpi-label">Renda Total</div>
               <div class="fd-kpi-value" id="kpi-renda">R$ —</div>
               <div class="fd-kpi-hint">Bruta declarada</div>
             </div>
             <div class="fd-kpi fd-kpi-blue">
-              <div class="fd-kpi-icon">DE</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#2E6DA4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l7-7 7 7v9a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M8 19V12h4v7"/></svg></div>
               <div class="fd-kpi-label">Despesas Essenciais</div>
               <div class="fd-kpi-value" id="kpi-desp-ess">R$ —</div>
               <div class="fd-kpi-hint">Moradia, alimentação…</div>
             </div>
             <div class="fd-kpi">
-              <div class="fd-kpi-icon">DV</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="1.2"/><circle cx="15" cy="17" r="1.2"/><path d="M1 2h3l2 10h10l1.5-7H6"/></svg></div>
               <div class="fd-kpi-label">Despesas Variáveis</div>
               <div class="fd-kpi-value" id="kpi-desp-var">R$ —</div>
               <div class="fd-kpi-hint">Internet, lazer…</div>
             </div>
             <div class="fd-kpi fd-kpi-red">
-              <div class="fd-kpi-icon">TD</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="18" height="13" rx="2"/><path d="M1 9h18M5 13h3M14 13h2"/><path d="M5 3h10" opacity=".4"/></svg></div>
               <div class="fd-kpi-label">Total Dívidas</div>
               <div class="fd-kpi-value" id="kpi-total-dividas">R$ —</div>
               <div class="fd-kpi-hint" id="kpi-n-credores">0 credores</div>
             </div>
             <div class="fd-kpi fd-kpi-warn">
-              <div class="fd-kpi-icon">CP</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#d97706" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16h16M2 12h5v4H2zM7 9h5v7H7zM12 5h6v11h-6z"/></svg></div>
               <div class="fd-kpi-label">Comprometimento</div>
               <div class="fd-kpi-value" id="kpi-comprometimento">—%</div>
               <div class="fd-kpi-hint">Das parcelas / renda</div>
             </div>
             <div class="fd-kpi fd-kpi-gold">
-              <div class="fd-kpi-icon">ME</div>
+              <div class="fd-kpi-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#B7860B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2l1.5 4.5H16l-3.6 2.6 1.4 4.5L10 11l-3.8 2.6 1.4-4.5L4 6.5h4.5z"/></svg></div>
               <div class="fd-kpi-label">Mínimo Existencial</div>
               <div class="fd-kpi-value" id="kpi-min-exist">R$ —</div>
               <div class="fd-kpi-hint">Lei 14.181/2021</div>
             </div>
             <div class="fd-kpi fd-kpi-green" id="kpi-sobra-card">
-              <div class="fd-kpi-icon">SM</div>
+              <div class="fd-kpi-icon" id="kpi-sobra-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M1 10h18M14 3H6c-.6 0-1 .4-1 1v2h10V4c0-.6-.4-1-1-1z"/><circle cx="10" cy="14" r="1.5"/></svg></div>
               <div class="fd-kpi-label">Sobra Mensal</div>
               <div class="fd-kpi-value" id="kpi-sobra">R$ —</div>
               <div class="fd-kpi-hint">Após dívidas e mínimo</div>
@@ -551,7 +551,7 @@
           <!-- ── Renda e Dependentes ────────────────────────────── -->
           <div class="fd-section" id="section-renda">
             <div class="fd-section-header open" onclick="toggleSection('renda')">
-              <div class="fd-section-icon">R</div>
+              <div class="fd-section-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--navy)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,13 7,8 11,11 17,5"/><polyline points="14,5 17,5 17,8"/></svg></div>
               <div class="fd-section-title">Renda Mensal</div>
               <div class="fd-section-badge" id="badge-renda">Não informado</div>
               <div class="fd-section-chevron">▼</div>
@@ -588,7 +588,7 @@
           <!-- ── Despesas Essenciais ─────────────────────────────── -->
           <div class="fd-section" id="section-ess">
             <div class="fd-section-header" onclick="toggleSection('ess')">
-              <div class="fd-section-icon">E</div>
+              <div class="fd-section-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--ink2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l7-7 7 7v9a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M8 19V12h4v7"/></svg></div>
               <div class="fd-section-title">Despesas Essenciais</div>
               <div class="fd-section-badge" id="badge-ess">R$ —</div>
               <div class="fd-section-chevron">▼</div>
@@ -604,7 +604,7 @@
           <!-- ── Despesas Variáveis ─────────────────────────────── -->
           <div class="fd-section" id="section-var">
             <div class="fd-section-header" onclick="toggleSection('var')">
-              <div class="fd-section-icon">V</div>
+              <div class="fd-section-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--ink2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="1.2"/><circle cx="15" cy="17" r="1.2"/><path d="M1 2h3l2 10h10l1.5-7H6"/></svg></div>
               <div class="fd-section-title">Despesas Variáveis</div>
               <div class="fd-section-badge" id="badge-var">R$ —</div>
               <div class="fd-section-chevron">▼</div>
@@ -620,7 +620,7 @@
           <!-- ── Dívidas ─────────────────────────────────────────── -->
           <div class="fd-section" id="section-dividas">
             <div class="fd-section-header open" onclick="toggleSection('dividas')">
-              <div class="fd-section-icon">D</div>
+              <div class="fd-section-icon"><svg viewBox="0 0 20 20" fill="none" stroke="var(--ink2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="18" height="13" rx="2"/><path d="M1 9h18M5 13h3M14 13h2"/></svg></div>
               <div class="fd-section-title">Dívidas Cadastradas</div>
               <div class="fd-section-badge" id="badge-dividas">0 dívidas</div>
               <div class="fd-section-chevron">▼</div>
@@ -666,7 +666,9 @@
   <div class="fd-modal">
     <div class="fd-modal-header">
       <div class="fd-modal-title" id="modal-title">Nova Dívida</div>
-      <button class="fd-modal-close" onclick="closeDebtModal()">X</button>
+      <button class="fd-modal-close" onclick="closeDebtModal()" aria-label="Fechar">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
+      </button>
     </div>
     <div class="fd-modal-body">
       <input type="hidden" id="modal-debt-id" />
@@ -1003,7 +1005,11 @@ function refreshDiag() {
   if (sobraCard) {
     sobraCard.className = 'fd-kpi ' + (diag.sobraReal < 0 ? 'fd-kpi-red' : 'fd-kpi-green');
     const iconEl = sobraCard.querySelector('.fd-kpi-icon');
-    if (iconEl) iconEl.textContent = diag.sobraReal < 0 ? 'AL' : 'OK';
+    if (iconEl) {
+      const alertSvg = '<svg viewBox="0 0 20 20" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l-7 13h14L9 3z"/><path d="M9 9v3.5M9 14.5h.01"/></svg>';
+      const okSvg    = '<svg viewBox="0 0 20 20" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M1 10h18"/><circle cx="10" cy="14" r="1.5"/></svg>';
+      iconEl.innerHTML = diag.sobraReal < 0 ? alertSvg : okSvg;
+    }
   }
 
   // Diagnóstico banner
@@ -1023,7 +1029,11 @@ function renderDiagBanner(diag) {
   banner.style.display = 'flex';
   banner.className = `fd-diag-banner fd-diag--${diag.severity}`;
 
-  const icons   = { critical:'AL', high:'AT', medium:'MD', low:'OK' };
+  const svgAlertOctagon = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.2 2 12.8 2 18 7.2 18 12.8 12.8 18 7.2 18 2 12.8 2 7.2"/><path d="M10 7v3.5M10 13.5h.01"/></svg>';
+  const svgAlertTri    = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l-7 13h14L9 3z"/><path d="M9 9v3.5M9 14.5h.01"/></svg>';
+  const svgInfo        = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 7h.01M10 9v5"/></svg>';
+  const svgCheckCircle = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M6.5 10l2.5 2.5 4.5-5"/></svg>';
+  const icons   = { critical: svgAlertOctagon, high: svgAlertTri, medium: svgInfo, low: svgCheckCircle };
   const titles  = {
     critical: 'Superendividamento crítico — ação urgente necessária',
     high:     'Superendividamento confirmado — Lei 14.181/2021 aplicável',
@@ -1037,7 +1047,8 @@ function renderDiagBanner(diag) {
     low:      `Comprometimento de ${FinancialCalculator.formatPct(diag.comprometimentoPct)} — dentro dos limites. Continue monitorando suas finanças.`,
   };
 
-  safeSetText('fd-diag-icon', icons[diag.severity] || 'DG');
+  const diagIconEl = byId('fd-diag-icon');
+  if (diagIconEl) diagIconEl.innerHTML = icons[diag.severity] || svgInfo;
   safeSetText('fd-diag-title', titles[diag.severity] || '');
   safeSetText('fd-diag-text', texts[diag.severity] || '');
 
