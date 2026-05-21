@@ -26,6 +26,15 @@ const nativeSetInterval = window.setInterval.bind(window);
 const nativeClearInterval = window.clearInterval.bind(window);
 const capturedModuleTimers = [];
 
+function runSafely(kind, fn, ctx, args) {
+  try {
+    return fn.apply(ctx, args);
+  } catch (error) {
+    console.warn(`[shell:${kind}] listener/timer error suppressed`, error);
+    return undefined;
+  }
+}
+
 function trackModuleListener(target, type, originalListener, listener, options) {
   if (!captureModuleListeners || typeof listener !== 'function') return;
   capturedModuleListeners.push({ target, type, originalListener, listener, options });
@@ -61,7 +70,7 @@ document.addEventListener = function patchedDocumentAddEventListener(type, liste
   const token = activeModuleToken;
   const wrapped = function wrappedDocumentListener(...args) {
     if (token !== activeModuleToken) return;
-    return listener.apply(this, args);
+    return runSafely('document', listener, this, args);
   };
 
   nativeDocumentAddEventListener(type, wrapped, options);
@@ -77,7 +86,7 @@ window.addEventListener = function patchedWindowAddEventListener(type, listener,
   const token = activeModuleToken;
   const wrapped = function wrappedWindowListener(...args) {
     if (token !== activeModuleToken) return;
-    return listener.apply(this, args);
+    return runSafely('window', listener, this, args);
   };
 
   nativeWindowAddEventListener(type, wrapped, options);
@@ -92,7 +101,12 @@ window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
   const token = activeModuleToken;
   const wrapped = (...cbArgs) => {
     if (token !== activeModuleToken) return;
-    return handler(...cbArgs);
+    try {
+      return handler(...cbArgs);
+    } catch (error) {
+      console.warn('[shell:timeout] callback error suppressed', error);
+      return undefined;
+    }
   };
 
   const id = nativeSetTimeout(wrapped, timeout, ...args);
@@ -112,7 +126,12 @@ window.setInterval = function patchedSetInterval(handler, timeout, ...args) {
   const token = activeModuleToken;
   const wrapped = (...cbArgs) => {
     if (token !== activeModuleToken) return;
-    return handler(...cbArgs);
+    try {
+      return handler(...cbArgs);
+    } catch (error) {
+      console.warn('[shell:interval] callback error suppressed', error);
+      return undefined;
+    }
   };
 
   const id = nativeSetInterval(wrapped, timeout, ...args);
