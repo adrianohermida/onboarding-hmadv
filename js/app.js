@@ -28,7 +28,13 @@ const capturedModuleTimers = [];
 
 function runSafely(kind, fn, ctx, args) {
   try {
-    return fn.apply(ctx, args);
+    const result = fn.apply(ctx, args);
+    if (result && typeof result.then === 'function' && typeof result.catch === 'function') {
+      result.catch(error => {
+        console.warn(`[shell:${kind}] async listener/timer error suppressed`, error);
+      });
+    }
+    return result;
   } catch (error) {
     console.warn(`[shell:${kind}] listener/timer error suppressed`, error);
     return undefined;
@@ -101,12 +107,7 @@ window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
   const token = activeModuleToken;
   const wrapped = (...cbArgs) => {
     if (token !== activeModuleToken) return;
-    try {
-      return handler(...cbArgs);
-    } catch (error) {
-      console.warn('[shell:timeout] callback error suppressed', error);
-      return undefined;
-    }
+    return runSafely('timeout', handler, window, cbArgs);
   };
 
   const id = nativeSetTimeout(wrapped, timeout, ...args);
@@ -126,12 +127,7 @@ window.setInterval = function patchedSetInterval(handler, timeout, ...args) {
   const token = activeModuleToken;
   const wrapped = (...cbArgs) => {
     if (token !== activeModuleToken) return;
-    try {
-      return handler(...cbArgs);
-    } catch (error) {
-      console.warn('[shell:interval] callback error suppressed', error);
-      return undefined;
-    }
+    return runSafely('interval', handler, window, cbArgs);
   };
 
   const id = nativeSetInterval(wrapped, timeout, ...args);
