@@ -17,6 +17,7 @@ import { obs } from '../../shell/observability/Observability.js';
 import { bus } from '../../modules/events/EventBus.js';
 import { observabilityFoundation } from '../../observability/ObservabilityFoundation.js';
 import { integrationHub } from '../../integrations/IntegrationHub.js';
+import { workflowAutomationFoundation } from '../../workflow-engine/WorkflowAutomationFoundation.js';
 
 // ── Modal API ─────────────────────────────────────────────────────────────────
 export const modal = {
@@ -83,6 +84,18 @@ export const integrations = {
   refresh: () => integrationHub.snapshot(),
 };
 
+// ── Workflows API ───────────────────────────────────────────────────────────
+export const workflows = {
+  getSnapshot: () => store.get('workflows') || {},
+  getLifecycle: () => store.get('workflows')?.lifecycle || {},
+  getTelemetry: () => store.get('workflows')?.telemetry || {},
+  getSla: () => store.get('workflows')?.sla || {},
+  getTasks: () => store.get('workflows')?.tasks || {},
+  getApprovals: () => store.get('workflows')?.approvals || {},
+  getEscalations: () => store.get('workflows')?.escalations || {},
+  refresh: () => workflowAutomationFoundation.snapshot(),
+};
+
 // ── Tenant API ────────────────────────────────────────────────────────────────
 export const tenant = {
   getId: () => store.get('tenant')?.id || 'hmadv',
@@ -105,4 +118,4 @@ export const billing = {
 };
 
 // Convenience default export (barrel)
-export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, tenant, shellStore, billing };
+export default { modal, slideover, loading, auth, notify, events, telemetry, observability, integrations, workflows, tenant, shellStore, billing };

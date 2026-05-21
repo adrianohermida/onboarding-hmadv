@@ -13,6 +13,7 @@
  *   notifications: { items: [], unreadCount: 0 }
  *   billing   : { subscription, usage, quotas, entitlements, cost, economics }
  *   integrations: { providers, health, telemetry, queue_depth, generated_at }
+ *   workflows: { definitions, lifecycle, telemetry, sla, tasks, approvals, escalations, queue, generated_at }
  *   route     : { current, previous, loading }
  *   viewMode  : 'cliente' | 'advogado' | 'admin'
  */
@@ -50,6 +51,17 @@ const _initialState = () => ({
     health: { global: 'unknown', providers: {} },
     telemetry: { total: 0, failures: 0, retries: 0, sla_violations: 0, degraded: 0, list: [] },
     queue_depth: 0,
+    generated_at: null,
+  },
+  workflows: {
+    definitions: [],
+    lifecycle: { total: 0, active: 0, completed: 0, archived: 0, list: [] },
+    telemetry: { total: 0, failures: 0, retries: 0, escalations: 0, stuck: 0, throughput: 0, list: [] },
+    sla: { total: 0, overdue: 0, policies: {}, list: [] },
+    tasks: { total: 0, open: 0, overdue: 0, list: [] },
+    approvals: { total: 0, pending: 0, list: [] },
+    escalations: { total: 0, open: 0, list: [] },
+    queue: { depth: 0 },
     generated_at: null,
   },
   route: { current: null, previous: null, loading: false },
@@ -162,6 +174,22 @@ class ShellStore extends EventTarget {
       health: snapshot.health || { global: 'unknown', providers: {} },
       telemetry: snapshot.telemetry || { total: 0, failures: 0, retries: 0, sla_violations: 0, degraded: 0, list: [] },
       queue_depth: Number(snapshot.queue_depth) || 0,
+      generated_at: snapshot.generated_at || new Date().toISOString(),
+    });
+  }
+
+  // ── Workflows ─────────────────────────────────────────────────────────────
+  setWorkflowSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    this._set('workflows', {
+      definitions: Array.isArray(snapshot.definitions) ? snapshot.definitions : [],
+      lifecycle: snapshot.lifecycle || { total: 0, active: 0, completed: 0, archived: 0, list: [] },
+      telemetry: snapshot.telemetry || { total: 0, failures: 0, retries: 0, escalations: 0, stuck: 0, throughput: 0, list: [] },
+      sla: snapshot.sla || { total: 0, overdue: 0, policies: {}, list: [] },
+      tasks: snapshot.tasks || { total: 0, open: 0, overdue: 0, list: [] },
+      approvals: snapshot.approvals || { total: 0, pending: 0, list: [] },
+      escalations: snapshot.escalations || { total: 0, open: 0, list: [] },
+      queue: snapshot.queue || { depth: 0 },
       generated_at: snapshot.generated_at || new Date().toISOString(),
     });
   }

@@ -31,6 +31,8 @@ import { mountBillingShellIntegration } from '../billing/ShellBillingIntegration
 import { mountObservabilityFoundation, observabilityFoundation } from '../observability/ObservabilityFoundation.js';
 import { mountIntegrationHub } from '../integrations/IntegrationHub.js';
 import { mountIntegrationShellVisibility } from '../integrations/ShellIntegrationVisibility.js';
+import { mountWorkflowAutomationFoundation } from '../workflow-engine/WorkflowAutomationFoundation.js';
+import { mountWorkflowShellVisibility } from '../workflow-engine/ShellWorkflowVisibility.js';
 
 export class AuthenticatedShell {
   constructor(opts = {}) {
@@ -70,6 +72,8 @@ export class AuthenticatedShell {
       mountObservabilityFoundation();
       mountIntegrationHub();
       mountIntegrationShellVisibility();
+      mountWorkflowAutomationFoundation();
+      mountWorkflowShellVisibility();
 
       // Mount shell subsystems
       globalModal.mount();
