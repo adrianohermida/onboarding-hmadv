@@ -140,6 +140,28 @@
 
         <div data-component="progress-bar" style="margin-bottom:16px;"></div>
 
+        <!-- CNJ step tracker -->
+        <div id="cnj-step-bar" style="display:none;background:#f0f4f8;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--muted);margin-bottom:4px;width:100%">Formulário CNJ — <span id="cnj-step-label">Passo 0/7</span></span>
+            <div id="cnj-step-dots" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
+          </div>
+          <div style="background:#dde3ea;border-radius:4px;height:4px;margin-top:8px;">
+            <div id="cnj-step-bar-fill" style="background:var(--blue);height:4px;border-radius:4px;transition:width .4s;width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Freshdesk ticket card -->
+        <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:20px">🎫</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--navy)">Chamado Freshdesk aberto</div>
+            <div style="font-size:12px;color:var(--muted)" id="fd-ticket-info">—</div>
+          </div>
+          <a id="fd-ticket-link" href="#" target="_blank" rel="noopener"
+             style="margin-left:auto;font-size:12px;color:var(--blue);white-space:nowrap">Ver chamado →</a>
+        </div>
+
         <div class="kpi-grid" style="margin-bottom:16px;">
           <div class="kpi kpi-red">
             <span class="kpi-label">Dívida Total Declarada</span>
@@ -239,6 +261,7 @@
 <script type="module">
 import { CaseService, DebtService, DocumentService, AdminService } from '../services/database.js';
 import { formatCurrency } from '../utils/helpers.js';
+import { supabase } from '../services/supabase.js';
 
 const FASE_LABEL = {
   cadastro:   'Cadastro',
@@ -347,65 +370,189 @@ window.switchView = async function(userId) {
 
 /* ── Client data (own or specific userId for admin) ─── */
 async function loadClientData(userId) {
-  let caso, dividas, docs;
 
+  // Admin visualizando cliente específico: usar queries diretas
   if (userId) {
-    [caso, dividas, docs] = await Promise.all([
+    const [caso, dividas, docs] = await Promise.all([
       AdminService.getClientCaso(userId).catch(() => null),
       AdminService.getClientDebts(userId).catch(() => []),
       AdminService.getClientDocs(userId).catch(() => []),
     ]);
-  } else {
-    [caso, dividas, docs] = await Promise.all([
-      CaseService.get().catch(() => null),
-      DebtService.list().catch(() => []),
-      DocumentService.list().catch(() => []),
+    renderClientKPIs({ caso, dividas, docs });
+    buildActivityFeedLegacy(caso, dividas, docs);
+    return;
+  }
+
+  // Cliente próprio: usar rpc_get_meu_caso() + caso completo para dívidas
+  let rpcData = null;
+  let casoFull = null;
+  let docs = [];
+
+  try {
+    const [rpcRes, casoRes, docsRes] = await Promise.all([
+      supabase.rpc('rpc_get_meu_caso'),
+      CaseService.get(),
+      DocumentService.list(),
     ]);
+    rpcData  = rpcRes.data?.[0] ?? null;
+    casoFull = casoRes;
+    docs     = docsRes;
+  } catch (e) {
+    console.error('loadClientData error:', e);
   }
 
-  if (caso) {
-    const totalDividas = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
-    if (totalDividas) document.getElementById('kpi-divida').textContent = formatCurrency(totalDividas);
-    if (dividas.length) document.getElementById('kpi-credores').textContent = dividas.length;
-    document.getElementById('kpi-fase').textContent = FASE_LABEL[caso.fase] || caso.fase;
-    updateTrackerState(caso.fase === 'analise' ? 'analise' : caso.fase === 'negociacao' ? 'proposta' : 'cadastro');
+  // KPIs
+  if (casoFull) {
+    const credoresCNJ = casoFull.credores_cnj || [];
+    const totalCNJ    = credoresCNJ.reduce((s, c) => s + (Number(c.valorDeclarado) || 0), 0);
+    if (totalCNJ)           document.getElementById('kpi-divida').textContent    = formatCurrency(totalCNJ);
+    if (credoresCNJ.length) document.getElementById('kpi-credores').textContent  = credoresCNJ.length;
+    document.getElementById('kpi-fase').textContent = FASE_LABEL[casoFull.fase] || casoFull.fase || 'Cadastro';
+    updateTrackerState(casoFull.fase === 'analise' ? 'analise' : casoFull.fase === 'negociacao' ? 'proposta' : 'cadastro');
+    document.getElementById('footer-case-id').textContent = 'ID: ' + casoFull.id.slice(0, 8).toUpperCase();
   }
 
-  const aprovados = docs.filter(d => d.status === 'aprovado').length;
-  const total     = DocumentService.TYPES.length;
-  document.getElementById('kpi-docs').textContent       = aprovados + ' / ' + total;
-  document.getElementById('sc-docs-ok').textContent     = aprovados;
-  document.getElementById('sc-docs-total').textContent  = total;
+  // Docs: preferir dados do RPC, fallback para lista local
+  const aprovados  = rpcData ? Number(rpcData.docs_aprovados) : docs.filter(d => d.status === 'aprovado').length;
+  const pendentes  = rpcData ? Number(rpcData.docs_pendentes) : docs.filter(d => d.status === 'pendente').length;
+  const totalTypes = DocumentService.TYPES.length;
+  document.getElementById('kpi-docs').textContent      = aprovados + ' / ' + totalTypes;
+  document.getElementById('sc-docs-ok').textContent    = aprovados;
+  document.getElementById('sc-docs-total').textContent = totalTypes;
 
-  const pendDocs  = docs.filter(d => d.status === 'pendente').length;
-  const pendTotal = pendDocs + (caso && !caso.onboarding_done ? 1 : 0);
+  const pendTotal = pendentes + (casoFull && !casoFull.onboarding_done ? 1 : 0);
   document.getElementById('sc-pendencias').textContent = pendTotal || '—';
 
-  if (caso?.proxima_acao) {
-    document.getElementById('sc-next-action').textContent = caso.proxima_acao;
+  // Próxima ação
+  const proxima = rpcData?.proxima_acao || casoFull?.proxima_acao;
+  if (proxima) {
+    document.getElementById('sc-next-action').textContent = proxima;
     document.getElementById('sc-next-hint').textContent   = '';
-  } else if (caso && !caso.onboarding_done) {
-    document.getElementById('sc-next-action').textContent = 'Completar cadastro';
-    document.getElementById('sc-next-hint').textContent   = 'Acesse a aba Onboarding';
+  } else if (casoFull && !casoFull.onboarding_done) {
+    document.getElementById('sc-next-action').textContent = 'Completar cadastro CNJ';
+    document.getElementById('sc-next-hint').textContent   = 'Acesse a aba Formulário';
   }
 
-  if (caso) document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
+  // CNJ step bar
+  const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
+  renderCNJStepBar(step);
 
-  buildActivityFeed(caso, dividas, docs);
+  // Ticket Freshdesk
+  const fdTicketId = rpcData?.fd_ticket_id ?? casoFull?.fd_ticket_id;
+  if (fdTicketId) renderFDTicketCard(fdTicketId);
+
+  // Timeline real do portal_cnj_timeline
+  const timeline = rpcData?.timeline;
+  if (Array.isArray(timeline) && timeline.length > 0) {
+    buildTimelineFeed(timeline);
+  } else {
+    buildActivityFeedLegacy(casoFull, [], docs);
+  }
 }
 
-function buildActivityFeed(caso, dividas, docs) {
+/* ── Render KPIs para visão admin de cliente ────────── */
+function renderClientKPIs({ caso, dividas, docs }) {
+  if (!caso) return;
+  const totalDividas = dividas.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+  if (totalDividas)   document.getElementById('kpi-divida').textContent   = formatCurrency(totalDividas);
+  if (dividas.length) document.getElementById('kpi-credores').textContent = dividas.length;
+  document.getElementById('kpi-fase').textContent = FASE_LABEL[caso.fase] || caso.fase;
+  updateTrackerState(caso.fase === 'analise' ? 'analise' : caso.fase === 'negociacao' ? 'proposta' : 'cadastro');
+  const aprovados = docs.filter(d => d.status === 'aprovado').length;
+  const total     = DocumentService.TYPES.length;
+  document.getElementById('kpi-docs').textContent      = aprovados + ' / ' + total;
+  document.getElementById('sc-docs-ok').textContent    = aprovados;
+  document.getElementById('sc-docs-total').textContent = total;
+  const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
+  document.getElementById('sc-pendencias').textContent = pendTotal || '—';
+  if (caso) document.getElementById('footer-case-id').textContent = 'ID: ' + caso.id.slice(0, 8).toUpperCase();
+  buildActivityFeedLegacy(caso, dividas, docs);
+}
+
+/* ── CNJ Step Bar (7 passos) ────────────────────────── */
+function renderCNJStepBar(step) {
+  const bar = document.getElementById('cnj-step-bar');
+  if (!bar) return;
+  bar.style.display = '';
+  const total = 7;
+  const pct   = Math.min(100, Math.round((step / total) * 100));
+  document.getElementById('cnj-step-label').textContent  = `Passo ${step}/${total}`;
+  document.getElementById('cnj-step-bar-fill').style.width = pct + '%';
+
+  const STEPS = ['Identificação','Socioeconômico','Despesas','Endividamento','Credores','Análise','Documentação'];
+  const dotsEl = document.getElementById('cnj-step-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = STEPS.map((s, i) => {
+      const n = i + 1;
+      const cls = n < step ? 'ok' : n === step ? 'active' : 'pending';
+      const colors = { ok: 'var(--ok)', active: 'var(--blue)', pending: '#ccc' };
+      return `<span title="${s}" style="
+        width:22px;height:22px;border-radius:50%;border:2px solid ${colors[cls]};
+        background:${cls === 'ok' ? 'var(--ok)' : cls === 'active' ? 'var(--blue)' : '#fff'};
+        color:${cls !== 'pending' ? '#fff' : '#aaa'};font-size:11px;font-weight:700;
+        display:inline-flex;align-items:center;justify-content:center;cursor:default;"
+      >${n}</span>`;
+    }).join('');
+  }
+}
+
+/* ── Freshdesk ticket card ──────────────────────────── */
+function renderFDTicketCard(ticketId) {
+  const card = document.getElementById('fd-ticket-card');
+  if (!card) return;
+  card.style.display = 'flex';
+  document.getElementById('fd-ticket-info').textContent = `Chamado #${ticketId} — Em análise pela equipe`;
+  const link = document.getElementById('fd-ticket-link');
+  if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
+}
+
+/* ── Timeline real (portal_cnj_timeline) ────────────── */
+const EVENTO_ICON = {
+  formulario_enviado:   { icon: '📋', type: 'ok'   },
+  ticket_criado:        { icon: '🎫', type: 'ok'   },
+  ticket_atualizado:    { icon: '🔄', type: 'muted' },
+  documento_aprovado:   { icon: '✅', type: 'ok'   },
+  documento_rejeitado:  { icon: '❌', type: 'red'  },
+  documento_enviado:    { icon: '📎', type: 'warn' },
+  fase_alterada:        { icon: '⚡', type: 'blue' },
+  step_concluido:       { icon: '✔',  type: 'ok'   },
+  notificacao_enviada:  { icon: '📧', type: 'muted' },
+  comentario_admin:     { icon: '💬', type: 'blue' },
+  conciliacao_agendada: { icon: '📅', type: 'ok'   },
+  acordo_formalizado:   { icon: '🤝', type: 'ok'   },
+  encerrado:            { icon: '🏁', type: 'muted' },
+};
+
+function buildTimelineFeed(timeline) {
+  const list = document.getElementById('activity-list');
+  document.getElementById('activity-count').textContent = timeline.length + ' evento' + (timeline.length !== 1 ? 's' : '');
+  list.innerHTML = timeline.map(ev => {
+    const meta  = EVENTO_ICON[ev.tipo] || { icon: '🔵', type: 'muted' };
+    const date  = ev.created_at ? new Date(ev.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+    return `
+      <div class="activity-item">
+        <div class="activity-dot dot-${meta.type}" style="font-style:normal;font-size:14px">${meta.icon}</div>
+        <div class="activity-body">
+          <div class="activity-label">${ev.descricao || ev.tipo}</div>
+          <div class="activity-hint">${date}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ── Fallback feed (quando timeline vazia) ──────────── */
+function buildActivityFeedLegacy(caso, dividas, docs) {
   const items = [];
-  if (caso?.onboarding_done) items.push({ label: 'Cadastro concluído', hint: formatDate(caso.updated_at), type: 'ok' });
-  dividas.slice(-3).forEach(d => items.push({ label: 'Dívida cadastrada: ' + d.credor, hint: formatCurrency(d.valor), type: 'warn' }));
-  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
+  if (caso?.onboarding_done) items.push({ icon: '📋', label: 'Cadastro CNJ concluído',   hint: formatDate(caso.updated_at), type: 'ok' });
+  dividas.slice(-3).forEach(d  => items.push({ icon: '💳', label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor),          type: 'warn' }));
+  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ icon: '✅', label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
 
   const list = document.getElementById('activity-list');
   if (items.length === 0) return;
   document.getElementById('activity-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
   list.innerHTML = items.map(it => `
     <div class="activity-item">
-      <div class="activity-dot dot-${it.type}"></div>
+      <div class="activity-dot dot-${it.type}">${it.icon || ''}</div>
       <div class="activity-body">
         <div class="activity-label">${it.label}</div>
         <div class="activity-hint">${it.hint}</div>

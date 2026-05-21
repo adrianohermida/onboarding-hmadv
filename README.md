@@ -104,10 +104,18 @@ Valor: <seu-usuario>.github.io
 
 ## Roadmap
 
-| Sprint | Escopo                                       | Status       |
-|--------|----------------------------------------------|--------------|
-| 0      | Refatoração estrutural base                  | ✅ Concluído  |
-| 1      | Branding Hermida Maia + Autenticação Supabase | ✅ Concluído  |
-| 2      | Integração Freshdesk (tickets + contatos)    | 🔜 Próximo   |
-| 3      | Upload de documentos                         | 🔜 Planejado |
-| 4      | Análise de dívidas e relatórios              | 🔜 Planejado |
+| Sprint | Escopo                                                        | Status        |
+|--------|---------------------------------------------------------------|---------------|
+| 0      | Refatoração estrutural base                                   | ✅ Concluído   |
+| 1      | Branding Hermida Maia + Autenticação Supabase                 | ✅ Concluído   |
+| 2      | Integração Freshdesk (tickets + contatos)                     | ✅ Concluído   |
+| 3      | Upload de documentos + pipeline de aprovação admin            | ✅ Concluído   |
+| 4      | Análise de dívidas (portal_dividas)                           | ✅ Concluído   |
+| 5      | Admin dashboard + DirectData CPF lookup                       | ✅ Concluído   |
+| 6      | Shell persistente + pipeline avançado                         | ✅ Concluído   |
+| 7      | Formulário CNJ 7 passos — Lei 14.181/2021 + cnj-engine.js     | ✅ Concluído   |
+| 7.5    | Enterprise Architecture — multi-tenant, timeline, views       | ✅ Concluído   |
+| 8      | Portal Pós-Onboarding — ticket automático, timeline, step bar | ✅ Concluído   |
+| 9      | Admin CNJ — dashboard vw_cnj_dashboard_admin, busca por CPF   | 🔜 Próximo    |
+| 10     | Notificações push + WhatsApp + fila portal_cnj_notifications  | 🔜 Planejado  |
+| 11     | Relatórios PDF — petição CNJ, plano 104-A, mapa de credores   | 🔜 Planejado  |

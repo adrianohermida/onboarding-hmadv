@@ -65,6 +65,25 @@ ${observacao ? `<p><strong>Observação:</strong> ${observacao}</p>` : ''}
 <p>Nossa equipe irá respondê-lo em breve pelo mesmo canal.</p>
 <p style="color:#888;font-size:12px;">Hermida Maia — Sociedade Individual de Advocacia</p>`,
     });
+
+  } else if (type === 'fase_alterada') {
+    const { faseAnterior, faseNova, proxima_acao } = payload;
+    const FASE_LABEL: Record<string, string> = {
+      cadastro:    'Cadastro',
+      analise:     'Em Análise',
+      conciliacao: 'Conciliação',
+      judicial:    'Judicial',
+      encerrado:   'Encerrado',
+    };
+    messages.push({
+      to: clientEmail,
+      subject: `Atualização do seu caso — ${FASE_LABEL[faseNova] || faseNova}`,
+      html: `<p>Olá${clientName ? ' ' + clientName : ''}!</p>
+<p>Seu caso foi atualizado para a fase <strong>${FASE_LABEL[faseNova] || faseNova}</strong>.</p>
+${proxima_acao ? `<p><strong>Próxima ação:</strong> ${proxima_acao}</p>` : ''}
+<p>Acompanhe o andamento pelo portal.</p>
+<p style="color:#888;font-size:12px;">Hermida Maia — Sociedade Individual de Advocacia</p>`,
+    });
   }
 
   const results = await Promise.allSettled(messages.map(msg =>

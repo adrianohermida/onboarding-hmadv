@@ -849,6 +849,8 @@
 import { showToast }                      from '../utils/helpers.js';
 import { CaseService }                    from '../services/database.js';
 import { lookupCPF, lookupCEP }           from '../services/directdata.js';
+import { supabase }                       from '../services/supabase.js';
+import { FUNCTIONS_URL }                  from '../utils/config.js';
 import {
   calcAnaliseGlobal, calcPlanoPagamento,
   buildCNJJson, fmtBRL, parseBRL,
@@ -1577,9 +1579,33 @@ window.finalizarCadastro = async function() {
     await CaseService.save(payload);
     clearDraft(_userId);
 
-    showToast('Formulário enviado com sucesso! O escritório irá analisar seu caso.', 'success');
-    document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: payload }));
-    setTimeout(() => { window.location.href = '../index.html'; }, 2200);
+    // Chama portal-cnj-complete: cria ticket Freshdesk + e-mails + timeline
+    let fdTicketId = null;
+    try {
+      btn.textContent = 'Criando chamado...';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const res = await fetch(`${FUNCTIONS_URL}/portal-cnj-complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        });
+        if (res.ok) {
+          const result = await res.json();
+          fdTicketId = result.fd_ticket_id;
+        }
+      }
+    } catch (notifyErr) {
+      console.warn('portal-cnj-complete falhou (não bloqueia):', notifyErr);
+    }
+
+    const ticketMsg = fdTicketId ? ` Chamado #${fdTicketId} criado.` : '';
+    showToast(`Formulário enviado com sucesso!${ticketMsg} Nossa equipe irá analisar seu caso.`, 'success');
+    document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: { ...payload, fd_ticket_id: fdTicketId } }));
+    setTimeout(() => { window.location.href = '../pages/dashboard.html'; }, 2800);
   } catch (e) {
     showToast('Erro ao salvar: ' + e.message, 'error');
     btn.disabled = false;
