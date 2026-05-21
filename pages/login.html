@@ -206,10 +206,6 @@
             <strong id="code-email" style="color:var(--navy);"></strong>
           </p>
 
-          <div id="dev-hint" style="display:none;margin-bottom:18px;" class="callout callout-warn">
-            <strong>Modo desenvolvimento</strong> — código: <strong id="dev-code" style="font-family:monospace;letter-spacing:2px;"></strong>
-          </div>
-
           <div class="form-group" style="margin-bottom:18px;">
             <label class="form-label" for="otp-code">Código de verificação</label>
             <input class="form-input"
@@ -281,9 +277,7 @@ window.handleSend = async function() {
 
   // Dev bypass: admin skips the Supabase OTP call entirely
   if (email === ADMIN_EMAIL) {
-    document.getElementById('code-email').textContent  = email;
-    document.getElementById('dev-hint').style.display  = '';
-    document.getElementById('dev-code').textContent    = ADMIN_DEV_CODE;
+    document.getElementById('code-email').textContent = email;
     setState('state-code');
     setTimeout(() => document.getElementById('otp-code').focus(), 80);
     return;
