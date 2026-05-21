@@ -46,6 +46,25 @@ let unmountShellModeSelector = null;
 let freshchatWatchdogTimer = null;
 let shellManagersReady = false;
 
+function getUserDisplayState(user, isAdmin = false) {
+  const email = user?.email || '';
+  const display = user?.user_metadata?.full_name || user?.user_metadata?.name || email || 'Conta HMADV';
+  const initials = String(display)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() || 'HM';
+
+  return {
+    email,
+    display,
+    initials,
+    roleLabel: isAdmin ? 'Administrador' : 'Cliente',
+  };
+}
+
 function normalizeViewMode(mode) {
   return mode === 'admin' ? 'admin' : 'cliente';
 }
@@ -228,6 +247,47 @@ function escapeShellHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function setAccountMenuOpen(open) {
+  const trigger = document.getElementById('header-user-trigger');
+  const menu = document.getElementById('header-user-menu');
+  const shell = document.getElementById('header-user-shell');
+  if (!trigger || !menu || !shell) return;
+
+  const nextOpen = Boolean(open);
+  trigger.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+  menu.hidden = !nextOpen;
+  shell.classList.toggle('is-open', nextOpen);
+}
+
+function toggleAccountMenu(force = null) {
+  const trigger = document.getElementById('header-user-trigger');
+  const expanded = trigger?.getAttribute('aria-expanded') === 'true';
+  setAccountMenuOpen(force === null ? !expanded : force);
+}
+
+function renderSidebarToggleButton({ mobile = false, expanded = true } = {}) {
+  const toggle = document.getElementById('sidebar-toggle');
+  if (!toggle) return;
+
+  const icon = mobile
+    ? (expanded
+      ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>')
+    : (expanded
+      ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 4v12M12.5 8.5 10 10l2.5 1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 4v12M11 8.5l3 2-3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+
+  toggle.innerHTML = icon;
+  toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  toggle.setAttribute('aria-label', mobile
+    ? (expanded ? 'Fechar menu lateral' : 'Abrir menu lateral')
+    : (expanded ? 'Recolher menu lateral' : 'Expandir menu lateral'));
+  toggle.setAttribute('title', mobile
+    ? (expanded ? 'Fechar menu' : 'Abrir menu')
+    : (expanded ? 'Recolher menu' : 'Expandir menu'));
+  toggle.classList.toggle('is-collapsed', !expanded && !mobile);
 }
 
 function renderRouteFailureFallback(routeUrl, error) {
@@ -631,9 +691,29 @@ function setupShellNavigation() {
 
   document.addEventListener('click', event => {
     const shellAction = event.target?.closest?.('[data-shell-action]');
+    const clickedInsideAccountMenu = !!event.target?.closest?.('#header-user-shell');
+
+    if (!clickedInsideAccountMenu) {
+      setAccountMenuOpen(false);
+    }
+
     if (shellAction?.dataset.shellAction === 'logout') {
       event.preventDefault();
+      setAccountMenuOpen(false);
       window.handleLogout?.();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'account-menu-toggle') {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleAccountMenu();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'open-account-modal') {
+      event.preventDefault();
+      openAccountModal(shellAction.dataset.accountView || 'conta');
       return;
     }
 
@@ -701,6 +781,9 @@ function setupShellNavigation() {
   });
 
   window.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      setAccountMenuOpen(false);
+    }
     const wantsSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
     if (wantsSearch) {
       event.preventDefault();
@@ -762,15 +845,41 @@ function renderSidebarNavigation(isAdmin = false) {
     modules = getCanonicalSidebarModules({ isAdmin });
   }
 
-  navRoot.innerHTML = modules.map(module => {
-    const label = module.menuLabel || module.title;
-    return `
-      <a href="${module.key}.html" class="nav-link" data-page="${module.key}" title="${label}">
-        ${getNavIcon(module.key)}
-        <span class="nav-link-label">${label}</span>
-      </a>
-    `;
-  }).join('');
+  const sections = [];
+  const sectionMap = new Map();
+
+  modules.forEach(module => {
+    const sectionKey = module.sidebarSection || (isAdmin ? 'workspace' : 'portal');
+    if (!sectionMap.has(sectionKey)) {
+      const section = {
+        key: sectionKey,
+        label: module.sidebarSectionLabel || (isAdmin ? 'Workspace' : 'Portal'),
+        order: module.sidebarSectionOrder ?? 999,
+        items: [],
+      };
+      sectionMap.set(sectionKey, section);
+      sections.push(section);
+    }
+    sectionMap.get(sectionKey).items.push(module);
+  });
+
+  navRoot.innerHTML = sections
+    .sort((a, b) => a.order - b.order)
+    .map(section => `
+      <section class="sidebar-nav-group" data-nav-group="${escapeShellHtml(section.key)}">
+        <div class="nav-section-label">${escapeShellHtml(section.label)}</div>
+        ${section.items.map(module => {
+          const label = module.menuLabel || module.title;
+          const title = module.title || label;
+          return `
+            <a href="${module.key}.html" class="nav-link" data-page="${module.key}" data-nav-section="${escapeShellHtml(section.key)}" title="${escapeShellHtml(title)}">
+              ${getNavIcon(module.key)}
+              <span class="nav-link-label">${escapeShellHtml(label)}</span>
+            </a>
+          `;
+        }).join('')}
+      </section>
+    `).join('');
 }
 
 /* ── Sidebar / Header update (scripts don't run via innerHTML) ─── */
@@ -783,18 +892,25 @@ function updateSidebarUser(user, caso, isAdmin) {
     : (caso?.fase || 'Cadastro');
 }
 
-function updateHeaderUser(user) {
+function updateHeaderUser(user, isAdmin = false) {
   const nameEl   = document.getElementById('header-user-name');
+  const roleEl   = document.getElementById('header-user-role');
   const avatarEl = document.getElementById('header-avatar');
+  const menuNameEl = document.getElementById('header-user-menu-name');
+  const menuEmailEl = document.getElementById('header-user-menu-email');
   if (!user) return;
-  const email    = user.email || '';
-  const display  = user.user_metadata?.full_name || email;
-  const initials = email.substring(0, 2).toUpperCase();
+  const displayState = getUserDisplayState(user, isAdmin);
   if (nameEl) {
-    nameEl.textContent = display;
+    nameEl.textContent = displayState.display;
     nameEl.hidden = false;
   }
-  if (avatarEl)   avatarEl.textContent = initials;
+  if (roleEl) {
+    roleEl.textContent = displayState.roleLabel;
+    roleEl.hidden = false;
+  }
+  if (avatarEl) avatarEl.textContent = displayState.initials;
+  if (menuNameEl) menuNameEl.textContent = displayState.display;
+  if (menuEmailEl) menuEmailEl.textContent = displayState.email || displayState.roleLabel;
 }
 
 function updateShellModeSelector(isAdmin = false) {
