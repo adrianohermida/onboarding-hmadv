@@ -155,6 +155,25 @@
           </div>
         </div>
 
+        <!-- Formulário CNJ status card -->
+        <div id="cnj-form-status-card" style="display:none;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#2E6DA4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="2" width="12" height="14" rx="2"/><path d="M6 6h6M6 9h6M6 12h4"/>
+              </svg>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Formulário CNJ</div>
+              <div id="cnj-form-status-text" style="font-size:13px;font-weight:600;color:var(--ink)">Carregando...</div>
+            </div>
+            <a id="cnj-form-status-link" href="onboarding.html" style="font-size:12px;color:var(--blue);white-space:nowrap;text-decoration:none;font-weight:500;flex-shrink:0;">
+              Abrir →
+            </a>
+          </div>
+          <div id="cnj-form-status-hint" style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:46px;display:none;"></div>
+        </div>
+
         <!-- Freshdesk ticket card -->
         <div id="fd-ticket-card" style="display:none;border:1px solid #c8d8ea;background:#f0f6ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
           <div style="font-size:12px;font-weight:700;color:var(--blue)">FD</div>
@@ -240,7 +259,11 @@
           </div>
           <div class="activity-list" id="activity-list">
             <div class="empty-state">
-              <div class="empty-state-icon">CNJ</div>
+              <div class="empty-state-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".45">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+                </svg>
+              </div>
               <h3>Nenhuma atividade ainda</h3>
               <p>As atualizações do seu caso aparecerão aqui.</p>
               <a href="onboarding.html" class="btn btn-primary btn-sm">Iniciar cadastro</a>
@@ -605,6 +628,14 @@ async function loadClientData(userId) {
   const step = rpcData?.cnj_step_atual ?? casoFull?.cnj_step_atual ?? 0;
   renderCNJStepBar(step);
 
+  // Formulário CNJ status card
+  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online' || d.tipo === 'formulario_cnj_anexo_ii') ?? null;
+  renderFormStatusCard(
+    !!(casoFull?.onboarding_done),
+    Number(casoFull?.cnj_step_atual || 0),
+    formDoc,
+  );
+
   // Ticket Freshdesk
   const fdTicketId = rpcData?.fd_ticket_id ?? casoFull?.fd_ticket_id;
   if (fdTicketId) renderFDTicketCard(fdTicketId);
@@ -635,6 +666,9 @@ function renderClientKPIs({ caso, dividas, docs }) {
   const pendTotal = docs.filter(d => d.status === 'pendente').length + (caso && !caso.onboarding_done ? 1 : 0);
   setText('sc-pendencias', pendTotal || '—');
   if (caso) setText('footer-case-id', 'ID: ' + caso.id.slice(0, 8).toUpperCase());
+  // Formulário status card
+  const formDoc = docs.find(d => d.tipo === 'formulario_cnj_online' || d.tipo === 'formulario_cnj_anexo_ii') ?? null;
+  renderFormStatusCard(!!(caso?.onboarding_done), Number(caso?.cnj_step_atual || 0), formDoc);
   buildActivityFeedLegacy(caso, dividas, docs);
 }
 
@@ -667,6 +701,54 @@ function renderCNJStepBar(step) {
   }
 }
 
+/* ── Formulário CNJ status card ─────────────────────── */
+function renderFormStatusCard(onboardingDone, cnjStepAtual, formDoc) {
+  const card = byId('cnj-form-status-card');
+  if (!card) return;
+  card.style.display = '';
+
+  const textEl = byId('cnj-form-status-text');
+  const linkEl = byId('cnj-form-status-link');
+  const hintEl = byId('cnj-form-status-hint');
+
+  // Determine state from portal_documentos workflow status (if available)
+  const wfStatus = formDoc?.workflow_status || null;
+
+  if (wfStatus === 'aprovado') {
+    card.style.borderColor = 'rgba(21,128,61,.3)';
+    card.style.background  = 'rgba(21,128,61,.05)';
+    if (textEl) textEl.innerHTML = '<span style="color:#15803d">✓ Formulário aprovado pelo escritório</span>';
+    if (linkEl) linkEl.textContent = 'Ver formulário →';
+    if (linkEl) linkEl.href = 'onboarding.html';
+    if (hintEl) { hintEl.textContent = 'Seu caso está em análise para elaboração do plano de pagamento.'; hintEl.style.display = ''; }
+  } else if (wfStatus === 'rejeitado') {
+    card.style.borderColor = 'rgba(192,57,43,.3)';
+    card.style.background  = 'rgba(192,57,43,.05)';
+    if (textEl) textEl.innerHTML = '<span style="color:var(--red)">⚠ Correção solicitada pelo escritório</span>';
+    if (linkEl) linkEl.textContent = 'Revisar →';
+    if (linkEl) linkEl.href = 'onboarding.html';
+    const obs = formDoc?.observacao_admin || formDoc?.observacao || '';
+    if (hintEl && obs) { hintEl.textContent = obs; hintEl.style.display = ''; }
+    else if (hintEl) { hintEl.textContent = 'O escritório solicitou correções. Acesse o formulário para revisar.'; hintEl.style.display = ''; }
+  } else if (onboardingDone || wfStatus === 'em_analise') {
+    card.style.borderColor = 'rgba(245,166,35,.3)';
+    card.style.background  = 'rgba(245,166,35,.05)';
+    if (textEl) textEl.innerHTML = '<span style="color:#c07b00">Enviado — aguardando análise do escritório</span>';
+    if (linkEl) linkEl.textContent = 'Ver formulário →';
+    if (linkEl) linkEl.href = 'onboarding.html';
+    if (hintEl) { hintEl.textContent = 'Formulário enviado com sucesso. O escritório irá analisar e entrar em contato.'; hintEl.style.display = ''; }
+  } else if (cnjStepAtual > 0) {
+    if (textEl) textEl.textContent = `Em andamento — passo ${cnjStepAtual} de 7`;
+    if (linkEl) linkEl.textContent = 'Continuar →';
+    if (linkEl) linkEl.href = 'onboarding.html';
+    if (hintEl) { hintEl.textContent = `Continue de onde parou. ${7 - cnjStepAtual} passo(s) restante(s).`; hintEl.style.display = ''; }
+  } else {
+    if (textEl) textEl.textContent = 'Não iniciado';
+    if (linkEl) linkEl.textContent = 'Iniciar →';
+    if (linkEl) linkEl.href = 'onboarding.html';
+  }
+}
+
 /* ── Freshdesk ticket card ──────────────────────────── */
 function renderFDTicketCard(ticketId) {
   const card = byId('fd-ticket-card');
@@ -678,21 +760,34 @@ function renderFDTicketCard(ticketId) {
   if (link) link.href = `https://hmdesk.freshdesk.com/support/tickets/${ticketId}`;
 }
 
+/* ── Activity SVG icons ─────────────────────────────── */
+const _SVG = {
+  check:    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 7 5.5 10.5 12 3.5"/></svg>',
+  doc:      '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="1" width="10" height="12" rx="1.5"/><path d="M4 5h6M4 7.5h6M4 10h4"/></svg>',
+  upload:   '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9.5V3.5M4.5 6 7 3.5 9.5 6"/><path d="M2 11.5h10"/></svg>',
+  clock:    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4.5v2.8l1.8 1.8"/></svg>',
+  flag:     '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 1v12M3 1h8L9 5h2L9 9H3"/></svg>',
+  bell:     '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2a4 4 0 0 1 4 4c0 3 1 3.5 1 3.5H2s1-.5 1-3.5a4 4 0 0 1 4-4z"/><path d="M5.5 10.5a1.5 1.5 0 0 0 3 0"/></svg>',
+  handshake:'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l2.5 2.5L7 9l2.5 2.5L12 9M2 5l3 3 2-2 3 3"/></svg>',
+  x:        '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>',
+  msg:      '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="2" width="12" height="8" rx="1.5"/><path d="M4 13l3-3h3"/></svg>',
+};
+
 /* ── Timeline real (portal_cnj_timeline) ────────────── */
 const EVENTO_ICON = {
-  formulario_enviado:   { icon: 'CNJ', type: 'ok'   },
-  ticket_criado:        { icon: 'FD', type: 'ok'   },
-  ticket_atualizado:    { icon: 'AT', type: 'muted' },
-  documento_aprovado:   { icon: 'OK', type: 'ok'   },
-  documento_rejeitado:  { icon: 'NO', type: 'red'  },
-  documento_enviado:    { icon: 'UP', type: 'warn' },
-  fase_alterada:        { icon: 'FS', type: 'blue' },
-  step_concluido:       { icon: 'ET',  type: 'ok'   },
-  notificacao_enviada:  { icon: 'NT', type: 'muted' },
-  comentario_admin:     { icon: 'AD', type: 'blue' },
-  conciliacao_agendada: { icon: 'AG', type: 'ok'   },
-  acordo_formalizado:   { icon: 'AC', type: 'ok'   },
-  encerrado:            { icon: 'END', type: 'muted' },
+  formulario_enviado:   { svg: _SVG.doc,       type: 'ok'   },
+  ticket_criado:        { svg: _SVG.check,     type: 'ok'   },
+  ticket_atualizado:    { svg: _SVG.flag,      type: 'muted' },
+  documento_aprovado:   { svg: _SVG.check,     type: 'ok'   },
+  documento_rejeitado:  { svg: _SVG.x,         type: 'red'  },
+  documento_enviado:    { svg: _SVG.upload,    type: 'warn' },
+  fase_alterada:        { svg: _SVG.flag,      type: 'blue' },
+  step_concluido:       { svg: _SVG.check,     type: 'ok'   },
+  notificacao_enviada:  { svg: _SVG.bell,      type: 'muted' },
+  comentario_admin:     { svg: _SVG.msg,       type: 'blue' },
+  conciliacao_agendada: { svg: _SVG.clock,     type: 'ok'   },
+  acordo_formalizado:   { svg: _SVG.handshake, type: 'ok'   },
+  encerrado:            { svg: _SVG.flag,      type: 'muted' },
 };
 
 function buildTimelineFeed(timeline) {
@@ -701,11 +796,11 @@ function buildTimelineFeed(timeline) {
   if (!list || !countEl) return;
   countEl.textContent = timeline.length + ' evento' + (timeline.length !== 1 ? 's' : '');
   list.innerHTML = timeline.map(ev => {
-    const meta  = EVENTO_ICON[ev.tipo] || { icon: 'EV', type: 'muted' };
+    const meta  = EVENTO_ICON[ev.tipo] || { svg: _SVG.clock, type: 'muted' };
     const date  = ev.created_at ? new Date(ev.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
     return `
       <div class="activity-item">
-        <div class="activity-dot dot-${meta.type}" style="font-style:normal;font-size:14px">${meta.icon}</div>
+        <div class="activity-dot dot-${meta.type}" style="display:flex;align-items:center;justify-content:center;">${meta.svg}</div>
         <div class="activity-body">
           <div class="activity-label">${ev.descricao || ev.tipo}</div>
           <div class="activity-hint">${date}</div>
@@ -717,9 +812,9 @@ function buildTimelineFeed(timeline) {
 /* ── Fallback feed (quando timeline vazia) ──────────── */
 function buildActivityFeedLegacy(caso, dividas, docs) {
   const items = [];
-  if (caso?.onboarding_done) items.push({ icon: 'CNJ', label: 'Cadastro CNJ concluído',   hint: formatDate(caso.updated_at), type: 'ok' });
-  dividas.slice(-3).forEach(d  => items.push({ icon: 'DIV', label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor),          type: 'warn' }));
-  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ icon: 'OK', label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
+  if (caso?.onboarding_done) items.push({ svg: _SVG.doc,    label: 'Cadastro CNJ concluído',   hint: formatDate(caso.updated_at), type: 'ok' });
+  dividas.slice(-3).forEach(d  => items.push({ svg: _SVG.flag,   label: 'Dívida: ' + (d.credor || '—'), hint: formatCurrency(d.valor), type: 'warn' }));
+  docs.filter(d => d.status === 'aprovado').forEach(d => items.push({ svg: _SVG.check, label: 'Documento aprovado', hint: d.nome_arquivo || d.tipo, type: 'ok' }));
 
   const list = byId('activity-list');
   const countEl = byId('activity-count');
@@ -728,7 +823,7 @@ function buildActivityFeedLegacy(caso, dividas, docs) {
   countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
   list.innerHTML = items.map(it => `
     <div class="activity-item">
-      <div class="activity-dot dot-${it.type}">${it.icon || ''}</div>
+      <div class="activity-dot dot-${it.type}" style="display:flex;align-items:center;justify-content:center;">${it.svg || ''}</div>
       <div class="activity-body">
         <div class="activity-label">${it.label}</div>
         <div class="activity-hint">${it.hint}</div>

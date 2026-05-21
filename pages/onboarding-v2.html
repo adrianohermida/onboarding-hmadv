@@ -333,6 +333,7 @@ let activePlayer = null; // VideoPlayer instance
 let autosaveTimer = null;
 let uploadedFile  = null;
 let diagnostico   = null;  // financial diagnosis
+let casoState     = null;  // { onboarding_done, cnj_step_atual } — synced from DB on boot
 let isAdminUser = false;
 let unmountModeSelector = null;
 
@@ -416,15 +417,40 @@ async function loadData() {
     console.warn('[Journey] Could not load video progress:', e.message);
   }
 
-  // 3. Load financial data for diagnostics
+  // 3. Load financial data, onboarding state and diagnostics
   try {
     const caso = await supabase
       .from('portal_casos')
-      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj')
+      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj,onboarding_done,cnj_step_atual')
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .maybeSingle();
     if (caso.data) {
       const d = caso.data;
+
+      // Store form completion state for step rendering
+      casoState = {
+        onboarding_done: !!d.onboarding_done,
+        cnj_step_atual:  Number(d.cnj_step_atual) || 0,
+      };
+
+      // Sync engine states with DB truth (override sessionStorage if DB is more advanced)
+      if (casoState.onboarding_done) {
+        const cnj = engine.getState('cnj_form');
+        if (!['awaiting_review','approved','completed'].includes(cnj)) {
+          engine.setState('cnj_form', 'awaiting_review');
+        }
+        // Only auto-advance anexo_ii if it was not already handled by PDF upload
+        const anx = engine.getState('anexo_ii');
+        if (!['awaiting_review','approved','completed'].includes(anx)) {
+          engine.setState('anexo_ii', 'awaiting_review');
+        }
+      } else if (casoState.cnj_step_atual > 0) {
+        const cnj = engine.getState('cnj_form');
+        if (!['completed','approved','awaiting_review'].includes(cnj)) {
+          engine.setState('cnj_form', 'in_progress');
+        }
+      }
+
       let despesas = {};
       if (d.despesas && typeof d.despesas === 'object') {
         despesas = d.despesas;
@@ -831,7 +857,7 @@ function renderAnexoStep(step, container) {
           </div>
           <div class="option-card" id="opt-online" onclick="window.selectOption('online')">
             <div class="option-icon">WEB</div>
-            <div class="option-title">Online <span style="font-size:9px;background:rgba(245,166,35,.2);color:#c07b00;padding:1px 6px;border-radius:5px;vertical-align:middle">Em breve</span></div>
+            <div class="option-title">Online</div>
             <div class="option-desc">Formulário guiado no portal</div>
           </div>
         </div>
@@ -864,10 +890,25 @@ function renderAnexoStep(step, container) {
         </div>
 
         <div id="panel-online" style="display:none">
-          <div class="glass-info">
-            <div class="glass-info-title">Em desenvolvimento</div>
-            <ul><li>O formulário online guiado estará disponível em breve. Por enquanto utilize a opção de PDF.</li></ul>
-          </div>
+          ${casoState?.onboarding_done
+            ? `<div class="done-banner">Formulário online preenchido e enviado ao escritório. Acompanhe o status no Painel.</div>`
+            : `<div class="glass-info">
+                <div class="glass-info-title">Formulário online guiado</div>
+                <ul>
+                  <li>Preencha o formulário de superendividamento diretamente no portal, sem baixar PDF</li>
+                  <li>Seus dados são salvos automaticamente a cada passo</li>
+                  <li>Tempo estimado: 15–25 minutos</li>
+                </ul>
+                <div style="margin-top:14px">
+                  <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 2 12 7 5 12"/></svg>
+                    ${casoState?.cnj_step_atual > 0
+                      ? `Continuar formulário (passo ${casoState.cnj_step_atual}/7)`
+                      : 'Iniciar formulário online'}
+                  </a>
+                </div>
+              </div>`
+          }
         </div>
 
         <div class="jnav">
@@ -990,12 +1031,24 @@ function renderCnjFormStep(step, container) {
         </div>` : ''}
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
-          <div style="font-size:20px;margin-bottom:8px">CNJ</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Preencher Formulário CNJ</div>
-          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Suas respostas são salvas automaticamente.</div>
-          <a href="onboarding.html" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
-            Iniciar Formulario
-          </a>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">Formulário CNJ — Portal</div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:16px">
+            ${casoState?.onboarding_done
+              ? 'Formulário enviado com sucesso. Aguardando revisão do escritório.'
+              : casoState?.cnj_step_atual > 0
+              ? `Formulário em andamento — passo ${casoState.cnj_step_atual} de 7. Continue de onde parou.`
+              : 'Preencha os 7 passos do formulário. Suas respostas são salvas automaticamente.'}
+          </div>
+          ${casoState?.onboarding_done
+            ? `<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(21,128,61,.1);color:var(--ok);border:1px solid rgba(21,128,61,.25);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 8 6 12 14 4"/></svg>
+                Enviado — aguardando análise
+              </div>`
+            : `<a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 2 12 7 5 12"/></svg>
+                ${casoState?.cnj_step_atual > 0 ? `Continuar (passo ${casoState.cnj_step_atual}/7)` : 'Iniciar Formulário'}
+              </a>`
+          }
         </div>
 
         <div class="jnav">
