@@ -441,29 +441,11 @@ async function loadData() {
     if (caso.data) {
       const d = caso.data;
 
-      // Store form completion state for step rendering
+      // Store form completion state for step rendering — engine.setState synced in section 6
       casoState = {
         onboarding_done: !!d.onboarding_done,
         cnj_step_atual:  Number(d.cnj_step_atual) || 0,
       };
-
-      // Sync engine states with DB truth (override sessionStorage if DB is more advanced)
-      if (casoState.onboarding_done) {
-        const cnj = engine.getState('cnj_form');
-        if (!['awaiting_review','approved','completed'].includes(cnj)) {
-          engine.setState('cnj_form', 'awaiting_review');
-        }
-        // Only auto-advance anexo_ii if it was not already handled by PDF upload
-        const anx = engine.getState('anexo_ii');
-        if (!['awaiting_review','approved','completed'].includes(anx)) {
-          engine.setState('anexo_ii', 'awaiting_review');
-        }
-      } else if (casoState.cnj_step_atual > 0) {
-        const cnj = engine.getState('cnj_form');
-        if (!['completed','approved','awaiting_review'].includes(cnj)) {
-          engine.setState('cnj_form', 'in_progress');
-        }
-      }
 
       let despesas = {};
       if (d.despesas && typeof d.despesas === 'object') {
