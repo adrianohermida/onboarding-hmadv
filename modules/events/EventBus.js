@@ -31,7 +31,10 @@ export class EventBus extends EventTarget {
     eventMap.set(handler, wrapper);
     this._listenerMap.set(event, eventMap);
     this.addEventListener(event, wrapper);
-    return () => this.removeEventListener(event, wrapper);
+    return () => {
+      this.removeEventListener(event, wrapper);
+      eventMap.delete(handler);
+    };
   }
 
   /** Remove listener registered by handler reference */

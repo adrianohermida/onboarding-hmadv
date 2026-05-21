@@ -17,6 +17,7 @@ export class NotificationCenter {
     this._el        = null;
     this._panel     = null;
     this._isOpen    = false;
+    this._unsubs    = [];
   }
 
   // ── Mount ──────────────────────────────────────────────────────────────────
@@ -49,12 +50,23 @@ export class NotificationCenter {
       this._togglePanel();
     });
 
+    this._el.querySelector('#notif-bell-btn').addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this._togglePanel();
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') this._closePanel();
+    });
+
     document.addEventListener('click', () => this._closePanel());
 
     // Subscribe to store changes
-    store.subscribe('notifications', ({ detail: { state } }) => {
+    this._unsubs.push(store.subscribe('notifications', ({ detail: { state } }) => {
       this._updateBadge(state.unreadCount);
-    });
+    }));
 
     // Wire EventBus events → notifications
     this._bindBusEvents();
@@ -62,14 +74,17 @@ export class NotificationCenter {
 
   // ── Bus → Notifications ────────────────────────────────────────────────────
   _bindBusEvents() {
-    const evt = (tipo, icon, makeMsg) => bus.on(tipo, data => {
-      store.addNotification({
-        type:    tipo,
-        icon,
-        message: makeMsg(data),
-        ts:      new Date().toISOString(),
+    const evt = (tipo, icon, makeMsg) => {
+      const unsub = bus.on(tipo, data => {
+        store.addNotification({
+          type:    tipo,
+          icon,
+          message: this._normalizeMessage(makeMsg(data)),
+          ts:      new Date().toISOString(),
+        });
       });
-    });
+      this._unsubs.push(unsub);
+    };
 
     evt('document.approved',   '✓', d => `Documento aprovado`);
     evt('document.rejected',   '✗', d => `Documento rejeitado — verifique o motivo`);
@@ -82,14 +97,14 @@ export class NotificationCenter {
     evt('onboarding.completed','★', d => `Onboarding concluido`);
     evt('tenant.changed',      'T', d => `Tenant atualizado`);
     evt('auth.changed',        'A', d => `Sessao atualizada`);
-    bus.on('notification.created', data => {
+    this._unsubs.push(bus.on('notification.created', data => {
       store.addNotification({
         type: data?.type || 'notification.created',
         icon: data?.icon || '•',
-        message: data?.message || 'Nova notificacao',
+        message: this._normalizeMessage(data?.message || 'Nova notificacao'),
         ts: new Date().toISOString(),
       });
-    });
+    }));
   }
 
   // ── Panel ──────────────────────────────────────────────────────────────────
@@ -105,9 +120,9 @@ export class NotificationCenter {
     const content = items.length
       ? items.slice(0, 12).map(n => `
           <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid #f1f5f9;">
-            <span style="flex-shrink:0;width:24px;height:24px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">${n.icon || '•'}</span>
+            <span style="flex-shrink:0;width:24px;height:24px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">${this._escapeHtml(n.icon || '•')}</span>
             <div>
-              <div style="font-size:12px;color:#0f1923;">${n.message}</div>
+              <div style="font-size:12px;color:#0f1923;">${this._escapeHtml(this._normalizeMessage(n.message))}</div>
               <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${this._fmtTs(n.ts)}</div>
             </div>
           </div>`).join('')
@@ -116,9 +131,9 @@ export class NotificationCenter {
     if (this._panel) this._panel.remove();
     this._panel = document.createElement('div');
     this._panel.style.cssText = `
-      position:absolute;top:calc(100% + 8px);right:0;width:300px;
+      position:absolute;top:calc(100% + 8px);right:0;width:min(320px, calc(100vw - 24px));
       background:#fff;border-radius:12px;border:1px solid #e2e8f0;
-      box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:800;overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:800;overflow:hidden;max-height:min(70vh, 520px);
     `;
     this._panel.innerHTML = `
       <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:700;color:#0f1923;">Notificações</div>
@@ -151,6 +166,21 @@ export class NotificationCenter {
     const h = Math.floor(m / 60);
     if (h < 24) return `${h}h atrás`;
     return new Date(ts).toLocaleDateString('pt-BR');
+  }
+
+  _normalizeMessage(value) {
+    const message = String(value ?? '').trim();
+    if (!message) return 'Notificacao sem descricao';
+    return message.length > 180 ? `${message.slice(0, 177)}...` : message;
+  }
+
+  _escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 }
 
