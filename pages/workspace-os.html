@@ -2,13 +2,33 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workspace OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Workspace OS | Hermida Maia Advocacia</title>
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
 </head>
 <body>
-  <main>
-    <h1>Workspace OS Foundation</h1>
-    <p>Command center, copilot contextual e operacoes multi-painel ativas no shell.</p>
-  </main>
+  <div class="portal-shell">
+    <div data-component="sidebar"></div>
+    <div class="main-area">
+      <div data-component="header"></div>
+      <main class="page-content">
+        <div class="page-header page-header-row">
+          <div>
+            <h1>Workspace OS</h1>
+            <p>Command center, contexto operacional, quick actions e navegação multi-painel do shell jurídico.</p>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Painéis</span><div class="kpi-value">4</div><div class="kpi-hint">Superfícies ativas</div></div>
+          <div class="kpi"><span class="kpi-label">Busca</span><div class="kpi-value">Omni</div><div class="kpi-hint">Acesso contextual</div></div>
+          <div class="kpi kpi-ok"><span class="kpi-label">Atalhos</span><div class="kpi-value">Prontos</div><div class="kpi-hint">Workflow-ready</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="../js/app.js?v=20260521p"></script>
 </body>
 </html>

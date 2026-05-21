@@ -2,15 +2,33 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UI OS | HMADV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>UI OS | Hermida Maia Advocacia</title>
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
 </head>
 <body>
-  <main class="page-content">
-    <section class="page-header">
-      <h1>UI Operating System</h1>
-      <p>Workspace UI enterprise, mobile-first e preparado para copilots e interacoes operacionais consistentes.</p>
-    </section>
-  </main>
+  <div class="portal-shell">
+    <div data-component="sidebar"></div>
+    <div class="main-area">
+      <div data-component="header"></div>
+      <main class="page-content">
+        <div class="page-header page-header-row">
+          <div>
+            <h1>UI Operating System</h1>
+            <p>Interface enterprise, mobile-first, responsiva e pronta para copilots e operações multi-contexto.</p>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Design system</span><div class="kpi-value">Ativo</div><div class="kpi-hint">Tokens e componentes</div></div>
+          <div class="kpi"><span class="kpi-label">Mobile-first</span><div class="kpi-value">OK</div><div class="kpi-hint">Navegação adaptativa</div></div>
+          <div class="kpi kpi-ok"><span class="kpi-label">Acessibilidade</span><div class="kpi-value">Base</div><div class="kpi-hint">Hooks globais</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="../js/app.js?v=20260521p"></script>
 </body>
 </html>

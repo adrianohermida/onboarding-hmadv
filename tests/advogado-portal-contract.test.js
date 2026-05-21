@@ -36,6 +36,17 @@ describe('portal do advogado contract', () => {
     });
   });
 
+  it('ships shell-mounted enterprise pages for the new operating system modules', () => {
+    ['analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'].forEach(key => {
+      const html = readFile('pages', `${key}.html`);
+
+      expect(html).toContain('data-component="sidebar"');
+      expect(html).toContain('data-component="header"');
+      expect(html).toContain('main class="page-content"');
+      expect(html).toContain('../js/app.js?v=20260521p');
+    });
+  });
+
   it('defines operational CRUD configuration for all lawyer CRUD modules', () => {
     crudKeys.forEach(key => {
       const config = ADVOGADO_MODULES[key];

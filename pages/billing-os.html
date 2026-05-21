@@ -2,13 +2,33 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Billing OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Billing OS | Hermida Maia Advocacia</title>
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
 </head>
 <body>
-  <main>
-    <h1>Billing OS Foundation</h1>
-    <p>Assinaturas, quotas, usage, checkout e monetizacao enterprise ativos.</p>
-  </main>
+  <div class="portal-shell">
+    <div data-component="sidebar"></div>
+    <div class="main-area">
+      <div data-component="header"></div>
+      <main class="page-content">
+        <div class="page-header page-header-row">
+          <div>
+            <h1>Billing OS</h1>
+            <p>Assinaturas, quotas, usage, checkout e monetização enterprise conectados ao runtime.</p>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Planos</span><div class="kpi-value">3</div><div class="kpi-hint">Catálogo ativo</div></div>
+          <div class="kpi"><span class="kpi-label">Uso</span><div class="kpi-value">Metered</div><div class="kpi-hint">Consumo monitorado</div></div>
+          <div class="kpi kpi-warn"><span class="kpi-label">Faturas</span><div class="kpi-value">Live</div><div class="kpi-hint">Ciclo financeiro</div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="../js/app.js?v=20260521p"></script>
 </body>
 </html>
