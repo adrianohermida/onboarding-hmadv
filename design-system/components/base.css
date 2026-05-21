@@ -1,0 +1,68 @@
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  padding: 10px 14px;
+  font: 600 var(--ds-font-size-md)/1 var(--ds-font-family-sans);
+  cursor: pointer;
+  transition: transform var(--ds-transition-fast), box-shadow var(--ds-transition-base), background var(--ds-transition-fast);
+}
+
+.ds-btn:focus-visible,
+.ds-input:focus-visible,
+.ds-select:focus-visible,
+.ds-textarea:focus-visible {
+  outline: 2px solid var(--ds-color-brand-700);
+  outline-offset: 2px;
+}
+
+.ds-btn-primary { background: var(--theme-brand); color: #fff; box-shadow: var(--ds-shadow-sm); }
+.ds-btn-primary:hover { transform: translateY(-1px); box-shadow: var(--ds-shadow-md); }
+.ds-btn-secondary { background: #fff; border-color: var(--theme-line); color: var(--theme-text); }
+
+.ds-input,
+.ds-select,
+.ds-textarea {
+  width: 100%;
+  border: 1px solid var(--theme-line);
+  border-radius: var(--ds-radius-sm);
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--theme-text);
+}
+
+.ds-card {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-line);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-sm);
+  padding: var(--ds-space-4);
+}
+
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font: 700 var(--ds-font-size-xs)/1.6 var(--ds-font-family-sans);
+}
+
+.ds-badge-ok { background: rgba(26,122,74,.12); color: var(--ds-color-ok-500); }
+.ds-badge-warn { background: rgba(180,83,9,.12); color: var(--ds-color-warn-500); }
+.ds-badge-danger { background: rgba(192,57,43,.12); color: var(--ds-color-danger-500); }
+
+.ds-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #eef2f7 0%, #f7f9fb 45%, #eef2f7 100%);
+  background-size: 220% 100%;
+  border-radius: var(--ds-radius-sm);
+  animation: dsShimmer 1.2s linear infinite;
+}
+
+@keyframes dsShimmer {
+  to { background-position: -220% 0; }
+}
