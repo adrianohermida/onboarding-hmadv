@@ -165,14 +165,15 @@ export const DocumentService = {
     const { data, error } = await supabase
       .from('portal_documentos')
       .select('*')
-      .eq('user_id', uid);
+      .eq('user_id', uid)
+      .is('deleted_at', null);
     if (error) throw error;
     return data || [];
   },
 
   async upload(tipo, file) {
-    const uid = await getUserId();
-    const ext = file.name.split('.').pop();
+    const uid  = await getUserId();
+    const ext  = file.name.split('.').pop();
     const path = `${uid}/${tipo}/${Date.now()}.${ext}`;
 
     const { data, error } = await supabase.storage
@@ -180,13 +181,132 @@ export const DocumentService = {
       .upload(path, file, { upsert: true });
     if (error) throw error;
 
+    // Upsert document record with enterprise fields
     const { error: dbErr } = await supabase
       .from('portal_documentos')
-      .update({ status: 'em_analise', storage_path: data.path, nome_arquivo: file.name })
-      .eq('user_id', uid)
-      .eq('tipo', tipo);
+      .upsert({
+        user_id:         uid,
+        tipo,
+        status:          'em_analise',
+        workflow_status: 'em_analise',
+        storage_path:    data.path,
+        nome_arquivo:    file.name,
+        file_size:       file.size,
+        mime_type:       file.type,
+        direction:       'client_to_office',
+        uploaded_by:     uid,
+        updated_at:      new Date().toISOString(),
+      }, { onConflict: 'user_id,tipo' });
     if (dbErr) throw dbErr;
 
+    return data;
+  },
+
+  async getSignedUrl(storagePath, expiresIn = 3600) {
+    const { data, error } = await supabase.storage
+      .from('portal-documentos')
+      .createSignedUrl(storagePath, expiresIn);
+    if (error) throw error;
+    return data.signedUrl;
+  },
+
+  async adminUpdateWorkflow(docId, workflowStatus, notes = null, adminNotes = null) {
+    const { data, error } = await supabase.rpc('admin_update_doc_workflow', {
+      p_doc_id:          docId,
+      p_workflow_status: workflowStatus,
+      p_observacao:      notes,
+      p_admin_notes:     adminNotes,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  // Legacy admin_update_doc_status compatibility
+  async adminUpdateStatus(docId, status, observacao = null) {
+    const wfMap = {
+      aprovado:   'aprovado',
+      recusado:   'rejeitado',
+      em_analise: 'em_analise',
+    };
+    return this.adminUpdateWorkflow(docId, wfMap[status] || status, observacao);
+  },
+
+  async getDocTimeline(documentId) {
+    const { data, error } = await supabase
+      .from('portal_cnj_timeline')
+      .select('*')
+      .eq('documento_id', documentId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    return data || [];
+  },
+
+  async logTimeline({ documentId, eventoTipo, eventoSubtipo, payload = {} }) {
+    const uid = await getUserId().catch(() => null);
+    // Get caso_id from the document
+    const { data: doc } = await supabase
+      .from('portal_documentos')
+      .select('caso_id, workspace_id')
+      .eq('id', documentId)
+      .maybeSingle();
+
+    if (!doc?.caso_id) return;
+    const { error } = await supabase
+      .from('portal_cnj_timeline')
+      .insert({
+        caso_id:        doc.caso_id,
+        workspace_id:   doc.workspace_id,
+        documento_id:   documentId,
+        evento_tipo:    eventoTipo,
+        evento_subtipo: eventoSubtipo,
+        descricao:      `Documento: ${eventoTipo}`,
+        payload,
+        author_uid:     uid,
+        is_visible_client: true,
+      });
+    if (error) console.warn('[DocumentService] logTimeline error:', error.message);
+  },
+
+  async listRequests() {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_document_requests')
+      .select('*')
+      .eq('user_id', uid)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async fulfillRequest(requestId) {
+    const { error } = await supabase
+      .from('portal_document_requests')
+      .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
+      .eq('id', requestId);
+    if (error) throw error;
+  },
+
+  // Admin: list docs for a specific user
+  async listForUser(userId) {
+    const { data, error } = await supabase
+      .from('portal_documentos')
+      .select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Admin: create document request
+  async createRequest(fields) {
+    const { data, error } = await supabase
+      .from('portal_document_requests')
+      .insert(fields)
+      .select()
+      .single();
+    if (error) throw error;
     return data;
   },
 };

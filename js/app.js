@@ -11,6 +11,40 @@ const SHELL_STYLE_ATTR = 'data-shell-page-style';
 
 let appUserDetail = null;
 let shellNavInFlight = false;
+let captureModuleListeners = true;
+const capturedModuleListeners = [];
+
+const nativeDocumentAddEventListener = document.addEventListener.bind(document);
+const nativeDocumentRemoveEventListener = document.removeEventListener.bind(document);
+const nativeWindowAddEventListener = window.addEventListener.bind(window);
+const nativeWindowRemoveEventListener = window.removeEventListener.bind(window);
+
+function trackModuleListener(target, type, listener, options) {
+  if (!captureModuleListeners || typeof listener !== 'function') return;
+  capturedModuleListeners.push({ target, type, listener, options });
+}
+
+function cleanupModuleListeners() {
+  while (capturedModuleListeners.length) {
+    const item = capturedModuleListeners.pop();
+    if (!item) continue;
+    if (item.target === document) {
+      nativeDocumentRemoveEventListener(item.type, item.listener, item.options);
+    } else if (item.target === window) {
+      nativeWindowRemoveEventListener(item.type, item.listener, item.options);
+    }
+  }
+}
+
+document.addEventListener = function patchedDocumentAddEventListener(type, listener, options) {
+  nativeDocumentAddEventListener(type, listener, options);
+  trackModuleListener(document, type, listener, options);
+};
+
+window.addEventListener = function patchedWindowAddEventListener(type, listener, options) {
+  nativeWindowAddEventListener(type, listener, options);
+  trackModuleListener(window, type, listener, options);
+};
 
 /* ── Session cache helpers ───────────────────────── */
 function getCached() {
@@ -106,6 +140,9 @@ function syncMainContent(parsedDoc) {
 }
 
 async function runPageScripts(parsedDoc, targetUrl) {
+  cleanupModuleListeners();
+  captureModuleListeners = true;
+
   const scripts = [...parsedDoc.querySelectorAll('script[type="module"]')]
     .filter(s => {
       const src = s.getAttribute('src') || '';
@@ -132,6 +169,8 @@ async function runPageScripts(parsedDoc, targetUrl) {
       });
     }
   }
+
+  captureModuleListeners = false;
 }
 
 async function navigateModule(url, { pushState = true } = {}) {
@@ -398,6 +437,8 @@ function initModalClose() {
 
 /* ── Init ────────────────────────────────────────── */
 async function init() {
+  captureModuleListeners = false;
+
   const allowed = await guardAuth();
   if (!allowed) return;
 
@@ -416,4 +457,4 @@ async function init() {
   document.body.classList.add('app-loaded');
 }
 
-document.addEventListener('DOMContentLoaded', init);
+nativeDocumentAddEventListener('DOMContentLoaded', init);
