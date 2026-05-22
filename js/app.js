@@ -956,6 +956,14 @@ function getNavIcon(moduleKey) {
     'billing-os': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M4 4.5h10A1.5 1.5 0 0 1 15.5 6v6A1.5 1.5 0 0 1 14 13.5H4A1.5 1.5 0 0 1 2.5 12V6A1.5 1.5 0 0 1 4 4.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M11 9h2.5M5 8.5h2M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     onboarding: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="3" y="1" width="12" height="16" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 6h6M6 9h6M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
     suporte: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 10.5V11M6.8 7a2.2 2.2 0 014.2.7c0 1.4-2 2.1-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    'visao-geral': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M2 9L9 3l7 6M4 8v7h4v-4h2v4h4V8" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+    'meus-casos': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M7 3h4l1 2H6L7 3zM2 6h14a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V7a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 10c0-1 1.5-2 1.5-.5C10.5 11 9 12 9 12s-1.5-1-1.5-2.5C7.5 8 9 9 9 10z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
+    'meus-processos': '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M9 2v14M6 16h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="4" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="14" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M4 6.5L9 5l5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    honorarios: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="1" y="4" width="16" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M1 8h16" stroke="currentColor" stroke-width="1.5"/><circle cx="13.5" cy="12" r="1" fill="currentColor"/></svg>',
+    atendimento: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 11V9a6 6 0 0112 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="2" y="11" width="3" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="11" width="3" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>',
+    marketplace: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><path d="M3 2h12l2 5H1L3 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 7v1a3 3 0 006 0 3 3 0 006 0V7" stroke="currentColor" stroke-width="1.5"/><path d="M4 17V11h10v6M4 17h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    configuracoes: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.5 3.5l1.4 1.4M13.1 13.1l1.4 1.4M3.5 14.5l1.4-1.4M13.1 4.9l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    prazos: '<svg class="nav-icon" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1.5v3M13 1.5v3M2 7h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 10v2M9 14h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   };
 
   return icons[moduleKey] || icons.dashboard;
@@ -2309,8 +2317,8 @@ function renderMobileWorkspaceNav() {
   }
 
   const preferred = getEffectiveIsAdmin()
-    ? ['painel', 'documentos', 'processos', 'analytics']
-    : ['meu-caso', 'onboarding-v2', 'meus-documentos', 'suporte'];
+    ? ['painel', 'tarefas', 'prazos', 'clientes']
+    : ['visao-geral', 'meus-casos', 'meus-documentos', 'atendimento'];
   const modules = getShellModules().filter(module => preferred.includes(module.key));
   dock.innerHTML = modules.map(module => `
     <a href="${module.key}.html" data-page="${module.key}" class="shell-mobile-nav-link">
