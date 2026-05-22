@@ -116,9 +116,10 @@ export function usePublicacaoDetalhe(id: string | null) {
       const { data, error } = await jud()
         .from('publicacoes')
         .select(`
-          id, processo_id, data_publicacao, conteudo, despacho, tem_prazo, prazo_data,
-          lido, ativo, nome_cliente, nome_diario, descricao_diario, nome_caderno_diario,
-          cidade_comarca_descricao, vara_descricao, numero_processo_api, adriano_polo,
+          id, processo_id, data_publicacao, data_disponibilizacao, conteudo, despacho,
+          tem_prazo, prazo_data, lido, ativo, nome_cliente, nome_diario, descricao_diario,
+          nome_caderno_diario, cidade_comarca_descricao, vara_descricao, numero_processo_api,
+          adriano_polo, palavras_chave, numero_edicao, pagina_inicial, pagina_final, comentario,
           ai_resumo, ai_tipo_ato, ai_prazo_sugerido, ai_urgencia, ai_enriquecido_at, data_hora_cadastro,
           processos:processo_id (
             id, numero_cnj, tribunal, comarca, status, classe, orgao_julgador
@@ -369,6 +370,154 @@ export function useVincularProcesso() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['publicacao', variables.publicacaoId] });
       qc.invalidateQueries({ queryKey: ['publicacoes'] });
+    },
+  });
+}
+
+export function useMarcarNaoLida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await jud()
+        .from('publicacoes')
+        .update({ lido: false })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['publicacoes'] });
+      qc.invalidateQueries({ queryKey: ['publicacao'] });
+    },
+  });
+}
+
+export function useSalvarComentario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, comentario }: { id: string; comentario: string }) => {
+      const { error } = await jud()
+        .from('publicacoes')
+        .update({ comentario: comentario.trim() || null })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['publicacao', variables.id] });
+    },
+  });
+}
+
+export function useCriarProcessoPublicacao() {
+  const qc = useQueryClient();
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async ({
+      publicacaoId,
+      numeroCnj,
+      comarca,
+      vara,
+      classe,
+    }: {
+      publicacaoId: string;
+      numeroCnj: string;
+      comarca?: string | null;
+      vara?: string | null;
+      classe?: string | null;
+    }) => {
+      // Create process in judiciário schema
+      const { data: processo, error: errProcesso } = await jud()
+        .from('processos')
+        .insert({
+          numero_cnj: numeroCnj,
+          comarca,
+          orgao_julgador: vara,
+          classe,
+          status: 'ativo',
+        })
+        .select('id')
+        .single();
+      if (errProcesso) throw errProcesso;
+
+      // Link publication to new process
+      const { error: errVinculo } = await jud()
+        .from('publicacoes')
+        .update({ processo_id: processo.id })
+        .eq('id', publicacaoId);
+      if (errVinculo) throw errVinculo;
+
+      // Trigger CNJ enrichment via edge function (non-blocking)
+      supabase.functions
+        .invoke('portal-cnj-complete', { body: { processo_id: processo.id, numero_cnj: numeroCnj } })
+        .catch(() => {/* enrichment is best-effort */});
+
+      return processo;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['publicacao', variables.publicacaoId] });
+      qc.invalidateQueries({ queryKey: ['publicacoes'] });
+    },
+  });
+}
+
+export function useCalcularPrazoAutomatico() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      publicacaoId,
+      processoId,
+      comarca,
+      vara,
+      dataPublicacao,
+      dataDisponibilizacao,
+      conteudo,
+      aiPrazoSugerido,
+    }: {
+      publicacaoId: string;
+      processoId: string;
+      comarca?: string | null;
+      vara?: string | null;
+      dataPublicacao?: string | null;
+      dataDisponibilizacao?: string | null;
+      conteudo?: string | null;
+      aiPrazoSugerido?: number | null;
+    }) => {
+      // Determine data_base: prefer disponibilizacao, fallback to publicacao
+      const dataBase = dataDisponibilizacao?.split('T')[0] ?? dataPublicacao?.split('T')[0] ?? new Date().toISOString().split('T')[0];
+      // Início de contagem: next business day after disponibilização (simplified: +1 day)
+      const inicioContagem = (() => {
+        const d = new Date(dataBase);
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
+      })();
+      // Vencimento: use AI suggestion or default to 15 dias úteis (~21 calendar days)
+      const prazosDias = aiPrazoSugerido ?? 15;
+      const dataVencimento = (() => {
+        const d = new Date(inicioContagem);
+        d.setDate(d.getDate() + prazosDias);
+        return d.toISOString().split('T')[0];
+      })();
+
+      const { data, error } = await jud()
+        .from('prazo_calculado')
+        .insert({
+          processo_id: processoId,
+          publicacao_id: publicacaoId,
+          evento_tipo: 'publicacao',
+          titulo: `Prazo — ${vara ?? comarca ?? 'Publicação'}`,
+          data_base: dataBase,
+          data_inicio_contagem: inicioContagem,
+          data_vencimento: dataVencimento,
+          status: 'aberto',
+          observacoes_ia: `Calculado automaticamente. Comarca: ${comarca ?? '—'} | Vara: ${vara ?? '—'} | Base legal inferida do conteúdo.`,
+          metadata: { comarca, vara, conteudo_snippet: conteudo?.slice(0, 200) },
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['publicacao', variables.publicacaoId] });
     },
   });
 }

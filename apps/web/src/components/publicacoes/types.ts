@@ -107,6 +107,7 @@ export interface PublicacaoDetalhe {
   id: string;
   processo_id: string | null;
   data_publicacao: string | null;
+  data_disponibilizacao: string | null;
   conteudo: string | null;
   despacho: string | null;
   tem_prazo: boolean | null;
@@ -121,6 +122,11 @@ export interface PublicacaoDetalhe {
   vara_descricao: string | null;
   numero_processo_api: string | null;
   adriano_polo: string | null;
+  palavras_chave: string | null;
+  numero_edicao: string | null;
+  pagina_inicial: string | null;
+  pagina_final: string | null;
+  comentario: string | null;
   ai_resumo: string | null;
   ai_tipo_ato: string | null;
   ai_prazo_sugerido: number | null;
