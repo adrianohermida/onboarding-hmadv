@@ -506,8 +506,8 @@ export function usePrazosContagens() {
       const amanhaStr = new Date(base.getTime() + 86_400_000).toISOString();
       const semanaStr = new Date(base.getTime() + 7 * 86_400_000).toISOString();
 
-      const excluir = (q: ReturnType<typeof jud>) =>
-        q.neq('status', 'concluido').neq('status', 'cancelado');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const excluir = (q: any) => q.neq('status', 'concluido').neq('status', 'cancelado');
 
       const [a, b, c, d] = await Promise.all([
         excluir(jud().from('prazo_calculado').select('id', { count: 'exact', head: true }))
