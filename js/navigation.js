@@ -56,13 +56,12 @@ export const FEATURE_FLAGS = {
 
 export const PORTAL_MODULES = [
 
-  // ── Cliente — 5 sidebar items ─────────────────────────────────────────────
+  // ── Cliente — 4 sidebar hubs ─────────────────────────────────────────────
 
-  { key: 'meu-caso',        title: 'Meu Caso',            menuLabel: 'Meu Caso',       parent: null,      order: 10,  visible: true,  roles: ['cliente'],         feature: 'meuCaso',          icon: 'heart-handshake', sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'financeiro',      title: 'Financeiro',          menuLabel: 'Financeiro',     parent: 'Meu Caso', order: 20,  visible: true,  roles: ['cliente'],         feature: 'financeiro',       icon: 'wallet',          sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'meus-documentos', title: 'Documentos',          menuLabel: 'Documentos',     parent: 'Meu Caso', order: 30,  visible: true,  roles: ['cliente'],         feature: 'meusDocumentos',   icon: 'file-text',       sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'mensagens',       title: 'Mensagens',           menuLabel: 'Mensagens',      parent: 'Meu Caso', order: 40,  visible: true,  roles: ['cliente', 'admin'], feature: 'mensagensCliente', icon: 'message-square',  sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10, adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
-  { key: 'ajuda',           title: 'Atendimento',         menuLabel: 'Atendimento',    parent: 'Meu Caso', order: 50,  visible: true,  roles: ['cliente'],         feature: 'ajuda',            icon: 'headphones',      sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'meu-caso',        title: 'Meu Caso',            menuLabel: 'Meu Caso',       parent: null,      order: 10,  visible: true,  roles: ['cliente'],  feature: 'meuCaso',          icon: 'heart-handshake', sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'financeiro',      title: 'Financeiro',          menuLabel: 'Financeiro',     parent: 'Meu Caso', order: 20, visible: true,  roles: ['cliente'],  feature: 'financeiro',       icon: 'wallet',          sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'meus-documentos', title: 'Documentos',          menuLabel: 'Documentos',     parent: 'Meu Caso', order: 30, visible: true,  roles: ['cliente'],  feature: 'meusDocumentos',   icon: 'file-text',       sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'ajuda',           title: 'Atendimento',         menuLabel: 'Atendimento',    parent: 'Meu Caso', order: 50, visible: true,  roles: ['cliente'],  feature: 'ajuda',            icon: 'headphones',      sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
 
   // ── Cliente — sub-pages (routable but not in sidebar) ────────────────────
 
@@ -72,7 +71,7 @@ export const PORTAL_MODULES = [
   { key: 'plano-pagamento', title: 'Plano de Pagamento',  menuLabel: 'Plano',          parent: 'Financeiro', order: 240, visible: false, roles: ['cliente'],        feature: 'planoPagamento',   icon: 'list-checks' },
   { key: 'minhas-dividas',  title: 'Minhas Dívidas',      menuLabel: 'Dívidas',        parent: 'Financeiro', order: 250, visible: false, roles: ['cliente'],        feature: 'minhasDividas',    icon: 'credit-card' },
   { key: 'dashboard',       title: 'Dashboard',           menuLabel: 'Início',         parent: null,         order: 500, visible: false, roles: ['cliente'],        feature: 'dashboard',        icon: 'layout-dashboard' },
-  { key: 'suporte',         title: 'Suporte',             menuLabel: 'Suporte',        parent: 'Meu Caso',   order: 510, visible: false, roles: ['cliente', 'admin'], feature: 'suporte',        icon: 'circle-help',    adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
+  { key: 'suporte',         title: 'Suporte',             menuLabel: 'Suporte',        parent: 'Meu Caso',   order: 510, adminOrder: 150, visible: true,  roles: ['admin'], feature: 'suporte',        icon: 'circle-help',    adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
   { key: 'onboarding',      title: 'Formulário',          menuLabel: 'Formulário',     parent: 'Meu Caso',   order: 520, visible: false, roles: ['cliente', 'admin'], feature: 'onboardingLegacy', icon: 'clipboard-list' },
   { key: 'onboarding-v2',   title: 'Jornada CNJ',         menuLabel: 'Jornada',        parent: 'Meu Caso',   order: 530, visible: false, roles: ['cliente', 'admin'], feature: 'onboardingV2',   icon: 'route' },
   { key: 'financial-dashboard', title: 'Diagnóstico Financeiro', menuLabel: 'Diagnóstico', parent: 'Meu Caso', order: 540, visible: false, roles: ['cliente', 'admin'], feature: 'financialDashboard', icon: 'chart-column' },
@@ -97,9 +96,9 @@ export const PORTAL_MODULES = [
   { key: 'custas-processuais',      title: 'Custas',              menuLabel: 'Custas',         parent: 'Painel', order: 120, visible: true, roles: ['admin'], feature: 'custasProcessuais',    icon: 'receipt',       adminSidebarSection: 'financeiro-adm', adminSidebarSectionLabel: 'Financeiro', adminSidebarSectionOrder: 30 },
   { key: 'financeiro-processual',   title: 'Financeiro Processual', menuLabel: 'Cobranças',    parent: 'Painel', order: 130, visible: true, roles: ['admin'], feature: 'financeiroProcessual', icon: 'wallet-cards',  adminSidebarSection: 'financeiro-adm', adminSidebarSectionLabel: 'Financeiro', adminSidebarSectionOrder: 30 },
 
-  // ── Admin — Relacionamento ────────────────────────────────────────────────
+  // ── Admin — Relacionamento ─────────────────────────────────────────────────
 
-  // (mensagens appears above under shared, already has adminSidebarSection)
+  { key: 'mensagens', title: 'Mensagens', menuLabel: 'Mensagens', parent: 'Painel', order: 40, adminOrder: 140, visible: true, roles: ['admin'], feature: 'mensagensCliente', icon: 'message-square', adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
 
   // ── Admin — Gestão ────────────────────────────────────────────────────────
 
@@ -108,7 +107,7 @@ export const PORTAL_MODULES = [
 
   // ── Admin — sub-pages (routable, not in sidebar) ──────────────────────────
 
-  { key: 'partes',              title: 'Partes',                menuLabel: 'Partes',              parent: 'Painel', order: 300, visible: false, roles: ['admin'], feature: 'partes',              icon: 'contact-round' },
+  { key: 'partes',              title: 'Partes',                menuLabel: 'Partes',              parent: 'Painel', order: 300, adminOrder: 160, visible: true,  roles: ['admin'], feature: 'partes',              icon: 'contact-round', adminSidebarSection: 'cadastros', adminSidebarSectionLabel: 'Cadastros', adminSidebarSectionOrder: 45 },
   { key: 'documentos',          title: 'Documentos',            menuLabel: 'Documentos',          parent: 'Painel', order: 310, visible: false, roles: ['admin'], feature: 'documentos',          icon: 'file-text' },
   { key: 'dividas',             title: 'Dívidas',               menuLabel: 'Dívidas',             parent: 'Painel', order: 320, visible: false, roles: ['admin'], feature: 'dividas',             icon: 'credit-card' },
   { key: 'planos',              title: 'Planos',                menuLabel: 'Planos',              parent: 'Painel', order: 330, visible: false, roles: ['admin'], feature: 'planos',              icon: 'landmark' },

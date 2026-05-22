@@ -1,56 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules, PORTAL_MODULES } from '../js/navigation.js';
 
-const expectedSidebarKeys = [
-  'meu-caso',
-  'custas',
-  'meus-documentos',
-  'contratos',
-  'meu-plano',
-  'plano-pagamento',
-  'mensagens',
-  'ajuda',
-  'onboarding-v2',
-  'financial-dashboard',
-  'suporte',
-  'onboarding',
-];
+const expectedClientSidebarKeys = ['meu-caso', 'financeiro', 'meus-documentos', 'ajuda'];
 
-const expectedBusinessLabels = {
-  'onboarding-v2': { title: 'Jornada CNJ', menuLabel: 'Jornada', sidebarSectionLabel: 'Jornada e suporte' },
-  'financial-dashboard': { title: 'Diagnóstico Financeiro', menuLabel: 'Diagnóstico', sidebarSectionLabel: 'Jornada e suporte' },
-  suporte: { title: 'Suporte', menuLabel: 'Suporte', sidebarSectionLabel: 'Jornada e suporte' },
-  onboarding: { title: 'Formulário', menuLabel: 'Formulário', sidebarSectionLabel: 'Jornada e suporte' },
-};
-
-const expectedAdminCaseLabels = {
-  'onboarding-v2': { menuLabel: 'Jornada', adminSidebarSectionLabel: 'Gestão do caso' },
-  'financial-dashboard': { menuLabel: 'Diagnóstico', adminSidebarSectionLabel: 'Gestão do caso' },
-  suporte: { menuLabel: 'Suporte', adminSidebarSectionLabel: 'Gestão do caso' },
-  onboarding: { menuLabel: 'Formulário', adminSidebarSectionLabel: 'Gestão do caso' },
+const expectedAdminRelacionamento = {
+  mensagens: { menuLabel: 'Mensagens', adminSidebarSectionLabel: 'Relacionamento' },
+  suporte:   { menuLabel: 'Suporte',   adminSidebarSectionLabel: 'Relacionamento' },
 };
 
 const expectedAdminOperations = {
-  partes: { title: 'Partes', menuLabel: 'Partes' },
-  processos: { title: 'Processos', menuLabel: 'Processos' },
-  movimentacoes: { title: 'Movimentacoes', menuLabel: 'Movimentacoes' },
-  audiencias: { title: 'Audiencias', menuLabel: 'Audiencias' },
-  publicacoes: { title: 'Publicacoes', menuLabel: 'Publicacoes' },
-  prazos: { title: 'Prazos', menuLabel: 'Prazos' },
-  'custas-processuais': { title: 'Custas', menuLabel: 'Custas' },
-  'financeiro-processual': { title: 'Financeiro Processual', menuLabel: 'Financeiro Processual' },
-  'relacoes-processuais': { title: 'Relacoes Processuais', menuLabel: 'Relacoes Processuais' },
-  tpu: { title: 'TPU', menuLabel: 'TPU' },
-  'orgaos-judiciarios': { title: 'Orgaos Judiciarios', menuLabel: 'Orgaos Judiciarios' },
-  serventias: { title: 'Serventias', menuLabel: 'Serventias' },
+  clientes:              { title: 'Clientes',              menuLabel: 'Clientes' },
+  processos:             { title: 'Processos',             menuLabel: 'Processos' },
+  audiencias:            { title: 'Audiências',            menuLabel: 'Audiências' },
+  publicacoes:           { title: 'Publicações',           menuLabel: 'Publicações' },
+  prazos:                { title: 'Prazos',                menuLabel: 'Prazos' },
+  'custas-processuais':  { title: 'Custas',                menuLabel: 'Custas' },
+  'financeiro-processual': { title: 'Financeiro Processual', menuLabel: 'Cobranças' },
 };
 
 describe('navigation contract', () => {
   it('exposes the client portal modules in the expected order', () => {
     const modules = getSidebarModules({ isAdmin: false });
 
-    expect(modules.map(module => module.key)).toEqual(expectedSidebarKeys);
-    expect(new Set(modules.map(module => module.key)).size).toBe(expectedSidebarKeys.length);
+    expect(modules.map(module => module.key)).toEqual(expectedClientSidebarKeys);
+    expect(new Set(modules.map(module => module.key)).size).toBe(expectedClientSidebarKeys.length);
     expect(modules.every(module => module.visible)).toBe(true);
   });
 
@@ -58,31 +31,26 @@ describe('navigation contract', () => {
     const routes = getRoutes();
     const moduleKeys = PORTAL_MODULES.map(module => module.key);
 
-    expectedSidebarKeys.forEach(key => {
+    expectedClientSidebarKeys.forEach(key => {
       expect(moduleKeys).toContain(key);
       expect(routes[key]).toBeTruthy();
       expect(routes[key].title).toBeTruthy();
     });
   });
 
-  it('uses explicit business labels for the jornada, diagnostico and formulario flows', () => {
-    const modules = getSidebarModules({ isAdmin: false });
+  it('exposes mensagens and suporte in the admin Relacionamento section', () => {
+    const modules = getSidebarModules({ isAdmin: true });
 
-    Object.entries(expectedBusinessLabels).forEach(([key, expected]) => {
+    Object.entries(expectedAdminRelacionamento).forEach(([key, expected]) => {
       const module = modules.find(item => item.key === key);
-
       expect(module).toMatchObject(expected);
     });
   });
 
-  it('also exposes the case-management flows in the admin shell', () => {
+  it('exposes partes in the admin Cadastros section', () => {
     const modules = getSidebarModules({ isAdmin: true });
-
-    Object.entries(expectedAdminCaseLabels).forEach(([key, expected]) => {
-      const module = modules.find(item => item.key === key);
-
-      expect(module).toMatchObject(expected);
-    });
+    const partes = modules.find(m => m.key === 'partes');
+    expect(partes).toMatchObject({ menuLabel: 'Partes', adminSidebarSectionLabel: 'Cadastros' });
   });
 
   it('exposes operational legal modules for admin workflow', () => {
@@ -90,7 +58,6 @@ describe('navigation contract', () => {
 
     Object.entries(expectedAdminOperations).forEach(([key, expected]) => {
       const module = modules.find(item => item.key === key);
-
       expect(module).toMatchObject(expected);
     });
   });

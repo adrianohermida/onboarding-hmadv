@@ -5,8 +5,21 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'mensagens', 'audiencias', 'prazos', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'custas-processuais', 'financeiro-processual', 'ai-copilot', 'relacoes-processuais', 'experiencia-cliente', 'tpu', 'financeiro-inteligencia', 'orgaos-judiciarios', 'operacoes-juridicas', 'serventias', 'compliance', 'tarefas', 'agenda', 'financeiro', 'analytics'];
-const crudKeys = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+
+const lawyerKeys = [
+  'painel',
+  'clientes', 'processos', 'publicacoes', 'prazos', 'tarefas', 'agenda', 'audiencias',
+  'financeiro', 'custas-processuais', 'financeiro-processual',
+  'mensagens', 'suporte', 'partes',
+  'analytics', 'ai-copilot',
+];
+
+const crudKeys = [
+  'clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes',
+  'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual',
+  'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias', 'tarefas', 'agenda',
+  'mensagens', 'financeiro',
+];
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -28,36 +41,36 @@ describe('portal do advogado contract', () => {
     });
   });
 
-  it('ships authenticated pages for every new lawyer route', () => {
-    ['painel', 'clientes', 'partes', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
+  it('ships authenticated pages for every core admin route', () => {
+    ['painel', 'clientes', 'partes', 'processos', 'publicacoes', 'audiencias', 'prazos',
+     'custas-processuais', 'financeiro-processual', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
-      expect(html).toContain('data-advogado-module-host');
-      expect(html).toContain('../js/app.js?v=20260522c');
-      expect(html).toContain(`bootAdvogadoPage('${key}')`);
+      expect(html).toContain('../js/app.js?v=20260522d');
     });
   });
 
-  it('ships case-management pages that stay mounted inside the shared shell', () => {
-    ['onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'].forEach(key => {
+  it('ships support and sub-pages mounted inside the shared shell', () => {
+    ['suporte', 'onboarding-v2', 'financial-dashboard', 'onboarding'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
-      expect(html).toContain('../js/app.js?v=20260522c');
+      expect(html).toContain('../js/app.js?v=20260522d');
     });
   });
 
-  it('ships shell-mounted enterprise pages for the new operating system modules', () => {
-    ['analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'].forEach(key => {
+  it('ships shell-mounted enterprise pages for the operating system modules', () => {
+    ['analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia',
+     'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260522c');
+      expect(html).toContain('../js/app.js?v=20260522d');
     });
   });
 

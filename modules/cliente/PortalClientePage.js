@@ -466,7 +466,6 @@ function renderHelpPage(data) {
     ['Como falo com a equipe?', 'Use Mensagens ou Ajuda para abrir atendimento pelo canal oficial.'],
   ];
   return `
-    ${renderShellHeader('ajuda', nextStep)}
     <section class="cliente-card">
       <h2>Dúvidas frequentes</h2>
       <div class="cliente-faq">
@@ -483,6 +482,83 @@ function renderHelpPage(data) {
       </div>
     </section>
   `;
+}
+
+// ── Hub navigation ────────────────────────────────────────────────────────────
+
+const HUB_TABS = {
+  financeiro: [
+    { key: 'contratos',      label: 'Contratos' },
+    { key: 'custas',         label: 'Custas' },
+    { key: 'parcelas',       label: 'Plano de Pagamento' },
+    { key: 'dividas',        label: 'Dívidas' },
+  ],
+  ajuda: [
+    { key: 'mensagens',      label: 'Mensagens' },
+    { key: 'suporte',        label: 'Suporte' },
+    { key: 'ajuda',          label: 'Ajuda' },
+    { key: 'jornada',        label: 'Jornada' },
+  ],
+};
+
+function getActiveHubTab(hubKey) {
+  const tabs = HUB_TABS[hubKey];
+  if (!tabs) return null;
+  const hash = (window.location.hash || '').replace('#', '');
+  return tabs.find(t => t.key === hash) ? hash : tabs[0].key;
+}
+
+function renderHubNav(hubKey, activeTab) {
+  const tabs = HUB_TABS[hubKey];
+  if (!tabs) return '';
+  return `
+    <nav class="hub-tabs" aria-label="Abas do hub">
+      ${tabs.map(t => `
+        <a class="hub-tab${t.key === activeTab ? ' is-active' : ''}"
+           href="#${t.key}" data-hub-tab="${t.key}">${escapeHtml(t.label)}</a>
+      `).join('')}
+    </nav>
+  `;
+}
+
+function renderFinancialHubContent(tabKey, data) {
+  switch (tabKey) {
+    case 'custas':        return renderCustasPage(data);
+    case 'parcelas':      return renderPaymentPlanPage(data);
+    case 'dividas':       return renderDebtsPage(data);
+    default:              return renderContractsPage(data);
+  }
+}
+
+function renderAtendimentoHubContent(tabKey, data) {
+  switch (tabKey) {
+    case 'suporte':
+      return `
+        <section class="cliente-card">
+          <h2>Canais de Atendimento</h2>
+          <p>Abra um chamado ou acompanhe as solicitações em andamento com o escritório.</p>
+          <div class="cliente-help-actions">
+            <a class="btn btn-primary btn-sm" href="suporte.html" data-page="suporte">Abrir suporte completo</a>
+            <a class="btn btn-ghost btn-sm" href="https://hmdesk.freshdesk.com/support/tickets" target="_blank" rel="noopener">Ver chamados externos</a>
+          </div>
+        </section>
+      `;
+    case 'ajuda':
+      return renderHelpPage(data);
+    case 'jornada':
+      return `
+        <section class="cliente-card">
+          <h2>Sua Jornada</h2>
+          <p>Acompanhe os passos do processo de superendividamento e preencha as etapas do formulário CNJ.</p>
+          <div class="cliente-help-actions">
+            <a class="btn btn-primary btn-sm" href="onboarding-v2.html" data-page="onboarding-v2">Abrir jornada CNJ</a>
+            <a class="btn btn-ghost btn-sm" href="financial-dashboard.html" data-page="financial-dashboard">Diagnóstico financeiro</a>
+          </div>
+        </section>
+      `;
+    default:
+      return renderMessagesPage(data);
+  }
 }
 
 async function loadClientData() {
@@ -518,6 +594,22 @@ async function loadClientData() {
   };
 }
 
+function mountHubTabListeners(host, hubKey, data, renderContent) {
+  host.querySelectorAll('[data-hub-tab]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tabKey = link.dataset.hubTab;
+      window.history.replaceState(null, '', `#${tabKey}`);
+      host.querySelectorAll('.hub-tab').forEach(a => a.classList.toggle('is-active', a.dataset.hubTab === tabKey));
+      const contentEl = host.querySelector('.hub-tab-content');
+      if (contentEl) {
+        contentEl.innerHTML = renderContent(tabKey, data);
+        window.initUiKit?.(contentEl);
+      }
+    });
+  });
+}
+
 export async function bootClientePage(moduleKey) {
   const host = document.querySelector('[data-cliente-module-host]');
   if (!host) return;
@@ -526,6 +618,41 @@ export async function bootClientePage(moduleKey) {
 
   try {
     const data = await loadClientData();
+
+    if (moduleKey === 'financeiro') {
+      const activeTab = getActiveHubTab('financeiro');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Financeiro</h1>
+            <p>Contratos, custas, parcelas e dívidas do seu caso.</p>
+          </div>
+          ${renderHubNav('financeiro', activeTab)}
+          <div class="hub-tab-content">${renderFinancialHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'financeiro', data, renderFinancialHubContent);
+      return;
+    }
+
+    if (moduleKey === 'ajuda') {
+      const activeTab = getActiveHubTab('ajuda');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Atendimento</h1>
+            <p>Mensagens, suporte e jornada do seu caso.</p>
+          </div>
+          ${renderHubNav('ajuda', activeTab)}
+          <div class="hub-tab-content">${renderAtendimentoHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'ajuda', data, renderAtendimentoHubContent);
+      return;
+    }
+
     const renderers = {
       'meu-caso': renderCasePage,
       custas: renderCustasPage,
@@ -535,7 +662,6 @@ export async function bootClientePage(moduleKey) {
       'meu-plano': renderPlanPage,
       'plano-pagamento': renderPaymentPlanPage,
       mensagens: renderMessagesPage,
-      ajuda: renderHelpPage,
     };
     host.innerHTML = `<section class="cliente-page">${renderers[moduleKey]?.(data) || renderCasePage(data)}</section>`;
     window.initUiKit?.(host);
@@ -556,7 +682,7 @@ export async function bootClientePage(moduleKey) {
                   <p>Escolha o melhor canal para agendamento com a equipe.</p>
                   <div class="cliente-help-actions" style="margin-top:14px;">
                     <a class="btn btn-primary btn-sm" href="suporte.html" data-page="suporte">Solicitar por suporte</a>
-                    <a class="btn btn-ghost btn-sm" href="mensagens.html" data-page="mensagens">Enviar mensagem</a>
+                    <a class="btn btn-ghost btn-sm" href="ajuda.html#mensagens" data-page="ajuda">Enviar mensagem</a>
                   </div>
                 </div>
               `,

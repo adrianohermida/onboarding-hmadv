@@ -15,14 +15,29 @@
   <div class="main-area">
     <div data-component="header"></div>
     <main class="page-content">
+      <div data-cliente-module-host></div>
       <div data-advogado-module-host></div>
     </main>
   </div>
 </div>
 <script type="module" src="../js/app.js?v=20260522d"></script>
 <script type="module">
+  import { checkIsAdmin } from '../services/database.js';
   import { bootAdvogadoPage } from '../modules/advogado/PortalAdvogadoPage.js?v=20260522d';
-  document.addEventListener('app:ready', () => bootAdvogadoPage('financeiro'), { once: true });
+  import { bootClientePage } from '../modules/cliente/PortalClientePage.js?v=20260522d';
+
+  document.addEventListener('app:ready', async () => {
+    const isAdmin = await checkIsAdmin().catch(() => false);
+    const clientHost = document.querySelector('[data-cliente-module-host]');
+    const adminHost = document.querySelector('[data-advogado-module-host]');
+    if (isAdmin) {
+      if (clientHost) clientHost.remove();
+      bootAdvogadoPage('financeiro');
+      return;
+    }
+    if (adminHost) adminHost.remove();
+    bootClientePage('financeiro');
+  }, { once: true });
 </script>
 </body>
 </html>

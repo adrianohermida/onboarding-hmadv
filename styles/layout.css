@@ -1712,3 +1712,31 @@ body.app-loaded .sk { display: none !important; }
   opacity: 1;
   pointer-events: auto;
 }
+
+/* ── HUB TABS ─────────────────────────────────── */
+.hub-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1.5px solid var(--line);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hub-tabs::-webkit-scrollbar { display: none; }
+.hub-tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1.5px;
+  transition: color .14s, border-color .14s;
+}
+.hub-tab:hover { color: var(--ink); }
+.hub-tab.is-active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+}
+.hub-tab-content { min-height: 120px; }

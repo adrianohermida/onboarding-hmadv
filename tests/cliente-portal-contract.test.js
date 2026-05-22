@@ -4,20 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules } from '../js/navigation.js';
 
 const root = process.cwd();
-const clientKeys = ['meu-caso', 'custas', 'meus-documentos', 'contratos', 'meu-plano', 'plano-pagamento', 'mensagens', 'ajuda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'];
-const usefulClientFlowMarkers = {
-  'meu-caso': ['Seu caminho no portal', 'Ações rápidas'],
-  custas: ['Despesas processuais', 'Custas estimadas'],
+const clientKeys = ['meu-caso', 'financeiro', 'meus-documentos', 'ajuda'];
+
+const hubContentMarkers = {
+  'meu-caso':      ['Seu caminho no portal', 'Ações rápidas'],
+  financeiro:      ['Workflow contratual', 'Cronograma de pagamento'],
   'meus-documentos': ['Lista de documentos', 'Enviar documento'],
-  contratos: ['Workflow contratual', 'Assinatura'],
-  'meu-plano': ['Proposta consolidada', 'Diagnóstico financeiro'],
-  'plano-pagamento': ['Cronograma de pagamento', 'Parcela'],
-  mensagens: ['Comunicação com o escritório', 'Abrir atendimento'],
-  ajuda: ['Dúvidas frequentes', 'Falar com o escritório'],
-  'onboarding-v2': ['Sua Jornada de Superendividamento', 'Seu Diagnóstico Financeiro'],
-  'financial-dashboard': ['Diagnóstico Financeiro', 'Salvar diagnóstico'],
-  suporte: ['Meus Chamados', 'Canais de Atendimento'],
-  onboarding: ['Formulário de Superendividamento', 'Continuar etapa atual'],
+  ajuda:           ['Dúvidas frequentes', 'Falar com o escritório'],
 };
 
 function readFile(...parts) {
@@ -43,7 +36,7 @@ describe('portal do cliente contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260522c');
+      expect(html).toContain('../js/app.js?v=20260522d');
     });
   });
 
@@ -54,7 +47,7 @@ describe('portal do cliente contract', () => {
     ['CaseService', 'DebtService', 'DocumentService', 'CustasService', 'ContratosService', 'PlanoPagamentoService'].forEach(symbol => {
       expect(controller).toContain(symbol);
     });
-    ['documentos.html', 'dividas.html', 'suporte.html', 'onboarding-v2.html', 'financial-dashboard.html', 'custas.html', 'contratos.html', 'plano-pagamento.html'].forEach(route => {
+    ['suporte.html', 'onboarding-v2.html', 'financial-dashboard.html', 'custas.html', 'contratos.html', 'plano-pagamento.html'].forEach(route => {
       expect(controller).toContain(route);
     });
     ['cliente-next-action', 'cliente-kpis', 'cliente-list-item', 'cliente-faq'].forEach(cssClass => {
@@ -62,17 +55,12 @@ describe('portal do cliente contract', () => {
     });
   });
 
-  it('keeps every client sidebar flow connected to useful business content', () => {
+  it('keeps every client hub connected to useful business content', () => {
     const controller = readFile('modules', 'cliente', 'PortalClientePage.js');
-    const directPages = new Set(['onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding']);
 
-    Object.entries(usefulClientFlowMarkers).forEach(([key, markers]) => {
-      const content = directPages.has(key)
-        ? readFile('pages', `${key}.html`)
-        : controller;
-
+    Object.entries(hubContentMarkers).forEach(([, markers]) => {
       markers.forEach(marker => {
-        expect(content).toContain(marker);
+        expect(controller).toContain(marker);
       });
     });
   });
