@@ -28,14 +28,12 @@ const ONBOARDING_STEPS = [
 export default function ClienteDashboard({ caso, docs }: Props) {
   if (!caso) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-          <Gavel className="h-8 w-8 text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center px-4">
+        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Gavel className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-lg font-semibold">Bem-vindo ao Portal</h2>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          Seu processo ainda está sendo configurado. Entre em contato com o escritório para iniciar seu onboarding.
-        </p>
+        <h2 className="text-base font-semibold">Caso em preparação</h2>
+        <p className="text-sm text-muted-foreground max-w-sm">O escritório está configurando seu acesso.</p>
       </div>
     );
   }
@@ -51,9 +49,8 @@ export default function ClienteDashboard({ caso, docs }: Props) {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Case header */}
-      <div className="bg-card border border-border rounded-xl p-5">
+    <div className="space-y-4 max-w-2xl mx-auto p-3 sm:p-0">
+      <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Seu processo</p>
@@ -66,7 +63,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
         {!caso.onboarding_done && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-medium text-foreground">Onboarding</p>
+              <p className="text-xs font-medium text-foreground">Jornada</p>
               <p className="text-xs text-muted-foreground">{stepAtual}/{ONBOARDING_STEPS.length} etapas</p>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -79,7 +76,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
               {ONBOARDING_STEPS.map((step, i) => (
                 <span
                   key={step}
-                  className={`text-xs px-2 py-0.5 rounded-full border ${
+                  className={`text-xs px-2 py-0.5 rounded-md border ${
                     i < stepAtual
                       ? 'bg-green-50 text-green-700 border-green-200'
                       : i === stepAtual
@@ -95,7 +92,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
               href="/onboarding"
               className="mt-3 inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
             >
-              Continuar onboarding <ChevronRight className="h-3 w-3" />
+              Continuar <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
         )}
@@ -103,21 +100,21 @@ export default function ClienteDashboard({ caso, docs }: Props) {
         {caso.onboarding_done && (
           <div className="mt-3 flex items-center gap-2 text-xs text-green-700">
             <CheckCircle2 className="h-4 w-4" />
-            Onboarding concluído
+            Jornada concluída
           </div>
         )}
       </div>
 
       {/* Document summary */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">Meus documentos</h2>
-          <Link href="/documentos" className="text-xs text-primary hover:underline">Ver todos →</Link>
+          <Link href="/documentos" className="text-xs text-primary hover:underline">Ver todos</Link>
         </div>
 
         <div className="grid grid-cols-2 divide-x divide-y divide-border">
           <div className="p-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center">
               <Clock className="h-4 w-4 text-amber-600" />
             </div>
             <div>
@@ -126,7 +123,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-green-50 flex items-center justify-center">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
             </div>
             <div>
@@ -135,7 +132,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-gray-50 flex items-center justify-center">
               <FileText className="h-4 w-4 text-gray-500" />
             </div>
             <div>
@@ -144,7 +141,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-orange-50 flex items-center justify-center">
               <AlertCircle className="h-4 w-4 text-orange-600" />
             </div>
             <div>
@@ -162,7 +159,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
                 href={`/documentos/${doc.id}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">

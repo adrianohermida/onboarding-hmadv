@@ -148,22 +148,21 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
   ];
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+    <div className="space-y-4 p-3 sm:p-4 lg:p-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}
             href={kpi.href}
             className={cn(
-              'bg-card border rounded-xl p-4 hover:border-primary/40 hover:bg-muted/30 transition-colors group',
+              'bg-card border rounded-lg p-3 hover:border-primary/40 hover:bg-muted/30 transition-colors group',
               kpi.urgent ? 'border-orange-300 bg-orange-50/30' : 'border-border',
             )}
           >
-            <div className={cn('inline-flex p-2 rounded-lg mb-3', kpi.bg)}>
+            <div className={cn('inline-flex p-1.5 rounded-md mb-2', kpi.bg)}>
               <kpi.Icon className={cn('h-4 w-4', kpi.color)} />
             </div>
-            <p className="text-2xl font-bold text-foreground tabular-nums">
+            <p className="text-xl font-bold text-foreground tabular-nums leading-none">
               {kpi.value == null ? <KpiSkeleton /> : kpi.value}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{kpi.label}</p>
@@ -171,9 +170,8 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent clients */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold">Clientes recentes</h2>
             <Link href="/clientes" className="flex items-center gap-1 text-xs text-primary hover:underline">
@@ -187,7 +185,7 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
                 href={`/clientes/${c.user_id}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0 uppercase">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0 uppercase">
                   {c.nome?.split(' ').slice(0, 2).map((w: string) => w[0]).join('') || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -203,8 +201,7 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
           </div>
         </div>
 
-        {/* Pending documents */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold">Documentos em análise</h2>
             <Link href="/documentos" className="flex items-center gap-1 text-xs text-primary hover:underline">
@@ -231,7 +228,7 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
             {pendingDocs.length === 0 && (
               <div className="px-4 py-8 text-center">
                 <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Nenhum documento pendente</p>
+                <p className="text-sm text-muted-foreground">Sem documentos pendentes</p>
               </div>
             )}
           </div>

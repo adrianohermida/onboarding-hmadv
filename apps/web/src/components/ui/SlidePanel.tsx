@@ -51,7 +51,7 @@ export default function SlidePanel({
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200',
+          'fixed inset-0 z-40 bg-slate-950/35 transition-opacity duration-200',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         )}
         onClick={onClose}
@@ -64,14 +64,14 @@ export default function SlidePanel({
         role="dialog"
         aria-modal
         className={cn(
-          'fixed right-0 top-0 bottom-0 z-50 flex flex-col bg-background border-l border-border shadow-2xl transition-transform duration-300 ease-in-out w-full',
+          'fixed right-0 top-0 bottom-0 z-50 flex flex-col bg-background border-l border-border shadow-lg transition-transform duration-200 ease-in-out w-full',
           WIDTH_CLS[width],
           open ? 'translate-x-0' : 'translate-x-full',
         )}
       >
         {/* Header */}
         {(title || actions) && (
-          <div className="flex items-start gap-3 px-5 py-4 border-b border-border flex-shrink-0">
+          <div className="flex items-start gap-3 px-4 py-3 border-b border-border flex-shrink-0">
             <div className="flex-1 min-w-0">
               {title && <p className="text-sm font-semibold text-foreground leading-snug">{title}</p>}
               {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -79,7 +79,7 @@ export default function SlidePanel({
             {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
             <button
               onClick={onClose}
-              className="flex-shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="flex-shrink-0 p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
