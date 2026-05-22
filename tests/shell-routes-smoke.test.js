@@ -29,9 +29,9 @@ describe('authenticated route shell smoke', () => {
       expect(pageHtml).toContain('data-component="sidebar"');
       expect(pageHtml).toContain('data-component="header"');
       expect(pageHtml).toContain('main class="page-content"');
-      expect(pageHtml).toContain('../js/app.js?v=20260522d');
-      expect(pageHtml).toContain('../styles/layout.css?v=20260522d');
-      expect(pageHtml).toContain('../styles/components.css?v=20260522d');
+      expect(pageHtml).toContain('../js/app.js?v=20260523a');
+      expect(pageHtml).toContain('../styles/layout.css?v=20260523a');
+      expect(pageHtml).toContain('../styles/components.css?v=20260523a');
       expect(pageHtml.replace(/<script[\s\S]*?<\/script>/gi, '')).toMatch(/<main class="page-content"[\s\S]*?<\/main>/);
     });
   });

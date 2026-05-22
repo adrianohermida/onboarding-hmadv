@@ -36,7 +36,7 @@ describe('portal do cliente contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260522d');
+      expect(html).toContain('../js/app.js?v=20260523a');
     });
   });
 
