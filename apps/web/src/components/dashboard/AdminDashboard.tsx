@@ -1,13 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, FileText, Clock, CheckCircle2, TrendingUp, Gavel, CheckSquare, Newspaper, ArrowRight } from 'lucide-react';
+import {
+  Users, FileText, Clock, CheckCircle2, Gavel, CheckSquare,
+  Newspaper, ArrowRight, Calendar, AlertTriangle,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/utils';
 import type { ClienteSummary } from '@/types';
 import { FASE_LABELS } from '@/types';
 import StatusBadge from '../ui/StatusBadge';
+import { cn } from '@/lib/utils';
 
 interface Props {
   clients: ClienteSummary[];
@@ -20,32 +24,55 @@ function useAdminCounts() {
     staleTime: 60_000,
     queryFn: async () => {
       const supabase = createClient();
+      const hoje = new Date().toISOString().split('T')[0];
+      const semana = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
       const [
-        { count: tarefas },
-        { count: processos },
-        { count: publicacoes },
+        tarefasResult,
+        processosResult,
+        publicacoesResult,
+        prazosResult,
+        audienciasResult,
       ] = await Promise.all([
         supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
         supabase.from('re_processos_judiciais').select('id', { count: 'exact', head: true }),
-        (supabase as any).schema('judiciario')
+        (supabase as any)
+          .schema('judiciario')
           .from('publicacoes')
           .select('id', { count: 'exact', head: true })
           .eq('lido', false)
           .eq('ativo', true)
-          .then((r: any) => r)
+          .catch(() => ({ count: 0 })),
+        (supabase as any)
+          .schema('judiciario')
+          .from('prazo_calculado')
+          .select('id', { count: 'exact', head: true })
+          .lte('data_vencimento', semana)
+          .eq('concluido', false)
+          .catch(() => ({ count: 0 })),
+        (supabase as any)
+          .schema('judiciario')
+          .from('audiencias')
+          .select('id', { count: 'exact', head: true })
+          .gte('data_hora', hoje)
+          .lte('data_hora', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+          .neq('situacao', 'cancelada')
           .catch(() => ({ count: 0 })),
       ]);
+
       return {
-        tarefas: tarefas ?? 0,
-        processos: processos ?? 0,
-        publicacoes: publicacoes ?? 0,
+        tarefas: tarefasResult.count ?? 0,
+        processos: processosResult.count ?? 0,
+        publicacoes: publicacoesResult.count ?? 0,
+        prazos: prazosResult.count ?? 0,
+        audiencias: audienciasResult.count ?? 0,
       };
     },
   });
 }
 
 function KpiSkeleton() {
-  return <div className="h-5 w-10 rounded bg-muted animate-pulse" />;
+  return <div className="h-7 w-12 rounded bg-muted animate-pulse" />;
 }
 
 export default function AdminDashboard({ clients, pendingDocs }: Props) {
@@ -55,7 +82,7 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
     {
       label: 'Clientes ativos',
       value: clients.length,
-      icon: Users,
+      Icon: Users,
       color: 'text-blue-500',
       bg: 'bg-blue-500/10',
       href: '/clientes',
@@ -63,7 +90,7 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
     {
       label: 'Processos',
       value: counts?.processos,
-      icon: Gavel,
+      Icon: Gavel,
       color: 'text-violet-500',
       bg: 'bg-violet-500/10',
       href: '/processos',
@@ -71,15 +98,32 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
     {
       label: 'Publicações novas',
       value: counts?.publicacoes,
-      icon: Newspaper,
+      Icon: Newspaper,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
       href: '/publicacoes',
     },
     {
+      label: 'Prazos esta semana',
+      value: counts?.prazos,
+      Icon: AlertTriangle,
+      color: 'text-orange-500',
+      bg: 'bg-orange-500/10',
+      href: '/prazos',
+      urgent: counts != null && (counts.prazos ?? 0) > 0,
+    },
+    {
+      label: 'Audiências (7 dias)',
+      value: counts?.audiencias,
+      Icon: Calendar,
+      color: 'text-indigo-500',
+      bg: 'bg-indigo-500/10',
+      href: '/audiencias',
+    },
+    {
       label: 'Tarefas pendentes',
       value: counts?.tarefas,
-      icon: CheckSquare,
+      Icon: CheckSquare,
       color: 'text-green-500',
       bg: 'bg-green-500/10',
       href: '/tarefas',
@@ -87,15 +131,16 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
     {
       label: 'Docs em análise',
       value: pendingDocs.length,
-      icon: FileText,
+      Icon: FileText,
       color: 'text-rose-500',
       bg: 'bg-rose-500/10',
       href: '/documentos',
+      urgent: pendingDocs.length > 0,
     },
     {
       label: 'Onboarding concluído',
       value: clients.filter((c) => c.onboarding_done).length,
-      icon: CheckCircle2,
+      Icon: CheckCircle2,
       color: 'text-teal-500',
       bg: 'bg-teal-500/10',
       href: '/clientes',
@@ -105,15 +150,18 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
   return (
     <div className="space-y-6 p-4 lg:p-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {kpis.map((kpi) => (
           <Link
             key={kpi.label}
             href={kpi.href}
-            className="bg-card border border-border rounded-xl p-4 hover:border-primary/40 hover:bg-muted/30 transition-colors group"
+            className={cn(
+              'bg-card border rounded-xl p-4 hover:border-primary/40 hover:bg-muted/30 transition-colors group',
+              kpi.urgent ? 'border-orange-300 bg-orange-50/30' : 'border-border',
+            )}
           >
-            <div className={`inline-flex p-2 rounded-lg ${kpi.bg} mb-3`}>
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+            <div className={cn('inline-flex p-2 rounded-lg mb-3', kpi.bg)}>
+              <kpi.Icon className={cn('h-4 w-4', kpi.color)} />
             </div>
             <p className="text-2xl font-bold text-foreground tabular-nums">
               {kpi.value == null ? <KpiSkeleton /> : kpi.value}
