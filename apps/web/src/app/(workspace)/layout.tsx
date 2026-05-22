@@ -20,7 +20,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
         <MobileNav />
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-60 transition-all duration-200" id="workspace-main">
+        <div className="flex-1 flex flex-col min-w-0 lg:pl-56 transition-all duration-200" id="workspace-main">
           {/* Sticky header */}
           <div className="lg:hidden h-14" /> {/* Spacer for mobile top bar */}
           <Header />

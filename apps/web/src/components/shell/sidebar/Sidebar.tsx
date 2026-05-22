@@ -1,84 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
-  Settings, LogOut, ChevronLeft, ChevronRight, Scale,
-  DollarSign, Calendar, CheckSquare, MessageSquare, Gavel, Newspaper,
-  Briefcase,
-} from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { getInitials } from '@/lib/utils';
 import { useSidebarCounts } from '@/lib/hooks/use-sidebar-counts';
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  countKey?: keyof ReturnType<typeof useSidebarCounts>;
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-}
-
-const ADMIN_SECTIONS: NavSection[] = [
-  {
-    label: 'Meu Escritório',
-    items: [
-      { href: '/dashboard', label: 'Painel', icon: LayoutDashboard },
-      { href: '/clientes', label: 'Clientes', icon: Users },
-      { href: '/processos', label: 'Processos', icon: Gavel },
-      { href: '/publicacoes', label: 'Publicações', icon: Newspaper, countKey: 'publicacoes' },
-      { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, countKey: 'tarefas' },
-    ],
-  },
-  {
-    label: 'Operacional',
-    items: [
-      { href: '/agenda', label: 'Agenda', icon: Calendar },
-      { href: '/documentos', label: 'Documentos', icon: FileText, countKey: 'documentos' },
-      { href: '/mensagens', label: 'Mensagens', icon: MessageSquare, countKey: 'mensagens' },
-    ],
-  },
-  {
-    label: 'Financeiro',
-    items: [
-      { href: '/financeiro', label: 'Financeiro', icon: DollarSign },
-    ],
-  },
-];
-
-const CLIENT_SECTIONS: NavSection[] = [
-  {
-    label: 'Meu Processo',
-    items: [
-      { href: '/dashboard', label: 'Meu Painel', icon: LayoutDashboard },
-      { href: '/onboarding', label: 'Meu Caso', icon: Scale },
-      { href: '/documentos', label: 'Documentos', icon: FileText, countKey: 'documentos' },
-    ],
-  },
-  {
-    label: 'Planejamento',
-    items: [
-      { href: '/planos', label: 'Meu Plano', icon: Briefcase },
-      { href: '/dividas', label: 'Minhas Dívidas', icon: TrendingDown },
-      { href: '/planos', label: 'Plano de Pagamento', icon: CreditCard },
-    ],
-  },
-  {
-    label: 'Comunicação',
-    items: [
-      { href: '/agenda', label: 'Agenda', icon: Calendar },
-      { href: '/mensagens', label: 'Mensagens', icon: MessageSquare, countKey: 'mensagens' },
-    ],
-  },
-];
+import { ADMIN_SECTIONS, CLIENT_SECTIONS, type NavItem } from '../nav-config';
 
 function Badge({ count }: { count: number }) {
   if (!count) return null;
@@ -89,15 +19,19 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-interface NavLinkProps {
+function NavLink({
+  item,
+  counts,
+  collapsed,
+}: {
   item: NavItem;
   counts: ReturnType<typeof useSidebarCounts>;
   collapsed: boolean;
-}
-
-function NavLink({ item, counts, collapsed }: NavLinkProps) {
+}) {
   const pathname = usePathname();
-  const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'));
+  const active =
+    pathname === item.href ||
+    (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'));
   const count = item.countKey ? (counts[item.countKey] ?? 0) : 0;
 
   return (
@@ -105,10 +39,10 @@ function NavLink({ item, counts, collapsed }: NavLinkProps) {
       href={item.href}
       title={collapsed ? item.label : undefined}
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative',
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative',
         active
-          ? 'bg-sidebar-accent text-white shadow-sm'
-          : 'text-sidebar-foreground/70 hover:text-white hover:bg-sidebar-accent/60',
+          ? 'bg-sidebar-accent text-white'
+          : 'text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent/50',
         collapsed && 'justify-center px-2',
       )}
     >
@@ -119,9 +53,8 @@ function NavLink({ item, counts, collapsed }: NavLinkProps) {
           <Badge count={count} />
         </>
       )}
-      {/* Collapsed badge */}
       {collapsed && count > 0 && (
-        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
+        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-primary" />
       )}
     </Link>
   );
@@ -131,12 +64,10 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, sidebarCollapsed, setSidebarCollapsed } = useWorkspaceStore();
   const counts = useSidebarCounts(user?.isAdmin ?? false);
-
   const sections = user?.isAdmin ? ADMIN_SECTIONS : CLIENT_SECTIONS;
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await createClient().auth.signOut();
     router.push('/login');
   }
 
@@ -144,23 +75,24 @@ export default function Sidebar() {
     <aside
       className={cn(
         'fixed inset-y-0 left-0 z-40 flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
-        'transition-all duration-200 ease-in-out',
-        sidebarCollapsed ? 'w-16' : 'w-60',
-        'hidden lg:flex',
+        'transition-all duration-200 ease-in-out hidden lg:flex',
+        sidebarCollapsed ? 'w-16' : 'w-56',
       )}
     >
       {/* Logo */}
-      <div className={cn(
-        'flex items-center h-16 border-b border-sidebar-border px-4 flex-shrink-0',
-        sidebarCollapsed && 'justify-center px-2',
-      )}>
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-          <span className="text-white text-xs font-bold">HM</span>
+      <div
+        className={cn(
+          'flex items-center h-14 border-b border-sidebar-border px-4 flex-shrink-0',
+          sidebarCollapsed && 'justify-center px-2',
+        )}
+      >
+        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+          <span className="text-white text-[11px] font-bold">HM</span>
         </div>
         {!sidebarCollapsed && (
-          <div className="ml-3 min-w-0">
+          <div className="ml-2.5 min-w-0">
             <p className="text-sm font-semibold text-white truncate leading-tight">Hermida Maia</p>
-            <p className="text-[10px] text-sidebar-foreground/50 truncate">Advocacia</p>
+            <p className="text-[10px] text-sidebar-foreground/40 truncate">Advocacia</p>
           </div>
         )}
       </div>
@@ -170,13 +102,18 @@ export default function Sidebar() {
         {sections.map((section) => (
           <div key={section.label}>
             {!sidebarCollapsed && (
-              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
                 {section.label}
               </p>
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-px">
               {section.items.map((item) => (
-                <NavLink key={item.href + item.label} item={item} counts={counts} collapsed={sidebarCollapsed} />
+                <NavLink
+                  key={item.href + item.label}
+                  item={item}
+                  counts={counts}
+                  collapsed={sidebarCollapsed}
+                />
               ))}
             </div>
           </div>
@@ -184,12 +121,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border p-2 space-y-0.5 flex-shrink-0">
+      <div className="border-t border-sidebar-border p-2 space-y-px flex-shrink-0">
         <Link
           href="/configuracoes"
           title={sidebarCollapsed ? 'Configurações' : undefined}
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent transition-colors',
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:text-white hover:bg-sidebar-accent/50 transition-colors',
             sidebarCollapsed && 'justify-center px-2',
           )}
         >
@@ -201,7 +138,7 @@ export default function Sidebar() {
           onClick={handleSignOut}
           title={sidebarCollapsed ? 'Sair' : undefined}
           className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/60 hover:text-red-400 hover:bg-sidebar-accent transition-colors',
+            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent/50 transition-colors',
             sidebarCollapsed && 'justify-center px-2',
           )}
         >
@@ -209,22 +146,27 @@ export default function Sidebar() {
           {!sidebarCollapsed && <span>Sair</span>}
         </button>
 
-        {/* User + toggle */}
-        <div className={cn(
-          'flex items-center mt-2 pt-2 border-t border-sidebar-border',
-          sidebarCollapsed ? 'justify-center' : 'gap-2 px-1',
-        )}>
+        {/* Usuário + botão colapsar */}
+        <div
+          className={cn(
+            'flex items-center mt-1 pt-2 border-t border-sidebar-border',
+            sidebarCollapsed ? 'justify-center' : 'gap-2 px-1',
+          )}
+        >
           {!sidebarCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-white truncate leading-tight">{user?.nome ?? user?.email}</p>
-              <p className="text-[10px] text-sidebar-foreground/50 truncate">
+              <p className="text-xs font-medium text-white truncate leading-tight">
+                {user?.nome ?? user?.email}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/40 truncate">
                 {user?.isAdmin ? 'Advogado' : 'Cliente'}
               </p>
             </div>
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="flex-shrink-0 p-1.5 rounded-lg text-sidebar-foreground/50 hover:text-white hover:bg-sidebar-accent transition-colors"
+            className="flex-shrink-0 p-1.5 rounded-lg text-sidebar-foreground/40 hover:text-white hover:bg-sidebar-accent/50 transition-colors"
+            title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
           >
             {sidebarCollapsed
               ? <ChevronRight className="h-4 w-4" />
