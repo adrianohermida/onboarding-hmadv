@@ -32,6 +32,28 @@ describe('supabase rls multitenancy contract', () => {
     });
   });
 
+  it('migration 019 upgrades core table policies to is_any_portal_admin for internal workspace staff', () => {
+    const migration = readFile('supabase', 'migrations-safe', '20260522_safe_019_is_any_admin_upgrade.sql');
+
+    expect(migration).toContain('CREATE OR REPLACE FUNCTION is_any_portal_admin()');
+    expect(migration).toContain("pwm.role IN ('owner', 'admin', 'advogado', 'colaborador', 'financeiro', 'estagiario')");
+    [
+      'admin_workspaces_portal',
+      'admin_workspace_members_portal',
+      'admin_all_casos_portal',
+      'admin_all_docs_portal',
+      'admin_all_dividas_portal',
+      'admin_all_timeline_portal',
+      'admin_all_notifications_portal',
+      'admin_operational_records_portal',
+      'admin_operational_record_audit_portal',
+      'doc_comments_select_portal',
+      'doc_comments_insert_portal',
+    ].forEach(policy => {
+      expect(migration).toContain(policy);
+    });
+  });
+
   it('protects storage and client-side mutations with tenant/user filters', () => {
     const migration = readFile('supabase', 'migrations-safe', '20260521_safe_015_rls_multitenancy_hardening.sql');
     const database = readFile('services', 'database.js');

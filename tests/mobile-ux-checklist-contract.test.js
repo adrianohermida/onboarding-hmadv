@@ -15,7 +15,7 @@ describe('mobile UX final checklist contract', () => {
     const adminKeys = getSidebarModules({ isAdmin: true }).map((module) => module.key);
     const allKeys = [...new Set([...clientKeys, ...adminKeys])];
 
-    const header = readFile('components', 'header.html');
+    const header = readFile('shell', 'header', 'header.html');
     expect(header).toContain('header-breadcrumb');
     expect(header).toContain('header-page-title');
 

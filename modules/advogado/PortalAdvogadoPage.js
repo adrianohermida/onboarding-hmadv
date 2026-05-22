@@ -737,8 +737,8 @@ function renderRows(rows, config) {
   if (!rows.length) {
     return `
       <div class="advogado-empty-state">
-        <h2>Nenhum registro encontrado</h2>
-        <p>Use o botão principal para criar um registro operacional deste módulo.</p>
+        <h2>Nenhum item nesta visão</h2>
+        <p>Crie um novo registro ou ajuste os filtros para retomar o acompanhamento.</p>
       </div>
     `;
   }
@@ -922,6 +922,38 @@ async function renderPainelPage(host) {
     acc.archived += records.filter(record => record.archived).length;
     return acc;
   }, { total: 0, archived: 0 });
+  const countOpen = (key, doneStatuses = ['concluida', 'concluido', 'realizado', 'aprovado', 'assinado', 'arquivado']) =>
+    (recordMap[key] || []).filter(record => !record.archived && !doneStatuses.includes(String(record.status || '').toLowerCase())).length;
+  const routineCards = [
+    {
+      key: 'documentos',
+      title: 'Documentos e assinaturas',
+      count: countOpen('documentos', ['aprovado', 'assinado', 'arquivado']),
+      copy: 'Revisar pendências, correções e itens enviados para assinatura.',
+      cta: 'Abrir documentos',
+    },
+    {
+      key: 'prazos',
+      title: 'Prazos do dia',
+      count: countOpen('prazos'),
+      copy: 'Conferir prazos processuais, alertas e responsáveis.',
+      cta: 'Ver prazos',
+    },
+    {
+      key: 'publicacoes',
+      title: 'Publicações',
+      count: countOpen('publicacoes'),
+      copy: 'Tratar publicações novas, ciência interna e providências.',
+      cta: 'Ver publicações',
+    },
+    {
+      key: 'tarefas',
+      title: 'Follow-up',
+      count: countOpen('tarefas'),
+      copy: 'Organizar tarefas abertas e próximos contatos com clientes.',
+      cta: 'Ver tarefas',
+    },
+  ];
 
   const moduleCards = ADMIN_PAGE_KEYS.map(key => {
     const config = ADVOGADO_MODULES[key];
@@ -952,6 +984,28 @@ async function renderPainelPage(host) {
         <div class="ui-stat-card"><span>Arquivados</span><strong>${totals.archived}</strong><small>histórico</small></div>
         <div class="ui-stat-card"><span>Módulos operacionais</span><strong>${ADMIN_PAGE_KEYS.length}</strong><small>conectados</small></div>
       </div>
+
+      <section class="advogado-routine sec">
+        <div class="advogado-routine-head">
+          <div>
+            <span>Rotina guiada</span>
+            <h2>Prioridades do escritório</h2>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" data-shell-action="workspace-panel">Abrir notificações</button>
+        </div>
+        <div class="advogado-routine-grid">
+          ${routineCards.map(card => `
+            <a class="advogado-routine-card" href="${escapeHtml(getModuleHref(card.key))}" data-page="${escapeHtml(card.key)}">
+              <div>
+                <span>${escapeHtml(card.title)}</span>
+                <strong>${card.count}</strong>
+              </div>
+              <p>${escapeHtml(card.copy)}</p>
+              <small>${escapeHtml(card.cta)}</small>
+            </a>
+          `).join('')}
+        </div>
+      </section>
 
       <div class="advogado-workspace-grid">
         ${moduleCards}
