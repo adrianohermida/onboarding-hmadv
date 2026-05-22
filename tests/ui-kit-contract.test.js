@@ -92,4 +92,42 @@ describe('ui kit contract', () => {
     expect(appJs).toContain("import { initUiKit }");
     expect(appJs).toContain('initUiKit(document)');
   });
+
+  it('keeps app components compact and aligned with the shell design language', () => {
+    const kpi = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'ui', 'KpiCard.tsx'), 'utf8');
+    const empty = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'ui', 'EmptyState.tsx'), 'utf8');
+    const panel = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'ui', 'SlidePanel.tsx'), 'utf8');
+    const admin = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'dashboard', 'AdminDashboard.tsx'), 'utf8');
+    const cliente = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'dashboard', 'ClienteDashboard.tsx'), 'utf8');
+
+    [kpi, empty, panel, admin, cliente].forEach(source => {
+      expect(source).toContain('rounded-lg');
+      expect(source).not.toContain('rounded-xl');
+      expect(source).not.toContain('backdrop-blur');
+    });
+
+    expect(admin).toContain('space-y-4');
+    expect(cliente).toContain('Jornada concluída');
+    expect(cliente).not.toContain('Ver todos →');
+  });
+
+  it('keeps technical shell pages in product language', () => {
+    const files = [
+      'analytics.html',
+      'compliance.html',
+      'experiencia-cliente.html',
+      'financeiro-inteligencia.html',
+      'operacoes-juridicas.html',
+      'platform-os.html',
+      'ui-os.html',
+      'workspace-os.html',
+      'billing-os.html',
+      'ai-copilot.html',
+    ];
+
+    const content = files.map(file => fs.readFileSync(path.join(root, 'pages', file), 'utf8')).join('\n');
+    ['Operating System', 'Platform OS', 'Workspace OS', 'Billing OS', 'UI OS', 'AI Copilot', 'cloud-native', 'usage', 'Workflow-ready'].forEach(term => {
+      expect(content).not.toContain(term);
+    });
+  });
 });
