@@ -13,10 +13,11 @@ describe('operational legal shell contract', () => {
     const header = read('shell', 'header', 'header.html');
 
     expect(header).toContain('data-shell-action="global-search"');
-    expect(header).toContain('data-shell-action="workspace-panel"');
-    expect(header).toContain('aria-label="Notificações"');
-    expect(header).toContain('data-shell-action="notifications-panel"');
+    expect(header).toContain('data-shell-action="atividades-panel"');
+    expect(header).toContain('data-shell-action="juridico-panel"');
+    expect(header).toContain('data-shell-action="sistema-panel"');
     expect(header).toContain('shell-notification-count');
+    expect(header).toContain('shell-activity-count');
     expect(header).toContain('data-shell-action="account-menu-toggle"');
     expect(header).toContain('data-shell-action="open-account-modal"');
     expect(header).toContain('id="sidebar-toggle"');

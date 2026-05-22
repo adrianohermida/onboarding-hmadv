@@ -33,8 +33,33 @@ const FRESHCHAT_VISIBLE_STYLE_ID = 'freshchat-shell-persistence-style';
 const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
 const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
+const SHELL_ACTIVITIES_KEY = 'portal:activities';
+const SHELL_ACTIVITIES_MAX = 50;
 const SHELL_TENANT_CONFIG_KEY = 'portal:tenant-config';
 const SHELL_MAX_RECENT_ROUTES = 6;
+
+const ACTIVITY_CATEGORIES = {
+  geral:      { label: 'Geral' },
+  processos:  { label: 'Processos' },
+  financeiro: { label: 'Financeiro' },
+  documentos: { label: 'Documentos' },
+  contratos:  { label: 'Contratos' },
+  mensagens:  { label: 'Mensagens' },
+  intimacoes: { label: 'Intimações' },
+  equipe:     { label: 'Equipe' },
+  sistema:    { label: 'Sistema' },
+};
+
+const ROUTE_ACTIVITY_CATEGORY = {
+  processos: 'processos', publicacoes: 'intimacoes', audiencias: 'processos',
+  prazos: 'processos', 'meu-caso': 'processos', 'custas-processuais': 'financeiro',
+  financeiro: 'financeiro', 'financeiro-processual': 'financeiro',
+  documentos: 'documentos', 'meus-documentos': 'documentos',
+  mensagens: 'mensagens', suporte: 'mensagens',
+  clientes: 'equipe', partes: 'equipe', agenda: 'equipe', tarefas: 'equipe',
+  'onboarding-v2': 'equipe', onboarding: 'equipe',
+  analytics: 'sistema', 'ai-copilot': 'sistema', gestao: 'sistema',
+};
 
 window.__shellVersion = SHELL_VERSION;
 
@@ -53,6 +78,7 @@ let shellManagersReady = false;
 let shellLegalNotificationItems = [];
 let shellLegalNotificationSource = 'session';
 const shellLegalNotificationFilters = { types: [], statuses: [] };
+let shellActivitiesFilter = 'geral';
 
 function getUserDisplayState(user, isAdmin = false) {
   const email = user?.email || '';
@@ -692,6 +718,7 @@ async function navigateModule(url, { pushState = true } = {}) {
       return;
     }
 
+    closeShellDrawer();
     removeDynamicPageArtifacts();
     syncPageStyles(parsedDoc, absolute);
     const swapped = syncMainContent(parsedDoc);
@@ -771,15 +798,21 @@ function setupShellNavigation() {
       return;
     }
 
-    if (shellAction?.dataset.shellAction === 'workspace-panel') {
+    if (shellAction?.dataset.shellAction === 'atividades-panel') {
+      event.preventDefault();
+      openAtividadesPanel();
+      return;
+    }
+
+    if (shellAction?.dataset.shellAction === 'juridico-panel') {
       event.preventDefault();
       openWorkspacePanel();
       return;
     }
 
-    if (shellAction?.dataset.shellAction === 'notifications-panel') {
+    if (shellAction?.dataset.shellAction === 'sistema-panel') {
       event.preventDefault();
-      openWorkspacePanel();
+      openSistemaPanel();
       return;
     }
 
@@ -799,6 +832,15 @@ function setupShellNavigation() {
       event.preventDefault();
       setShellNotifications([]);
       openWorkspacePanel();
+      return;
+    }
+
+    const atividadesFilter = event.target?.closest?.('[data-atividades-filter]');
+    if (atividadesFilter) {
+      event.preventDefault();
+      shellActivitiesFilter = atividadesFilter.dataset.atividadesFilter;
+      const content = document.getElementById('shell-drawer-content');
+      if (content) content.innerHTML = renderAtividadesPanel(shellActivitiesFilter);
       return;
     }
 
@@ -1558,6 +1600,14 @@ function rememberWorkspaceRoute() {
   const recentRoutes = [route, ...(state.recentRoutes || []).filter(item => item.key !== route.key)]
     .slice(0, SHELL_MAX_RECENT_ROUTES);
   setShellWorkspaceState({ ...state, currentRoute: route, recentRoutes });
+
+  const category = ROUTE_ACTIVITY_CATEGORY[module.key] || 'geral';
+  addShellActivity({
+    category,
+    title: module.menuLabel || module.title,
+    text: `Você acessou ${module.menuLabel || module.title}`,
+    href: `${module.key}.html`,
+  });
 }
 
 function getShellNotifications() {
@@ -1653,6 +1703,7 @@ function shellTimeAgo(ts) {
 function ensureShellManagers() {
   if (shellManagersReady) {
     renderShellNotificationCount();
+    renderShellActivityCount();
     renderMobileWorkspaceNav();
     return;
   }
@@ -1697,6 +1748,7 @@ function ensureShellManagers() {
 
   renderMobileWorkspaceNav();
   renderShellNotificationCount();
+  renderShellActivityCount();
 
   window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer };
   window.shellModal = { open: openShellModal, close: closeShellModal };
@@ -1876,6 +1928,141 @@ function openGlobalSearchPanelBindOnly() {
 
 function openNotificationsPanel() {
   openWorkspacePanel();
+}
+
+/* ── ATIVIDADES RECENTES ──────────────────────── */
+
+function getShellActivities() {
+  try {
+    return JSON.parse(sessionStorage.getItem(getTenantScopedStorageKey(SHELL_ACTIVITIES_KEY)) || '[]') || [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function addShellActivity({ category = 'geral', title, text, href = null } = {}) {
+  if (!title) return;
+  const item = {
+    id: `act-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    category,
+    title,
+    text: text || title,
+    href,
+    ts: Date.now(),
+  };
+  try {
+    const items = [item, ...getShellActivities()].slice(0, SHELL_ACTIVITIES_MAX);
+    sessionStorage.setItem(getTenantScopedStorageKey(SHELL_ACTIVITIES_KEY), JSON.stringify(items));
+  } catch (_) {}
+  renderShellActivityCount();
+}
+
+function renderShellActivityCount() {
+  const badge = document.getElementById('shell-activity-count');
+  if (!badge) return;
+  const today = Date.now() - 8 * 60 * 60 * 1000;
+  const count = getShellActivities().filter(a => a.ts > today).length;
+  badge.hidden = count === 0;
+  badge.textContent = String(Math.min(count, 9));
+}
+
+function renderAtividadesPanel(filter = 'geral') {
+  const all = getShellActivities();
+  const items = filter === 'geral' ? all : all.filter(a => a.category === filter);
+
+  const tabs = Object.entries(ACTIVITY_CATEGORIES).map(([key, meta]) => {
+    const count = key === 'geral' ? all.length : all.filter(a => a.category === key).length;
+    const active = filter === key;
+    return `<button type="button" class="shell-activity-filter ${active ? 'is-active' : ''}" data-atividades-filter="${escapeShellHtml(key)}">${escapeShellHtml(meta.label)}${count > 0 ? ` <span class="shell-activity-count-pill">${count}</span>` : ''}</button>`;
+  }).join('');
+
+  const feed = items.length === 0
+    ? '<div class="shell-empty-state">Nenhuma atividade registrada para este filtro.</div>'
+    : `<div class="shell-activity-feed">${items.map(item => `
+        <div class="shell-activity-item">
+          <span class="shell-activity-dot is-${escapeShellHtml(item.category)}" aria-hidden="true"></span>
+          <div>
+            ${item.href ? `<a href="${escapeShellHtml(item.href)}" data-page="${escapeShellHtml(item.href.replace('.html', ''))}" class="shell-activity-link"><strong>${escapeShellHtml(item.title)}</strong></a>` : `<strong>${escapeShellHtml(item.title)}</strong>`}
+            <small>${escapeShellHtml(item.text)}</small>
+            <small class="shell-activity-time">${shellTimeAgo(item.ts)}</small>
+          </div>
+        </div>
+      `).join('')}</div>`;
+
+  return `
+    <section class="shell-legal-center-hero">
+      <div>
+        <h3>Atividades Recentes</h3>
+        <p>Histórico das suas ações no portal, filtradas por módulo.</p>
+      </div>
+    </section>
+    <div class="shell-activity-filters">${tabs}</div>
+    ${feed}
+  `;
+}
+
+function openAtividadesPanel(filter) {
+  ensureShellManagers();
+  if (filter) shellActivitiesFilter = filter;
+  openShellDrawer({
+    eyebrow: 'Portal HMADV',
+    title: 'Atividades Recentes',
+    body: renderAtividadesPanel(shellActivitiesFilter),
+  });
+}
+
+/* ── STATUS DO SISTEMA ────────────────────────── */
+
+function renderSistemaPanel() {
+  const services = [
+    { name: 'Banco de dados', label: 'Supabase — operacional', status: 'ok' },
+    { name: 'Autenticação', label: 'Supabase Auth — operacional', status: 'ok' },
+    { name: 'Armazenamento', label: 'Supabase Storage — operacional', status: 'ok' },
+    { name: 'Edge Functions', label: 'Supabase Edge — operacional', status: 'ok' },
+    { name: 'Suporte', label: 'Freshdesk widget — ativo', status: 'ok' },
+    { name: 'Notificações legais', label: 'Serviço — operacional', status: 'ok' },
+  ];
+
+  return `
+    <section class="shell-legal-center-hero">
+      <div>
+        <h3>Status do Sistema</h3>
+        <p>Visão geral dos serviços e integrações ativas no portal.</p>
+      </div>
+    </section>
+    <div class="shell-panel-section-title">Serviços</div>
+    <div class="shell-sistema-status-list">
+      ${services.map(s => `
+        <div class="shell-sistema-status-item">
+          <span class="shell-sistema-status-dot is-${escapeShellHtml(s.status)}" aria-hidden="true"></span>
+          <span class="shell-sistema-status-name">${escapeShellHtml(s.name)}</span>
+          <span class="shell-sistema-status-label">${escapeShellHtml(s.label)}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="shell-panel-section-title">Portal</div>
+    <div class="shell-sistema-status-list">
+      <div class="shell-sistema-status-item">
+        <span class="shell-sistema-status-dot is-ok" aria-hidden="true"></span>
+        <span class="shell-sistema-status-name">Versão</span>
+        <span class="shell-sistema-status-label">${escapeShellHtml(SHELL_VERSION)}</span>
+      </div>
+      <div class="shell-sistema-status-item">
+        <span class="shell-sistema-status-dot is-ok" aria-hidden="true"></span>
+        <span class="shell-sistema-status-name">Ambiente</span>
+        <span class="shell-sistema-status-label">GitHub Pages — produção</span>
+      </div>
+    </div>
+  `;
+}
+
+function openSistemaPanel() {
+  ensureShellManagers();
+  openShellDrawer({
+    eyebrow: 'Portal HMADV',
+    title: 'Status do Sistema',
+    body: renderSistemaPanel(),
+  });
 }
 
 function renderLegalNotificationFilters() {

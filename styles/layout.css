@@ -1740,3 +1740,133 @@ body.app-loaded .sk { display: none !important; }
   border-bottom-color: var(--blue);
 }
 .hub-tab-content { min-height: 120px; }
+
+/* ── ATIVIDADES RECENTES ──────────────────────── */
+.shell-activity-filters {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+.shell-activity-filters::-webkit-scrollbar { display: none; }
+.shell-activity-filter {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.shell-activity-filter.is-active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.shell-activity-filter:hover:not(.is-active) {
+  background: var(--line2);
+  color: var(--navy);
+}
+.shell-activity-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.12);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.shell-activity-filter.is-active .shell-activity-count-pill {
+  background: rgba(255,255,255,.25);
+}
+
+.shell-activity-feed { display: grid; gap: 0; }
+.shell-activity-item {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.shell-activity-item:last-child { border-bottom: none; }
+.shell-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--navy);
+  margin-top: 5px;
+  justify-self: center;
+  flex-shrink: 0;
+}
+.shell-activity-dot.is-processos  { background: var(--navy); }
+.shell-activity-dot.is-financeiro  { background: var(--ok); }
+.shell-activity-dot.is-documentos  { background: var(--blue); }
+.shell-activity-dot.is-contratos   { background: var(--blue); }
+.shell-activity-dot.is-mensagens   { background: var(--navy); }
+.shell-activity-dot.is-intimacoes  { background: var(--warn); }
+.shell-activity-dot.is-equipe      { background: var(--ok); }
+.shell-activity-dot.is-sistema     { background: var(--muted); }
+.shell-activity-item strong {
+  display: block;
+  font-size: 13px;
+  color: var(--navy);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.shell-activity-item small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+.shell-activity-time { font-size: 11px !important; }
+.shell-activity-link { color: var(--navy); text-decoration: none; }
+.shell-activity-link:hover { color: var(--blue); text-decoration: underline; }
+
+/* ── STATUS DO SISTEMA ────────────────────────── */
+.shell-sistema-status-list {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 16px;
+}
+.shell-sistema-status-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--line2);
+}
+.shell-sistema-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.shell-sistema-status-dot.is-ok    { background: #16a34a; }
+.shell-sistema-status-dot.is-warn  { background: #d97706; }
+.shell-sistema-status-dot.is-error { background: #dc2626; }
+.shell-sistema-status-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--navy);
+  font-weight: 500;
+}
+.shell-sistema-status-label {
+  font-size: 12px;
+  color: var(--muted);
+}

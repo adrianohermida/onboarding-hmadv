@@ -18,18 +18,25 @@
         <path d="m13.2 13.2 3.1 3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
     </button>
-    <button type="button" class="shell-action-btn" data-shell-action="workspace-panel" aria-label="Notificações" title="Notificações">
+    <button type="button" class="shell-action-btn" data-shell-action="atividades-panel" aria-label="Atividades recentes" title="Atividades recentes">
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/>
-        <path d="M7 4V3h6v1M7 9h6M7 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M10 6v4l2.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
+      <span class="shell-notification-dot" id="shell-activity-count" hidden>0</span>
     </button>
-    <button type="button" class="shell-action-btn shell-notification-btn" data-shell-action="notifications-panel" aria-label="Notificações" title="Notificações">
+    <button type="button" class="shell-action-btn" data-shell-action="juridico-panel" aria-label="Notificações jurídicas" title="Notificações jurídicas">
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path d="M6 8a4 4 0 0 1 8 0v3.5l1.5 2.5h-11L6 11.5V8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
         <path d="M8.5 16a1.7 1.7 0 0 0 3 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
       <span class="shell-notification-dot" id="shell-notification-count" hidden>0</span>
+    </button>
+    <button type="button" class="shell-action-btn" data-shell-action="sistema-panel" aria-label="Status do sistema" title="Status do sistema">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M6 9h2M6 12h1M10 9h4M10 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
     </button>
     <div class="header-user-shell" id="header-user-shell">
       <button type="button" class="header-user" id="header-user-trigger" data-shell-action="account-menu-toggle" aria-haspopup="menu" aria-expanded="false" title="Abrir menu da conta">
