@@ -909,6 +909,132 @@ function renderModulePage() {
   `;
 }
 
+// ── Painel workspace helpers ─────────────────────────────────────────────────
+
+const DONE_STS = new Set(['concluida', 'concluido', 'realizado', 'aprovado', 'assinado', 'arquivado', 'ativo', 'recebido', 'quitado']);
+const PRI_TONE = { urgente: 'danger', alta: 'warn', normal: 'brand', baixa: 'muted' };
+
+function isVencido(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return !Number.isNaN(d.getTime()) && d < t;
+}
+function isHoje(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return !Number.isNaN(d.getTime()) && d.getTime() === t.getTime();
+}
+function isEmBreve(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const end = new Date(t); end.setDate(end.getDate() + 7);
+  return !Number.isNaN(d.getTime()) && d > t && d <= end;
+}
+function prazoUrgency(dateStr) {
+  if (isVencido(dateStr)) return { tone: 'danger', label: 'Vencido' };
+  if (isHoje(dateStr))    return { tone: 'warn',   label: 'Hoje' };
+  if (isEmBreve(dateStr)) return { tone: 'brand',  label: 'Em breve' };
+  return { tone: 'muted', label: formatDate(dateStr) };
+}
+function urgTone(n, high, mid) {
+  return n >= high ? 'danger' : n >= mid ? 'warn' : n > 0 ? 'brand' : 'ok';
+}
+
+function renderPainelAlerts(recordMap) {
+  const items = [];
+  const tv = (recordMap['tarefas'] || []).filter(t => !t.archived && isVencido(t.prazo || t.vencimento) && !DONE_STS.has(String(t.status || '').toLowerCase()));
+  if (tv.length) items.push({ level: 'danger', title: `${tv.length} tarefa(s) com prazo vencido`, detail: 'Revisão imediata necessária.' });
+  const pv = (recordMap['prazos'] || []).filter(p => !p.archived && isVencido(p.vencimento) && !DONE_STS.has(String(p.status || '').toLowerCase()));
+  if (pv.length) items.push({ level: 'danger', title: `${pv.length} prazo(s) processual(is) vencido(s)`, detail: 'Verifique providências urgentes.' });
+  const pb = (recordMap['publicacoes'] || []).filter(p => !p.archived && ['nova', 'pendente', 'nao_tratada'].includes(String(p.status || '').toLowerCase()));
+  if (pb.length) items.push({ level: 'warn', title: `${pb.length} publicação(ões) aguardando ciência interna`, detail: 'Registre ciência e providências.' });
+  if (!items.length) return '';
+  return `<div class="painel-alerts" role="alert">${items.map(a => `
+    <div class="painel-alert painel-alert--${escapeHtml(a.level)}">
+      <strong>${escapeHtml(a.title)}</strong>
+      <span>${escapeHtml(a.detail)}</span>
+    </div>`).join('')}</div>`;
+}
+
+function renderPainelTarefas(records) {
+  const active = records
+    .filter(t => !t.archived && !DONE_STS.has(String(t.status || '').toLowerCase()))
+    .sort((a, b) => {
+      const dA = a.prazo || a.vencimento, dB = b.prazo || b.vencimento;
+      const uA = isVencido(dA) ? 0 : isHoje(dA) ? 1 : isEmBreve(dA) ? 2 : 3;
+      const uB = isVencido(dB) ? 0 : isHoje(dB) ? 1 : isEmBreve(dB) ? 2 : 3;
+      if (uA !== uB) return uA - uB;
+      const pm = { urgente: 0, alta: 1, normal: 2, baixa: 3 };
+      return (pm[String(a.prioridade || 'normal').toLowerCase()] ?? 2) - (pm[String(b.prioridade || 'normal').toLowerCase()] ?? 2);
+    })
+    .slice(0, 8);
+  if (!active.length) return '<div class="painel-empty">Nenhuma tarefa pendente — bom trabalho!</div>';
+  return active.map(t => {
+    const d = t.prazo || t.vencimento;
+    const urg = prazoUrgency(d);
+    const pt  = PRI_TONE[String(t.prioridade || 'normal').toLowerCase()] || 'brand';
+    return `<div class="painel-row">
+      <span class="painel-dot painel-dot--${escapeHtml(pt)}"></span>
+      <div class="painel-row-body">
+        <span class="painel-row-title">${escapeHtml(t.descricao || t.titulo || t.cliente || 'Tarefa')}</span>
+        ${t.responsavel ? `<span class="painel-row-sub">${escapeHtml(t.responsavel)}</span>` : ''}
+      </div>
+      ${d ? `<span class="painel-chip painel-chip--${escapeHtml(urg.tone)}">${escapeHtml(urg.label)}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderPainelPrazos(records) {
+  const upcoming = records
+    .filter(p => !p.archived && !DONE_STS.has(String(p.status || '').toLowerCase()))
+    .sort((a, b) => {
+      const dA = a.vencimento ? new Date(a.vencimento).getTime() : Infinity;
+      const dB = b.vencimento ? new Date(b.vencimento).getTime() : Infinity;
+      return dA - dB;
+    })
+    .slice(0, 8);
+  if (!upcoming.length) return '<div class="painel-empty">Nenhum prazo processual pendente.</div>';
+  return upcoming.map(p => {
+    const urg = prazoUrgency(p.vencimento);
+    const sub = p.processo_id
+      ? `Proc. ${String(p.processo_id).slice(0, 8)}…`
+      : (p.cliente_nome || p.cliente || '');
+    return `<div class="painel-row">
+      <span class="painel-chip painel-chip--${escapeHtml(urg.tone)}">${escapeHtml(urg.label)}</span>
+      <div class="painel-row-body">
+        <span class="painel-row-title">${escapeHtml(p.descricao || p.titulo || p.tipo || 'Prazo')}</span>
+        ${sub ? `<span class="painel-row-sub">${escapeHtml(sub)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPainelMovimentacoes(records) {
+  const recent = [...records]
+    .sort((a, b) => {
+      const dA = a.data_movimentacao || a.createdAt || a.updatedAt || '';
+      const dB = b.data_movimentacao || b.createdAt || b.updatedAt || '';
+      return dB.localeCompare(dA);
+    })
+    .slice(0, 8);
+  if (!recent.length) return '<div class="painel-empty">Nenhuma movimentação registrada.</div>';
+  return recent.map(m => {
+    const date = m.data_movimentacao || m.createdAt || m.updatedAt;
+    return `<div class="painel-row">
+      <div class="painel-row-body">
+        <span class="painel-row-title">${escapeHtml(m.descricao || m.titulo || m.tipo || 'Movimentação')}</span>
+        ${m.tipo ? `<span class="painel-row-sub">${escapeHtml(m.tipo)}</span>` : ''}
+      </div>
+      ${date ? `<span class="painel-mov-date">${escapeHtml(formatDate(date))}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function renderPainelPage(host) {
   const recordMap = {};
   for (const key of ADMIN_PAGE_KEYS) {
@@ -916,100 +1042,100 @@ async function renderPainelPage(host) {
     recordMap[key] = key === 'clientes' ? localRecordsWithRemoteClients(key) : state.localRecords;
   }
 
-  const totals = ADMIN_PAGE_KEYS.reduce((acc, key) => {
-    const records = recordMap[key] || [];
-    acc.total += records.filter(record => !record.archived).length;
-    acc.archived += records.filter(record => record.archived).length;
-    return acc;
-  }, { total: 0, archived: 0 });
-  const countOpen = (key, doneStatuses = ['concluida', 'concluido', 'realizado', 'aprovado', 'assinado', 'arquivado']) =>
-    (recordMap[key] || []).filter(record => !record.archived && !doneStatuses.includes(String(record.status || '').toLowerCase())).length;
-  const routineCards = [
-    {
-      key: 'documentos',
-      title: 'Documentos e assinaturas',
-      count: countOpen('documentos', ['aprovado', 'assinado', 'arquivado']),
-      copy: 'Revisar pendências, correções e itens enviados para assinatura.',
-      cta: 'Abrir documentos',
-    },
-    {
-      key: 'prazos',
-      title: 'Prazos do dia',
-      count: countOpen('prazos'),
-      copy: 'Conferir prazos processuais, alertas e responsáveis.',
-      cta: 'Ver prazos',
-    },
-    {
-      key: 'publicacoes',
-      title: 'Publicações',
-      count: countOpen('publicacoes'),
-      copy: 'Tratar publicações novas, ciência interna e providências.',
-      cta: 'Ver publicações',
-    },
-    {
-      key: 'tarefas',
-      title: 'Follow-up',
-      count: countOpen('tarefas'),
-      copy: 'Organizar tarefas abertas e próximos contatos com clientes.',
-      cta: 'Ver tarefas',
-    },
-  ];
+  const tarefas = recordMap['tarefas'] || [];
+  const prazos  = recordMap['prazos']  || [];
+  const movs    = recordMap['movimentacoes'] || [];
+  const pubs    = recordMap['publicacoes']   || [];
+
+  const isPending = r => !r.archived && !DONE_STS.has(String(r.status || '').toLowerCase());
+  const tarefasPendentes = tarefas.filter(isPending).length;
+  const prazosUrgentes   = prazos.filter(p => isPending(p) && (isVencido(p.vencimento) || isHoje(p.vencimento))).length;
+  const pubNovas         = pubs.filter(p => !p.archived && ['nova', 'pendente', 'nao_tratada'].includes(String(p.status || '').toLowerCase())).length;
+  const movRecentes      = movs.filter(m => {
+    const d = m.data_movimentacao || m.createdAt;
+    if (!d) return false;
+    const week = new Date(); week.setDate(week.getDate() - 7);
+    return new Date(d) >= week;
+  }).length;
 
   const moduleCards = ADMIN_PAGE_KEYS.map(key => {
     const config = ADVOGADO_MODULES[key];
-    const records = recordMap[key] || [];
-    const active = records.filter(record => !record.archived).length;
-    return `
-      <a class="advogado-module-card" href="${key}.html" data-page="${key}">
+    const active = (recordMap[key] || []).filter(r => !r.archived).length;
+    return `<a class="advogado-module-card" href="${key}.html" data-page="${key}">
         <span>${escapeHtml(config.title)}</span>
         <strong>${active}</strong>
         <small>item(ns) ativos</small>
-      </a>
-    `;
+      </a>`;
   }).join('');
+
+  const todayStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   host.innerHTML = `
     <section class="advogado-page advogado-painel">
-      <div class="page-header page-header-row advogado-header">
+      <div class="painel-greeting">
         <div>
           <h1>Painel</h1>
-          <p>Operação jurídica do escritório com foco em clientes, prazos, documentos e próximos atos.</p>
+          <p>${escapeHtml(todayStr)}</p>
         </div>
         <a class="btn btn-primary" href="clientes.html" data-page="clientes">Novo atendimento</a>
       </div>
 
-      <div class="advogado-kpis">
-        <div class="ui-stat-card"><span>Clientes</span><strong>${state.remoteClients.length}</strong><small>casos vinculados</small></div>
-        <div class="ui-stat-card"><span>Pendências ativas</span><strong>${totals.total}</strong><small>em operação</small></div>
-        <div class="ui-stat-card"><span>Arquivados</span><strong>${totals.archived}</strong><small>histórico</small></div>
-        <div class="ui-stat-card"><span>Módulos operacionais</span><strong>${ADMIN_PAGE_KEYS.length}</strong><small>conectados</small></div>
+      <div class="painel-urgency">
+        <a class="painel-urgency-item painel-urgency-item--${urgTone(prazosUrgentes, 3, 1)}" href="prazos.html" data-page="prazos">
+          <strong>${prazosUrgentes}</strong>
+          <span>Prazos urgentes</span>
+          <small>vencidos ou vencem hoje</small>
+        </a>
+        <a class="painel-urgency-item painel-urgency-item--${urgTone(tarefasPendentes, 5, 2)}" href="tarefas.html" data-page="tarefas">
+          <strong>${tarefasPendentes}</strong>
+          <span>Tarefas pendentes</span>
+          <small>follow-up e providências</small>
+        </a>
+        <a class="painel-urgency-item painel-urgency-item--${pubNovas > 0 ? 'warn' : 'ok'}" href="publicacoes.html" data-page="publicacoes">
+          <strong>${pubNovas}</strong>
+          <span>Publicações sem ciência</span>
+          <small>aguardam tratamento interno</small>
+        </a>
+        <a class="painel-urgency-item painel-urgency-item--${movRecentes > 0 ? 'brand' : 'muted'}" href="movimentacoes.html" data-page="movimentacoes">
+          <strong>${movRecentes}</strong>
+          <span>Movimentações recentes</span>
+          <small>nos últimos 7 dias</small>
+        </a>
       </div>
 
-      <section class="advogado-routine sec">
-        <div class="advogado-routine-head">
-          <div>
-            <span>Rotina guiada</span>
-            <h2>Prioridades do escritório</h2>
+      ${renderPainelAlerts(recordMap)}
+
+      <div class="painel-workspace">
+        <div class="painel-workspace-col painel-workspace-col--wide">
+          <div class="painel-col-head">
+            <h2>Tarefas do dia</h2>
+            <a class="btn btn-ghost btn-sm" href="tarefas.html" data-page="tarefas">Ver todas</a>
           </div>
-          <button type="button" class="btn btn-ghost btn-sm" data-shell-action="workspace-panel">Abrir notificações</button>
+          <div class="painel-col-body">${renderPainelTarefas(tarefas)}</div>
         </div>
-        <div class="advogado-routine-grid">
-          ${routineCards.map(card => `
-            <a class="advogado-routine-card" href="${escapeHtml(getModuleHref(card.key))}" data-page="${escapeHtml(card.key)}">
-              <div>
-                <span>${escapeHtml(card.title)}</span>
-                <strong>${card.count}</strong>
-              </div>
-              <p>${escapeHtml(card.copy)}</p>
-              <small>${escapeHtml(card.cta)}</small>
-            </a>
-          `).join('')}
+        <div class="painel-workspace-col">
+          <div class="painel-col-head">
+            <h2>Prazos críticos</h2>
+            <a class="btn btn-ghost btn-sm" href="prazos.html" data-page="prazos">Ver todos</a>
+          </div>
+          <div class="painel-col-body">${renderPainelPrazos(prazos)}</div>
         </div>
-      </section>
-
-      <div class="advogado-workspace-grid">
-        ${moduleCards}
+        <div class="painel-workspace-col">
+          <div class="painel-col-head">
+            <h2>Movimentações</h2>
+            <a class="btn btn-ghost btn-sm" href="movimentacoes.html" data-page="movimentacoes">Ver todas</a>
+          </div>
+          <div class="painel-col-body">${renderPainelMovimentacoes(movs)}</div>
+        </div>
       </div>
+
+      <details class="painel-modules-details" open>
+        <summary class="painel-modules-summary">
+          <span>Todos os módulos</span>
+          <span class="painel-modules-count">${ADMIN_PAGE_KEYS.length} módulos operacionais</span>
+        </summary>
+        <div class="advogado-workspace-grid">${moduleCards}</div>
+      </details>
 
       ${renderCaseManagementPanel()}
     </section>
