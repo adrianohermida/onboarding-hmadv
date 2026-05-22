@@ -5,8 +5,8 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
-const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const lawyerKeys = ['painel', 'clientes', 'partes', 'documentos', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
+const crudKeys = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -25,7 +25,7 @@ describe('portal do advogado contract', () => {
   });
 
   it('ships authenticated pages for every new lawyer route', () => {
-    ['painel', 'clientes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
+    ['painel', 'clientes', 'partes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');

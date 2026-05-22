@@ -7,9 +7,17 @@ const MODULE_COPY = {
     title: 'Meu caso',
     subtitle: 'Acompanhe sua jornada com clareza, sem termos complicados.',
   },
+  custas: {
+    title: 'Custas',
+    subtitle: 'Veja despesas processuais, guias e comprovantes vinculados ao seu caso.',
+  },
   'meus-documentos': {
-    title: 'Meus documentos',
+    title: 'Documentos',
     subtitle: 'Veja o que já foi enviado e o que ainda precisa da sua atenção.',
+  },
+  contratos: {
+    title: 'Contratos',
+    subtitle: 'Acompanhe minuta, aceite, assinatura eletrônica e histórico contratual.',
   },
   'minhas-dividas': {
     title: 'Minhas dívidas',
@@ -18,6 +26,10 @@ const MODULE_COPY = {
   'meu-plano': {
     title: 'Meu plano',
     subtitle: 'Entenda o caminho de análise até a proposta para reorganizar sua vida financeira.',
+  },
+  'plano-pagamento': {
+    title: 'Plano de pagamento',
+    subtitle: 'Consulte parcelas, cronograma e comprovantes da negociação com credores.',
   },
   mensagens: {
     title: 'Mensagens',
@@ -85,10 +97,10 @@ function getNextStep(caso, docStats, debtStats) {
   }
   if (debtStats.creditors === 0) {
     return {
-      label: 'Cadastrar dívidas',
-      text: 'Informe seus credores para que a análise financeira possa começar.',
-      href: 'minhas-dividas.html',
-      action: 'Ver minhas dívidas',
+      label: 'Completar plano financeiro',
+      text: 'Use os atalhos do Meu plano para cadastrar dívidas e avançar a proposta.',
+      href: 'meu-plano.html',
+      action: 'Abrir meu plano',
     };
   }
   if (docStats.pending > 0) {
@@ -163,10 +175,77 @@ function renderCasePage(data) {
       <h2>Resumo tranquilo</h2>
       <p>${docs.length || debts.length ? 'As informações abaixo ajudam a equipe a preparar a análise do seu caso.' : 'Comece preenchendo o formulário e enviando seus documentos. O portal vai orientar cada etapa.'}</p>
       <div class="cliente-link-grid">
-        <a href="meus-documentos.html" data-page="meus-documentos">Ver documentos</a>
-        <a href="minhas-dividas.html" data-page="minhas-dividas">Ver dívidas</a>
-        <a href="meu-plano.html" data-page="meu-plano">Ver plano</a>
+        <a href="meus-documentos.html" data-page="meus-documentos">Documentos</a>
+        <a href="custas.html" data-page="custas">Custas</a>
+        <a href="contratos.html" data-page="contratos">Contratos</a>
+        <a href="meu-plano.html" data-page="meu-plano">Meu plano</a>
         <a href="ajuda.html" data-page="ajuda">Preciso de ajuda</a>
+      </div>
+    </section>
+    <section class="cliente-card">
+      <h2>Ações rápidas</h2>
+      <div class="cliente-help-actions" style="margin-top:0;">
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="info-processo">Informações do processo</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="copia-processo">Cópia do processo</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="duvidas">Tenho dúvidas</button>
+        <button type="button" class="btn btn-primary btn-sm" data-case-action="agendar">Agendar horário</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderCustasPage(data) {
+  const { debts, nextStep } = data;
+  const estimated = debts.reduce((sum, debt) => sum + (Number(debt.valor || 0) * 0.02), 0);
+  const rows = debts.length
+    ? debts.slice(0, 8).map(debt => `
+      <article class="cliente-list-item">
+        <div>
+          <strong>${escapeHtml(debt.credor || 'Credor')}</strong>
+          <span>Guia vinculada ao acompanhamento jurídico</span>
+        </div>
+        <small>${formatMoney((Number(debt.valor || 0) * 0.02))}</small>
+      </article>
+    `).join('')
+    : '<div class="cliente-empty">As custas aparecem após o cadastro de credores e andamento processual.</div>';
+
+  return `
+    ${renderShellHeader('custas', nextStep)}
+    <section class="cliente-kpis">
+      <article class="cliente-kpi"><span>Custas estimadas</span><strong>${formatMoney(estimated)}</strong><small>base inicial de simulação</small></article>
+      <article class="cliente-kpi"><span>Guias pendentes</span><strong>${debts.length ? debts.slice(0, 8).length : 0}</strong><small>acompanhamento por credor</small></article>
+      <article class="cliente-kpi"><span>Comprovantes</span><strong>0</strong><small>anexe no envio documental</small></article>
+    </section>
+    <section class="cliente-card">
+      <div class="cliente-card-head">
+        <h2>Despesas processuais</h2>
+        <a class="btn btn-primary btn-sm" href="meus-documentos.html" data-page="meus-documentos">Enviar comprovante</a>
+      </div>
+      <div class="cliente-list">${rows}</div>
+    </section>
+  `;
+}
+
+function renderContractsPage(data) {
+  const { docStats, nextStep } = data;
+  return `
+    ${renderShellHeader('contratos', nextStep)}
+    <section class="cliente-kpis">
+      <article class="cliente-kpi"><span>Minutas</span><strong>${docStats.sent > 0 ? 1 : 0}</strong><small>documentação base recebida</small></article>
+      <article class="cliente-kpi"><span>Aguardando aceite</span><strong>${docStats.pending > 0 ? 1 : 0}</strong><small>dependente de pendências</small></article>
+      <article class="cliente-kpi"><span>Assinaturas</span><strong>${docStats.approved > 0 ? 1 : 0}</strong><small>status contratual</small></article>
+    </section>
+    <section class="cliente-card">
+      <h2>Workflow contratual</h2>
+      <div class="cliente-steps">
+        <div class="cliente-step ${docStats.sent > 0 ? 'is-done' : ''}"><span>1</span><strong>Minuta</strong></div>
+        <div class="cliente-step ${docStats.pending === 0 && docStats.sent > 0 ? 'is-done' : ''}"><span>2</span><strong>Aceite</strong></div>
+        <div class="cliente-step ${docStats.approved > 0 ? 'is-done' : ''}"><span>3</span><strong>Assinatura</strong></div>
+        <div class="cliente-step"><span>4</span><strong>Histórico</strong></div>
+      </div>
+      <div class="cliente-help-actions">
+        <a class="btn btn-primary btn-sm" href="meus-documentos.html" data-page="meus-documentos">Enviar anexo contratual</a>
+        <a class="btn btn-ghost btn-sm" href="financeiro.html" data-page="financeiro">Ver financeiro</a>
       </div>
     </section>
   `;
@@ -274,9 +353,47 @@ function renderPlanPage(data) {
       </div>
       <div class="cliente-link-grid">
         <a href="onboarding-v2.html" data-page="onboarding-v2">Formulário CNJ</a>
-        <a href="minhas-dividas.html" data-page="minhas-dividas">Dívidas</a>
+        <a href="dividas.html" data-page="dividas">Dívidas</a>
         <a href="meus-documentos.html" data-page="meus-documentos">Documentos</a>
+        <a href="plano-pagamento.html" data-page="plano-pagamento">Plano de pagamento</a>
         <a href="financial-dashboard.html" data-page="financial-dashboard">Diagnóstico financeiro</a>
+      </div>
+    </section>
+  `;
+}
+
+function renderPaymentPlanPage(data) {
+  const { debtStats, financialPlan, nextStep } = data;
+  const proposal = financialPlan?.proposal || {};
+  const installments = proposal.prazoMeses && proposal.parcelaSugerida
+    ? Array.from({ length: Math.min(proposal.prazoMeses, 12) }).map((_, index) => ({
+      index: index + 1,
+      value: proposal.parcelaSugerida,
+    }))
+    : [];
+
+  return `
+    ${renderShellHeader('plano-pagamento', nextStep)}
+    <section class="cliente-kpis">
+      <article class="cliente-kpi"><span>Saldo negociado</span><strong>${formatMoney(proposal.saldoNegociado)}</strong><small>base consolidada</small></article>
+      <article class="cliente-kpi"><span>Parcela sugerida</span><strong>${formatMoney(proposal.parcelaSugerida)}</strong><small>com mínimo existencial</small></article>
+      <article class="cliente-kpi"><span>Prazo estimado</span><strong>${proposal.prazoMeses || 0} meses</strong><small>${debtStats.creditors} credores</small></article>
+    </section>
+    <section class="cliente-card">
+      <div class="cliente-card-head">
+        <h2>Cronograma de pagamento</h2>
+        <a class="btn btn-ghost btn-sm" href="meu-plano.html" data-page="meu-plano">Voltar ao plano</a>
+      </div>
+      <div class="cliente-list">
+        ${installments.length ? installments.map(item => `
+          <article class="cliente-list-item">
+            <div>
+              <strong>Parcela ${item.index}</strong>
+              <span>Cronograma proposto para negociação</span>
+            </div>
+            <small>${formatMoney(item.value)}</small>
+          </article>
+        `).join('') : '<div class="cliente-empty">Preencha renda, despesas e dívidas para gerar o plano de pagamento.</div>'}
       </div>
     </section>
   `;
@@ -376,14 +493,54 @@ export async function bootClientePage(moduleKey) {
     const data = await loadClientData();
     const renderers = {
       'meu-caso': renderCasePage,
+      custas: renderCustasPage,
       'meus-documentos': renderDocumentsPage,
       'minhas-dividas': renderDebtsPage,
+      contratos: renderContractsPage,
       'meu-plano': renderPlanPage,
+      'plano-pagamento': renderPaymentPlanPage,
       mensagens: renderMessagesPage,
       ajuda: renderHelpPage,
     };
     host.innerHTML = `<section class="cliente-page">${renderers[moduleKey]?.(data) || renderCasePage(data)}</section>`;
     window.initUiKit?.(host);
+
+    if (moduleKey === 'meu-caso') {
+      host.querySelectorAll('[data-case-action]').forEach(button => {
+        button.addEventListener('click', () => {
+          const action = button.dataset.caseAction;
+          if (action === 'duvidas') {
+            window.location.href = 'suporte.html';
+            return;
+          }
+          if (action === 'agendar') {
+            window.shellModal?.open?.({
+              title: 'Agendar horário',
+              body: `
+                <div class="cliente-card" style="margin:0;">
+                  <p>Escolha o melhor canal para agendamento com a equipe.</p>
+                  <div class="cliente-help-actions" style="margin-top:14px;">
+                    <a class="btn btn-primary btn-sm" href="suporte.html" data-page="suporte">Solicitar por suporte</a>
+                    <a class="btn btn-ghost btn-sm" href="mensagens.html" data-page="mensagens">Enviar mensagem</a>
+                  </div>
+                </div>
+              `,
+            });
+            return;
+          }
+          const modalContent = action === 'copia-processo'
+            ? {
+              title: 'Cópia do processo',
+              body: 'Solicitação registrada. A equipe enviará a cópia no canal de mensagens e notificará no suporte.',
+            }
+            : {
+              title: 'Informações do processo',
+              body: 'O andamento detalhado está em atualização contínua. Consulte também as mensagens e documentos para últimos movimentos.',
+            };
+          window.shellModal?.open?.({ title: modalContent.title, body: `<div class="cliente-card" style="margin:0;"><p>${modalContent.body}</p></div>` });
+        });
+      });
+    }
   } catch (error) {
     host.innerHTML = `
       <section class="cliente-card cliente-error">

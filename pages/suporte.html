@@ -24,7 +24,7 @@
           <h1>Suporte</h1>
           <p>Acompanhe seus chamados e entre em contato com a equipe.</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">+ Novo chamado</button>
+        <button class="btn btn-primary btn-sm" id="btn-new-ticket-top" onclick="showNewTicketModal()">+ Novo chamado</button>
       </div>
 
       <div id="suporte-admin-bar" class="admin-bar" style="display:none; margin-bottom:16px;">
@@ -40,8 +40,10 @@
           <div class="next-action-label">Próxima ação</div>
           <div class="next-action-text">Abra um chamado com assunto objetivo, anexe evidências e acompanhe a sincronização.</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">Novo chamado</button>
+        <button class="btn btn-primary btn-sm" id="btn-new-ticket-next" onclick="showNewTicketModal()">Novo chamado</button>
       </div>
+
+      <div id="suporte-case-summary"></div>
 
       <div id="contact-bar" style="display:none; margin-bottom:16px;"></div>
 
@@ -213,22 +215,110 @@
 <script type="module" src="../js/app.js?v=20260521p"></script>
 <script type="module">
 import { showToast }        from '../utils/helpers.js';
+import { AdminService } from '../services/database.js';
 import { FreshdeskService } from '../services/freshdesk.js';
 import { invokeEdgeFunction } from '../services/edge.js';
+import { buildCaseContextHref, getCaseFlowSummary } from '../js/case-flow.js';
 
 window.showToast = showToast;
+const suporteUrlParams = new URLSearchParams(window.location.search);
+const requestedClientId = suporteUrlParams.get('client');
 
 let currentUser = null;
 let currentCaso = null;
 let suporteBooting = false;
 let isAdminUser = false;
 let unmountModeSelector = null;
+let activeUserId = null;
+let targetUserId = null;
+let isReadonlyAdminView = false;
+let targetCaseSummary = null;
 let ticketState = { page: 1, pageSize: 10, total: 0, totalPages: 1, filters: {} };
 let lastTickets = [];
 
 const byId = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const fmtDate = (value) => value ? new Date(value).toLocaleDateString('pt-BR') : '—';
+
+function hasTargetClientContext() {
+  return Boolean(isReadonlyAdminView && targetUserId);
+}
+
+function buildContextHref(pageKey, options = {}) {
+  return buildCaseContextHref(pageKey, {
+    clientId: hasTargetClientContext() ? targetUserId : null,
+    ...options,
+  });
+}
+
+function setReadonlyAdminMode(enabled) {
+  isReadonlyAdminView = Boolean(enabled);
+
+  const topBtn = byId('btn-new-ticket-top');
+  const nextBtn = byId('btn-new-ticket-next');
+  [topBtn, nextBtn].forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = isReadonlyAdminView;
+    btn.textContent = isReadonlyAdminView ? 'Modo leitura' : (btn.id === 'btn-new-ticket-top' ? '+ Novo chamado' : 'Novo chamado');
+  });
+
+  ['filter-search', 'filter-status', 'filter-priority', 'filter-from', 'filter-to', 'filter-page-size', 'btn-clear-filters', 'btn-apply-filters', 'btn-prev-page', 'btn-next-page']
+    .forEach((id) => {
+      const el = byId(id);
+      if (!el) return;
+      el.disabled = isReadonlyAdminView;
+    });
+}
+
+function renderCaseSummary() {
+  const host = byId('suporte-case-summary');
+  if (!host) return;
+  if (!hasTargetClientContext() || !targetCaseSummary) {
+    host.innerHTML = '';
+    return;
+  }
+
+  const summary = getCaseFlowSummary(targetCaseSummary);
+  host.innerHTML = `
+    <div class="callout callout-blue" style="margin:0 0 16px;">
+      Acompanhamento admin em modo leitura para ${esc(targetCaseSummary.full_name || targetCaseSummary.email || 'cliente')}.
+      A API de suporte atual lista chamados apenas do usuário autenticado, por isso a visualização de tickets deste cliente está indisponível neste módulo.
+    </div>
+    <div class="dyn-card" style="margin-bottom:16px;">
+      <div class="dyn-card-header">
+        <span class="dyn-card-title">Contexto do caso</span>
+        <span class="sec-tag">${esc(summary.label)}</span>
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Fluxo CNJ</label>
+          <div style="font-weight:700;color:var(--navy);">${summary.step}/7 · ${summary.progressPct}%</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Situação</label>
+          <div style="font-weight:700;color:var(--ink);">${esc(summary.detail)}</div>
+        </div>
+      </div>
+      <div class="btn-group" style="justify-content:flex-start;flex-wrap:wrap;">
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('onboarding-v2')}">Abrir jornada</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('onboarding', { source: 'journey' })}">Abrir formulário</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('financial-dashboard')}">Abrir diagnóstico</a>
+      </div>
+    </div>
+  `;
+}
+
+async function resolveSupportContext() {
+  activeUserId = currentUser?.id || null;
+  targetUserId = isAdminUser && requestedClientId ? requestedClientId : activeUserId;
+  setReadonlyAdminMode(Boolean(isAdminUser && requestedClientId && targetUserId && targetUserId !== activeUserId));
+  if (hasTargetClientContext()) {
+    targetCaseSummary = await AdminService.getClientCaso(targetUserId);
+  } else {
+    targetCaseSummary = currentCaso;
+  }
+  renderCaseSummary();
+}
 
 function collectFilters() {
   return {
@@ -241,7 +331,7 @@ function collectFilters() {
   };
 }
 
-document.addEventListener('app:user-loaded', e => {
+document.addEventListener('app:user-loaded', async (e) => {
   currentUser = e.detail?.user;
   currentCaso = e.detail?.caso;
   isAdminUser = !!e.detail?.isAdmin;
@@ -250,6 +340,7 @@ document.addEventListener('app:user-loaded', e => {
   if (!bar) return;
   if (!isAdminUser) {
     bar.style.display = 'none';
+    await resolveSupportContext();
     return;
   }
 
@@ -268,6 +359,8 @@ document.addEventListener('app:user-loaded', e => {
     });
     window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'suporte-init' });
   }
+
+  await resolveSupportContext();
 });
 
 async function init({ page = ticketState.page, reset = false } = {}) {
@@ -281,6 +374,27 @@ async function init({ page = ticketState.page, reset = false } = {}) {
 
   try {
     if (reset) page = 1;
+
+    if (hasTargetClientContext()) {
+      lastTickets = [];
+      ticketState = {
+        page: 1,
+        pageSize: Number(byId('filter-page-size')?.value || 10),
+        total: 0,
+        totalPages: 1,
+        filters: collectFilters(),
+      };
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Visualização de tickets do cliente indisponível neste contexto administrativo.</td></tr>';
+      byId('tickets-table-wrap').style.display = '';
+      byId('tickets-empty').style.display = 'none';
+      byId('kpi-abertos').textContent = '—';
+      byId('kpi-resolvidos').textContent = '—';
+      byId('kpi-total-tickets').textContent = '—';
+      byId('ticket-count').textContent = 'visão restrita';
+      renderPagination();
+      return;
+    }
+
     const filters = collectFilters();
     const [ticketResult, contact] = await Promise.all([
       FreshdeskService.listTickets({ ...filters, page }).catch(error => ({ data: [], total: 0, page, pageSize: filters.pageSize, totalPages: 1, error })),
@@ -394,10 +508,20 @@ function setupTicketFilters() {
   byId('btn-next-page')?.addEventListener('click', () => init({ page: Math.min(ticketState.page + 1, ticketState.totalPages) }));
 }
 
-window.showNewTicketModal  = () => document.getElementById('modal-new-ticket').classList.add('show');
+window.showNewTicketModal  = () => {
+  if (isReadonlyAdminView) {
+    showToast('Modo leitura do administrador: criação de chamado desabilitada.', 'warn');
+    return;
+  }
+  document.getElementById('modal-new-ticket').classList.add('show');
+};
 window.closeNewTicketModal = () => document.getElementById('modal-new-ticket').classList.remove('show');
 
 window.submitTicket = async function() {
+  if (isReadonlyAdminView) {
+    showToast('Modo leitura do administrador: criação de chamado desabilitada.', 'warn');
+    return;
+  }
   const subject = document.getElementById('t-subject').value.trim();
   const desc    = document.getElementById('t-desc').value.trim();
   const files   = document.getElementById('t-attachments')?.files || [];

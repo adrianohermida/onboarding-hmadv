@@ -3,9 +3,11 @@ import { getRoutes, getSidebarModules, PORTAL_MODULES } from '../js/navigation.j
 
 const expectedSidebarKeys = [
   'meu-caso',
+  'custas',
   'meus-documentos',
-  'minhas-dividas',
+  'contratos',
   'meu-plano',
+  'plano-pagamento',
   'mensagens',
   'ajuda',
   'onboarding-v2',
@@ -26,6 +28,10 @@ const expectedAdminCaseLabels = {
   'financial-dashboard': { menuLabel: 'Diagnóstico', adminSidebarSectionLabel: 'Gestão do caso' },
   suporte: { menuLabel: 'Suporte', adminSidebarSectionLabel: 'Gestão do caso' },
   onboarding: { menuLabel: 'Formulário', adminSidebarSectionLabel: 'Gestão do caso' },
+};
+
+const expectedAdminOperations = {
+  partes: { title: 'Partes', menuLabel: 'Partes' },
 };
 
 describe('navigation contract', () => {
@@ -62,6 +68,16 @@ describe('navigation contract', () => {
     const modules = getSidebarModules({ isAdmin: true });
 
     Object.entries(expectedAdminCaseLabels).forEach(([key, expected]) => {
+      const module = modules.find(item => item.key === key);
+
+      expect(module).toMatchObject(expected);
+    });
+  });
+
+  it('exposes operational legal modules for admin workflow', () => {
+    const modules = getSidebarModules({ isAdmin: true });
+
+    Object.entries(expectedAdminOperations).forEach(([key, expected]) => {
       const module = modules.find(item => item.key === key);
 
       expect(module).toMatchObject(expected);

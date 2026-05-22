@@ -887,7 +887,7 @@ function renderSidebarNavigation(isAdmin = false) {
       const section = {
         key: sectionKey,
         label: isAdmin
-          ? (module.adminSidebarSectionLabel || module.sidebarSectionLabel || 'Workspace')
+          ? (module.adminSidebarSectionLabel || module.sidebarSectionLabel || 'Meu Escritório')
           : (module.sidebarSectionLabel || 'Portal'),
         order: isAdmin
           ? (module.adminSidebarSectionOrder ?? module.sidebarSectionOrder ?? 999)
@@ -1565,7 +1565,7 @@ function ensureShellManagers() {
     <div class="ui-drawer-panel shell-side-panel-body" role="dialog" aria-modal="true" aria-labelledby="shell-drawer-title">
       <header class="ui-drawer-header">
         <div>
-          <div class="shell-panel-eyebrow" id="shell-drawer-eyebrow">Workspace</div>
+          <div class="shell-panel-eyebrow" id="shell-drawer-eyebrow">Meu Escritório</div>
           <h2 class="shell-panel-title" id="shell-drawer-title">Portal jurídico</h2>
         </div>
         <button type="button" class="shell-action-btn" data-shell-action="close-shell-drawer" aria-label="Fechar painel">
@@ -1602,7 +1602,7 @@ function ensureShellManagers() {
   window.shellNotify = addShellNotification;
 }
 
-function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Workspace', body = '' } = {}) {
+function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Meu Escritório', body = '' } = {}) {
   ensureShellManagers();
   const drawer = document.getElementById('shell-drawer-root');
   const titleEl = document.getElementById('shell-drawer-title');

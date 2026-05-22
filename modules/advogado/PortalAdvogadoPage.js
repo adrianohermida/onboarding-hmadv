@@ -20,7 +20,7 @@ import { financialPlanEngine } from '../financeiro/FinancialPlanEngine.js';
 import { buildCommunicationSnapshot } from '../mensagens/CommunicationCenter.js';
 import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '../../js/case-flow.js';
 
-const ADMIN_PAGE_KEYS = ['clientes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];
 
 const state = {
@@ -723,21 +723,11 @@ async function renderPainelPage(host) {
         <div class="ui-stat-card"><span>Clientes Supabase</span><strong>${state.remoteClients.length}</strong></div>
         <div class="ui-stat-card"><span>Registros ativos</span><strong>${totals.total}</strong></div>
         <div class="ui-stat-card"><span>Arquivados</span><strong>${totals.archived}</strong></div>
-        <div class="ui-stat-card"><span>Módulos</span><strong>${ADMIN_PAGE_KEYS.length + 2}</strong></div>
+        <div class="ui-stat-card"><span>Módulos</span><strong>${ADMIN_PAGE_KEYS.length}</strong></div>
       </div>
 
       <div class="advogado-workspace-grid">
         ${moduleCards}
-        <a class="advogado-module-card" href="documentos.html" data-page="documentos">
-          <span>Documentos</span>
-          <strong>CRUD</strong>
-          <small>workflow documental existente</small>
-        </a>
-        <a class="advogado-module-card" href="dividas.html" data-page="dividas">
-          <span>Dívidas</span>
-          <strong>CRUD</strong>
-          <small>cadastro financeiro existente</small>
-        </a>
       </div>
 
       ${renderCaseManagementPanel()}

@@ -447,6 +447,8 @@
             <button class="btn btn-primary btn-sm" onclick="document.getElementById('section-renda')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">Preencher renda</button>
           </div>
 
+          <div id="findash-case-summary"></div>
+
           <!-- ── Diagnóstico Banner ──────────────────────────────── -->
           <div id="fd-diag-banner" class="fd-diag-banner fd-diag--low" style="display:none;">
             <div class="fd-diag-icon" id="fd-diag-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 7v3.5M10 13.5h.01"/></svg></div>
@@ -630,8 +632,8 @@
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                 <span style="font-size:12px;color:var(--muted);">Dívidas ativas são usadas no cálculo de comprometimento.</span>
                 <div style="display:flex;gap:8px;">
-                  <button class="btn-fd-ghost" onclick="window.open('dividas.html','_self')">Ver tudo →</button>
-                  <button class="btn-fd-primary" onclick="openDebtModal()">+ Adicionar dívida</button>
+                  <button class="btn-fd-ghost" id="fd-view-all-debts-btn" onclick="window.open('dividas.html','_self')">Ver tudo →</button>
+                  <button class="btn-fd-primary" id="fd-add-debt-btn" onclick="openDebtModal()">+ Adicionar dívida</button>
                 </div>
               </div>
               <div id="fd-debts-list"><!-- rendered by JS --></div>
@@ -752,11 +754,12 @@
 <!-- ── Module Script ───────────────────────────────────────────────────── -->
 <script type="module">
 import { supabase }            from '../services/supabase.js';
-import { DebtService, CaseService } from '../services/database.js';
+import { AdminService, DebtService, CaseService } from '../services/database.js';
 import { bus }                 from '../modules/events/EventBus.js';
 import { Shell }               from '../modules/ui/Shell.js';
 import { Toast }               from '../modules/ui/Toast.js';
 import { DebtEngine, DEBT_STATUS, CREDITOR_TYPES } from '../modules/dividas/DebtEngine.js';
+import { buildCaseContextHref, getCaseFlowSummary } from '../js/case-flow.js';
 import {
   FinancialCalculator,
   DESPESAS_CONFIG,
@@ -765,6 +768,8 @@ import {
 } from '../modules/financeiro/calculator.js';
 
 const REQUIRED_SHELL_VERSION = '20260521p';
+const finDashUrlParams = new URLSearchParams(window.location.search);
+const requestedClientId = finDashUrlParams.get('client');
 
 if (window.history?.state?.shell && window.__shellVersion !== REQUIRED_SHELL_VERSION) {
   const hardReloadUrl = new URL(window.location.href);
@@ -796,10 +801,15 @@ let chartsEnabled = true;
 let finDashUnmounted = false;
 let isAdminUser = false;
 let unmountModeSelector = null;
+let activeUserId = null;
+let targetUserId = null;
+let isReadonlyAdminView = false;
+let targetCaseSummary = null;
 
 const shell = new Shell();
 
 const byId = (id) => document.getElementById(id);
+const escHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const safeSetText = (id, value) => {
   const el = byId(id);
   if (!el) return null;
@@ -808,8 +818,100 @@ const safeSetText = (id, value) => {
 };
 const isFinDashMounted = () => !finDashUnmounted && !!byId('fd-main');
 
+function hasTargetClientContext() {
+  return Boolean(isReadonlyAdminView && targetUserId);
+}
+
+function buildContextHref(pageKey, options = {}) {
+  return buildCaseContextHref(pageKey, {
+    clientId: hasTargetClientContext() ? targetUserId : null,
+    ...options,
+  });
+}
+
+function setReadonlyAdminMode(enabled) {
+  isReadonlyAdminView = Boolean(enabled);
+
+  const addDebtBtn = byId('fd-add-debt-btn');
+  if (addDebtBtn) {
+    addDebtBtn.disabled = isReadonlyAdminView;
+    addDebtBtn.textContent = isReadonlyAdminView ? 'Modo leitura' : '+ Adicionar dívida';
+  }
+
+  if (isReadonlyAdminView) {
+    byId('fd-save-bar')?.classList.remove('visible');
+  }
+
+  const saveBtn = byId('fd-save-btn');
+  if (saveBtn) {
+    if (isReadonlyAdminView) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Modo leitura do administrador';
+    } else {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Salvar diagnóstico';
+    }
+  }
+
+  document.querySelectorAll('.fd-input, .expense-input').forEach((el) => {
+    if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement) && !(el instanceof HTMLSelectElement)) return;
+    if (isReadonlyAdminView) {
+      el.disabled = true;
+      el.setAttribute('data-admin-readonly', 'true');
+    } else if (el.getAttribute('data-admin-readonly') === 'true') {
+      el.disabled = false;
+      el.removeAttribute('data-admin-readonly');
+    }
+  });
+}
+
+function renderCaseSummary() {
+  const host = byId('findash-case-summary');
+  if (!host) return;
+  if (!hasTargetClientContext() || !targetCaseSummary) {
+    host.innerHTML = '';
+    return;
+  }
+
+  const summary = getCaseFlowSummary(targetCaseSummary);
+  host.innerHTML = `
+    <div class="callout callout-blue" style="margin:0 0 14px;">
+      Acompanhamento admin do diagnóstico do cliente em modo leitura.
+    </div>
+    <div class="dyn-card" style="margin-bottom:16px;">
+      <div class="dyn-card-header">
+        <span class="dyn-card-title">Contexto do caso</span>
+        <span class="sec-tag">${escHtml(summary.label)}</span>
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Cliente</label>
+          <div style="font-weight:700;color:var(--ink);">${escHtml(targetCaseSummary.full_name || targetCaseSummary.email || 'Cliente')}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fluxo CNJ</label>
+          <div style="font-weight:700;color:var(--navy);">${summary.step}/7 · ${summary.progressPct}%</div>
+        </div>
+      </div>
+      <div class="btn-group" style="justify-content:flex-start;flex-wrap:wrap;">
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('onboarding-v2')}">Abrir jornada</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('onboarding', { source: 'journey' })}">Abrir formulário</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('suporte')}">Abrir suporte</a>
+      </div>
+    </div>
+  `;
+}
+
+async function resolveCaseContext() {
+  const { data: { user } } = await supabase.auth.getUser();
+  activeUserId = user?.id || null;
+  targetUserId = isAdminUser && requestedClientId ? requestedClientId : activeUserId;
+  setReadonlyAdminMode(Boolean(isAdminUser && requestedClientId && targetUserId && targetUserId !== activeUserId));
+}
+
 document.addEventListener('app:user-loaded', (e) => {
   isAdminUser = !!e.detail?.isAdmin;
+  activeUserId = e.detail?.user?.id || null;
   const bar = byId('findash-admin-bar');
   if (!bar) return;
 
@@ -912,14 +1014,44 @@ async function bootstrap() {
 
 async function loadData() {
   try {
-    caso = await CaseService.get();
+    await resolveCaseContext();
+
+    if (hasTargetClientContext()) {
+      targetCaseSummary = await AdminService.getClientCaso(targetUserId);
+      caso = targetCaseSummary || null;
+    } else {
+      caso = await CaseService.get();
+      targetCaseSummary = caso;
+    }
+
     if (caso) {
       rendaPropria = Number(caso.renda_mensal)          || 0;
       rendaFam     = Number(caso.renda_familiar)        || 0;
       nDep         = Number(caso.numero_dependentes)    || 0;
       try { despesas = JSON.parse(caso.despesas_json || '{}'); } catch { despesas = {}; }
     }
-    await engine.init(DebtService);
+
+    if (hasTargetClientContext()) {
+      const debtReadonlyService = {
+        async list() {
+          const { data, error } = await supabase
+            .from('portal_dividas')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .order('created_at', { ascending: true });
+          if (error) throw error;
+          return data || [];
+        },
+        async add() { throw new Error('Modo leitura do administrador.'); },
+        async update() { throw new Error('Modo leitura do administrador.'); },
+        async remove() { throw new Error('Modo leitura do administrador.'); },
+      };
+      await engine.init(debtReadonlyService);
+    } else {
+      await engine.init(DebtService);
+    }
+
+    renderCaseSummary();
     const loadingEl = byId('fd-loading');
     const mainEl = byId('fd-main');
     if (loadingEl) loadingEl.style.display = 'none';
@@ -1349,6 +1481,10 @@ function renderDividasTipo() {
 
 // ── Debt Modal ─────────────────────────────────────────────────────────
 function openDebtModal(debtId = null) {
+  if (isReadonlyAdminView) {
+    Toast.warn('Modo leitura do administrador: edição de dívidas desabilitada.');
+    return;
+  }
   editingDebtId = debtId;
   const modal  = document.getElementById('debt-modal');
   const delBtn = document.getElementById('modal-delete-btn');
@@ -1405,6 +1541,10 @@ function closeDebtModal() {
 window.closeDebtModal = closeDebtModal;
 
 async function saveDebt() {
+  if (isReadonlyAdminView) {
+    Toast.warn('Modo leitura do administrador: edição de dívidas desabilitada.');
+    return;
+  }
   const credor = document.getElementById('m-credor').value.trim();
   const valor  = parseFloat(document.getElementById('m-valor').value);
   if (!credor) { Toast.warn('Informe o nome do credor.'); return; }
@@ -1441,6 +1581,10 @@ async function saveDebt() {
 window.saveDebt = saveDebt;
 
 async function deleteCurrentDebt() {
+  if (isReadonlyAdminView) {
+    Toast.warn('Modo leitura do administrador: edição de dívidas desabilitada.');
+    return;
+  }
   if (!editingDebtId) return;
   if (!confirm('Tem certeza que deseja excluir esta dívida?')) return;
   try {
@@ -1458,6 +1602,7 @@ window._fdEditDebt = (id) => openDebtModal(id);
 
 // ── Income / Expenses input handlers ──────────────────────────────────
 window.onInputChange = function() {
+  if (isReadonlyAdminView) return;
   if (!isFinDashMounted()) return;
   rendaPropria = parseFloat(document.getElementById('inp-renda-propria').value)  || 0;
   rendaFam     = parseFloat(document.getElementById('inp-renda-familiar').value) || 0;
@@ -1471,6 +1616,7 @@ window.onInputChange = function() {
 };
 
 window._fdOnExpenseChange = function(key, val) {
+  if (isReadonlyAdminView) return;
   if (!isFinDashMounted()) return;
   despesas[key] = parseFloat(val) || 0;
   markDirty();
@@ -1479,6 +1625,7 @@ window._fdOnExpenseChange = function(key, val) {
 };
 
 window.changeDep = function(delta) {
+  if (isReadonlyAdminView) return;
   if (!isFinDashMounted()) return;
   nDep = Math.max(0, nDep + delta);
   safeSetText('dep-count-display', nDep);
@@ -1496,6 +1643,7 @@ function markDirty() {
 }
 
 window.discardChanges = async function() {
+  if (isReadonlyAdminView) return;
   dirty = false;
   byId('fd-save-bar')?.classList.remove('visible');
   await loadData();
@@ -1506,6 +1654,10 @@ window.discardChanges = async function() {
 };
 
 window.saveFinancial = async function() {
+  if (isReadonlyAdminView) {
+    Toast.warn('Modo leitura do administrador: alterações não são salvas neste contexto.');
+    return;
+  }
   const btn = byId('fd-save-btn');
   if (!btn) return;
   btn.textContent = 'Salvando…';

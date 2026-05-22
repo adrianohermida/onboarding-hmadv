@@ -4,12 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules } from '../js/navigation.js';
 
 const root = process.cwd();
-const clientKeys = ['meu-caso', 'meus-documentos', 'minhas-dividas', 'meu-plano', 'mensagens', 'ajuda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'];
+const clientKeys = ['meu-caso', 'custas', 'meus-documentos', 'contratos', 'meu-plano', 'plano-pagamento', 'mensagens', 'ajuda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'];
 const usefulClientFlowMarkers = {
-  'meu-caso': ['Seu caminho no portal', 'Resumo tranquilo'],
+  'meu-caso': ['Seu caminho no portal', 'Ações rápidas'],
+  custas: ['Despesas processuais', 'Custas estimadas'],
   'meus-documentos': ['Lista de documentos', 'Enviar documento'],
-  'minhas-dividas': ['Seus credores', 'Adicionar dívida'],
+  contratos: ['Workflow contratual', 'Assinatura'],
   'meu-plano': ['Proposta consolidada', 'Diagnóstico financeiro'],
+  'plano-pagamento': ['Cronograma de pagamento', 'Parcela'],
   mensagens: ['Comunicação com o escritório', 'Abrir atendimento'],
   ajuda: ['Dúvidas frequentes', 'Falar com o escritório'],
   'onboarding-v2': ['Sua Jornada de Superendividamento', 'Seu Diagnóstico Financeiro'],
@@ -52,7 +54,7 @@ describe('portal do cliente contract', () => {
     ['CaseService', 'DebtService', 'DocumentService'].forEach(symbol => {
       expect(controller).toContain(symbol);
     });
-    ['documentos.html', 'dividas.html', 'suporte.html', 'onboarding-v2.html', 'financial-dashboard.html'].forEach(route => {
+    ['documentos.html', 'dividas.html', 'suporte.html', 'onboarding-v2.html', 'financial-dashboard.html', 'custas.html', 'contratos.html', 'plano-pagamento.html'].forEach(route => {
       expect(controller).toContain(route);
     });
     ['cliente-next-action', 'cliente-kpis', 'cliente-list-item', 'cliente-faq'].forEach(cssClass => {
