@@ -2040,6 +2040,41 @@ function renderShellActivityCount() {
   badge.textContent = String(Math.min(count, 9));
 }
 
+function shellGroupActivitiesByDay(items) {
+  const todayStart     = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(todayStart.getDate() - 1);
+  const weekStart      = new Date(todayStart); weekStart.setDate(todayStart.getDate() - 6);
+  const groups = [
+    { label: 'Hoje',        items: [], from: todayStart.getTime() },
+    { label: 'Ontem',       items: [], from: yesterdayStart.getTime() },
+    { label: 'Esta semana', items: [], from: weekStart.getTime() },
+    { label: 'Anteriores',  items: [], from: 0 },
+  ];
+  items.forEach(item => {
+    const t = new Date(item.ts).getTime();
+    const g = t >= todayStart.getTime()     ? groups[0]
+            : t >= yesterdayStart.getTime() ? groups[1]
+            : t >= weekStart.getTime()      ? groups[2]
+            : groups[3];
+    g.items.push(item);
+  });
+  return groups.filter(g => g.items.length > 0);
+}
+
+function renderActivityItem(item) {
+  return `
+    <div class="shell-activity-item">
+      <span class="shell-activity-dot is-${escapeShellHtml(item.category)}" aria-hidden="true"></span>
+      <div>
+        ${item.href
+          ? `<a href="${escapeShellHtml(item.href)}" data-page="${escapeShellHtml(item.href.replace('.html', ''))}" class="shell-activity-link"><strong>${escapeShellHtml(item.title)}</strong></a>`
+          : `<strong>${escapeShellHtml(item.title)}</strong>`}
+        <small>${escapeShellHtml(item.text)}</small>
+        <small class="shell-activity-time">${shellTimeAgo(item.ts)}</small>
+      </div>
+    </div>`;
+}
+
 function renderAtividadesPanel(filter = 'geral') {
   const all = getShellActivities();
   const items = filter === 'geral' ? all : all.filter(a => a.category === filter);
@@ -2050,18 +2085,17 @@ function renderAtividadesPanel(filter = 'geral') {
     return `<button type="button" class="shell-activity-filter ${active ? 'is-active' : ''}" data-atividades-filter="${escapeShellHtml(key)}">${escapeShellHtml(meta.label)}${count > 0 ? ` <span class="shell-activity-count-pill">${count}</span>` : ''}</button>`;
   }).join('');
 
-  const feed = items.length === 0
-    ? '<div class="shell-empty-state">Nenhuma atividade registrada para este filtro.</div>'
-    : `<div class="shell-activity-feed">${items.map(item => `
-        <div class="shell-activity-item">
-          <span class="shell-activity-dot is-${escapeShellHtml(item.category)}" aria-hidden="true"></span>
-          <div>
-            ${item.href ? `<a href="${escapeShellHtml(item.href)}" data-page="${escapeShellHtml(item.href.replace('.html', ''))}" class="shell-activity-link"><strong>${escapeShellHtml(item.title)}</strong></a>` : `<strong>${escapeShellHtml(item.title)}</strong>`}
-            <small>${escapeShellHtml(item.text)}</small>
-            <small class="shell-activity-time">${shellTimeAgo(item.ts)}</small>
-          </div>
-        </div>
-      `).join('')}</div>`;
+  let feed;
+  if (items.length === 0) {
+    feed = '<div class="shell-empty-state">Nenhuma atividade registrada para este filtro.</div>';
+  } else {
+    const groups = shellGroupActivitiesByDay(items);
+    feed = groups.map(g => `
+      <div class="shell-activity-group">
+        <div class="shell-activity-group-label">${escapeShellHtml(g.label)}</div>
+        <div class="shell-activity-feed">${g.items.map(renderActivityItem).join('')}</div>
+      </div>`).join('');
+  }
 
   return `
     <section class="shell-legal-center-hero">

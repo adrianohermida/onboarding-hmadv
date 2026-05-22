@@ -968,6 +968,8 @@ function renderVisaoGeralPage(data) {
 
 // ── MARKETPLACE ──────────────────────────────────────────────────────────────
 
+let _activeCaso = null;
+
 const MKT_ORDERS_KEY = 'hm_mkt_orders';
 
 const MKT_CATEGORIES = [
@@ -1023,9 +1025,9 @@ function getMktOrders() {
   try { return JSON.parse(localStorage.getItem(MKT_ORDERS_KEY) || '[]'); } catch { return []; }
 }
 
-function saveMktOrder(serviceId, serviceLabel, desc, urgency) {
+function saveMktOrder(serviceId, serviceLabel, desc, urgency, casoNum) {
   const orders = getMktOrders();
-  orders.unshift({ id: Date.now(), serviceId, serviceLabel, desc, urgency, status: 'enviada', createdAt: new Date().toISOString() });
+  orders.unshift({ id: Date.now(), serviceId, serviceLabel, desc, urgency, casoNum: casoNum || null, status: 'enviada', createdAt: new Date().toISOString() });
   localStorage.setItem(MKT_ORDERS_KEY, JSON.stringify(orders.slice(0, 30)));
 }
 
@@ -1087,7 +1089,7 @@ function renderMarketplaceSolicitacoesTab() {
             <div class="mkt-order-body">
               <strong>${escapeHtml(o.serviceLabel)}</strong>
               ${o.desc ? `<span class="mkt-order-desc">${escapeHtml(o.desc.slice(0, 90))}${o.desc.length > 90 ? '…' : ''}</span>` : ''}
-              <span class="mkt-order-meta">${mktFmtDate(o.createdAt)} · ${escapeHtml(urg.label)}</span>
+              <span class="mkt-order-meta">${mktFmtDate(o.createdAt)} · ${escapeHtml(urg.label)}${o.casoNum ? ` · Proc. ${escapeHtml(o.casoNum)}` : ''}</span>
             </div>
             <span class="painel-chip painel-chip--${escapeHtml(st.tone)}">${escapeHtml(st.label)}</span>
           </div>
@@ -1104,10 +1106,16 @@ function renderMarketplaceHubContent(tabKey) {
   }
 }
 
-function openMktRequestModal(serviceId, serviceLabel, host) {
+function openMktRequestModal(serviceId, serviceLabel, host, caso) {
   const urgencyOpts = Object.entries(MKT_URGENCY)
     .map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(v.label)} — ${escapeHtml(v.time)}</option>`)
     .join('');
+  const casoNum  = caso?.numero_processo || null;
+  const casoRow  = casoNum ? `
+    <div class="form-field" style="margin-top:12px">
+      <label class="form-label">Processo vinculado</label>
+      <input type="text" value="${escapeHtml(casoNum)}" readonly class="form-input" style="background:var(--line2);color:var(--muted)">
+    </div>` : '';
   window.shellModal?.open?.({
     title: `Solicitar — ${escapeHtml(serviceLabel)}`,
     body: `
@@ -1116,10 +1124,11 @@ function openMktRequestModal(serviceId, serviceLabel, host) {
           <label class="form-label">Serviço</label>
           <input type="text" value="${escapeHtml(serviceLabel)}" readonly class="form-input" style="background:var(--line2);color:var(--muted)">
         </div>
+        ${casoRow}
         <div class="form-field" style="margin-top:12px">
           <label class="form-label" for="mkt-desc">Descreva sua necessidade</label>
           <textarea id="mkt-desc" class="form-input"
-            placeholder="Descreva o que precisa, prazo desejado, processo vinculado..."
+            placeholder="Descreva o que precisa, prazo desejado, observações..."
             style="resize:vertical;min-height:90px" rows="4"></textarea>
         </div>
         <div class="form-field" style="margin-top:12px">
@@ -1136,7 +1145,7 @@ function openMktRequestModal(serviceId, serviceLabel, host) {
     e.preventDefault();
     const desc    = document.getElementById('mkt-desc')?.value?.trim() || '';
     const urgency = document.getElementById('mkt-urgency')?.value || 'normal';
-    saveMktOrder(serviceId, serviceLabel, desc, urgency);
+    saveMktOrder(serviceId, serviceLabel, desc, urgency, casoNum);
     form.innerHTML = `
       <div class="mkt-success">
         <svg viewBox="0 0 24 24" fill="none" width="40" height="40"><circle cx="12" cy="12" r="10" stroke="var(--ok)" stroke-width="1.5"/><path d="M8 12l3 3 5-5" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1152,11 +1161,11 @@ function openMktRequestModal(serviceId, serviceLabel, host) {
   });
 }
 
-function initMarketplace(host) {
+function initMarketplace(host, caso) {
   host.addEventListener('click', e => {
     const card = e.target.closest('[data-service]');
     if (card) {
-      openMktRequestModal(card.dataset.service, card.dataset.serviceLabel || card.dataset.service, host);
+      openMktRequestModal(card.dataset.service, card.dataset.serviceLabel || card.dataset.service, host, caso);
       return;
     }
     const gotoBtn = e.target.closest('[data-goto-tab]');
@@ -1198,10 +1207,28 @@ export async function bootClientePage(moduleKey) {
   const host = document.querySelector('[data-cliente-module-host]');
   if (!host) return;
 
-  host.innerHTML = '<section class="cliente-card cliente-loading">Carregando seu portal...</section>';
+  host.innerHTML = `
+    <section class="cliente-page cliente-skeleton" aria-busy="true" aria-label="Carregando portal">
+      <div class="skeleton-header">
+        <div class="skel skel-title"></div>
+        <div class="skel skel-sub"></div>
+      </div>
+      <div class="skeleton-kpis">
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+      </div>
+      <div class="skeleton-rows">
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+      </div>
+    </section>`;
 
   try {
     const data = await loadClientData();
+    _activeCaso = data.caso;
     dispatchShellContext(data.caso, data.nextStep);
 
     if (moduleKey === 'meu-caso') {
@@ -1364,7 +1391,7 @@ export async function bootClientePage(moduleKey) {
       `;
       window.initUiKit?.(host);
       mountHubTabListeners(host, 'marketplace', null, renderMarketplaceHubContent);
-      initMarketplace(host);
+      initMarketplace(host, _activeCaso);
       return;
     }
 
