@@ -5,6 +5,11 @@ import { initUiKit }                 from '../components/ui/index.js';
 import { AuthService }               from '../services/auth.js';
 import { showToast }                 from '../utils/helpers.js';
 import { CaseService, checkIsAdmin } from '../services/database.js';
+import {
+  LegalNotificationService,
+  LEGAL_NOTIFICATION_STATUSES,
+  LEGAL_NOTIFICATION_TYPES,
+} from '../services/legal-notifications.js';
 
 const BASE = window.location.pathname.includes('/pages/') ? '../' : './';
 
@@ -45,6 +50,9 @@ let serviceErrorBannerListenerBound = false;
 let unmountShellModeSelector = null;
 let freshchatWatchdogTimer = null;
 let shellManagersReady = false;
+let shellLegalNotificationItems = [];
+let shellLegalNotificationSource = 'session';
+const shellLegalNotificationFilters = { types: [], statuses: [] };
 
 function getUserDisplayState(user, isAdmin = false) {
   const email = user?.email || '';
@@ -747,7 +755,7 @@ function setupShellNavigation() {
 
     if (shellAction?.dataset.shellAction === 'notifications-panel') {
       event.preventDefault();
-      openNotificationsPanel();
+      openWorkspacePanel();
       return;
     }
 
@@ -766,7 +774,22 @@ function setupShellNavigation() {
     if (shellAction?.dataset.shellAction === 'clear-notifications') {
       event.preventDefault();
       setShellNotifications([]);
-      openNotificationsPanel();
+      openWorkspacePanel();
+      return;
+    }
+
+    const legalFilter = event.target?.closest?.('[data-legal-filter-kind]');
+    if (legalFilter) {
+      event.preventDefault();
+      toggleLegalNotificationFilter(legalFilter.dataset.legalFilterKind, legalFilter.dataset.legalFilterValue);
+      openWorkspacePanel({ reload: false });
+      return;
+    }
+
+    const legalItem = event.target?.closest?.('[data-legal-notification-id]');
+    if (legalItem) {
+      event.preventDefault();
+      openLegalNotificationDetail(legalItem.dataset.legalNotificationId);
       return;
     }
 
@@ -1534,9 +1557,53 @@ function addShellNotification({ title, text = '', tone = 'brand' } = {}) {
 function renderShellNotificationCount() {
   const badge = document.getElementById('shell-notification-count');
   if (!badge) return;
-  const count = getShellNotifications().filter(item => !item.read).length;
+  const realUnread = shellLegalNotificationItems.filter(item => item.status === 'nao_lido').length;
+  const count = realUnread || getShellNotifications().filter(item => !item.read).length;
   badge.hidden = count === 0;
   badge.textContent = String(Math.min(count, 9));
+}
+
+async function loadShellLegalNotifications() {
+  try {
+    shellLegalNotificationItems = await LegalNotificationService.list();
+    shellLegalNotificationSource = 'supabase';
+  } catch (error) {
+    shellLegalNotificationItems = LegalNotificationService.normalizeLocal(getShellNotifications());
+    shellLegalNotificationSource = 'session';
+  }
+  renderShellNotificationCount();
+  return shellLegalNotificationItems;
+}
+
+function toggleLegalNotificationFilter(kind, value) {
+  if (!['types', 'statuses'].includes(kind) || !value) return;
+  const current = shellLegalNotificationFilters[kind];
+  shellLegalNotificationFilters[kind] = current.includes(value)
+    ? current.filter(item => item !== value)
+    : [...current, value];
+}
+
+function getFilteredLegalNotifications() {
+  return shellLegalNotificationItems.filter(item => {
+    const typeOk = !shellLegalNotificationFilters.types.length || shellLegalNotificationFilters.types.includes(item.type);
+    const statusOk = !shellLegalNotificationFilters.statuses.length || shellLegalNotificationFilters.statuses.includes(item.status);
+    return typeOk && statusOk;
+  });
+}
+
+function countLegalNotifications(kind, value) {
+  return shellLegalNotificationItems.filter(item => item[kind] === value).length;
+}
+
+function legalNotificationIcon(name) {
+  const icons = {
+    scale: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v14M5 6h10M6 6l-3 5h6L6 6Zm8 0-3 5h6l-3-5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    'file-text': '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 2h6l4 4v12H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 2v5h4M7 11h6M7 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    receipt: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10v14l-2-1-2 1-2-1-2 1-2-1V3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7h4M8 10h4M8 13h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    bell: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 8a4 4 0 0 1 8 0v3.5l1.5 2.5h-11L6 11.5V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.5 16a1.7 1.7 0 0 0 3 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    pen: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m4 14-.8 3 3-.8L16 6.4 13.6 4 4 14Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m12.5 5.1 2.4 2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  };
+  return icons[name] || icons.bell;
 }
 
 function shellTimeAgo(ts) {
@@ -1774,93 +1841,154 @@ function openGlobalSearchPanelBindOnly() {
 }
 
 function openNotificationsPanel() {
-  const notifications = getShellNotifications();
-  setShellNotifications(notifications.map(item => ({ ...item, read: true })));
-  const items = getShellNotifications();
-  openShellDrawer({
-    eyebrow: 'Notificações',
-    title: 'Atualizações do caso',
-    body: `
-      <div class="shell-panel-list">
-        ${items.map(item => `
-          <article class="shell-panel-item shell-notification-item">
-            <span class="ui-badge ui-badge-${item.tone === 'danger' ? 'danger' : item.tone === 'warn' ? 'warn' : 'brand'}">${shellTimeAgo(item.ts)}</span>
+  openWorkspacePanel();
+}
+
+function renderLegalNotificationFilters() {
+  const typeButtons = Object.entries(LEGAL_NOTIFICATION_TYPES).map(([key, meta]) => {
+    const active = shellLegalNotificationFilters.types.includes(key);
+    return `
+      <button type="button" class="shell-legal-filter ${active ? 'is-active' : ''}" data-legal-filter-kind="types" data-legal-filter-value="${key}" title="${escapeShellHtml(meta.label)}">
+        <span class="shell-legal-filter-icon">${legalNotificationIcon(meta.icon)}</span>
+        <span>${escapeShellHtml(meta.label)}</span>
+        <strong>${countLegalNotifications('type', key)}</strong>
+      </button>
+    `;
+  }).join('');
+
+  const statusButtons = Object.entries(LEGAL_NOTIFICATION_STATUSES).map(([key, meta]) => {
+    const active = shellLegalNotificationFilters.statuses.includes(key);
+    return `
+      <button type="button" class="shell-legal-status is-${meta.tone} ${active ? 'is-active' : ''}" data-legal-filter-kind="statuses" data-legal-filter-value="${key}" title="${escapeShellHtml(meta.label)}">
+        <span>${escapeShellHtml(meta.label)}</span>
+        <strong>${countLegalNotifications('status', key)}</strong>
+      </button>
+    `;
+  }).join('');
+
+  return `
+    <div class="shell-panel-section-title">Tipo de interação</div>
+    <div class="shell-legal-filter-grid">${typeButtons}</div>
+    <div class="shell-panel-section-title">Estado</div>
+    <div class="shell-legal-status-grid">${statusButtons}</div>
+  `;
+}
+
+function renderLegalNotificationList() {
+  const items = getFilteredLegalNotifications();
+  return `
+    <div class="shell-panel-section-title">Interações</div>
+    <div class="shell-panel-list">
+      ${items.map(item => {
+        const typeMeta = LEGAL_NOTIFICATION_TYPES[item.type] || LEGAL_NOTIFICATION_TYPES.notificacao;
+        const statusMeta = LEGAL_NOTIFICATION_STATUSES[item.status] || LEGAL_NOTIFICATION_STATUSES.pendente;
+        return `
+          <button type="button" class="shell-panel-item shell-legal-notification-item" data-legal-notification-id="${escapeShellHtml(item.id)}" title="Abrir e marcar como lida">
+            <span class="shell-panel-item-icon is-${escapeShellHtml(typeMeta.tone)}">${legalNotificationIcon(typeMeta.icon)}</span>
             <span>
               <strong>${escapeShellHtml(item.title)}</strong>
+              <small>${escapeShellHtml(typeMeta.label)} · ${shellTimeAgo(new Date(item.createdAt).getTime())}</small>
               <small>${escapeShellHtml(item.text || 'Sem detalhes adicionais.')}</small>
             </span>
-          </article>
-        `).join('') || '<div class="shell-empty-state">Sem notificações recentes.</div>'}
+            <span class="shell-legal-status-pill is-${escapeShellHtml(statusMeta.tone)}" title="${escapeShellHtml(statusMeta.label)}">${escapeShellHtml(statusMeta.label)}</span>
+          </button>
+        `;
+      }).join('') || '<div class="shell-empty-state">Nenhuma interação encontrada para os filtros selecionados.</div>'}
+    </div>
+  `;
+}
+
+function renderLegalNotificationDrawer({ loading = false } = {}) {
+  const isAdmin = !!appUserDetail?.isAdmin;
+  const total = shellLegalNotificationItems.length;
+  const unread = shellLegalNotificationItems.filter(item => item.status === 'nao_lido').length;
+  const pendingSignature = shellLegalNotificationItems.filter(item => item.status === 'pendente_assinatura').length;
+  const pending = shellLegalNotificationItems.filter(item => ['nao_lido', 'pendente', 'pendente_assinatura'].includes(item.status)).length;
+
+  return `
+    <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary shell-legal-center-hero">
+      <div>
+        <h3>${isAdmin ? 'Ciências, assinaturas e notificações eletrônicas' : 'Itens que precisam da sua atenção'}</h3>
+        <p>${isAdmin
+          ? 'Central filtrável para acompanhar comunicações enviadas, confirmações de leitura, pendências de assinatura e trilhas de auditoria.'
+          : 'Veja documentos para assinar, leia comunicados do escritório e confirme ciência quando solicitado.'}</p>
       </div>
-      <div class="shell-panel-actions">
-        <button type="button" class="ui-btn ui-btn-ghost ui-btn-full" data-shell-action="clear-notifications">Limpar notificações</button>
-      </div>
-    `,
+      <div class="shell-legal-source">${shellLegalNotificationSource === 'supabase' ? 'Supabase' : 'Sessão local'}</div>
+    </section>
+
+    <div class="shell-legal-kpis">
+      <article><span>Total</span><strong>${total}</strong></article>
+      <article><span>Não lidas</span><strong>${unread}</strong></article>
+      <article><span>Assinaturas</span><strong>${pendingSignature}</strong></article>
+      <article><span>Pendentes</span><strong>${pending}</strong></article>
+    </div>
+
+    ${renderLegalNotificationFilters()}
+    ${loading ? '<div class="shell-empty-state">Carregando notificações...</div>' : renderLegalNotificationList()}
+  `;
+}
+
+async function openWorkspacePanel({ reload = true } = {}) {
+  if (reload) {
+    openShellDrawer({
+      eyebrow: 'Central jurídica',
+      title: 'Notificações',
+      body: renderLegalNotificationDrawer({ loading: true }),
+    });
+    await loadShellLegalNotifications();
+  }
+
+  openShellDrawer({
+    eyebrow: 'Central jurídica',
+    title: 'Notificações',
+    body: renderLegalNotificationDrawer(),
   });
 }
 
-function openWorkspacePanel() {
-  const state = getShellWorkspaceState();
-  const recentRoutes = state.recentRoutes || [];
-  const isAdmin = !!appUserDetail?.isAdmin;
-  const pendingNotifications = getShellNotifications();
+async function openLegalNotificationDetail(id) {
+  const item = shellLegalNotificationItems.find(entry => String(entry.id) === String(id));
+  if (!item) return;
+
+  if (item.status === 'nao_lido') {
+    item.status = 'lido';
+    item.readAt = new Date().toISOString();
+    if (shellLegalNotificationSource === 'supabase') {
+      LegalNotificationService.markRead(id).catch(error => {
+        console.warn('[shell] mark notification read failed', error);
+      });
+    } else {
+      const local = getShellNotifications().map(entry => entry.id === id ? { ...entry, read: true } : entry);
+      setShellNotifications(local);
+    }
+  }
+
+  const typeMeta = LEGAL_NOTIFICATION_TYPES[item.type] || LEGAL_NOTIFICATION_TYPES.notificacao;
+  const statusMeta = LEGAL_NOTIFICATION_STATUSES[item.status] || LEGAL_NOTIFICATION_STATUSES.pendente;
+  renderShellNotificationCount();
   openShellDrawer({
-    eyebrow: isAdmin ? 'Central do advogado' : 'Central do cliente',
-    title: 'Notificações',
+    eyebrow: typeMeta.label,
+    title: item.title,
     body: `
-      <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary shell-legal-center-hero">
-        <div>
-          <h3>${isAdmin ? 'Ciências, assinaturas e notificações eletrônicas' : 'Itens que precisam da sua atenção'}</h3>
-          <p>${isAdmin
-            ? 'Central para acompanhar assinaturas pendentes, comunicações enviadas ao cliente, confirmações de leitura e trilhas de auditoria.'
-            : 'Veja documentos para assinar, leia comunicados do escritório e confirme ciência quando solicitado.'}</p>
+      <article class="shell-legal-detail">
+        <div class="shell-legal-detail-head">
+          <span class="shell-panel-item-icon is-${escapeShellHtml(typeMeta.tone)}">${legalNotificationIcon(typeMeta.icon)}</span>
+          <div>
+            <strong>${escapeShellHtml(item.title)}</strong>
+            <small>${escapeShellHtml(typeMeta.label)} · ${shellTimeAgo(new Date(item.createdAt).getTime())}</small>
+          </div>
+          <span class="shell-legal-status-pill is-${escapeShellHtml(statusMeta.tone)}" title="${escapeShellHtml(statusMeta.label)}">${escapeShellHtml(statusMeta.label)}</span>
         </div>
-        <a class="ui-btn ui-btn-primary ui-btn-full" href="documentos.html" data-page="documentos">${isAdmin ? 'Ver assinaturas' : 'Abrir documentos'}</a>
-      </section>
-
-      <div class="shell-legal-center-grid">
-        <a class="shell-legal-center-card" href="documentos.html" data-page="documentos">
-          <span class="shell-panel-item-icon">${getNavIcon('documentos')}</span>
-          <strong>Assinaturas pendentes</strong>
-          <small>Documentos submetidos à assinatura seguem com guia própria no módulo Documentos.</small>
-        </a>
-        <a class="shell-legal-center-card" href="mensagens.html" data-page="mensagens">
-          <span class="shell-panel-item-icon">${getNavIcon('mensagens')}</span>
-          <strong>Ciências e comentários</strong>
-          <small>Confirmações de leitura, comentários coletados e comunicações do caso.</small>
-        </a>
-        <a class="shell-legal-center-card" href="${isAdmin ? 'processos.html' : 'meu-caso.html'}" data-page="${isAdmin ? 'processos' : 'meu-caso'}">
-          <span class="shell-panel-item-icon">${getNavIcon(isAdmin ? 'processos' : 'meu-caso')}</span>
-          <strong>Registro legal</strong>
-          <small>Entrega, leitura, ciência e contexto do caso para auditoria futura.</small>
-        </a>
-      </div>
-
-      <div class="shell-panel-section-title">Pendências recentes</div>
-      <div class="shell-panel-list">
-        ${pendingNotifications.slice(0, 5).map(item => `
-          <article class="shell-panel-item shell-notification-item">
-            <span class="ui-badge ui-badge-${item.tone === 'danger' ? 'danger' : item.tone === 'warn' ? 'warn' : 'brand'}">${shellTimeAgo(item.ts)}</span>
-            <span>
-              <strong>${escapeShellHtml(item.title)}</strong>
-              <small>${escapeShellHtml(item.text || 'Sem detalhes adicionais.')}</small>
-            </span>
-          </article>
-        `).join('') || '<div class="shell-empty-state">Nenhuma ciência, assinatura ou notificação pendente nesta sessão.</div>'}
-      </div>
-
-      <div class="shell-panel-section-title">Atalhos operacionais</div>
-      <div class="shell-panel-list">
-        ${recentRoutes.map(route => `
-          <a class="shell-panel-item" href="${route.href}" data-page="${route.key}">
-            <span class="shell-panel-item-icon">${getNavIcon(route.key)}</span>
-            <span>
-              <strong>${escapeShellHtml(route.title)}</strong>
-              <small>Acessado ${shellTimeAgo(route.ts)}</small>
-            </span>
-          </a>
-        `).join('') || '<div class="shell-empty-state">Nenhum módulo recente nesta sessão.</div>'}
-      </div>
+        <p>${escapeShellHtml(item.text || 'Sem conteúdo adicional registrado.')}</p>
+        <dl>
+          <div><dt>Ciência</dt><dd>${item.requiresAck ? 'Solicitada' : 'Não exigida'}</dd></div>
+          <div><dt>Comentário</dt><dd>${item.requiresComment ? 'Solicitado' : 'Opcional'}</dd></div>
+          <div><dt>Assinatura</dt><dd>${item.requiresSignature ? 'Obrigatória' : 'Não exigida'}</dd></div>
+        </dl>
+        <div class="shell-panel-actions">
+          <button type="button" class="ui-btn ui-btn-ghost ui-btn-full" data-shell-action="workspace-panel">Voltar às notificações</button>
+          ${item.documentId ? '<a class="ui-btn ui-btn-primary ui-btn-full" href="documentos.html" data-page="documentos">Abrir documento</a>' : ''}
+        </div>
+      </article>
     `,
   });
 }

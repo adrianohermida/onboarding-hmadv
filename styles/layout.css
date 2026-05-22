@@ -1007,43 +1007,219 @@ body.app-loaded .sk { display: none !important; }
   margin-bottom: 14px;
 }
 
-.shell-legal-center-grid {
+.shell-legal-source {
+  align-self: start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .7px;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.shell-legal-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.shell-legal-kpis article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 10px;
+}
+
+.shell-legal-kpis span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+
+.shell-legal-kpis strong {
+  color: var(--navy);
+  display: block;
+  font-size: 18px;
+  margin-top: 3px;
+}
+
+.shell-legal-filter-grid,
+.shell-legal-status-grid {
   display: grid;
   gap: 8px;
 }
 
-.shell-legal-center-card {
+.shell-legal-filter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shell-legal-status-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shell-legal-filter,
+.shell-legal-status,
+.shell-legal-notification-item {
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.shell-legal-filter {
   display: grid;
-  grid-template-columns: 34px 1fr;
-  gap: 10px;
-  align-items: start;
+  grid-template-columns: 28px 1fr auto;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
-  padding: 12px;
+  padding: 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--white);
   color: var(--ink);
-  text-decoration: none;
 }
 
-.shell-legal-center-card:hover {
+.shell-legal-filter:hover,
+.shell-legal-filter.is-active {
   background: var(--line2);
-  text-decoration: none;
+  border-color: rgba(46,109,164,.34);
 }
 
-.shell-legal-center-card strong {
-  display: block;
+.shell-legal-filter-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(46,109,164,.1);
   color: var(--navy);
-  font-size: 13px;
-  line-height: 1.25;
 }
 
-.shell-legal-center-card small {
-  display: block;
+.shell-legal-filter-icon svg,
+.shell-legal-notification-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.shell-legal-filter span,
+.shell-legal-status span {
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.shell-legal-filter strong,
+.shell-legal-status strong {
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.4;
-  margin-top: 4px;
+}
+
+.shell-legal-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 8px 9px;
+}
+
+.shell-legal-status.is-active {
+  border-color: rgba(46,109,164,.38);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.shell-legal-status-pill {
+  align-self: center;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.shell-legal-status-pill.is-ok,
+.shell-legal-status.is-ok {
+  background: rgba(22, 163, 74, .08);
+  color: #15803d;
+}
+
+.shell-legal-status-pill.is-warn,
+.shell-legal-status.is-warn {
+  background: rgba(217, 119, 6, .08);
+  color: #b45309;
+}
+
+.shell-legal-status-pill.is-danger,
+.shell-legal-status.is-danger {
+  background: rgba(220, 38, 38, .08);
+  color: #b91c1c;
+}
+
+.shell-legal-status-pill.is-muted,
+.shell-legal-status.is-muted {
+  background: rgba(100, 116, 139, .1);
+  color: var(--muted);
+}
+
+.shell-legal-notification-item {
+  width: 100%;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+}
+
+.shell-legal-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.shell-legal-detail-head {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.shell-legal-detail-head strong {
+  color: var(--navy);
+  display: block;
+  font-size: 14px;
+}
+
+.shell-legal-detail-head small,
+.shell-legal-detail p,
+.shell-legal-detail dd {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.shell-legal-detail dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.shell-legal-detail dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+
+.shell-legal-detail dt {
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .shell-mobile-nav {

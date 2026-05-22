@@ -33,7 +33,10 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('function openWorkspacePanel');
     expect(app).toContain("title: 'Notificações'");
     expect(app).toContain('Ciências, assinaturas e notificações eletrônicas');
-    expect(app).toContain('Documentos.');
+    expect(app).toContain('renderLegalNotificationFilters');
+    expect(app).toContain('data-legal-filter-kind="types"');
+    expect(app).toContain('data-legal-filter-kind="statuses"');
+    expect(app).toContain('openLegalNotificationDetail');
     expect(app).toContain('function openAccountModal');
     expect(app).toContain('function getEffectiveIsAdmin');
     expect(app).toContain('function syncShellViewMode');
@@ -56,7 +59,9 @@ describe('operational legal shell contract', () => {
       '.account-modal-grid',
       '.shell-side-panel',
       '.shell-panel-item',
-      '.shell-legal-center-card',
+      '.shell-legal-filter-grid',
+      '.shell-legal-status-grid',
+      '.shell-legal-notification-item',
       '.shell-mobile-nav',
       '.shell-workspace-summary',
       '@media (max-width: 1023px)',
