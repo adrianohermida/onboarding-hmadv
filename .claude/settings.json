@@ -3,7 +3,9 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"d:\\\\Github\\\\onboarding-hmadv\\\\apps\\\\web\\\\src\\\\app\\\\\\(workspace\\)\" -Directory)",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Github\\\\onboarding-hmadv\\\\apps\\\\web\\\\src\\\\components\\\\clientes\" -File)",
+      "Bash(Select-Object FullName, Name)"
     ]
   }
 }
