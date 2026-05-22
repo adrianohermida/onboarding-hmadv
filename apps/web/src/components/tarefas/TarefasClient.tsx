@@ -6,9 +6,13 @@ import { createClient } from '@/lib/supabase/client';
 import {
   CheckSquare, Clock, AlertTriangle, Plus, X, Calendar,
   Circle, CheckCircle2, List, LayoutGrid, Loader2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmptyState from '../ui/EmptyState';
+import { useDebounce } from '@/lib/hooks/use-global-search';
+
+const TAREFAS_PAGE_SIZE = 30;
 
 interface Tarefa {
   id: string;

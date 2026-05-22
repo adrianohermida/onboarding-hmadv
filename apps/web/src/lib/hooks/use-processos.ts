@@ -387,6 +387,55 @@ export function useDocumentosProcesso(userIds: string[]) {
   });
 }
 
+// ─── Hook paginado — lista principal de processos ────────────────────────────
+
+export const PROCESSOS_PAGE_SIZE = 30;
+
+export interface ProcessosFiltros {
+  search: string;
+  status: string | null;
+  prioridade: string | null;
+}
+
+export interface ProcessosPaginados {
+  data: Processo[];
+  total: number;
+  page: number;
+}
+
+export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
+  return useQuery<ProcessosPaginados>({
+    queryKey: ['processos-paginados', filtros, page],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const from = page * PROCESSOS_PAGE_SIZE;
+      const to = from + PROCESSOS_PAGE_SIZE - 1;
+
+      let q = jud()
+        .from('processos')
+        .select(
+          'id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at',
+          { count: 'exact' }
+        )
+        .order('data_ultima_movimentacao', { ascending: false })
+        .range(from, to);
+
+      const q2 = filtros.search.trim().length >= 2
+        ? q.or(
+            `numero_cnj.ilike.%${filtros.search}%,tribunal.ilike.%${filtros.search}%,comarca.ilike.%${filtros.search}%,classe.ilike.%${filtros.search}%,assunto.ilike.%${filtros.search}%,orgao_julgador.ilike.%${filtros.search}%`
+          )
+        : q;
+
+      const q3 = filtros.status ? q2.eq('status', filtros.status) : q2;
+      const q4 = filtros.prioridade ? q3.eq('prioridade', filtros.prioridade) : q3;
+
+      const { data, error, count } = await q4;
+      if (error) throw error;
+      return { data: data ?? [], total: count ?? 0, page };
+    },
+  });
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function prazoUrgencia(data: string): 'vencida' | 'hoje' | 'semana' | 'ok' {

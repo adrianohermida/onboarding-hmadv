@@ -73,7 +73,7 @@ export const PORTAL_MODULES = [
   { key: 'dashboard',       title: 'Dashboard',           menuLabel: 'Início',         parent: null,         order: 500, visible: false, roles: ['cliente'],        feature: 'dashboard',        icon: 'layout-dashboard' },
   { key: 'suporte',         title: 'Suporte',             menuLabel: 'Suporte',        parent: 'Meu Caso',   order: 510, adminOrder: 150, visible: true,  roles: ['admin'], feature: 'suporte',        icon: 'circle-help',    adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
   { key: 'onboarding',      title: 'Formulário',          menuLabel: 'Formulário',     parent: 'Meu Caso',   order: 520, visible: false, roles: ['cliente', 'admin'], feature: 'onboardingLegacy', icon: 'clipboard-list' },
-  { key: 'onboarding-v2',   title: 'Jornada CNJ',         menuLabel: 'Jornada',        parent: 'Meu Caso',   order: 530, visible: false, roles: ['cliente', 'admin'], feature: 'onboardingV2',   icon: 'route' },
+  { key: 'onboarding-v2',   title: 'Jornada CNJ',         menuLabel: 'Jornada Cliente', parent: 'Meu Caso',  order: 530, adminOrder: 145, visible: true, roles: ['admin'], feature: 'onboardingV2', icon: 'route', adminSidebarSection: 'relacionamento', adminSidebarSectionLabel: 'Relacionamento', adminSidebarSectionOrder: 40 },
   { key: 'financial-dashboard', title: 'Diagnóstico Financeiro', menuLabel: 'Diagnóstico', parent: 'Meu Caso', order: 540, visible: false, roles: ['cliente', 'admin'], feature: 'financialDashboard', icon: 'chart-column' },
 
   // ── Admin — Painel ────────────────────────────────────────────────────────

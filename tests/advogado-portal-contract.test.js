@@ -10,7 +10,7 @@ const lawyerKeys = [
   'painel',
   'clientes', 'processos', 'publicacoes', 'prazos', 'tarefas', 'agenda', 'audiencias',
   'financeiro', 'custas-processuais', 'financeiro-processual',
-  'mensagens', 'suporte', 'partes',
+  'mensagens', 'onboarding-v2', 'suporte', 'partes',
   'analytics', 'ai-copilot',
 ];
 

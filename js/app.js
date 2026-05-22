@@ -833,6 +833,10 @@ function setupShellNavigation() {
     const absolute = toAbsoluteUrl(href);
     if (!isSameOrigin(absolute) || !isEligibleModulePath(absolute)) return;
 
+    const targetPath = new URL(absolute).pathname;
+    const currentPath = new URL(window.location.href).pathname;
+    if (targetPath === currentPath) return;
+
     event.preventDefault();
     navigateModule(absolute, { pushState: true });
   });

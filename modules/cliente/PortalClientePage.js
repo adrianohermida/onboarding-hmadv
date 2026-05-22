@@ -484,9 +484,181 @@ function renderHelpPage(data) {
   `;
 }
 
+// ── Meu Caso hub tab helpers ──────────────────────────────────────────────────
+
+function renderMeoCasoProcessosTab(data) {
+  const { caso } = data;
+  return `
+    <section class="cliente-card">
+      <h2>Processos vinculados</h2>
+      <p>Os processos são vinculados pela equipe jurídica conforme o caso avança no sistema.</p>
+      <div class="cliente-kpis">
+        <article class="cliente-kpi"><span>Fase do caso</span><strong>${escapeHtml(caso?.fase || 'Cadastro')}</strong><small>atualizado pelo escritório</small></article>
+        <article class="cliente-kpi"><span>Número do processo</span><strong>${escapeHtml(caso?.numero_processo || 'A definir')}</strong><small>padrão CNJ</small></article>
+      </div>
+      <div class="cliente-help-actions">
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="info-processo">Informações do processo</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="copia-processo">Cópia do processo</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderMeoCasoDiagnosticoTab(data) {
+  const { financialPlan, debtStats } = data;
+  const diag = financialPlan?.diagnostico || {};
+  return `
+    <section class="cliente-card">
+      <h2>Diagnóstico financeiro</h2>
+      <p>Análise do seu perfil com base nas informações do formulário CNJ e dívidas cadastradas.</p>
+      <div class="cliente-kpis">
+        <article class="cliente-kpi"><span>Renda declarada</span><strong>${formatMoney(diag.rendaTotal)}</strong><small>Anexo II CNJ</small></article>
+        <article class="cliente-kpi"><span>Total de dívidas</span><strong>${formatMoney(debtStats.total)}</strong><small>${debtStats.creditors} credores</small></article>
+        <article class="cliente-kpi"><span>Comprometimento</span><strong>${formatPercent(diag.comprometimentoPct)}</strong><small>parcelas sobre renda</small></article>
+      </div>
+      <div class="cliente-help-actions">
+        <a class="btn btn-primary btn-sm" href="financial-dashboard.html" data-page="financial-dashboard">Ver diagnóstico completo</a>
+        <a class="btn btn-ghost btn-sm" href="onboarding-v2.html" data-page="onboarding-v2">Formulário CNJ</a>
+      </div>
+    </section>
+  `;
+}
+
+function renderMeoCasoPrazosTab() {
+  return `
+    <section class="cliente-card">
+      <h2>Prazos do caso</h2>
+      <p>Os prazos processuais são gerenciados pela equipe jurídica e atualizados conforme o andamento.</p>
+      <div class="cliente-empty">Os prazos aparecem aqui quando o escritório vincular datas ao seu processo.</div>
+      <div class="cliente-help-actions" style="margin-top:14px;">
+        <button type="button" class="btn btn-ghost btn-sm" data-case-action="info-processo">Consultar processo</button>
+        <a class="btn btn-primary btn-sm" href="ajuda.html#mensagens" data-page="ajuda">Falar com o escritório</a>
+      </div>
+    </section>
+  `;
+}
+
+function renderMeoCasoAndamentosTab(data) {
+  const { communication } = data;
+  const timeline = communication.timeline.filter(event => event.visibleToClient).slice(0, 10);
+  return `
+    <section class="cliente-card">
+      <h2>Andamentos do caso</h2>
+      <div class="cliente-case-history">
+        ${timeline.length ? timeline.map(event => `
+          <article>
+            <span>${escapeHtml(event.source)} · ${formatDateTime(event.createdAt)}</span>
+            <strong>${escapeHtml(event.title)}</strong>
+            <p>${escapeHtml(event.detail)}</p>
+          </article>
+        `).join('') : '<div class="cliente-empty">Os andamentos aparecem aqui conforme o caso avançar.</div>'}
+      </div>
+    </section>
+  `;
+}
+
+// ── Documentos hub tab helpers ─────────────────────────────────────────────────
+
+function renderDocSolicitacoesTab(data) {
+  const { docs, docStats } = data;
+  const pending = docs.filter(doc => !doc.storage_path);
+  return `
+    <section class="cliente-card">
+      <h2>Solicitações pendentes</h2>
+      <p>Documentos que a equipe ainda aguarda para dar continuidade à análise do seu caso.</p>
+      <div class="cliente-kpis">
+        <article class="cliente-kpi"><span>Pendentes</span><strong>${docStats.pending}</strong><small>aguardando envio</small></article>
+        <article class="cliente-kpi"><span>Em análise</span><strong>${docStats.review}</strong><small>com a equipe</small></article>
+      </div>
+      <div class="cliente-list">
+        ${pending.length ? pending.slice(0, 8).map(item => `
+          <article class="cliente-list-item">
+            <div>
+              <strong>${escapeHtml(item.nome || item.tipo || 'Documento')}</strong>
+              <span>${escapeHtml(normalizeStatus(item.workflow_status || item.status || 'pendente'))}</span>
+            </div>
+          </article>
+        `).join('') : '<div class="cliente-empty">Nenhuma solicitação pendente no momento.</div>'}
+      </div>
+      <div class="cliente-help-actions">
+        <a class="btn btn-primary btn-sm" href="documentos.html" data-page="documentos">Enviar documento</a>
+      </div>
+    </section>
+  `;
+}
+
+function renderDocAssinaturasTab(data) {
+  const { contratos, docStats } = data;
+  const assinados = contratos.filter(item => ['assinado', 'concluido'].includes(item.status));
+  const aguardando = contratos.filter(item => ['aguardando_aceite', 'enviado'].includes(item.status));
+  return `
+    <section class="cliente-card">
+      <h2>Assinaturas</h2>
+      <p>Documentos e contratos que requerem ou já receberam assinatura eletrônica.</p>
+      <div class="cliente-kpis">
+        <article class="cliente-kpi"><span>Assinados</span><strong>${assinados.length || docStats.approved}</strong><small>concluídos</small></article>
+        <article class="cliente-kpi"><span>Aguardando</span><strong>${aguardando.length}</strong><small>assinatura pendente</small></article>
+      </div>
+      <div class="cliente-list">
+        ${aguardando.length ? aguardando.map(item => `
+          <article class="cliente-list-item">
+            <div>
+              <strong>${escapeHtml(item.titulo || item.tipo || 'Contrato')}</strong>
+              <span>${escapeHtml(normalizeStatus(item.status))}</span>
+            </div>
+          </article>
+        `).join('') : '<div class="cliente-empty">Nenhuma assinatura pendente.</div>'}
+      </div>
+      <div class="cliente-help-actions">
+        <a class="btn btn-ghost btn-sm" href="financeiro.html#contratos" data-page="financeiro">Ver contratos</a>
+      </div>
+    </section>
+  `;
+}
+
+function renderDocEstanteTab(data) {
+  const { docs, docStats } = data;
+  const approved = docs.filter(doc => ['aprovado', 'assinado'].includes(doc.workflow_status || doc.status));
+  return `
+    <section class="cliente-card">
+      <h2>Estante Digital</h2>
+      <p>Documentos aprovados e finalizados guardados com segurança no portal.</p>
+      <div class="cliente-kpis">
+        <article class="cliente-kpi"><span>Aprovados</span><strong>${docStats.approved}</strong><small>na estante digital</small></article>
+        <article class="cliente-kpi"><span>Enviados</span><strong>${docStats.sent}</strong><small>no total</small></article>
+      </div>
+      <div class="cliente-list">
+        ${approved.length ? approved.map(doc => `
+          <article class="cliente-list-item">
+            <div>
+              <strong>${escapeHtml(doc.nome || doc.tipo || 'Documento')}</strong>
+              <span>${escapeHtml(normalizeStatus(doc.workflow_status || doc.status))}</span>
+            </div>
+          </article>
+        `).join('') : '<div class="cliente-empty">Os documentos aprovados aparecerão aqui.</div>'}
+      </div>
+    </section>
+  `;
+}
+
 // ── Hub navigation ────────────────────────────────────────────────────────────
 
 const HUB_TABS = {
+  'meu-caso': [
+    { key: 'visao-geral',   label: 'Visão Geral' },
+    { key: 'processos',     label: 'Processos' },
+    { key: 'plano',         label: 'Plano' },
+    { key: 'diagnostico',   label: 'Diagnóstico' },
+    { key: 'dividas',       label: 'Dívidas' },
+    { key: 'prazos',        label: 'Prazos' },
+    { key: 'andamentos',    label: 'Andamentos' },
+  ],
+  'meus-documentos': [
+    { key: 'lista',         label: 'Meus Documentos' },
+    { key: 'solicitacoes',  label: 'Solicitações' },
+    { key: 'assinaturas',   label: 'Assinaturas' },
+    { key: 'estante',       label: 'Estante Digital' },
+  ],
   financeiro: [
     { key: 'contratos',      label: 'Contratos' },
     { key: 'custas',         label: 'Custas' },
@@ -561,6 +733,27 @@ function renderAtendimentoHubContent(tabKey, data) {
   }
 }
 
+function renderMeoCasoHubContent(tabKey, data) {
+  switch (tabKey) {
+    case 'processos':   return renderMeoCasoProcessosTab(data);
+    case 'plano':       return renderPlanPage(data);
+    case 'diagnostico': return renderMeoCasoDiagnosticoTab(data);
+    case 'dividas':     return renderDebtsPage(data);
+    case 'prazos':      return renderMeoCasoPrazosTab(data);
+    case 'andamentos':  return renderMeoCasoAndamentosTab(data);
+    default:            return renderCasePage(data);
+  }
+}
+
+function renderDocumentosHubContent(tabKey, data) {
+  switch (tabKey) {
+    case 'solicitacoes': return renderDocSolicitacoesTab(data);
+    case 'assinaturas':  return renderDocAssinaturasTab(data);
+    case 'estante':      return renderDocEstanteTab(data);
+    default:             return renderDocumentsPage(data);
+  }
+}
+
 async function loadClientData() {
   await CaseService.ensureExists().catch(() => {});
   const [caso, debts, docs, custas, contratos, planosPagamento] = await Promise.all([
@@ -610,6 +803,43 @@ function mountHubTabListeners(host, hubKey, data, renderContent) {
   });
 }
 
+function mountCaseActionListeners(host) {
+  host.addEventListener('click', (e) => {
+    const button = e.target.closest('[data-case-action]');
+    if (!button) return;
+    const action = button.dataset.caseAction;
+    if (action === 'duvidas') {
+      window.location.href = 'suporte.html';
+      return;
+    }
+    if (action === 'agendar') {
+      window.shellModal?.open?.({
+        title: 'Agendar horário',
+        body: `
+          <div class="cliente-card" style="margin:0;">
+            <p>Escolha o melhor canal para agendamento com a equipe.</p>
+            <div class="cliente-help-actions" style="margin-top:14px;">
+              <a class="btn btn-primary btn-sm" href="suporte.html" data-page="suporte">Solicitar por suporte</a>
+              <a class="btn btn-ghost btn-sm" href="ajuda.html#mensagens" data-page="ajuda">Enviar mensagem</a>
+            </div>
+          </div>
+        `,
+      });
+      return;
+    }
+    const modalContent = action === 'copia-processo'
+      ? {
+        title: 'Cópia do processo',
+        body: 'Solicitação registrada. A equipe enviará a cópia no canal de mensagens e notificará no suporte.',
+      }
+      : {
+        title: 'Informações do processo',
+        body: 'O andamento detalhado está em atualização contínua. Consulte também as mensagens e documentos para últimos movimentos.',
+      };
+    window.shellModal?.open?.({ title: modalContent.title, body: `<div class="cliente-card" style="margin:0;"><p>${modalContent.body}</p></div>` });
+  });
+}
+
 export async function bootClientePage(moduleKey) {
   const host = document.querySelector('[data-cliente-module-host]');
   if (!host) return;
@@ -618,6 +848,41 @@ export async function bootClientePage(moduleKey) {
 
   try {
     const data = await loadClientData();
+
+    if (moduleKey === 'meu-caso') {
+      const activeTab = getActiveHubTab('meu-caso');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Meu Caso</h1>
+            <p>Acompanhe sua jornada com clareza, sem termos complicados.</p>
+          </div>
+          ${renderHubNav('meu-caso', activeTab)}
+          <div class="hub-tab-content">${renderMeoCasoHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountCaseActionListeners(host);
+      mountHubTabListeners(host, 'meu-caso', data, renderMeoCasoHubContent);
+      return;
+    }
+
+    if (moduleKey === 'meus-documentos') {
+      const activeTab = getActiveHubTab('meus-documentos');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Documentos</h1>
+            <p>Veja o que já foi enviado e o que ainda precisa da sua atenção.</p>
+          </div>
+          ${renderHubNav('meus-documentos', activeTab)}
+          <div class="hub-tab-content">${renderDocumentosHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'meus-documentos', data, renderDocumentosHubContent);
+      return;
+    }
 
     if (moduleKey === 'financeiro') {
       const activeTab = getActiveHubTab('financeiro');
@@ -654,9 +919,7 @@ export async function bootClientePage(moduleKey) {
     }
 
     const renderers = {
-      'meu-caso': renderCasePage,
       custas: renderCustasPage,
-      'meus-documentos': renderDocumentsPage,
       'minhas-dividas': renderDebtsPage,
       contratos: renderContractsPage,
       'meu-plano': renderPlanPage,
@@ -665,43 +928,6 @@ export async function bootClientePage(moduleKey) {
     };
     host.innerHTML = `<section class="cliente-page">${renderers[moduleKey]?.(data) || renderCasePage(data)}</section>`;
     window.initUiKit?.(host);
-
-    if (moduleKey === 'meu-caso') {
-      host.querySelectorAll('[data-case-action]').forEach(button => {
-        button.addEventListener('click', () => {
-          const action = button.dataset.caseAction;
-          if (action === 'duvidas') {
-            window.location.href = 'suporte.html';
-            return;
-          }
-          if (action === 'agendar') {
-            window.shellModal?.open?.({
-              title: 'Agendar horário',
-              body: `
-                <div class="cliente-card" style="margin:0;">
-                  <p>Escolha o melhor canal para agendamento com a equipe.</p>
-                  <div class="cliente-help-actions" style="margin-top:14px;">
-                    <a class="btn btn-primary btn-sm" href="suporte.html" data-page="suporte">Solicitar por suporte</a>
-                    <a class="btn btn-ghost btn-sm" href="ajuda.html#mensagens" data-page="ajuda">Enviar mensagem</a>
-                  </div>
-                </div>
-              `,
-            });
-            return;
-          }
-          const modalContent = action === 'copia-processo'
-            ? {
-              title: 'Cópia do processo',
-              body: 'Solicitação registrada. A equipe enviará a cópia no canal de mensagens e notificará no suporte.',
-            }
-            : {
-              title: 'Informações do processo',
-              body: 'O andamento detalhado está em atualização contínua. Consulte também as mensagens e documentos para últimos movimentos.',
-            };
-          window.shellModal?.open?.({ title: modalContent.title, body: `<div class="cliente-card" style="margin:0;"><p>${modalContent.body}</p></div>` });
-        });
-      });
-    }
   } catch (error) {
     host.innerHTML = `
       <section class="cliente-card cliente-error">
