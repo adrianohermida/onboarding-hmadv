@@ -37,9 +37,13 @@ describe('clients visibility and invite contract', () => {
     expect(database).toContain("supabase.auth.signInWithOtp");
     expect(database).toContain('shouldCreateUser: true');
     expect(database).toContain('async ensureClientWorkspaceMember');
+    expect(database).toContain('await AdminService.ensureClientWorkspaceMember');
+    expect(database).toContain('const invitedBy = await getUserId().catch(() => null);');
 
     expect(advogadoPage).toContain('data-action="invite"');
     expect(advogadoPage).toContain('Convidar acesso');
     expect(advogadoPage).toContain('AdminService.sendClientInvite');
+    expect(advogadoPage).toContain('userId: record.user_id || null');
+    expect(advogadoPage).toContain('workspaceId: record.workspace_id || null');
   });
 });

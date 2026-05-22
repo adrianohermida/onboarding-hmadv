@@ -62,4 +62,15 @@ describe('documentos enterprise contract', () => {
     expect(webhook).toContain('document.finished');
     expect(webhook).toContain('signature.accepted');
   });
+
+  it('keeps document admin authorization workspace-aware in migration 012', () => {
+    const migration = readFile('supabase', 'migrations-safe', '20260521_safe_012_documents_signature_enterprise.sql');
+
+    expect(migration).toContain('CREATE OR REPLACE FUNCTION can_manage_document_workspace(');
+    expect(migration).toContain('CREATE POLICY admin_document_requests ON portal_document_requests');
+    expect(migration).toContain('can_manage_document_workspace(');
+    expect(migration).toContain('IF NOT can_manage_document_workspace(v_doc_workspace_id) THEN');
+    expect(migration).toContain("FROM portal_casos pc");
+    expect(migration).toContain("WHERE pc.user_id::text IN ((storage.foldername(name))[1], (storage.foldername(name))[2])");
+  });
 });

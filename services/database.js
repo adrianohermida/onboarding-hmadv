@@ -178,9 +178,18 @@ export const AdminService = {
     }));
   },
 
-  async sendClientInvite({ email, redirectTo = null }) {
+  async sendClientInvite({ email, userId = null, workspaceId = null, redirectTo = null }) {
     const normalizedEmail = String(email || '').trim().toLowerCase();
     if (!normalizedEmail) throw new Error('E-mail do cliente é obrigatório para enviar convite.');
+
+    const invitedBy = await getUserId().catch(() => null);
+    if (userId && workspaceId) {
+      await AdminService.ensureClientWorkspaceMember({
+        userId,
+        workspaceId,
+        invitedBy,
+      });
+    }
 
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,

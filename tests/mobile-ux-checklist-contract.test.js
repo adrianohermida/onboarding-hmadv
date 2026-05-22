@@ -24,7 +24,7 @@ describe('mobile UX final checklist contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260521p');
+      expect(html).toContain('../js/app.js?v=20260522a');
     });
   });
 

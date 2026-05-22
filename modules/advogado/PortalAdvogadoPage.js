@@ -862,14 +862,14 @@ function renderModulePage() {
           <h1>${escapeHtml(config.title)}</h1>
           <p>${escapeHtml(config.description)}</p>
         </div>
-        <button type="button" class="btn btn-primary" data-advogado-action="create">+ Criar ${escapeHtml(config.singular)}</button>
+        <button type="button" class="btn btn-primary" data-advogado-action="create">Criar ${escapeHtml(config.singular)}</button>
       </div>
 
       <div class="advogado-kpis">
-        <div class="ui-stat-card"><span>Ativos</span><strong>${activeCount}</strong></div>
-        <div class="ui-stat-card"><span>Em andamento</span><strong>${pendingCount}</strong></div>
-        <div class="ui-stat-card"><span>Arquivados</span><strong>${archivedCount}</strong></div>
-        <div class="ui-stat-card"><span>Total filtrado</span><strong data-advogado-kpi="filtered">${paginated.total}</strong></div>
+        <div class="ui-stat-card"><span>Ativos</span><strong>${activeCount}</strong><small>em acompanhamento</small></div>
+        <div class="ui-stat-card"><span>Pendências</span><strong>${pendingCount}</strong><small>exigem revisão</small></div>
+        <div class="ui-stat-card"><span>Arquivados</span><strong>${archivedCount}</strong><small>histórico preservado</small></div>
+        <div class="ui-stat-card"><span>Filtrados</span><strong data-advogado-kpi="filtered">${paginated.total}</strong><small>na visão atual</small></div>
       </div>
 
       ${renderOperationalControladoria()}
@@ -931,7 +931,7 @@ async function renderPainelPage(host) {
       <a class="advogado-module-card" href="${key}.html" data-page="${key}">
         <span>${escapeHtml(config.title)}</span>
         <strong>${active}</strong>
-        <small>${escapeHtml(config.singular)}(s) ativos</small>
+        <small>item(ns) ativos</small>
       </a>
     `;
   }).join('');
@@ -940,17 +940,17 @@ async function renderPainelPage(host) {
     <section class="advogado-page advogado-painel">
       <div class="page-header page-header-row advogado-header">
         <div>
-          <h1>Painel do Advogado</h1>
-          <p>Workspace jurídico operacional para clientes, tarefas, prazos, documentos e financeiro.</p>
+          <h1>Painel</h1>
+          <p>Operação jurídica do escritório com foco em clientes, prazos, documentos e próximos atos.</p>
         </div>
-        <a class="btn btn-primary" href="clientes.html" data-page="clientes">Abrir clientes</a>
+        <a class="btn btn-primary" href="clientes.html" data-page="clientes">Novo atendimento</a>
       </div>
 
       <div class="advogado-kpis">
-        <div class="ui-stat-card"><span>Clientes Supabase</span><strong>${state.remoteClients.length}</strong></div>
-        <div class="ui-stat-card"><span>Registros ativos</span><strong>${totals.total}</strong></div>
-        <div class="ui-stat-card"><span>Arquivados</span><strong>${totals.archived}</strong></div>
-        <div class="ui-stat-card"><span>Módulos</span><strong>${ADMIN_PAGE_KEYS.length}</strong></div>
+        <div class="ui-stat-card"><span>Clientes</span><strong>${state.remoteClients.length}</strong><small>casos vinculados</small></div>
+        <div class="ui-stat-card"><span>Pendências ativas</span><strong>${totals.total}</strong><small>em operação</small></div>
+        <div class="ui-stat-card"><span>Arquivados</span><strong>${totals.archived}</strong><small>histórico</small></div>
+        <div class="ui-stat-card"><span>Módulos operacionais</span><strong>${ADMIN_PAGE_KEYS.length}</strong><small>conectados</small></div>
       </div>
 
       <div class="advogado-workspace-grid">
@@ -1095,7 +1095,11 @@ function bindModuleEvents(host) {
         return;
       }
 
-      AdminService.sendClientInvite({ email }).then(() => {
+      AdminService.sendClientInvite({
+        email,
+        userId: record.user_id || null,
+        workspaceId: record.workspace_id || null,
+      }).then(() => {
         window.shellNotify?.({
           title: 'Convite enviado',
           text: `Link de acesso enviado para ${email}.`,

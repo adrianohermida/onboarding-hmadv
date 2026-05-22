@@ -43,19 +43,20 @@ describe('judiciario rls crud contract', () => {
     });
   });
 
-  it('enforces full CRUD policy pattern for authenticated admins', () => {
+  it('enforces full CRUD policy pattern for authenticated internal admins', () => {
     const sql = fs.readFileSync(migrationPath, 'utf8');
 
     expect(sql).toContain('ENABLE ROW LEVEL SECURITY');
     expect(sql).toContain('FORCE ROW LEVEL SECURITY');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION can_access_judiciario_schema(');
 
     ['j_read_', 'j_create_', 'j_update_', 'j_delete_'].forEach((prefix) => {
       expect(sql).toContain(prefix);
     });
 
-    expect(sql).toContain('FOR SELECT TO authenticated USING (is_any_admin())');
-    expect(sql).toContain('FOR INSERT TO authenticated WITH CHECK (is_any_admin())');
-    expect(sql).toContain('FOR UPDATE TO authenticated USING (is_any_admin()) WITH CHECK (is_any_admin())');
-    expect(sql).toContain('FOR DELETE TO authenticated USING (is_any_admin())');
+    expect(sql).toContain('FOR SELECT TO authenticated USING (can_access_judiciario_schema())');
+    expect(sql).toContain('FOR INSERT TO authenticated WITH CHECK (can_access_judiciario_schema())');
+    expect(sql).toContain('FOR UPDATE TO authenticated USING (can_access_judiciario_schema()) WITH CHECK (can_access_judiciario_schema())');
+    expect(sql).toContain('FOR DELETE TO authenticated USING (can_access_judiciario_schema())');
   });
 });

@@ -42,6 +42,52 @@ COMMENT ON COLUMN portal_documentos.autentique_id
 COMMENT ON COLUMN portal_documentos.direction
   IS 'Fluxo documental: client_to_office ou office_to_client';
 
+CREATE OR REPLACE FUNCTION can_manage_document_workspace(
+  p_workspace_id uuid,
+  p_roles text[] DEFAULT ARRAY['owner','admin','advogado','colaborador','financeiro']
+)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  legacy_admin boolean := false;
+  profile_admin boolean := false;
+  workspace_member boolean := false;
+BEGIN
+  IF to_regclass('public.admin_users') IS NOT NULL THEN
+    SELECT EXISTS(
+      SELECT 1 FROM admin_users WHERE user_id = auth.uid()
+    ) INTO legacy_admin;
+  END IF;
+
+  IF to_regclass('public.admin_profiles') IS NOT NULL THEN
+    SELECT EXISTS(
+      SELECT 1
+      FROM admin_profiles
+      WHERE id = auth.uid()
+        AND is_active = true
+        AND is_platform_admin = true
+    ) INTO profile_admin;
+  END IF;
+
+  IF p_workspace_id IS NOT NULL AND to_regclass('public.portal_workspace_members') IS NOT NULL THEN
+    SELECT EXISTS(
+      SELECT 1
+      FROM portal_workspace_members pwm
+      WHERE pwm.workspace_id = p_workspace_id
+        AND pwm.user_id = auth.uid()
+        AND pwm.is_active = true
+        AND pwm.role = ANY(p_roles)
+    ) INTO workspace_member;
+  END IF;
+
+  RETURN COALESCE(legacy_admin OR profile_admin OR workspace_member, false);
+END;
+$$;
+
 -- ─── 2. Solicitações documentais escritório → cliente ───────────────────────
 CREATE TABLE IF NOT EXISTS portal_document_requests (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -96,8 +142,22 @@ BEGIN
   ) THEN
     CREATE POLICY admin_document_requests ON portal_document_requests
       FOR ALL TO authenticated
-      USING (is_any_admin())
-      WITH CHECK (is_any_admin());
+      USING (
+        can_manage_document_workspace(
+          COALESCE(
+            workspace_id,
+            (SELECT pc.workspace_id FROM portal_casos pc WHERE pc.id = caso_id LIMIT 1)
+          )
+        )
+      )
+      WITH CHECK (
+        can_manage_document_workspace(
+          COALESCE(
+            workspace_id,
+            (SELECT pc.workspace_id FROM portal_casos pc WHERE pc.id = caso_id LIMIT 1)
+          )
+        )
+      );
   END IF;
 END $$;
 
@@ -117,11 +177,22 @@ SET search_path = public
 AS $$
 DECLARE
   v_doc portal_documentos%ROWTYPE;
+  v_doc_workspace_id uuid;
   v_status text;
   v_event text;
   v_desc text;
 BEGIN
-  IF NOT is_any_admin() THEN
+  SELECT workspace_id
+  INTO v_doc_workspace_id
+  FROM portal_documentos
+  WHERE id = p_doc_id
+    AND deleted_at IS NULL;
+
+  IF v_doc_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'Documento não encontrado';
+  END IF;
+
+  IF NOT can_manage_document_workspace(v_doc_workspace_id) THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
@@ -226,7 +297,14 @@ BEGIN
           owner = auth.uid()
           OR (storage.foldername(name))[1] = auth.uid()::text
           OR (storage.foldername(name))[2] = auth.uid()::text
-          OR is_any_admin()
+          OR can_manage_document_workspace(
+            (
+              SELECT pc.workspace_id
+              FROM portal_casos pc
+              WHERE pc.user_id::text IN ((storage.foldername(name))[1], (storage.foldername(name))[2])
+              LIMIT 1
+            )
+          )
         )
       );
   END IF;
@@ -245,7 +323,14 @@ BEGIN
           owner = auth.uid()
           OR (storage.foldername(name))[1] = auth.uid()::text
           OR (storage.foldername(name))[2] = auth.uid()::text
-          OR is_any_admin()
+          OR can_manage_document_workspace(
+            (
+              SELECT pc.workspace_id
+              FROM portal_casos pc
+              WHERE pc.user_id::text IN ((storage.foldername(name))[1], (storage.foldername(name))[2])
+              LIMIT 1
+            )
+          )
         )
       );
   END IF;
@@ -264,7 +349,14 @@ BEGIN
           owner = auth.uid()
           OR (storage.foldername(name))[1] = auth.uid()::text
           OR (storage.foldername(name))[2] = auth.uid()::text
-          OR is_any_admin()
+          OR can_manage_document_workspace(
+            (
+              SELECT pc.workspace_id
+              FROM portal_casos pc
+              WHERE pc.user_id::text IN ((storage.foldername(name))[1], (storage.foldername(name))[2])
+              LIMIT 1
+            )
+          )
         )
       )
       WITH CHECK (
@@ -273,7 +365,14 @@ BEGIN
           owner = auth.uid()
           OR (storage.foldername(name))[1] = auth.uid()::text
           OR (storage.foldername(name))[2] = auth.uid()::text
-          OR is_any_admin()
+          OR can_manage_document_workspace(
+            (
+              SELECT pc.workspace_id
+              FROM portal_casos pc
+              WHERE pc.user_id::text IN ((storage.foldername(name))[1], (storage.foldername(name))[2])
+              LIMIT 1
+            )
+          )
         )
       );
   END IF;
