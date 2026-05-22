@@ -79,16 +79,20 @@ function normalizeViewMode(mode) {
 
 function getStoredViewMode() {
   try {
-    return normalizeViewMode(sessionStorage.getItem(VIEW_MODE_KEY) || 'cliente');
+    return normalizeViewMode(
+      localStorage.getItem(VIEW_MODE_KEY) ||
+      sessionStorage.getItem(VIEW_MODE_KEY) ||
+      'cliente',
+    );
   } catch (_) {
     return 'cliente';
   }
 }
 
 function setStoredViewMode(mode) {
-  try {
-    sessionStorage.setItem(VIEW_MODE_KEY, normalizeViewMode(mode));
-  } catch (_) {}
+  const normalized = normalizeViewMode(mode);
+  try { localStorage.setItem(VIEW_MODE_KEY, normalized); } catch (_) {}
+  try { sessionStorage.setItem(VIEW_MODE_KEY, normalized); } catch (_) {}
 }
 
 function getEffectiveIsAdmin(hasAdminAccess = null) {
@@ -372,11 +376,19 @@ function ensureAdminServiceErrorBanner() {
     banner = document.createElement('div');
     banner.id = 'shell-service-error-banner';
     banner.className = 'shell-service-banner';
+    banner.hidden = true;
     banner.innerHTML = `
-      <div class="shell-service-banner-title">Diagnostico tecnico (admin)</div>
-      <div class="shell-service-banner-text" data-role="summary"></div>
-      <div class="shell-service-banner-text" data-role="latest"></div>
+      <div class="shell-service-banner-body">
+        <div class="shell-service-banner-title">Falhas de serviço detectadas</div>
+        <div class="shell-service-banner-text" data-role="summary"></div>
+        <div class="shell-service-banner-text" data-role="latest"></div>
+      </div>
+      <button type="button" class="shell-service-banner-close" aria-label="Fechar diagnóstico">✕</button>
     `;
+    banner.querySelector('.shell-service-banner-close').addEventListener('click', () => {
+      banner.hidden = true;
+      try { sessionStorage.setItem('portal:diag-dismissed-' + getCurrentPage(), '1'); } catch (_) {}
+    });
     main.prepend(banner);
   }
 
@@ -390,22 +402,34 @@ function renderAdminServiceErrorBanner() {
   const state = getServiceErrorState();
   const route = getCurrentPage();
   const routeCount = state.byRoute?.[route] || 0;
-  const latest = state.recent[state.recent.length - 1] || null;
 
-  const summaryEl = banner.querySelector('[data-role="summary"]');
-  const latestEl = banner.querySelector('[data-role="latest"]');
-  if (summaryEl) {
-    summaryEl.textContent = `Rota atual: ${routeCount} falha(s) | Sessao: ${state.total} falha(s)`;
+  // Only show when there are actual failures and user hasn't dismissed on this route
+  const hasFailed = state.total > 0 || routeCount > 0;
+  const dismissed = (() => {
+    try { return sessionStorage.getItem('portal:diag-dismissed-' + route) === '1'; } catch (_) { return false; }
+  })();
+
+  if (!hasFailed || dismissed) {
+    banner.hidden = true;
+    return;
   }
 
+  banner.hidden = false;
+  const latest = state.recent[state.recent.length - 1] || null;
+  const summaryEl = banner.querySelector('[data-role="summary"]');
+  const latestEl = banner.querySelector('[data-role="latest"]');
+
+  if (summaryEl) {
+    summaryEl.textContent = `Rota atual: ${routeCount} falha(s) | Sessão: ${state.total} falha(s)`;
+  }
   if (latestEl) {
     if (!latest) {
-      latestEl.textContent = 'Sem falhas recentes de servico.';
+      latestEl.textContent = '';
     } else {
-      const stage = latest.stage || 'unknown-stage';
+      const stage = latest.stage || 'unknown';
       const path = latest.path || latest.type || 'edge';
       const message = latest.message || 'erro sem mensagem';
-      latestEl.textContent = `Ultima falha: ${path} [${stage}] - ${message}`;
+      latestEl.textContent = `Última falha: ${path} [${stage}] — ${message}`;
     }
   }
 }
