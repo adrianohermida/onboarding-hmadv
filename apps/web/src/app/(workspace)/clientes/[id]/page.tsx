@@ -10,12 +10,16 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
   const { data: adminData } = await supabase.from('admin_users').select('role').maybeSingle();
   if (!adminData) redirect('/dashboard');
 
-  const [{ data: caso }, { data: docs }, { data: timeline }] = await Promise.all([
-    supabase
-      .from('portal_casos')
-      .select('*')
-      .eq('user_id', params.id)
-      .maybeSingle(),
+  const [
+    { data: caso },
+    { data: docs },
+    { data: timeline },
+    { data: tarefas },
+    { data: custas },
+    { data: contratos },
+    { data: planos },
+  ] = await Promise.all([
+    supabase.from('portal_casos').select('*').eq('user_id', params.id).maybeSingle(),
     supabase
       .from('portal_documentos')
       .select('id, tipo, nome, workflow_status, direction, require_signature, created_at, updated_at')
@@ -29,9 +33,46 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       .eq('user_id', params.id)
       .order('created_at', { ascending: false })
       .limit(30),
+    supabase
+      .from('re_tarefas')
+      .select('id, titulo, status, prioridade, data_vencimento, criado_em')
+      .eq('responsavel_id', params.id)
+      .order('data_vencimento', { ascending: true })
+      .limit(20),
+    supabase
+      .from('portal_custas')
+      .select('id, titulo, categoria, status, valor, data_vencimento, comprovante_url, created_at')
+      .eq('user_id', params.id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('portal_contratos')
+      .select('id, titulo, tipo, status, assinatura_status, assinado_em, arquivo_url, created_at')
+      .eq('user_id', params.id)
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('portal_planos_pagamento')
+      .select('id, titulo, status, valor_total, parcela_sugerida, prazo_meses, cronograma, created_at')
+      .eq('user_id', params.id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
 
   if (!caso) notFound();
 
-  return <ClienteDetail caso={caso} docs={docs ?? []} timeline={timeline ?? []} />;
+  return (
+    <ClienteDetail
+      caso={caso}
+      docs={docs ?? []}
+      timeline={timeline ?? []}
+      tarefas={tarefas ?? []}
+      custas={custas ?? []}
+      contratos={contratos ?? []}
+      planos={planos ?? []}
+    />
+  );
 }

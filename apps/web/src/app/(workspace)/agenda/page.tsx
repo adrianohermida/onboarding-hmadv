@@ -1,6 +1,9 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AgendaClient from '@/components/agenda/AgendaClient';
+
+export const metadata: Metadata = { title: 'Agenda' };
 
 export default async function AgendaPage() {
   const supabase = await createClient();
@@ -8,9 +11,10 @@ export default async function AgendaPage() {
   if (!user) redirect('/login');
 
   const hoje = new Date().toISOString().split('T')[0];
-  const fim = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const fim = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  const [{ data: slots }, { data: agendamentos }] = await Promise.all([
+  const [{ data: adminData }, { data: slots }, { data: agendamentos }] = await Promise.all([
+    supabase.from('admin_users').select('role').eq('user_id', user.id).maybeSingle(),
     supabase
       .from('re_agenda_slots')
       .select('id, data, hora, disponivel, tipo')
@@ -24,8 +28,14 @@ export default async function AgendaPage() {
       .select('id, slot_id, status, nome_cliente, email_cliente, telefone_cliente, tipo_atendimento, observacoes, criado_em')
       .gte('criado_em', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: false })
-      .limit(100),
+      .limit(200),
   ]);
 
-  return <AgendaClient slots={slots ?? []} agendamentos={agendamentos ?? []} />;
+  return (
+    <AgendaClient
+      slots={slots ?? []}
+      agendamentos={agendamentos ?? []}
+      isAdmin={!!adminData}
+    />
+  );
 }

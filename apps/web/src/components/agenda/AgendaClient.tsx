@@ -1,7 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, Clock, User, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
+import {
+  Calendar, Clock, MapPin, Video, User, CheckCircle2,
+  AlertCircle, ChevronLeft, ChevronRight, Plus, Gavel,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import EmptyState from '../ui/EmptyState';
+import KpiCard from '../ui/KpiCard';
 
 interface Slot {
   id: string;
@@ -23,154 +31,406 @@ interface Agendamento {
   criado_em: string;
 }
 
+interface Audiencia {
+  id: string;
+  processo_id: string | null;
+  tipo: string | null;
+  data_audiencia: string;
+  local: string | null;
+  situacao: string | null;
+  link_videoconferencia: string | null;
+  observacoes: string | null;
+}
+
 interface Props {
   slots: Slot[];
   agendamentos: Agendamento[];
+  isAdmin: boolean;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  pendente: 'bg-amber-50 text-amber-700 border-amber-200',
-  confirmado: 'bg-green-50 text-green-700 border-green-200',
-  cancelado: 'bg-red-50 text-red-700 border-red-200',
-  concluido: 'bg-teal-50 text-teal-700 border-teal-200',
-  remarcado: 'bg-blue-50 text-blue-700 border-blue-200',
+const STATUS_AGENDAMENTO: Record<string, { label: string; cls: string }> = {
+  pendente:   { label: 'Pendente',   cls: 'bg-amber-500/10 text-amber-500' },
+  confirmado: { label: 'Confirmado', cls: 'bg-green-500/10 text-green-500' },
+  cancelado:  { label: 'Cancelado',  cls: 'bg-rose-500/10 text-rose-500' },
+  concluido:  { label: 'Concluído',  cls: 'bg-muted text-muted-foreground' },
+  remarcado:  { label: 'Remarcado', cls: 'bg-blue-500/10 text-blue-500' },
 };
 
-function formatDate(d: string) {
-  const [y, m, day] = d.split('-');
-  return `${day}/${m}/${y}`;
+const SITUACAO_AUDIENCIA: Record<string, { label: string; cls: string }> = {
+  agendada:    { label: 'Agendada',    cls: 'bg-blue-500/10 text-blue-500' },
+  realizada:   { label: 'Realizada',   cls: 'bg-green-500/10 text-green-500' },
+  cancelada:   { label: 'Cancelada',   cls: 'bg-rose-500/10 text-rose-500' },
+  adiada:      { label: 'Adiada',      cls: 'bg-amber-500/10 text-amber-500' },
+  redesignada: { label: 'Redesignada', cls: 'bg-violet-500/10 text-violet-500' },
+};
+
+const TIPO_AUDIENCIA: Record<string, string> = {
+  inicial:      'Audiência Inicial',
+  instrucao:    'Instrução e Julgamento',
+  conciliacao:  'Conciliação',
+  mediacao:     'Mediação',
+  virtual:      'Virtual',
+  una:          'Una',
+  julgamento:   'Julgamento',
+};
+
+const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function formatData(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
 
-export default function AgendaClient({ slots, agendamentos }: Props) {
-  const [tab, setTab] = useState<'agendamentos' | 'slots'>('agendamentos');
+function formatHora(hora: string) {
+  return hora.slice(0, 5);
+}
 
-  const disponiveis = slots.filter((s) => s.disponivel).length;
-  const pendentes = agendamentos.filter((a) => a.status === 'pendente').length;
-  const confirmados = agendamentos.filter((a) => a.status === 'confirmado').length;
+function useAudienciasJudiciario(enabled: boolean) {
+  return useQuery<Audiencia[]>({
+    queryKey: ['agenda-audiencias'],
+    enabled,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data } = await (supabase as any)
+        .schema('judiciario')
+        .from('audiencias')
+        .select('id, processo_id, tipo, data_audiencia, local, situacao, link_videoconferencia, observacoes')
+        .order('data_audiencia', { ascending: true })
+        .limit(200);
+      return data ?? [];
+    },
+  });
+}
+
+function MiniCalendario({
+  ano,
+  mes,
+  datasComEvento,
+  diaAtivo,
+  onDiaClick,
+  onMesAnterior,
+  onProximoMes,
+}: {
+  ano: number;
+  mes: number;
+  datasComEvento: Set<string>;
+  diaAtivo: string | null;
+  onDiaClick: (d: string) => void;
+  onMesAnterior: () => void;
+  onProximoMes: () => void;
+}) {
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  const cells: (number | null)[] = [
+    ...Array(primeiroDia).fill(null),
+    ...Array.from({ length: totalDias }, (_, i) => i + 1),
+  ];
+
+  while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Agenda</h2>
-        <p className="text-sm text-muted-foreground">Gestão de agendamentos e disponibilidade</p>
+    <div className="bg-card border border-border rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={onMesAnterior} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <p className="text-sm font-semibold">{MESES[mes]} {ano}</p>
+        <button onClick={onProximoMes} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-xs font-medium">Pendentes</span>
-          </div>
-          <p className="text-2xl font-bold">{pendentes}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="text-xs font-medium">Confirmados</span>
-          </div>
-          <p className="text-2xl font-bold">{confirmados}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span className="text-xs font-medium">Slots livres</span>
-          </div>
-          <p className="text-2xl font-bold">{disponiveis}</p>
-        </div>
-      </div>
-
-      <div className="flex gap-1 border-b border-border">
-        {(['agendamentos', 'slots'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px capitalize ${
-              tab === t
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t === 'agendamentos' ? 'Agendamentos' : 'Disponibilidade'}
-          </button>
+      <div className="grid grid-cols-7 gap-px">
+        {DIAS_SEMANA.map((d) => (
+          <div key={d} className="text-center text-[10px] font-semibold text-muted-foreground pb-1">{d}</div>
         ))}
+        {cells.map((dia, i) => {
+          if (!dia) return <div key={i} />;
+          const isoDate = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+          const temEvento = datasComEvento.has(isoDate);
+          const isHoje = isoDate === hoje;
+          const isAtivo = isoDate === diaAtivo;
+
+          return (
+            <button
+              key={i}
+              onClick={() => onDiaClick(isoDate)}
+              className={cn(
+                'relative flex flex-col items-center justify-center h-8 w-full rounded-lg text-xs transition-colors',
+                isAtivo && 'bg-primary text-primary-foreground font-semibold',
+                !isAtivo && isHoje && 'bg-primary/10 text-primary font-semibold',
+                !isAtivo && !isHoje && 'hover:bg-muted text-foreground',
+              )}
+            >
+              {dia}
+              {temEvento && !isAtivo && (
+                <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CardAgendamento({ a, isAdmin }: { a: Agendamento; isAdmin: boolean }) {
+  const cfg = STATUS_AGENDAMENTO[a.status] ?? STATUS_AGENDAMENTO.pendente;
+  return (
+    <div className="flex items-start gap-3 px-4 py-3.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mt-0.5">
+        <User className="h-3.5 w-3.5 text-blue-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-medium">{a.nome_cliente ?? 'Cliente'}</p>
+          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', cfg.cls)}>{cfg.label}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
+          {a.tipo_atendimento && <span>{a.tipo_atendimento}</span>}
+          {a.telefone_cliente && <span>{a.telefone_cliente}</span>}
+          {a.email_cliente && <span>{a.email_cliente}</span>}
+        </div>
+        {a.observacoes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{a.observacoes}</p>}
+      </div>
+    </div>
+  );
+}
+
+function CardAudiencia({ a }: { a: Audiencia }) {
+  const dt = new Date(a.data_audiencia);
+  const sitCfg = a.situacao ? (SITUACAO_AUDIENCIA[a.situacao] ?? null) : null;
+  const tipoLabel = a.tipo ? (TIPO_AUDIENCIA[a.tipo] ?? a.tipo) : 'Audiência';
+
+  return (
+    <div className="flex items-start gap-4 px-4 py-4 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+      <div className="flex-shrink-0 text-center min-w-[44px]">
+        <p className="text-xl font-bold text-foreground tabular-nums leading-tight">{String(dt.getDate()).padStart(2, '0')}</p>
+        <p className="text-[10px] text-muted-foreground">{dt.toLocaleDateString('pt-BR', { month: 'short' })}</p>
+      </div>
+      <div className="w-px bg-border self-stretch flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <p className="text-sm font-medium">{tipoLabel}</p>
+          {sitCfg && <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', sitCfg.cls)}>{sitCfg.label}</span>}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          {a.local && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{a.local}</span>}
+          {a.link_videoconferencia && (
+            <a href={a.link_videoconferencia} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-primary hover:underline">
+              <Video className="h-3 w-3" />Acessar link
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
+  const hoje = new Date();
+  const [calAno, setCalAno] = useState(hoje.getFullYear());
+  const [calMes, setCalMes] = useState(hoje.getMonth());
+  const [diaSelecionado, setDiaSelecionado] = useState<string | null>(hoje.toISOString().slice(0, 10));
+  const [aba, setAba] = useState<'audiencias' | 'agendamentos' | 'slots'>('audiencias');
+
+  const { data: audiencias = [] } = useAudienciasJudiciario(isAdmin);
+
+  const datasComAudiencia = useMemo(() => {
+    const s = new Set<string>();
+    audiencias.forEach((a) => s.add(a.data_audiencia.slice(0, 10)));
+    agendamentos.forEach((a) => {
+      const slot = slots.find((s) => s.id === a.slot_id);
+      if (slot) s.add(slot.data);
+    });
+    return s;
+  }, [audiencias, agendamentos, slots]);
+
+  const audienciasFiltradas = useMemo(() => {
+    if (!diaSelecionado) return audiencias;
+    return audiencias.filter((a) => a.data_audiencia.slice(0, 10) === diaSelecionado);
+  }, [audiencias, diaSelecionado]);
+
+  const slotsDia = useMemo(() => {
+    if (!diaSelecionado) return slots;
+    return slots.filter((s) => s.data === diaSelecionado);
+  }, [slots, diaSelecionado]);
+
+  const agendamentosDia = useMemo(() => {
+    const slotIds = new Set(slotsDia.map((s) => s.id));
+    if (!diaSelecionado) return agendamentos;
+    return agendamentos.filter((a) => a.slot_id && slotIds.has(a.slot_id));
+  }, [agendamentos, slotsDia, diaSelecionado]);
+
+  const proximas = audiencias.filter((a) => new Date(a.data_audiencia) >= new Date() && a.situacao !== 'cancelada');
+  const pendentes = agendamentos.filter((a) => a.status === 'pendente').length;
+  const disponiveis = slots.filter((s) => s.disponivel).length;
+
+  return (
+    <div className="space-y-5">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <KpiCard label="Próximas audiências" value={proximas.length} icon={Gavel} iconCls="text-violet-500" bgCls="bg-violet-500/10" />
+        <KpiCard label="Agendamentos pendentes" value={pendentes} icon={AlertCircle} iconCls="text-amber-500" bgCls="bg-amber-500/10" />
+        <KpiCard label="Slots disponíveis" value={disponiveis} icon={Calendar} iconCls="text-blue-500" bgCls="bg-blue-500/10" />
+        <KpiCard label="Total confirmados" value={agendamentos.filter((a) => a.status === 'confirmado').length} icon={CheckCircle2} iconCls="text-green-500" bgCls="bg-green-500/10" />
       </div>
 
-      {tab === 'agendamentos' && (
-        <div className="rounded-xl border border-border overflow-hidden">
-          {agendamentos.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-muted-foreground text-center">Nenhum agendamento encontrado</p>
-          ) : (
-            <div className="divide-y divide-border">
-              {agendamentos.map((a) => (
-                <div key={a.id} className="px-4 py-3 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium">{a.nome_cliente ?? 'Cliente'}</p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLE[a.status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                        {a.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{a.tipo_atendimento ?? '—'} · {a.email_cliente}</p>
-                    {a.observacoes && <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.observacoes}</p>}
-                  </div>
-                  <p className="text-xs text-muted-foreground flex-shrink-0">
-                    {new Date(a.criado_em).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="grid lg:grid-cols-[280px,1fr] gap-5">
+        {/* Calendário lateral */}
+        <div className="space-y-4">
+          <MiniCalendario
+            ano={calAno}
+            mes={calMes}
+            datasComEvento={datasComAudiencia}
+            diaAtivo={diaSelecionado}
+            onDiaClick={(d) => setDiaSelecionado(diaSelecionado === d ? null : d)}
+            onMesAnterior={() => {
+              if (calMes === 0) { setCalMes(11); setCalAno((y) => y - 1); }
+              else setCalMes((m) => m - 1);
+            }}
+            onProximoMes={() => {
+              if (calMes === 11) { setCalMes(0); setCalAno((y) => y + 1); }
+              else setCalMes((m) => m + 1);
+            }}
+          />
 
-      {tab === 'slots' && (
-        <div className="rounded-xl border border-border overflow-hidden">
-          {slots.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-muted-foreground text-center">Nenhum slot nos próximos 30 dias</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/20">
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Data</th>
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Hora</th>
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Tipo</th>
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slots.map((s) => (
-                    <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          {formatDate(s.data)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          {s.hora}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{s.tipo ?? '—'}</td>
-                      <td className="px-4 py-2.5">
-                        {s.disponivel
-                          ? <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          : <XCircle className="h-4 w-4 text-red-400" />
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {diaSelecionado && (
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                {new Date(diaSelecionado + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+              </p>
+              <div className="space-y-1.5">
+                {slotsDia.length === 0 && audienciasFiltradas.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nenhum evento neste dia.</p>
+                )}
+                {audienciasFiltradas.slice(0, 3).map((a) => (
+                  <div key={a.id} className="flex items-center gap-2 text-xs">
+                    <Gavel className="h-3 w-3 text-violet-500 flex-shrink-0" />
+                    <span className="text-muted-foreground">{new Date(a.data_audiencia).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="truncate">{a.tipo ? (TIPO_AUDIENCIA[a.tipo] ?? a.tipo) : 'Audiência'}</span>
+                  </div>
+                ))}
+                {slotsDia.slice(0, 3).map((s) => (
+                  <div key={s.id} className="flex items-center gap-2 text-xs">
+                    <div className={cn('w-2 h-2 rounded-full flex-shrink-0', s.disponivel ? 'bg-green-500' : 'bg-muted')} />
+                    <span className="text-muted-foreground">{formatHora(s.hora)}</span>
+                    <span className={s.disponivel ? 'text-foreground' : 'text-muted-foreground line-through'}>{s.tipo ?? 'Slot'}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      )}
+
+        {/* Conteúdo principal */}
+        <div className="space-y-4">
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
+            {[
+              { id: 'audiencias' as const, label: `Audiências${isAdmin && audiencias.length ? ` (${audiencias.length})` : ''}` },
+              { id: 'agendamentos' as const, label: `Agendamentos (${agendamentos.length})` },
+              { id: 'slots' as const, label: `Slots (${slots.length})` },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setAba(t.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  aba === t.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {aba === 'audiencias' && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {diaSelecionado ? formatData(diaSelecionado) : 'Todas as audiências'}
+                </p>
+                {diaSelecionado && (
+                  <button onClick={() => setDiaSelecionado(null)} className="text-xs text-primary hover:underline">
+                    Ver todas
+                  </button>
+                )}
+              </div>
+              {audienciasFiltradas.length === 0 ? (
+                <EmptyState icon={Gavel} title="Nenhuma audiência" description={diaSelecionado ? "Sem audiências neste dia." : "Nenhuma audiência cadastrada."} />
+              ) : (
+                audienciasFiltradas.map((a) => <CardAudiencia key={a.id} a={a} />)
+              )}
+            </div>
+          )}
+
+          {aba === 'agendamentos' && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-muted/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {diaSelecionado ? formatData(diaSelecionado) : 'Todos os agendamentos'}
+                </p>
+              </div>
+              {agendamentosDia.length === 0 ? (
+                <EmptyState icon={User} title="Nenhum agendamento" description={diaSelecionado ? "Sem agendamentos neste dia." : "Nenhum agendamento encontrado."} />
+              ) : (
+                agendamentosDia.map((a) => <CardAgendamento key={a.id} a={a} isAdmin={isAdmin} />)
+              )}
+            </div>
+          )}
+
+          {aba === 'slots' && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-muted/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {diaSelecionado ? formatData(diaSelecionado) : 'Todos os slots'}
+                </p>
+              </div>
+              {slotsDia.length === 0 ? (
+                <EmptyState icon={Calendar} title="Nenhum slot" description="Não há slots disponíveis neste período." />
+              ) : (
+                <div className="divide-y divide-border">
+                  {slotsDia.map((s) => {
+                    const agendamento = agendamentos.find((a) => a.slot_id === s.id);
+                    return (
+                      <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                        <div className={cn(
+                          'w-2 h-2 rounded-full flex-shrink-0',
+                          s.disponivel ? 'bg-green-500' : agendamento ? 'bg-amber-500' : 'bg-muted',
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium tabular-nums">{formatHora(s.hora)}</span>
+                            <span className="text-xs text-muted-foreground">{s.tipo ?? 'Atendimento'}</span>
+                          </div>
+                          {agendamento && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{agendamento.nome_cliente} · {STATUS_AGENDAMENTO[agendamento.status]?.label}</p>
+                          )}
+                        </div>
+                        <span className={cn(
+                          'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                          s.disponivel ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground',
+                        )}>
+                          {s.disponivel ? 'Disponível' : 'Ocupado'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
