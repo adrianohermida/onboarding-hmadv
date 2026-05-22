@@ -700,6 +700,10 @@ const HUB_TABS = {
     { key: 'ajuda',         label: 'Ajuda' },
     { key: 'jornada',       label: 'Jornada' },
   ],
+  marketplace: [
+    { key: 'catalogo',     label: 'Catálogo' },
+    { key: 'solicitacoes', label: 'Minhas Solicitações' },
+  ],
 };
 
 function getActiveHubTab(hubKey) {
@@ -962,35 +966,206 @@ function renderVisaoGeralPage(data) {
   `;
 }
 
-function renderMarketplacePage() {
-  const services = [
-    { id: 'diligencias',    label: 'Diligências',         desc: 'Busca de informações e documentos' },
-    { id: 'correspondentes', label: 'Correspondentes',    desc: 'Representação em outras comarcas' },
-    { id: 'calculos',       label: 'Cálculos Jurídicos',  desc: 'Atualização de débitos e liquidação' },
-    { id: 'protocolos',     label: 'Protocolos',          desc: 'Petições e documentos em cartório' },
-    { id: 'certidoes',      label: 'Certidões',           desc: 'Certidões negativas e judiciais' },
-    { id: 'pareceres',      label: 'Pareceres',           desc: 'Consulta jurídica especializada' },
-    { id: 'consultorias',   label: 'Consultorias',        desc: 'Assessoria em áreas específicas' },
-    { id: 'audiencias',     label: 'Audiências',          desc: 'Representação em audiências remotas' },
-    { id: 'pericias',       label: 'Perícias',            desc: 'Laudos técnicos e periciais' },
-  ];
+// ── MARKETPLACE ──────────────────────────────────────────────────────────────
+
+const MKT_ORDERS_KEY = 'hm_mkt_orders';
+
+const MKT_CATEGORIES = [
+  {
+    key: 'busca',
+    label: 'Busca & Investigação',
+    services: [
+      { id: 'diligencias',          label: 'Diligências',          desc: 'Busca de informações e documentos', time: '3–5 dias' },
+      { id: 'pesquisa-patrimonial', label: 'Pesquisa Patrimonial', desc: 'Localização de bens e ativos',      time: '5–7 dias' },
+    ],
+  },
+  {
+    key: 'representacao',
+    label: 'Representação',
+    services: [
+      { id: 'correspondentes', label: 'Correspondentes', desc: 'Representação em outras comarcas',    time: '2–5 dias' },
+      { id: 'audiencias',      label: 'Audiências',      desc: 'Representação em audiências remotas', time: '1–3 dias' },
+    ],
+  },
+  {
+    key: 'documentos',
+    label: 'Documentos & Cartório',
+    services: [
+      { id: 'certidoes',  label: 'Certidões',  desc: 'Certidões negativas e judiciais',   time: '2–5 dias' },
+      { id: 'protocolos', label: 'Protocolos', desc: 'Petições e documentos em cartório', time: '1–2 dias' },
+    ],
+  },
+  {
+    key: 'consultoria',
+    label: 'Consultoria & Cálculos',
+    services: [
+      { id: 'calculos',      label: 'Cálculos Jurídicos', desc: 'Atualização de débitos e liquidação',  time: '2–3 dias' },
+      { id: 'pareceres',     label: 'Pareceres',          desc: 'Consulta jurídica especializada',     time: '3–5 dias' },
+      { id: 'pericias',      label: 'Perícias',           desc: 'Laudos técnicos e periciais',         time: '5–10 dias' },
+    ],
+  },
+];
+
+const MKT_URGENCY = {
+  normal:  { label: 'Normal',  time: '5–7 dias úteis' },
+  alta:    { label: 'Alta',    time: '2–3 dias úteis' },
+  urgente: { label: 'Urgente', time: '24h úteis'      },
+};
+
+const MKT_STATUS = {
+  enviada:    { label: 'Enviada',     tone: 'brand' },
+  em_analise: { label: 'Em análise',  tone: 'warn'  },
+  concluida:  { label: 'Concluída',   tone: 'ok'    },
+  cancelada:  { label: 'Cancelada',   tone: 'muted' },
+};
+
+function getMktOrders() {
+  try { return JSON.parse(localStorage.getItem(MKT_ORDERS_KEY) || '[]'); } catch { return []; }
+}
+
+function saveMktOrder(serviceId, serviceLabel, desc, urgency) {
+  const orders = getMktOrders();
+  orders.unshift({ id: Date.now(), serviceId, serviceLabel, desc, urgency, status: 'enviada', createdAt: new Date().toISOString() });
+  localStorage.setItem(MKT_ORDERS_KEY, JSON.stringify(orders.slice(0, 30)));
+}
+
+function mktFmtDate(iso) {
+  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }); } catch { return '—'; }
+}
+
+function renderMarketplaceCatalogTab() {
+  const activeCount = getMktOrders().filter(o => o.status === 'enviada' || o.status === 'em_analise').length;
   return `
-    <section class="cliente-page">
-      <div class="page-header">
-        <h1>Marketplace Jurídico</h1>
-        <p>Solicite serviços complementares ao seu caso.</p>
+    ${activeCount > 0 ? `
+      <div class="mkt-orders-banner">
+        <span>Você tem <strong>${activeCount}</strong> solicitação(ões) em andamento.</span>
+        <button type="button" class="btn btn-ghost btn-sm" data-goto-tab="solicitacoes">Ver →</button>
       </div>
-      <div class="marketplace-grid">
-        ${services.map(s => `
-          <button type="button" class="marketplace-card" data-service="${escapeHtml(s.id)}">
-            <strong>${escapeHtml(s.label)}</strong>
-            <small>${escapeHtml(s.desc)}</small>
-            <span class="marketplace-cta">Solicitar</span>
-          </button>
-        `).join('')}
-      </div>
-    </section>
+    ` : ''}
+    <div class="mkt-categories">
+      ${MKT_CATEGORIES.map(cat => `
+        <div class="mkt-category">
+          <h3 class="mkt-category-label">${escapeHtml(cat.label)}</h3>
+          <div class="mkt-service-grid">
+            ${cat.services.map(s => `
+              <button type="button"
+                class="marketplace-card mkt-service-card"
+                data-service="${escapeHtml(s.id)}"
+                data-service-label="${escapeHtml(s.label)}">
+                <strong>${escapeHtml(s.label)}</strong>
+                <small>${escapeHtml(s.desc)}</small>
+                <div class="mkt-card-footer">
+                  <span class="mkt-time-badge">${escapeHtml(s.time)}</span>
+                  <span class="marketplace-cta">Solicitar →</span>
+                </div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
   `;
+}
+
+function renderMarketplaceSolicitacoesTab() {
+  const orders = getMktOrders();
+  if (!orders.length) {
+    return `
+      <div class="mkt-empty">
+        <p>Nenhuma solicitação enviada ainda.</p>
+        <button type="button" class="btn btn-ghost btn-sm" data-goto-tab="catalogo">Ver catálogo de serviços</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="mkt-orders-list">
+      ${orders.map(o => {
+        const st  = MKT_STATUS[o.status]  || MKT_STATUS.enviada;
+        const urg = MKT_URGENCY[o.urgency] || MKT_URGENCY.normal;
+        return `
+          <div class="mkt-order-row">
+            <div class="mkt-order-body">
+              <strong>${escapeHtml(o.serviceLabel)}</strong>
+              ${o.desc ? `<span class="mkt-order-desc">${escapeHtml(o.desc.slice(0, 90))}${o.desc.length > 90 ? '…' : ''}</span>` : ''}
+              <span class="mkt-order-meta">${mktFmtDate(o.createdAt)} · ${escapeHtml(urg.label)}</span>
+            </div>
+            <span class="painel-chip painel-chip--${escapeHtml(st.tone)}">${escapeHtml(st.label)}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderMarketplaceHubContent(tabKey) {
+  switch (tabKey) {
+    case 'solicitacoes': return renderMarketplaceSolicitacoesTab();
+    default:             return renderMarketplaceCatalogTab();
+  }
+}
+
+function openMktRequestModal(serviceId, serviceLabel, host) {
+  const urgencyOpts = Object.entries(MKT_URGENCY)
+    .map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(v.label)} — ${escapeHtml(v.time)}</option>`)
+    .join('');
+  window.shellModal?.open?.({
+    title: `Solicitar — ${escapeHtml(serviceLabel)}`,
+    body: `
+      <form id="mkt-req-form">
+        <div class="form-field">
+          <label class="form-label">Serviço</label>
+          <input type="text" value="${escapeHtml(serviceLabel)}" readonly class="form-input" style="background:var(--line2);color:var(--muted)">
+        </div>
+        <div class="form-field" style="margin-top:12px">
+          <label class="form-label" for="mkt-desc">Descreva sua necessidade</label>
+          <textarea id="mkt-desc" class="form-input"
+            placeholder="Descreva o que precisa, prazo desejado, processo vinculado..."
+            style="resize:vertical;min-height:90px" rows="4"></textarea>
+        </div>
+        <div class="form-field" style="margin-top:12px">
+          <label class="form-label" for="mkt-urgency">Urgência</label>
+          <select id="mkt-urgency" class="form-input">${urgencyOpts}</select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:16px">Enviar solicitação</button>
+      </form>
+    `,
+  });
+  const form = document.getElementById('mkt-req-form');
+  if (!form) return;
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const desc    = document.getElementById('mkt-desc')?.value?.trim() || '';
+    const urgency = document.getElementById('mkt-urgency')?.value || 'normal';
+    saveMktOrder(serviceId, serviceLabel, desc, urgency);
+    form.innerHTML = `
+      <div class="mkt-success">
+        <svg viewBox="0 0 24 24" fill="none" width="40" height="40"><circle cx="12" cy="12" r="10" stroke="var(--ok)" stroke-width="1.5"/><path d="M8 12l3 3 5-5" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p>Solicitação enviada!</p>
+        <small>A equipe entrará em contato pelo canal de mensagens.</small>
+      </div>
+    `;
+    setTimeout(() => {
+      window.shellModal?.close?.();
+      const content = host.querySelector('.hub-tab-content');
+      if (content) content.innerHTML = renderMarketplaceHubContent(getActiveHubTab('marketplace'));
+    }, 2000);
+  });
+}
+
+function initMarketplace(host) {
+  host.addEventListener('click', e => {
+    const card = e.target.closest('[data-service]');
+    if (card) {
+      openMktRequestModal(card.dataset.service, card.dataset.serviceLabel || card.dataset.service, host);
+      return;
+    }
+    const gotoBtn = e.target.closest('[data-goto-tab]');
+    if (gotoBtn) {
+      e.preventDefault();
+      const tabKey = gotoBtn.dataset.gotoTab;
+      host.querySelector(`.hub-tab[data-hub-tab="${tabKey}"]`)?.click();
+    }
+  });
 }
 
 function renderConfiguracoesPage() {
@@ -1176,8 +1351,20 @@ export async function bootClientePage(moduleKey) {
     }
 
     if (moduleKey === 'marketplace') {
-      host.innerHTML = renderMarketplacePage();
+      const activeTab = getActiveHubTab('marketplace');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Marketplace Jurídico</h1>
+            <p>Solicite serviços complementares ao seu caso.</p>
+          </div>
+          ${renderHubNav('marketplace', activeTab)}
+          <div class="hub-tab-content">${renderMarketplaceHubContent(activeTab)}</div>
+        </section>
+      `;
       window.initUiKit?.(host);
+      mountHubTabListeners(host, 'marketplace', null, renderMarketplaceHubContent);
+      initMarketplace(host);
       return;
     }
 
