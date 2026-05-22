@@ -5,30 +5,24 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   Calendar, Clock, MapPin, Video, User, CheckCircle2,
-  AlertCircle, ChevronLeft, ChevronRight, Plus, Gavel,
+  AlertCircle, ChevronLeft, ChevronRight, Gavel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmptyState from '../ui/EmptyState';
 import KpiCard from '../ui/KpiCard';
 
-interface Slot {
-  id: string;
-  data: string;
-  hora: string;
-  disponivel: boolean;
-  tipo: string | null;
-}
-
 interface Agendamento {
   id: string;
-  slot_id: string | null;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  area: string | null;
+  data: string;
+  hora: string;
   status: string;
-  nome_cliente: string | null;
-  email_cliente: string | null;
-  telefone_cliente: string | null;
-  tipo_atendimento: string | null;
   observacoes: string | null;
-  criado_em: string;
+  zoom_join_url: string | null;
+  created_at: string;
 }
 
 interface Audiencia {
@@ -43,7 +37,6 @@ interface Audiencia {
 }
 
 interface Props {
-  slots: Slot[];
   agendamentos: Agendamento[];
   isAdmin: boolean;
 }
@@ -81,9 +74,6 @@ function formatData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 }
 
-function formatHora(hora: string) {
-  return hora.slice(0, 5);
-}
 
 function useAudienciasJudiciario(enabled: boolean) {
   return useQuery<Audiencia[]>({
@@ -177,7 +167,7 @@ function MiniCalendario({
   );
 }
 
-function CardAgendamento({ a, isAdmin }: { a: Agendamento; isAdmin: boolean }) {
+function CardAgendamento({ a }: { a: Agendamento }) {
   const cfg = STATUS_AGENDAMENTO[a.status] ?? STATUS_AGENDAMENTO.pendente;
   return (
     <div className="flex items-start gap-3 px-4 py-3.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
@@ -186,13 +176,20 @@ function CardAgendamento({ a, isAdmin }: { a: Agendamento; isAdmin: boolean }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium">{a.nome_cliente ?? 'Cliente'}</p>
+          <p className="text-sm font-medium">{a.nome ?? 'Cliente'}</p>
+          <span className="text-xs text-muted-foreground tabular-nums">{a.hora?.slice(0, 5)}</span>
           <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', cfg.cls)}>{cfg.label}</span>
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
-          {a.tipo_atendimento && <span>{a.tipo_atendimento}</span>}
-          {a.telefone_cliente && <span>{a.telefone_cliente}</span>}
-          {a.email_cliente && <span>{a.email_cliente}</span>}
+          {a.area && <span>{a.area}</span>}
+          {a.telefone && <span>{a.telefone}</span>}
+          {a.email && <span>{a.email}</span>}
+          {a.zoom_join_url && (
+            <a href={a.zoom_join_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-primary hover:underline">
+              <Video className="h-3 w-3" />Zoom
+            </a>
+          )}
         </div>
         {a.observacoes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{a.observacoes}</p>}
       </div>
@@ -235,52 +232,41 @@ function CardAudiencia({ a }: { a: Audiencia }) {
   );
 }
 
-export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
+export default function AgendaClient({ agendamentos, isAdmin }: Props) {
   const hoje = new Date();
   const [calAno, setCalAno] = useState(hoje.getFullYear());
   const [calMes, setCalMes] = useState(hoje.getMonth());
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(hoje.toISOString().slice(0, 10));
-  const [aba, setAba] = useState<'audiencias' | 'agendamentos' | 'slots'>('audiencias');
+  const [aba, setAba] = useState<'audiencias' | 'agendamentos'>('audiencias');
 
   const { data: audiencias = [] } = useAudienciasJudiciario(isAdmin);
 
   const datasComAudiencia = useMemo(() => {
     const s = new Set<string>();
     audiencias.forEach((a) => s.add(a.data_audiencia.slice(0, 10)));
-    agendamentos.forEach((a) => {
-      const slot = slots.find((s) => s.id === a.slot_id);
-      if (slot) s.add(slot.data);
-    });
+    agendamentos.forEach((a) => s.add(a.data));
     return s;
-  }, [audiencias, agendamentos, slots]);
+  }, [audiencias, agendamentos]);
 
   const audienciasFiltradas = useMemo(() => {
     if (!diaSelecionado) return audiencias;
     return audiencias.filter((a) => a.data_audiencia.slice(0, 10) === diaSelecionado);
   }, [audiencias, diaSelecionado]);
 
-  const slotsDia = useMemo(() => {
-    if (!diaSelecionado) return slots;
-    return slots.filter((s) => s.data === diaSelecionado);
-  }, [slots, diaSelecionado]);
-
   const agendamentosDia = useMemo(() => {
-    const slotIds = new Set(slotsDia.map((s) => s.id));
     if (!diaSelecionado) return agendamentos;
-    return agendamentos.filter((a) => a.slot_id && slotIds.has(a.slot_id));
-  }, [agendamentos, slotsDia, diaSelecionado]);
+    return agendamentos.filter((a) => a.data === diaSelecionado);
+  }, [agendamentos, diaSelecionado]);
 
   const proximas = audiencias.filter((a) => new Date(a.data_audiencia) >= new Date() && a.situacao !== 'cancelada');
   const pendentes = agendamentos.filter((a) => a.status === 'pendente').length;
-  const disponiveis = slots.filter((s) => s.disponivel).length;
 
   return (
     <div className="space-y-5">
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <KpiCard label="Próximas audiências" value={proximas.length} icon={Gavel} iconCls="text-violet-500" bgCls="bg-violet-500/10" />
         <KpiCard label="Agendamentos pendentes" value={pendentes} icon={AlertCircle} iconCls="text-amber-500" bgCls="bg-amber-500/10" />
-        <KpiCard label="Slots disponíveis" value={disponiveis} icon={Calendar} iconCls="text-blue-500" bgCls="bg-blue-500/10" />
         <KpiCard label="Total confirmados" value={agendamentos.filter((a) => a.status === 'confirmado').length} icon={CheckCircle2} iconCls="text-green-500" bgCls="bg-green-500/10" />
       </div>
 
@@ -309,7 +295,7 @@ export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
                 {new Date(diaSelecionado + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
               </p>
               <div className="space-y-1.5">
-                {slotsDia.length === 0 && audienciasFiltradas.length === 0 && (
+                {agendamentosDia.length === 0 && audienciasFiltradas.length === 0 && (
                   <p className="text-xs text-muted-foreground">Nenhum evento neste dia.</p>
                 )}
                 {audienciasFiltradas.slice(0, 3).map((a) => (
@@ -319,11 +305,11 @@ export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
                     <span className="truncate">{a.tipo ? (TIPO_AUDIENCIA[a.tipo] ?? a.tipo) : 'Audiência'}</span>
                   </div>
                 ))}
-                {slotsDia.slice(0, 3).map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 text-xs">
-                    <div className={cn('w-2 h-2 rounded-full flex-shrink-0', s.disponivel ? 'bg-green-500' : 'bg-muted')} />
-                    <span className="text-muted-foreground">{formatHora(s.hora)}</span>
-                    <span className={s.disponivel ? 'text-foreground' : 'text-muted-foreground line-through'}>{s.tipo ?? 'Slot'}</span>
+                {agendamentosDia.slice(0, 3).map((a) => (
+                  <div key={a.id} className="flex items-center gap-2 text-xs">
+                    <div className={cn('w-2 h-2 rounded-full flex-shrink-0', a.status === 'confirmado' ? 'bg-green-500' : 'bg-amber-500')} />
+                    <span className="text-muted-foreground">{a.hora?.slice(0, 5)}</span>
+                    <span className="truncate">{a.nome ?? 'Cliente'}</span>
                   </div>
                 ))}
               </div>
@@ -336,9 +322,8 @@ export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
           {/* Tabs */}
           <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
             {[
-              { id: 'audiencias' as const, label: `Audiências${isAdmin && audiencias.length ? ` (${audiencias.length})` : ''}` },
+              { id: 'audiencias' as const, label: `Audiências${audiencias.length ? ` (${audiencias.length})` : ''}` },
               { id: 'agendamentos' as const, label: `Agendamentos (${agendamentos.length})` },
-              { id: 'slots' as const, label: `Slots (${slots.length})` },
             ].map((t) => (
               <button
                 key={t.id}
@@ -383,52 +368,11 @@ export default function AgendaClient({ slots, agendamentos, isAdmin }: Props) {
               {agendamentosDia.length === 0 ? (
                 <EmptyState icon={User} title="Nenhum agendamento" description={diaSelecionado ? "Sem agendamentos neste dia." : "Nenhum agendamento encontrado."} />
               ) : (
-                agendamentosDia.map((a) => <CardAgendamento key={a.id} a={a} isAdmin={isAdmin} />)
+                agendamentosDia.map((a) => <CardAgendamento key={a.id} a={a} />)
               )}
             </div>
           )}
 
-          {aba === 'slots' && (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-border bg-muted/30">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {diaSelecionado ? formatData(diaSelecionado) : 'Todos os slots'}
-                </p>
-              </div>
-              {slotsDia.length === 0 ? (
-                <EmptyState icon={Calendar} title="Nenhum slot" description="Não há slots disponíveis neste período." />
-              ) : (
-                <div className="divide-y divide-border">
-                  {slotsDia.map((s) => {
-                    const agendamento = agendamentos.find((a) => a.slot_id === s.id);
-                    return (
-                      <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                        <div className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
-                          s.disponivel ? 'bg-green-500' : agendamento ? 'bg-amber-500' : 'bg-muted',
-                        )} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium tabular-nums">{formatHora(s.hora)}</span>
-                            <span className="text-xs text-muted-foreground">{s.tipo ?? 'Atendimento'}</span>
-                          </div>
-                          {agendamento && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{agendamento.nome_cliente} · {STATUS_AGENDAMENTO[agendamento.status]?.label}</p>
-                          )}
-                        </div>
-                        <span className={cn(
-                          'text-[10px] font-semibold px-1.5 py-0.5 rounded',
-                          s.disponivel ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground',
-                        )}>
-                          {s.disponivel ? 'Disponível' : 'Ocupado'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

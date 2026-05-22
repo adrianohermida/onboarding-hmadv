@@ -10,32 +10,22 @@ export default async function AgendaPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const hoje = new Date().toISOString().split('T')[0];
-  const fim = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const { data: adminData } = await supabase
+    .from('admin_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle();
 
-  const [{ data: adminData }, { data: slots }, { data: agendamentos }] = await Promise.all([
-    supabase.from('admin_users').select('role').eq('user_id', user.id).maybeSingle(),
-    supabase
-      .from('re_agenda_slots')
-      .select('id, data, hora, disponivel, tipo')
-      .gte('data', hoje)
-      .lte('data', fim)
-      .order('data', { ascending: true })
-      .order('hora', { ascending: true })
-      .limit(200),
-    supabase
-      .from('re_agendamentos')
-      .select('id, slot_id, status, nome_cliente, email_cliente, telefone_cliente, tipo_atendimento, observacoes, criado_em')
-      .gte('criado_em', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .order('criado_em', { ascending: false })
-      .limit(200),
-  ]);
+  if (!adminData) redirect('/dashboard');
+
+  const { data: agendamentos } = await supabase
+    .from('agendamentos')
+    .select('id, nome, email, telefone, area, data, hora, status, observacoes, zoom_join_url, created_at')
+    .order('data', { ascending: true })
+    .order('hora', { ascending: true })
+    .limit(500);
 
   return (
-    <AgendaClient
-      slots={slots ?? []}
-      agendamentos={agendamentos ?? []}
-      isAdmin={!!adminData}
-    />
+    <AgendaClient agendamentos={agendamentos ?? []} isAdmin={true} />
   );
 }
