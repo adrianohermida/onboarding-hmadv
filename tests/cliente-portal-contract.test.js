@@ -5,6 +5,18 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 
 const root = process.cwd();
 const clientKeys = ['meu-caso', 'meus-documentos', 'minhas-dividas', 'meu-plano', 'mensagens', 'ajuda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'];
+const usefulClientFlowMarkers = {
+  'meu-caso': ['Seu caminho no portal', 'Resumo tranquilo'],
+  'meus-documentos': ['Lista de documentos', 'Enviar documento'],
+  'minhas-dividas': ['Seus credores', 'Adicionar dívida'],
+  'meu-plano': ['Proposta consolidada', 'Diagnóstico financeiro'],
+  mensagens: ['Comunicação com o escritório', 'Abrir atendimento'],
+  ajuda: ['Dúvidas frequentes', 'Falar com o escritório'],
+  'onboarding-v2': ['Sua Jornada de Superendividamento', 'Seu Diagnóstico Financeiro'],
+  'financial-dashboard': ['Diagnóstico Financeiro', 'Salvar diagnóstico'],
+  suporte: ['Meus Chamados', 'Canais de Atendimento'],
+  onboarding: ['Formulário de Superendividamento', 'Continuar etapa atual'],
+};
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -45,6 +57,21 @@ describe('portal do cliente contract', () => {
     });
     ['cliente-next-action', 'cliente-kpis', 'cliente-list-item', 'cliente-faq'].forEach(cssClass => {
       expect(styles).toContain(cssClass);
+    });
+  });
+
+  it('keeps every client sidebar flow connected to useful business content', () => {
+    const controller = readFile('modules', 'cliente', 'PortalClientePage.js');
+    const directPages = new Set(['onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding']);
+
+    Object.entries(usefulClientFlowMarkers).forEach(([key, markers]) => {
+      const content = directPages.has(key)
+        ? readFile('pages', `${key}.html`)
+        : controller;
+
+      markers.forEach(marker => {
+        expect(content).toContain(marker);
+      });
     });
   });
 });
