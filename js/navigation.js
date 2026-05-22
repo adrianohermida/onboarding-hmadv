@@ -9,6 +9,13 @@ export const FEATURE_FLAGS = {
   planoPagamento: true,
   mensagensCliente: true,
   ajuda: true,
+  visaoGeral: true,
+  meusCasos: true,
+  meusProcessos: true,
+  honorariosCliente: true,
+  atendimento: true,
+  marketplace: true,
+  configuracoes: true,
   painel: true,
   clientes: true,
   partes: true,
@@ -57,15 +64,25 @@ export const FEATURE_FLAGS = {
 
 export const PORTAL_MODULES = [
 
-  // ── Cliente — 4 sidebar hubs ─────────────────────────────────────────────
+  // ── Cliente — 8 sidebar hubs (Sprint 5) ─────────────────────────────────
 
-  { key: 'meu-caso',        title: 'Meu Caso',            menuLabel: 'Meu Caso',       parent: null,      order: 10,  visible: true,  roles: ['cliente'],  feature: 'meuCaso',          icon: 'heart-handshake', sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'financeiro',      title: 'Financeiro',          menuLabel: 'Financeiro',     parent: 'Meu Caso', order: 20, visible: true,  roles: ['cliente'],  feature: 'financeiro',       icon: 'wallet',          sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'meus-documentos', title: 'Documentos',          menuLabel: 'Documentos',     parent: 'Meu Caso', order: 30, visible: true,  roles: ['cliente'],  feature: 'meusDocumentos',   icon: 'file-text',       sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
-  { key: 'ajuda',           title: 'Atendimento',         menuLabel: 'Atendimento',    parent: 'Meu Caso', order: 50, visible: true,  roles: ['cliente'],  feature: 'ajuda',            icon: 'headphones',      sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'visao-geral',    title: 'Visão Geral',          menuLabel: 'Visão Geral',    parent: null, order: 5,  visible: true, roles: ['cliente'], feature: 'visaoGeral',        icon: 'home',            sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'meus-casos',     title: 'Meus Casos',           menuLabel: 'Meus Casos',     parent: null, order: 10, visible: true, roles: ['cliente'], feature: 'meusCasos',         icon: 'heart-handshake', sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'meus-processos', title: 'Processos',            menuLabel: 'Processos',      parent: null, order: 15, visible: true, roles: ['cliente'], feature: 'meusProcessos',     icon: 'scale',           sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'honorarios',     title: 'Honorários',           menuLabel: 'Honorários',     parent: null, order: 20, visible: true, roles: ['cliente'], feature: 'honorariosCliente', icon: 'wallet',          sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'meus-documentos', title: 'Documentos',          menuLabel: 'Documentos',     parent: null, order: 30, visible: true, roles: ['cliente'], feature: 'meusDocumentos',    icon: 'file-text',       sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'atendimento',    title: 'Atendimento',          menuLabel: 'Atendimento',    parent: null, order: 40, visible: true, roles: ['cliente'], feature: 'atendimento',       icon: 'headphones',      sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'marketplace',    title: 'Marketplace Jurídico', menuLabel: 'Marketplace',    parent: null, order: 60, visible: true, roles: ['cliente'], feature: 'marketplace',       icon: 'store',           sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+  { key: 'configuracoes',  title: 'Configurações',        menuLabel: 'Configurações',  parent: null, order: 70, visible: true, roles: ['cliente'], feature: 'configuracoes',     icon: 'settings',        sidebarSection: 'portal', sidebarSectionLabel: '', sidebarSectionOrder: 10 },
+
+  // ── Cliente — legacy hubs (routable, hidden from sidebar) ────────────────
+
+  { key: 'meu-caso',  title: 'Meu Caso',   menuLabel: 'Meu Caso',   parent: null, order: 100, visible: false, roles: ['cliente'], feature: 'meuCaso',    icon: 'heart-handshake' },
+  { key: 'ajuda',     title: 'Atendimento', menuLabel: 'Atendimento', parent: null, order: 110, visible: false, roles: ['cliente'], feature: 'ajuda',      icon: 'headphones' },
 
   // ── Cliente — sub-pages (routable but not in sidebar) ────────────────────
 
+  { key: 'financeiro',      title: 'Financeiro',          menuLabel: 'Financeiro',     parent: null,         order: 120, visible: false, roles: ['cliente'],        feature: 'financeiro',       icon: 'wallet' },
   { key: 'custas',          title: 'Custas',              menuLabel: 'Custas',         parent: 'Financeiro', order: 210, visible: false, roles: ['cliente'],        feature: 'custas',           icon: 'receipt' },
   { key: 'contratos',       title: 'Contratos',           menuLabel: 'Contratos',      parent: 'Financeiro', order: 220, visible: false, roles: ['cliente'],        feature: 'contratos',        icon: 'file-signature' },
   { key: 'meu-plano',       title: 'Meu Plano',           menuLabel: 'Meu Plano',      parent: 'Financeiro', order: 230, visible: false, roles: ['cliente'],        feature: 'meuPlano',         icon: 'map' },

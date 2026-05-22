@@ -644,6 +644,7 @@ function renderDocEstanteTab(data) {
 // ── Hub navigation ────────────────────────────────────────────────────────────
 
 const HUB_TABS = {
+  // Legacy hub keys — kept for backward compat
   'meu-caso': [
     { key: 'visao-geral',   label: 'Visão Geral' },
     { key: 'processos',     label: 'Processos' },
@@ -652,12 +653,6 @@ const HUB_TABS = {
     { key: 'dividas',       label: 'Dívidas' },
     { key: 'prazos',        label: 'Prazos' },
     { key: 'andamentos',    label: 'Andamentos' },
-  ],
-  'meus-documentos': [
-    { key: 'lista',         label: 'Meus Documentos' },
-    { key: 'solicitacoes',  label: 'Solicitações' },
-    { key: 'assinaturas',   label: 'Assinaturas' },
-    { key: 'estante',       label: 'Estante Digital' },
   ],
   financeiro: [
     { key: 'contratos',      label: 'Contratos' },
@@ -670,6 +665,40 @@ const HUB_TABS = {
     { key: 'suporte',        label: 'Suporte' },
     { key: 'ajuda',          label: 'Ajuda' },
     { key: 'jornada',        label: 'Jornada' },
+  ],
+
+  // Sprint 5 — new sidebar hubs
+  'meus-casos': [
+    { key: 'visao-geral',   label: 'Visão Geral' },
+    { key: 'processos',     label: 'Processos' },
+    { key: 'plano',         label: 'Plano' },
+    { key: 'diagnostico',   label: 'Diagnóstico' },
+    { key: 'dividas',       label: 'Dívidas' },
+    { key: 'prazos',        label: 'Prazos' },
+    { key: 'andamentos',    label: 'Andamentos' },
+  ],
+  'meus-processos': [
+    { key: 'lista',         label: 'Processos' },
+    { key: 'prazos',        label: 'Prazos' },
+    { key: 'andamentos',    label: 'Andamentos' },
+  ],
+  honorarios: [
+    { key: 'contratos',     label: 'Contratos' },
+    { key: 'custas',        label: 'Custas' },
+    { key: 'parcelas',      label: 'Plano de Pagamento' },
+    { key: 'dividas',       label: 'Dívidas' },
+  ],
+  'meus-documentos': [
+    { key: 'lista',         label: 'Meus Documentos' },
+    { key: 'solicitacoes',  label: 'Solicitações' },
+    { key: 'assinaturas',   label: 'Assinaturas' },
+    { key: 'estante',       label: 'Estante Digital' },
+  ],
+  atendimento: [
+    { key: 'mensagens',     label: 'Mensagens' },
+    { key: 'suporte',       label: 'Suporte' },
+    { key: 'ajuda',         label: 'Ajuda' },
+    { key: 'jornada',       label: 'Jornada' },
   ],
 };
 
