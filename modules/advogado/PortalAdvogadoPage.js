@@ -1068,10 +1068,6 @@ function renderModulePage() {
   if (!view) return '';
   const { config, paginated } = view;
 
-  const activeCount = state.records.filter(record => !record.archived).length;
-  const archivedCount = state.records.filter(record => record.archived).length;
-  const pendingCount = state.records.filter(record => !record.archived && !['aprovado', 'concluida', 'realizado', 'recebido', 'ativo'].includes(record.status)).length;
-
   return `
     <section class="advogado-page" data-advogado-module="${escapeHtml(state.moduleKey)}">
       <div class="page-header page-header-row advogado-header">
@@ -1082,12 +1078,7 @@ function renderModulePage() {
         <button type="button" class="btn btn-primary" data-advogado-action="create">Criar ${escapeHtml(config.singular)}</button>
       </div>
 
-      <div class="advogado-kpis">
-        <div class="ui-stat-card"><span>Ativos</span><strong>${activeCount}</strong><small>em acompanhamento</small></div>
-        <div class="ui-stat-card"><span>Pendências</span><strong>${pendingCount}</strong><small>exigem revisão</small></div>
-        <div class="ui-stat-card"><span>Arquivados</span><strong>${archivedCount}</strong><small>histórico preservado</small></div>
-        <div class="ui-stat-card"><span>Filtrados</span><strong data-advogado-kpi="filtered">${paginated.total}</strong><small>na visão atual</small></div>
-      </div>
+      ${renderModuleHubSection(state.moduleKey, state.records, config, paginated.total)}
 
       ${renderOperationalControladoria()}
 

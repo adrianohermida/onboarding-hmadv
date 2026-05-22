@@ -2055,6 +2055,104 @@ td { padding: 9px 14px; vertical-align: middle; }
   .vg-status-strip     { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── PER-MODULE HUB ──────────────────────────────────── */
+.module-hub {
+  /* inherits .sec padding */
+}
+.module-hub-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.module-hub-kpis {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hub-kpi {
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+  padding: 10px 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.hub-kpi strong { font-size: 20px; font-weight: 700; line-height: 1; display: block; }
+.hub-kpi span   { font-size: 11px; color: var(--muted); margin-top: 3px; display: block; }
+.hub-kpi--danger strong { color: var(--red); }
+.hub-kpi--warn strong   { color: var(--warn); }
+.hub-kpi--brand strong  { color: var(--blue); }
+.hub-kpi--ok strong     { color: var(--ok); }
+.hub-kpi--muted strong  { color: var(--muted); }
+
+.module-hub-quick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.module-hub-count {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.module-hub-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.module-hub-col {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.module-hub-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line2);
+  margin: 0;
+}
+.module-hub-list { padding: 4px 0; }
+
+.hub-pending-row,
+.hub-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line2);
+}
+.hub-pending-row:last-child,
+.hub-activity-row:last-child { border-bottom: none; }
+
+.hub-activity-date {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .module-hub-top  { flex-direction: column; align-items: flex-start; }
+  .module-hub-body { grid-template-columns: 1fr; }
+  .module-hub-quick { justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  .hub-kpi { min-width: 80px; padding: 8px 10px; }
+  .hub-kpi strong { font-size: 17px; }
+}
+
 /* ── ADMIN PAINEL WORKSPACE ──────────────────────────── */
 .painel-greeting {
   display: flex;
