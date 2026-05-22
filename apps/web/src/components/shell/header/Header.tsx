@@ -9,8 +9,10 @@ import Breadcrumbs from '../breadcrumbs/Breadcrumbs';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard':     'Painel',
+  '/meu-caso':      'Meu Caso',
+  '/atendimento':   'Atendimento',
   '/clientes':      'Clientes',
-  '/onboarding':    'Meu Caso',
+  '/onboarding':    'Onboarding',
   '/documentos':    'Documentos',
   '/contratos':     'Contratos',
   '/custas':        'Custas',
