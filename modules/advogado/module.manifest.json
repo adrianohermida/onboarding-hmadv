@@ -1,0 +1,8 @@
+{
+  "module": "advogado",
+  "key": "advogado",
+  "title": "Portal Advogado",
+  "route": "/pages/painel.html",
+  "permissions": ["admin"],
+  "lazy": true
+}

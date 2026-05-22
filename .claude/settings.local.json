@@ -33,7 +33,8 @@
       "Bash(xargs grep -l \"useQuery\\\\|useMutation\")",
       "Bash(xargs grep -l \"drawer\\\\|panel\\\\|slide\")",
       "Bash(xargs grep -l \"adminFetch\")",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npm test *)"
     ]
   }
 }

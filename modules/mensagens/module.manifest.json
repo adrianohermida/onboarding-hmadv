@@ -1,0 +1,8 @@
+{
+  "module": "mensagens",
+  "key": "mensagens",
+  "title": "Mensagens",
+  "route": "/pages/mensagens.html",
+  "permissions": ["cliente", "admin"],
+  "lazy": true
+}

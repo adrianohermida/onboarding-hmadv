@@ -1,0 +1,8 @@
+{
+  "module": "cliente",
+  "key": "cliente",
+  "title": "Portal Cliente",
+  "route": "/pages/meu-caso.html",
+  "permissions": ["cliente"],
+  "lazy": true
+}
