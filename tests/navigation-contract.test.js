@@ -32,8 +32,17 @@ const expectedAdminCaseLabels = {
 
 const expectedAdminOperations = {
   partes: { title: 'Partes', menuLabel: 'Partes' },
+  processos: { title: 'Processos', menuLabel: 'Processos' },
+  movimentacoes: { title: 'Movimentacoes', menuLabel: 'Movimentacoes' },
   audiencias: { title: 'Audiencias', menuLabel: 'Audiencias' },
   publicacoes: { title: 'Publicacoes', menuLabel: 'Publicacoes' },
+  prazos: { title: 'Prazos', menuLabel: 'Prazos' },
+  'custas-processuais': { title: 'Custas', menuLabel: 'Custas' },
+  'financeiro-processual': { title: 'Financeiro Processual', menuLabel: 'Financeiro Processual' },
+  'relacoes-processuais': { title: 'Relacoes Processuais', menuLabel: 'Relacoes Processuais' },
+  tpu: { title: 'TPU', menuLabel: 'TPU' },
+  'orgaos-judiciarios': { title: 'Orgaos Judiciarios', menuLabel: 'Orgaos Judiciarios' },
+  serventias: { title: 'Serventias', menuLabel: 'Serventias' },
 };
 
 describe('navigation contract', () => {

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Movimentacoes — Hermida Maia Advocacia</title>
+<link rel="stylesheet" href="../styles/variables.css">
+<link rel="stylesheet" href="../styles/main.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+</head>
+<body>
+<div class="portal-shell">
+  <div data-component="sidebar"></div>
+  <div class="main-area">
+    <div data-component="header"></div>
+    <main class="page-content">
+      <div data-advogado-module-host></div>
+    </main>
+  </div>
+</div>
+<script type="module" src="../js/app.js?v=20260521p"></script>
+<script type="module">
+  import { bootAdvogadoPage } from '../modules/advogado/PortalAdvogadoPage.js';
+  document.addEventListener('app:ready', () => bootAdvogadoPage('movimentacoes'), { once: true });
+</script>
+</body>
+</html>

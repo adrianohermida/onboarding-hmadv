@@ -5,8 +5,8 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'partes', 'documentos', 'planos', 'processos', 'audiencias', 'publicacoes', 'mensagens', 'tarefas', 'agenda', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'financeiro', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
-const crudKeys = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'audiencias', 'publicacoes', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const lawyerKeys = ['painel', 'clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'mensagens', 'audiencias', 'prazos', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'custas-processuais', 'financeiro-processual', 'ai-copilot', 'relacoes-processuais', 'experiencia-cliente', 'tpu', 'financeiro-inteligencia', 'orgaos-judiciarios', 'operacoes-juridicas', 'serventias', 'compliance', 'tarefas', 'platform-os', 'agenda', 'ui-os', 'financeiro', 'workspace-os', 'analytics', 'billing-os'];
+const crudKeys = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -25,7 +25,7 @@ describe('portal do advogado contract', () => {
   });
 
   it('ships authenticated pages for every new lawyer route', () => {
-    ['painel', 'clientes', 'partes', 'planos', 'processos', 'audiencias', 'publicacoes', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
+    ['painel', 'clientes', 'partes', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias', 'tarefas', 'agenda', 'mensagens', 'financeiro'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');

@@ -59,14 +59,47 @@ const REQUIRED_SCHEMA_FIELDS = {
     'ai_tokens_usados', 'freshsales_synced_at', 'fs_sync_status', 'fs_sync_error',
     'fs_sync_retries', 'fs_sync_next_retry',
   ],
+  movimentacoes: [
+    'processo_id', 'fonte', 'data_movimentacao', 'conteudo', 'movimento_tpu_id',
+    'tipo_movimento_nome', 'freshsales_activity_id', 'fs_activity_id', 'raw_payload',
+  ],
+  prazos: [
+    'processo_id', 'publicacao_id', 'movimento_id', 'evento_tipo', 'titulo',
+    'data_base', 'data_inicio_contagem', 'data_vencimento', 'prioridade',
+    'freshsales_task_id', 'google_event_id', 'metadata', 'prazo_dias',
+  ],
+  'financeiro-processual': [
+    'processo_id', 'data', 'descricao', 'categoria', 'centro_custo',
+    'valor', 'situacao', 'criado_em',
+  ],
+  'custas-processuais': [
+    'processo_id', 'descricao', 'categoria', 'valor', 'data',
+    'situacao', 'data_vencimento', 'comprovante',
+  ],
+  tpu: [
+    'tipo_tpu', 'codigo_cnj', 'nome', 'descricao', 'sigla',
+    'tipo', 'gera_prazo', 'prazo_sugerido_dias', 'versao_cnj', 'gateway_payload',
+  ],
+  'orgaos-judiciarios': [
+    'codigo_cnj', 'nome', 'tribunal', 'grau', 'orgao_julgador',
+    'especialidade', 'municipio', 'uf', 'juizo_100_digital', 'serventia_id',
+  ],
+  serventias: [
+    'tribunal', 'nome_serventia', 'numero_serventia', 'tipo_orgao', 'competencia',
+    'codigo_municipio_ibge', 'municipio', 'uf', 'endereco', 'metadata',
+  ],
+  'relacoes-processuais': [
+    'processo_pai_id', 'processo_filho_id', 'numero_cnj_pai', 'numero_cnj_filho',
+    'tipo_relacao', 'status', 'observacoes', 'grafo',
+  ],
 };
 
 describe('judiciario schema coverage contract', () => {
-  it('keeps processos, partes, audiencias and publicacoes mapped in ADVOGADO_MODULES', () => {
+  it('keeps all operational judiciario modules mapped in ADVOGADO_MODULES', () => {
     const adminModules = getSidebarModules({ isAdmin: true }).map((item) => item.key);
     const routes = getRoutes();
 
-    ['processos', 'partes', 'audiencias', 'publicacoes'].forEach((moduleKey) => {
+    ['processos', 'partes', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais'].forEach((moduleKey) => {
       expect(ADVOGADO_MODULES[moduleKey]).toBeTruthy();
       expect(adminModules).toContain(moduleKey);
       expect(routes[moduleKey]).toBeTruthy();
@@ -82,8 +115,8 @@ describe('judiciario schema coverage contract', () => {
     });
   });
 
-  it('ships shell-mounted pages for audiencias and publicacoes modules', () => {
-    ['audiencias', 'publicacoes'].forEach((key) => {
+  it('ships shell-mounted pages for all operational judiciario modules', () => {
+    ['processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais'].forEach((key) => {
       const html = readFile('pages', `${key}.html`);
 
       expect(html).toContain('data-component="sidebar"');
