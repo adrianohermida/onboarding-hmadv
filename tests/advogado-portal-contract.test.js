@@ -91,4 +91,16 @@ describe('portal do advogado contract', () => {
     expect(styles).toContain('.advogado-detail-row');
     expect(styles).toContain('.advogado-flow-pill');
   });
+
+  it('reads legal admin modules from the real Supabase source tables', () => {
+    const service = readFile('modules', 'advogado', 'RegistroAdvogadoService.js');
+
+    expect(service).toContain("processos: { schema: 'judiciario', table: 'processos' }");
+    expect(service).toContain("publicacoes: { schema: 'judiciario', table: 'publicacoes' }");
+    expect(service).toContain("audiencias: { schema: 'judiciario', table: 'audiencias' }");
+    expect(service).toContain("prazos: { schema: 'judiciario', table: 'prazo_tarefa' }");
+    expect(service).toContain("documentos: { schema: 'public', table: 'portal_documentos'");
+    expect(service).toContain("supabase.schema('judiciario')");
+    expect(service).toContain('listSchemaModuleRecords');
+  });
 });

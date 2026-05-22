@@ -31,13 +31,13 @@
   --ds-font-size-lg: 16px;
   --ds-font-size-xl: 20px;
 
-  --ds-radius-sm: 8px;
-  --ds-radius-md: 12px;
-  --ds-radius-lg: 16px;
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 8px;
 
-  --ds-shadow-sm: 0 2px 8px rgba(15, 25, 35, .06);
-  --ds-shadow-md: 0 4px 16px rgba(15, 25, 35, .10);
-  --ds-shadow-lg: 0 8px 32px rgba(15, 25, 35, .18);
+  --ds-shadow-sm: 0 1px 4px rgba(15, 25, 35, .05);
+  --ds-shadow-md: 0 4px 14px rgba(15, 25, 35, .08);
+  --ds-shadow-lg: 0 10px 24px rgba(15, 25, 35, .14);
 
   --ds-z-dropdown: 100;
   --ds-z-overlay: 900;

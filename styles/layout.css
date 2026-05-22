@@ -825,6 +825,24 @@ body.app-loaded .sk { display: none !important; }
   border-left: 1px solid var(--line);
 }
 
+.shell-side-panel button,
+.shell-side-panel a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shell-side-panel button {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.shell-side-panel svg {
+  display: block;
+  flex: 0 0 auto;
+  max-width: 20px;
+  max-height: 20px;
+  stroke: currentColor;
+}
+
 .shell-panel-eyebrow {
   color: var(--muted);
   font-size: 10px;
@@ -875,7 +893,8 @@ body.app-loaded .sk { display: none !important; }
   color: var(--navy);
 }
 
-.shell-panel-item-icon .nav-icon {
+.shell-panel-item-icon .nav-icon,
+.shell-panel-item-icon svg {
   width: 18px;
   height: 18px;
 }
@@ -1004,7 +1023,28 @@ body.app-loaded .sk { display: none !important; }
 }
 
 .shell-legal-center-hero {
-  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shell-legal-center-hero h3 {
+  color: var(--navy);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0 0 4px;
+}
+
+.shell-legal-center-hero p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .shell-legal-source {
@@ -1022,15 +1062,16 @@ body.app-loaded .sk { display: none !important; }
 .shell-legal-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
 .shell-legal-kpis article {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--white);
-  padding: 10px;
+  padding: 9px;
+  min-width: 0;
 }
 
 .shell-legal-kpis span {
@@ -1038,29 +1079,38 @@ body.app-loaded .sk { display: none !important; }
   color: var(--muted);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: .7px;
+  letter-spacing: .04em;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
 .shell-legal-kpis strong {
   color: var(--navy);
   display: block;
-  font-size: 18px;
+  font-size: 19px;
+  line-height: 1;
   margin-top: 3px;
+}
+
+.shell-legal-toolbar {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .shell-legal-filter-grid,
 .shell-legal-status-grid {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .shell-legal-filter-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: none;
 }
 
 .shell-legal-status-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: none;
 }
 
 .shell-legal-filter,
@@ -1069,17 +1119,18 @@ body.app-loaded .sk { display: none !important; }
   cursor: pointer;
   font-family: inherit;
   text-align: left;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
 
 .shell-legal-filter {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 8px;
+  display: inline-flex;
   align-items: center;
+  gap: 7px;
   min-width: 0;
-  padding: 9px;
+  min-height: 34px;
+  padding: 5px 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--white);
   color: var(--ink);
 }
@@ -1091,9 +1142,9 @@ body.app-loaded .sk { display: none !important; }
 }
 
 .shell-legal-filter-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1103,37 +1154,57 @@ body.app-loaded .sk { display: none !important; }
 
 .shell-legal-filter-icon svg,
 .shell-legal-notification-item svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.7;
 }
 
-.shell-legal-filter span,
-.shell-legal-status span {
+.shell-legal-filter-label,
+.shell-legal-status-label {
   color: var(--navy);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.shell-legal-filter strong,
-.shell-legal-status strong {
+.shell-legal-count {
+  align-items: center;
+  background: var(--line2);
+  border: 1px solid rgba(26,58,92,.08);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 11px;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
 }
 
 .shell-legal-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 7px;
+  min-height: 30px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--white);
-  padding: 8px 9px;
+  padding: 5px 8px;
 }
 
 .shell-legal-status.is-active {
   border-color: rgba(46,109,164,.38);
-  box-shadow: inset 3px 0 0 var(--blue);
+  box-shadow: 0 0 0 2px rgba(46,109,164,.12);
+}
+
+.shell-legal-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .82;
 }
 
 .shell-legal-status-pill {
@@ -1172,6 +1243,7 @@ body.app-loaded .sk { display: none !important; }
 .shell-legal-notification-item {
   width: 100%;
   grid-template-columns: 34px minmax(0, 1fr) auto;
+  border-radius: 8px;
 }
 
 .shell-legal-detail {
@@ -1469,6 +1541,45 @@ body.app-loaded .sk { display: none !important; }
 
   .next-action-bar {
     align-items: stretch;
+  }
+
+  .shell-legal-center-hero {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .shell-legal-source {
+    justify-self: start;
+  }
+
+  .shell-legal-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shell-legal-filter-grid,
+  .shell-legal-status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .shell-legal-filter,
+  .shell-legal-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .shell-legal-count {
+    margin-left: auto;
+  }
+
+  .shell-legal-notification-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .shell-legal-notification-item .shell-legal-status-pill {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .sec {

@@ -301,6 +301,92 @@ export function useCriarFinanceiro() {
   });
 }
 
+// ─── Novos tipos e hooks — Central de Processos ──────────────────────────────
+
+export interface PublicacaoProcesso {
+  id: string;
+  data_publicacao: string | null;
+  ai_tipo_ato: string | null;
+  ai_urgencia: string | null;
+  conteudo: string | null;
+  nome_cliente: string | null;
+  lido: boolean | null;
+}
+
+export interface TarefaProcesso {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  status: string | null;
+  prioridade: string | null;
+  tipo: string | null;
+  data_vencimento: string | null;
+  criado_em: string;
+}
+
+export interface DocumentoProcesso {
+  id: string;
+  nome: string | null;
+  tipo: string | null;
+  status: string | null;
+  workflow_status: string | null;
+  storage_path: string | null;
+  created_at: string;
+  user_id: string;
+}
+
+export function usePublicacoesProcesso(processoId: string | null) {
+  return useQuery<PublicacaoProcesso[]>({
+    queryKey: ['publicacoes-processo', processoId],
+    enabled: !!processoId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await jud()
+        .from('publicacoes')
+        .select('id, data_publicacao, ai_tipo_ato, ai_urgencia, conteudo, nome_cliente, lido')
+        .eq('processo_id', processoId)
+        .order('data_publicacao', { ascending: false })
+        .limit(50);
+      return data ?? [];
+    },
+  });
+}
+
+export function useTarefasProcesso(processoId: string | null) {
+  return useQuery<TarefaProcesso[]>({
+    queryKey: ['tarefas-processo', processoId],
+    enabled: !!processoId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await createClient()
+        .from('re_tarefas')
+        .select('id, titulo, descricao, status, prioridade, tipo, data_vencimento, criado_em')
+        .eq('processo_id', processoId)
+        .order('data_vencimento', { ascending: true })
+        .limit(100);
+      return data ?? [];
+    },
+  });
+}
+
+export function useDocumentosProcesso(userIds: string[]) {
+  return useQuery<DocumentoProcesso[]>({
+    queryKey: ['documentos-processo', userIds.join(',')],
+    enabled: userIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await createClient()
+        .from('portal_documentos')
+        .select('id, nome, tipo, status, workflow_status, storage_path, created_at, user_id')
+        .in('user_id', userIds)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return data ?? [];
+    },
+  });
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function prazoUrgencia(data: string): 'vencida' | 'hoje' | 'semana' | 'ok' {

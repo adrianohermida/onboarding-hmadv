@@ -5,6 +5,22 @@ const OPERATIONAL_TABLE = 'portal_operational_records';
 const AUDIT_TABLE = 'portal_operational_record_audit';
 const PARTES_LINKS_TABLE = 'portal_partes_vinculos';
 
+const MODULE_DATA_SOURCES = {
+  documentos: { schema: 'public', table: 'portal_documentos', statusField: 'workflow_status' },
+  planos: { schema: 'public', table: 'portal_planos_pagamento' },
+  processos: { schema: 'judiciario', table: 'processos' },
+  movimentacoes: { schema: 'judiciario', table: 'movimentacoes' },
+  publicacoes: { schema: 'judiciario', table: 'publicacoes' },
+  audiencias: { schema: 'judiciario', table: 'audiencias' },
+  prazos: { schema: 'judiciario', table: 'prazo_tarefa' },
+  'financeiro-processual': { schema: 'judiciario', table: 'financeiro_processual', statusField: 'situacao' },
+  'custas-processuais': { schema: 'judiciario', table: 'custas_processuais', statusField: 'situacao' },
+  tpu: { schema: 'judiciario', table: 'tpu' },
+  'orgaos-judiciarios': { schema: 'judiciario', table: 'orgaos_judiciarios', statusField: 'ativa' },
+  serventias: { schema: 'judiciario', table: 'serventias', statusField: 'ativa' },
+  'relacoes-processuais': { schema: 'judiciario', table: 'relacoes_processuais' },
+};
+
 let supabaseClientPromise = null;
 let currentWorkspacePromise = null;
 
@@ -748,6 +764,52 @@ function mapRemoteRow(row) {
   };
 }
 
+function mapSourceRow(moduleKey, row, sourceConfig = {}) {
+  const config = getAdvogadoModuleConfig(moduleKey);
+  const statusKey = sourceConfig.statusField || 'status';
+  const createdAt = row.created_at || row.data_hora_cadastro || row.data_movimentacao || row.data || null;
+  const updatedAt = row.updated_at || row.data_hora_movimento || row.data_audiencia || createdAt;
+  const archivedAt = row.archived_at || null;
+  const deletedAt = row.deleted_at || null;
+  const rawStatus = row[statusKey];
+
+  return {
+    id: row.id,
+    ...row,
+    status: rawStatus ?? config?.status?.[0] ?? 'ativo',
+    archived: Boolean(archivedAt || deletedAt),
+    source: 'supabase',
+    createdAt,
+    updatedAt,
+    archivedAt,
+    deletedAt,
+  };
+}
+
+async function listSchemaModuleRecords(moduleKey) {
+  const sourceConfig = MODULE_DATA_SOURCES[moduleKey];
+  if (!sourceConfig) return null;
+
+  const supabase = await getSupabaseClient();
+  const scopedClient = sourceConfig.schema === 'judiciario'
+    ? supabase.schema('judiciario')
+    : supabase;
+
+  const { data, error } = await scopedClient
+    .from(sourceConfig.table)
+    .select('*')
+    .limit(500);
+
+  if (error) {
+    console.warn(`[RegistroAdvogadoService] ${moduleKey} schema list fallback:`, error.message);
+    return null;
+  }
+
+  return (data || [])
+    .map((row) => mapSourceRow(moduleKey, row, sourceConfig))
+    .sort((left, right) => new Date(right.updatedAt || right.createdAt || 0).getTime() - new Date(left.updatedAt || left.createdAt || 0).getTime());
+}
+
 function mapPartesRow(row) {
   return {
     id: row.id,
@@ -881,6 +943,9 @@ export async function listAdvogadoRecords(moduleKey) {
     console.warn('[RegistroAdvogadoService] Partes list fallback:', error.message);
     return parseJson(storageKey(moduleKey), []);
   }
+
+  const schemaRows = await listSchemaModuleRecords(moduleKey);
+  if (schemaRows) return schemaRows;
 
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase

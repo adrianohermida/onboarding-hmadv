@@ -21,7 +21,7 @@
   --ui-danger: var(--red, #c0392b);
   --ui-radius: 8px;
   --ui-radius-sm: 6px;
-  --ui-shadow: 0 10px 28px rgba(15, 23, 42, .08);
+  --ui-shadow: 0 4px 14px rgba(15, 23, 42, .08);
   --ui-focus: 0 0 0 3px rgba(46, 109, 164, .22);
 }
 
@@ -67,19 +67,21 @@
 
 /* Buttons */
 .ui-btn {
-  min-height: 40px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 1px solid transparent;
   border-radius: var(--ui-radius-sm);
-  padding: 8px 14px;
+  padding: 7px 12px;
   background: var(--ui-surface);
   color: var(--ui-text);
   font: 700 13px/1.2 var(--sans, Arial, sans-serif);
   text-decoration: none;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   white-space: nowrap;
   transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
 }
@@ -87,12 +89,12 @@
 .ui-btn:hover { text-decoration: none; transform: translateY(-1px); }
 .ui-btn:disabled,
 .ui-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; }
-.ui-btn-primary { background: var(--ui-brand); color: #fff; box-shadow: 0 8px 18px rgba(26, 58, 92, .22); }
+.ui-btn-primary { background: var(--ui-brand); color: #fff; box-shadow: 0 4px 12px rgba(26, 58, 92, .18); }
 .ui-btn-primary:hover { background: #102a46; }
 .ui-btn-secondary { background: var(--ui-brand-2); color: #fff; }
 .ui-btn-ghost { border-color: var(--ui-line); background: transparent; color: var(--ui-text-soft); }
 .ui-btn-danger { background: var(--ui-danger); color: #fff; }
-.ui-btn-icon { width: 40px; padding: 0; }
+.ui-btn-icon { width: 36px; padding: 0; }
 .ui-btn-sm { min-height: 32px; padding: 6px 10px; font-size: 12px; }
 .ui-btn-full { width: 100%; }
 
@@ -266,7 +268,7 @@
   overflow: auto;
   background: var(--ui-surface);
   color: var(--ui-text);
-  border-radius: 12px 12px 8px 8px;
+  border-radius: 8px 8px 6px 6px;
   box-shadow: var(--ui-shadow);
 }
 .ui-drawer { justify-items: end; }

@@ -21,7 +21,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260521p';
+const SHELL_VERSION = '20260522a';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -1850,8 +1850,8 @@ function renderLegalNotificationFilters() {
     return `
       <button type="button" class="shell-legal-filter ${active ? 'is-active' : ''}" data-legal-filter-kind="types" data-legal-filter-value="${key}" title="${escapeShellHtml(meta.label)}">
         <span class="shell-legal-filter-icon">${legalNotificationIcon(meta.icon)}</span>
-        <span>${escapeShellHtml(meta.label)}</span>
-        <strong>${countLegalNotifications('type', key)}</strong>
+        <span class="shell-legal-filter-label">${escapeShellHtml(meta.label)}</span>
+        <span class="shell-legal-count">${countLegalNotifications('type', key)}</span>
       </button>
     `;
   }).join('');
@@ -1860,17 +1860,24 @@ function renderLegalNotificationFilters() {
     const active = shellLegalNotificationFilters.statuses.includes(key);
     return `
       <button type="button" class="shell-legal-status is-${meta.tone} ${active ? 'is-active' : ''}" data-legal-filter-kind="statuses" data-legal-filter-value="${key}" title="${escapeShellHtml(meta.label)}">
-        <span>${escapeShellHtml(meta.label)}</span>
-        <strong>${countLegalNotifications('status', key)}</strong>
+        <span class="shell-legal-status-dot" aria-hidden="true"></span>
+        <span class="shell-legal-status-label">${escapeShellHtml(meta.label)}</span>
+        <span class="shell-legal-count">${countLegalNotifications('status', key)}</span>
       </button>
     `;
   }).join('');
 
   return `
-    <div class="shell-panel-section-title">Tipo de interação</div>
-    <div class="shell-legal-filter-grid">${typeButtons}</div>
-    <div class="shell-panel-section-title">Estado</div>
-    <div class="shell-legal-status-grid">${statusButtons}</div>
+    <div class="shell-legal-toolbar">
+      <div>
+        <div class="shell-panel-section-title">Tipo de interação</div>
+        <div class="shell-legal-filter-grid" role="group" aria-label="Filtrar por tipo">${typeButtons}</div>
+      </div>
+      <div>
+        <div class="shell-panel-section-title">Estado</div>
+        <div class="shell-legal-status-grid" role="group" aria-label="Filtrar por estado">${statusButtons}</div>
+      </div>
+    </div>
   `;
 }
 
@@ -1906,12 +1913,12 @@ function renderLegalNotificationDrawer({ loading = false } = {}) {
   const pending = shellLegalNotificationItems.filter(item => ['nao_lido', 'pendente', 'pendente_assinatura'].includes(item.status)).length;
 
   return `
-    <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary shell-legal-center-hero">
+    <section class="shell-legal-center-hero">
       <div>
-        <h3>${isAdmin ? 'Ciências, assinaturas e notificações eletrônicas' : 'Itens que precisam da sua atenção'}</h3>
+        <h3>${isAdmin ? 'Comunicações com registro legal' : 'Pendências do seu caso'}</h3>
         <p>${isAdmin
-          ? 'Central filtrável para acompanhar comunicações enviadas, confirmações de leitura, pendências de assinatura e trilhas de auditoria.'
-          : 'Veja documentos para assinar, leia comunicados do escritório e confirme ciência quando solicitado.'}</p>
+          ? 'Acompanhe envio, leitura, ciência, comentários e assinaturas vinculados ao caso.'
+          : 'Leia comunicados, confirme ciência e assine documentos quando solicitado.'}</p>
       </div>
       <div class="shell-legal-source">${shellLegalNotificationSource === 'supabase' ? 'Supabase' : 'Sessão local'}</div>
     </section>

@@ -32,7 +32,7 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('function openNotificationsPanel');
     expect(app).toContain('function openWorkspacePanel');
     expect(app).toContain("title: 'Notificações'");
-    expect(app).toContain('Ciências, assinaturas e notificações eletrônicas');
+    expect(app).toContain('Comunicações com registro legal');
     expect(app).toContain('renderLegalNotificationFilters');
     expect(app).toContain('data-legal-filter-kind="types"');
     expect(app).toContain('data-legal-filter-kind="statuses"');
