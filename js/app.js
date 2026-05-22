@@ -1803,18 +1803,53 @@ function openWorkspacePanel() {
   const state = getShellWorkspaceState();
   const recentRoutes = state.recentRoutes || [];
   const isAdmin = !!appUserDetail?.isAdmin;
+  const pendingNotifications = getShellNotifications();
   openShellDrawer({
-    eyebrow: isAdmin ? 'Advogado' : 'Cliente',
-    title: isAdmin ? 'Workspace jurídico' : 'Meu caso',
+    eyebrow: isAdmin ? 'Central do advogado' : 'Central do cliente',
+    title: 'Notificações',
     body: `
-      <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary">
+      <section class="${isAdmin ? 'ui-lawyer-panel' : 'ui-client-panel'} shell-workspace-summary shell-legal-center-hero">
         <div>
-          <h3>${isAdmin ? 'Produtividade do escritório' : 'Acompanhamento do caso'}</h3>
-          <p>${isAdmin ? 'Acesse módulos recentes, revise pendências e mantenha o fluxo jurídico sem sair do shell.' : 'Continue sua jornada, envie documentos e acompanhe as próximas etapas do seu caso.'}</p>
+          <h3>${isAdmin ? 'Ciências, assinaturas e notificações eletrônicas' : 'Itens que precisam da sua atenção'}</h3>
+          <p>${isAdmin
+            ? 'Central para acompanhar assinaturas pendentes, comunicações enviadas ao cliente, confirmações de leitura e trilhas de auditoria.'
+            : 'Veja documentos para assinar, leia comunicados do escritório e confirme ciência quando solicitado.'}</p>
         </div>
-        <a class="ui-btn ui-btn-primary ui-btn-full" href="${isAdmin ? 'painel.html' : 'meu-caso.html'}">${isAdmin ? 'Abrir painel' : 'Ver meu caso'}</a>
+        <a class="ui-btn ui-btn-primary ui-btn-full" href="documentos.html" data-page="documentos">${isAdmin ? 'Ver assinaturas' : 'Abrir documentos'}</a>
       </section>
-      <div class="shell-panel-section-title">Recentes</div>
+
+      <div class="shell-legal-center-grid">
+        <a class="shell-legal-center-card" href="documentos.html" data-page="documentos">
+          <span class="shell-panel-item-icon">${getNavIcon('documentos')}</span>
+          <strong>Assinaturas pendentes</strong>
+          <small>Documentos submetidos à assinatura seguem com guia própria no módulo Documentos.</small>
+        </a>
+        <a class="shell-legal-center-card" href="mensagens.html" data-page="mensagens">
+          <span class="shell-panel-item-icon">${getNavIcon('mensagens')}</span>
+          <strong>Ciências e comentários</strong>
+          <small>Confirmações de leitura, comentários coletados e comunicações do caso.</small>
+        </a>
+        <a class="shell-legal-center-card" href="${isAdmin ? 'processos.html' : 'meu-caso.html'}" data-page="${isAdmin ? 'processos' : 'meu-caso'}">
+          <span class="shell-panel-item-icon">${getNavIcon(isAdmin ? 'processos' : 'meu-caso')}</span>
+          <strong>Registro legal</strong>
+          <small>Entrega, leitura, ciência e contexto do caso para auditoria futura.</small>
+        </a>
+      </div>
+
+      <div class="shell-panel-section-title">Pendências recentes</div>
+      <div class="shell-panel-list">
+        ${pendingNotifications.slice(0, 5).map(item => `
+          <article class="shell-panel-item shell-notification-item">
+            <span class="ui-badge ui-badge-${item.tone === 'danger' ? 'danger' : item.tone === 'warn' ? 'warn' : 'brand'}">${shellTimeAgo(item.ts)}</span>
+            <span>
+              <strong>${escapeShellHtml(item.title)}</strong>
+              <small>${escapeShellHtml(item.text || 'Sem detalhes adicionais.')}</small>
+            </span>
+          </article>
+        `).join('') || '<div class="shell-empty-state">Nenhuma ciência, assinatura ou notificação pendente nesta sessão.</div>'}
+      </div>
+
+      <div class="shell-panel-section-title">Atalhos operacionais</div>
       <div class="shell-panel-list">
         ${recentRoutes.map(route => `
           <a class="shell-panel-item" href="${route.href}" data-page="${route.key}">

@@ -9,11 +9,12 @@ function read(...parts) {
 }
 
 describe('operational legal shell contract', () => {
-  it('keeps persistent header actions for search, workspace and notifications', () => {
+  it('keeps persistent header actions for search, legal notifications and alerts', () => {
     const header = read('shell', 'header', 'header.html');
 
     expect(header).toContain('data-shell-action="global-search"');
     expect(header).toContain('data-shell-action="workspace-panel"');
+    expect(header).toContain('aria-label="Notificações"');
     expect(header).toContain('data-shell-action="notifications-panel"');
     expect(header).toContain('shell-notification-count');
     expect(header).toContain('data-shell-action="account-menu-toggle"');
@@ -30,6 +31,9 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('function openGlobalSearchPanel');
     expect(app).toContain('function openNotificationsPanel');
     expect(app).toContain('function openWorkspacePanel');
+    expect(app).toContain("title: 'Notificações'");
+    expect(app).toContain('Ciências, assinaturas e notificações eletrônicas');
+    expect(app).toContain('Documentos.');
     expect(app).toContain('function openAccountModal');
     expect(app).toContain('function getEffectiveIsAdmin');
     expect(app).toContain('function syncShellViewMode');
@@ -43,7 +47,7 @@ describe('operational legal shell contract', () => {
     expect(app).not.toContain('window.location.href = absolute;');
   });
 
-  it('styles the mobile-first legal workspace controls', () => {
+  it('styles the mobile-first legal notification controls', () => {
     const css = read('styles', 'layout.css');
 
     [
@@ -52,6 +56,7 @@ describe('operational legal shell contract', () => {
       '.account-modal-grid',
       '.shell-side-panel',
       '.shell-panel-item',
+      '.shell-legal-center-card',
       '.shell-mobile-nav',
       '.shell-workspace-summary',
       '@media (max-width: 1023px)',

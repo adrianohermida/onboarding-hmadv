@@ -1003,6 +1003,49 @@ body.app-loaded .sk { display: none !important; }
   margin: 0;
 }
 
+.shell-legal-center-hero {
+  margin-bottom: 14px;
+}
+
+.shell-legal-center-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.shell-legal-center-card {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.shell-legal-center-card:hover {
+  background: var(--line2);
+  text-decoration: none;
+}
+
+.shell-legal-center-card strong {
+  display: block;
+  color: var(--navy);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.shell-legal-center-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
 .shell-mobile-nav {
   display: none;
 }
