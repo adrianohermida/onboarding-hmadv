@@ -35,7 +35,7 @@ describe('portal do advogado contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('data-advogado-module-host');
-      expect(html).toContain('../js/app.js?v=20260522b');
+      expect(html).toContain('../js/app.js?v=20260522c');
       expect(html).toContain(`bootAdvogadoPage('${key}')`);
     });
   });
@@ -46,7 +46,7 @@ describe('portal do advogado contract', () => {
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
-      expect(html).toContain('../js/app.js?v=20260522b');
+      expect(html).toContain('../js/app.js?v=20260522c');
     });
   });
 
@@ -57,7 +57,7 @@ describe('portal do advogado contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260522b');
+      expect(html).toContain('../js/app.js?v=20260522c');
     });
   });
 

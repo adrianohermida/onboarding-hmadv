@@ -21,7 +21,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260522b';
+const SHELL_VERSION = '20260522c';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -775,6 +775,12 @@ function setupShellNavigation() {
       event.preventDefault();
       setShellNotifications([]);
       openWorkspacePanel();
+      return;
+    }
+
+    if (event.target?.closest?.('[data-legal-filter-clear]')) {
+      event.preventDefault();
+      clearLegalNotificationFilters();
       return;
     }
 
@@ -1845,6 +1851,7 @@ function openNotificationsPanel() {
 }
 
 function renderLegalNotificationFilters() {
+  const hasFilters = shellLegalNotificationFilters.types.length || shellLegalNotificationFilters.statuses.length;
   const typeButtons = Object.entries(LEGAL_NOTIFICATION_TYPES).map(([key, meta]) => {
     const active = shellLegalNotificationFilters.types.includes(key);
     return `
@@ -1869,6 +1876,10 @@ function renderLegalNotificationFilters() {
 
   return `
     <div class="shell-legal-toolbar">
+      <div class="shell-legal-toolbar-head">
+        <span>Filtros</span>
+        ${hasFilters ? '<button type="button" class="shell-legal-clear" data-legal-filter-clear>Limpar</button>' : ''}
+      </div>
       <div>
         <div class="shell-panel-section-title">Tipo de interação</div>
         <div class="shell-legal-filter-grid" role="group" aria-label="Filtrar por tipo">${typeButtons}</div>
@@ -1915,12 +1926,11 @@ function renderLegalNotificationDrawer({ loading = false } = {}) {
   return `
     <section class="shell-legal-center-hero">
       <div>
-        <h3>${isAdmin ? 'Comunicações com registro legal' : 'Pendências do seu caso'}</h3>
+        <h3>${isAdmin ? 'Notificações jurídicas' : 'Pendências do seu caso'}</h3>
         <p>${isAdmin
           ? 'Acompanhe envio, leitura, ciência, comentários e assinaturas vinculados ao caso.'
           : 'Leia comunicados, confirme ciência e assine documentos quando solicitado.'}</p>
       </div>
-      <div class="shell-legal-source">${shellLegalNotificationSource === 'supabase' ? 'Supabase' : 'Sessão local'}</div>
     </section>
 
     <div class="shell-legal-kpis">
@@ -1950,6 +1960,13 @@ async function openWorkspacePanel({ reload = true } = {}) {
     title: 'Notificações',
     body: renderLegalNotificationDrawer(),
   });
+}
+
+function clearLegalNotificationFilters() {
+  shellLegalNotificationFilters.types = [];
+  shellLegalNotificationFilters.statuses = [];
+  const content = document.getElementById('shell-drawer-content');
+  if (content) content.innerHTML = renderLegalNotificationDrawer();
 }
 
 async function openLegalNotificationDetail(id) {
