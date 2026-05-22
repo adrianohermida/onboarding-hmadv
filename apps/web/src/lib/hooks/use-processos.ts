@@ -436,6 +436,158 @@ export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
   });
 }
 
+// ─── Prazos — paginação server-side ──────────────────────────────────────────
+
+export const PRAZOS_PAGE_SIZE = 50;
+
+export interface PrazosPaginadosFiltros {
+  search: string;
+  status: string | null;
+  prioridade: string | null;
+  urgencia: 'vencida' | 'hoje' | 'semana' | 'ok' | null;
+}
+
+export interface PrazosPaginados {
+  data: PrazoCalculado[];
+  total: number;
+  page: number;
+}
+
+export function usePrazosPaginados(filtros: PrazosPaginadosFiltros, page: number) {
+  return useQuery<PrazosPaginados>({
+    queryKey: ['prazos-paginados', filtros, page],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const from = page * PRAZOS_PAGE_SIZE;
+      const to   = from + PRAZOS_PAGE_SIZE - 1;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const hojeStr   = hoje.toISOString();
+      const amanhaStr = new Date(hoje.getTime() + 86_400_000).toISOString();
+      const semanaStr = new Date(hoje.getTime() + 7 * 86_400_000).toISOString();
+
+      let q = jud()
+        .from('prazo_calculado')
+        .select(
+          'id, processo_id, publicacao_id, titulo, descricao, data_vencimento, status, prioridade, base_legal, created_at',
+          { count: 'exact' }
+        )
+        .order('data_vencimento', { ascending: true })
+        .range(from, to);
+
+      if (filtros.search.trim().length >= 2)
+        q = q.or(`titulo.ilike.%${filtros.search}%,base_legal.ilike.%${filtros.search}%`);
+      if (filtros.status)    q = q.eq('status', filtros.status);
+      if (filtros.prioridade) q = q.eq('prioridade', filtros.prioridade);
+      if (filtros.urgencia) {
+        switch (filtros.urgencia) {
+          case 'vencida': q = q.lt('data_vencimento', hojeStr); break;
+          case 'hoje':    q = q.gte('data_vencimento', hojeStr).lt('data_vencimento', amanhaStr); break;
+          case 'semana':  q = q.gte('data_vencimento', amanhaStr).lt('data_vencimento', semanaStr); break;
+          case 'ok':      q = q.gte('data_vencimento', semanaStr); break;
+        }
+      }
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], total: count ?? 0, page };
+    },
+  });
+}
+
+export function usePrazosContagens() {
+  return useQuery<{ vencida: number; hoje: number; semana: number; ok: number }>({
+    queryKey: ['prazos-contagens'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const base = new Date();
+      base.setHours(0, 0, 0, 0);
+      const hojeStr   = base.toISOString();
+      const amanhaStr = new Date(base.getTime() + 86_400_000).toISOString();
+      const semanaStr = new Date(base.getTime() + 7 * 86_400_000).toISOString();
+
+      const excluir = (q: ReturnType<typeof jud>) =>
+        q.neq('status', 'concluido').neq('status', 'cancelado');
+
+      const [a, b, c, d] = await Promise.all([
+        excluir(jud().from('prazo_calculado').select('id', { count: 'exact', head: true }))
+          .lt('data_vencimento', hojeStr),
+        excluir(jud().from('prazo_calculado').select('id', { count: 'exact', head: true }))
+          .gte('data_vencimento', hojeStr).lt('data_vencimento', amanhaStr),
+        excluir(jud().from('prazo_calculado').select('id', { count: 'exact', head: true }))
+          .gte('data_vencimento', amanhaStr).lt('data_vencimento', semanaStr),
+        excluir(jud().from('prazo_calculado').select('id', { count: 'exact', head: true }))
+          .gte('data_vencimento', semanaStr),
+      ]);
+      return { vencida: a.count ?? 0, hoje: b.count ?? 0, semana: c.count ?? 0, ok: d.count ?? 0 };
+    },
+  });
+}
+
+// ─── Audiências — paginação server-side ──────────────────────────────────────
+
+export const AUDIENCIAS_PAGE_SIZE = 50;
+
+export interface AudienciasPaginadasFiltros {
+  search: string;
+  situacao: string | null;
+  periodo: 'futuras' | 'passadas';
+}
+
+export interface AudienciasPaginadas {
+  data: Audiencia[];
+  total: number;
+  page: number;
+}
+
+export function useAudienciasPaginadas(filtros: AudienciasPaginadasFiltros, page: number) {
+  return useQuery<AudienciasPaginadas>({
+    queryKey: ['audiencias-paginadas', filtros, page],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const from = page * AUDIENCIAS_PAGE_SIZE;
+      const to   = from + AUDIENCIAS_PAGE_SIZE - 1;
+      const agora = new Date().toISOString();
+
+      let q = jud()
+        .from('audiencias')
+        .select(
+          'id, processo_id, tipo, data_audiencia, descricao, local, situacao, link_videoconferencia, observacoes, created_at',
+          { count: 'exact' }
+        )
+        .range(from, to);
+
+      if (filtros.periodo === 'futuras') {
+        q = q.gte('data_audiencia', agora).order('data_audiencia', { ascending: true });
+      } else {
+        q = q.lt('data_audiencia', agora).order('data_audiencia', { ascending: false });
+      }
+      if (filtros.search.trim().length >= 2)
+        q = q.or(`tipo.ilike.%${filtros.search}%,local.ilike.%${filtros.search}%,observacoes.ilike.%${filtros.search}%`);
+      if (filtros.situacao) q = q.eq('situacao', filtros.situacao);
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], total: count ?? 0, page };
+    },
+  });
+}
+
+export function useAudienciasContagens() {
+  return useQuery<{ proximas: number; passadas: number }>({
+    queryKey: ['audiencias-contagens'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const agora = new Date().toISOString();
+      const [p, h] = await Promise.all([
+        jud().from('audiencias').select('id', { count: 'exact', head: true }).gte('data_audiencia', agora),
+        jud().from('audiencias').select('id', { count: 'exact', head: true }).lt('data_audiencia', agora),
+      ]);
+      return { proximas: p.count ?? 0, passadas: h.count ?? 0 };
+    },
+  });
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export function prazoUrgencia(data: string): 'vencida' | 'hoje' | 'semana' | 'ok' {

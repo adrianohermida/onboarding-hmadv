@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AudienciasClient from '@/components/audiencias/AudienciasClient';
-import type { Audiencia } from '@/lib/hooks/use-processos';
 
 export const metadata: Metadata = { title: 'Audiências' };
 
@@ -19,14 +18,5 @@ export default async function AudienciasPage() {
 
   if (!adminData) redirect('/dashboard');
 
-  const hoje = new Date().toISOString();
-
-  const { data: audiencias } = await (supabase as any)
-    .schema('judiciario')
-    .from('audiencias')
-    .select('id, processo_id, tipo, data_audiencia, descricao, local, situacao, link_videoconferencia, observacoes, created_at')
-    .order('data_audiencia', { ascending: true })
-    .limit(200);
-
-  return <AudienciasClient initial={(audiencias ?? []) as Audiencia[]} />;
+  return <AudienciasClient />;
 }

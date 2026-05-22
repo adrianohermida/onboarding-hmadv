@@ -1,21 +1,21 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Clock, AlertTriangle, CheckCircle2, Calendar, Plus, X, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, AlertTriangle, CheckCircle2, Calendar, Plus, X, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  usePrazos,
+  usePrazosPaginados,
+  usePrazosContagens,
   useAtualizarPrazo,
   useCriarPrazoManual,
-  PrazoCalculado,
-  prazoUrgencia,
+  type PrazoCalculado,
+  type PrazosPaginadosFiltros,
+  PRAZOS_PAGE_SIZE,
   URGENCIA_PRAZO_CONFIG,
   PRIORIDADE_PROCESSO_CONFIG,
+  prazoUrgencia,
 } from '@/lib/hooks/use-processos';
-
-interface Props {
-  initial: PrazoCalculado[];
-}
+import { useDebounce } from '@/lib/hooks/use-global-search';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -123,52 +123,55 @@ const URGENCIA_KPI_CLS = {
   ok:      { bg: 'bg-green-500/10',  icon: 'text-green-500' },
 };
 
-export default function PrazosClient({ initial }: Props) {
-  const { data = initial } = usePrazos();
-  const atualizar = useAtualizarPrazo();
-
+export default function PrazosClient() {
   const [search, setSearch] = useState('');
-  const [urgenciaFiltro, setUrgenciaFiltro] = useState<string | null>(null);
+  const [statusFiltro, setStatusFiltro] = useState<string | null>(null);
+  const [urgenciaFiltro, setUrgenciaFiltro] = useState<PrazosPaginadosFiltros['urgencia']>(null);
   const [prioridadeFiltro, setPrioridadeFiltro] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(0);
 
-  const pendentes = data.filter((p) => p.status !== 'concluido' && p.status !== 'cancelado');
+  const debouncedSearch = useDebounce(search, 350);
 
-  const counts = {
-    vencida: pendentes.filter((p) => prazoUrgencia(p.data_vencimento) === 'vencida').length,
-    hoje:    pendentes.filter((p) => prazoUrgencia(p.data_vencimento) === 'hoje').length,
-    semana:  pendentes.filter((p) => prazoUrgencia(p.data_vencimento) === 'semana').length,
-    ok:      pendentes.filter((p) => prazoUrgencia(p.data_vencimento) === 'ok').length,
+  const filtros: PrazosPaginadosFiltros = {
+    search: debouncedSearch,
+    status: statusFiltro,
+    prioridade: prioridadeFiltro,
+    urgencia: urgenciaFiltro,
   };
 
-  const filtered = useMemo(() => {
-    let list = data;
-    const q = search.toLowerCase().trim();
-    if (q) list = list.filter((p) => p.titulo?.toLowerCase().includes(q) || p.descricao?.toLowerCase().includes(q) || p.base_legal?.toLowerCase().includes(q));
-    if (urgenciaFiltro) list = list.filter((p) => prazoUrgencia(p.data_vencimento) === urgenciaFiltro);
-    if (prioridadeFiltro) list = list.filter((p) => p.prioridade === prioridadeFiltro);
-    return list;
-  }, [data, search, urgenciaFiltro, prioridadeFiltro]);
+  const { data: paginados, isFetching } = usePrazosPaginados(filtros, page);
+  const { data: contagens = { vencida: 0, hoje: 0, semana: 0, ok: 0 } } = usePrazosContagens();
+  const atualizar = useAtualizarPrazo();
+
+  const items = paginados?.data ?? [];
+  const total = paginados?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PRAZOS_PAGE_SIZE));
+
+  function handleFilterChange(fn: () => void) {
+    fn();
+    setPage(0);
+  }
 
   function toggleConcluido(prazo: PrazoCalculado) {
     const novoStatus = prazo.status === 'concluido' ? 'pendente' : 'concluido';
     atualizar.mutate({ id: prazo.id, processoId: prazo.processo_id, patch: { status: novoStatus } });
   }
 
-  const hasFilters = !!search || !!urgenciaFiltro || !!prioridadeFiltro;
+  const hasFilters = !!search || !!statusFiltro || !!urgenciaFiltro || !!prioridadeFiltro;
 
   return (
     <div className="space-y-5 max-w-3xl">
-      {/* KPIs */}
+      {/* KPIs — contagens reais do Supabase */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {(Object.entries(counts) as [keyof typeof counts, number][]).map(([key, val]) => {
-          const cfg = URGENCIA_PRAZO_CONFIG[key];
+        {(Object.entries(contagens) as [keyof typeof contagens, number][]).map(([key, val]) => {
+          const cfg    = URGENCIA_PRAZO_CONFIG[key];
           const kpiCls = URGENCIA_KPI_CLS[key];
-          const Icon = URGENCIA_ICON[key];
+          const Icon   = URGENCIA_ICON[key];
           return (
             <button
               key={key}
-              onClick={() => setUrgenciaFiltro(urgenciaFiltro === key ? null : key)}
+              onClick={() => handleFilterChange(() => setUrgenciaFiltro(urgenciaFiltro === key ? null : key))}
               className={cn(
                 'bg-card border border-border rounded-xl p-4 text-left transition-all hover:border-primary/40',
                 urgenciaFiltro === key && 'ring-2 ring-primary border-primary/60',
@@ -190,16 +193,16 @@ export default function PrazosClient({ initial }: Props) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Buscar prazo..."
+            placeholder="Buscar prazo, base legal..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             className="w-full pl-9 pr-3 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors"
           />
         </div>
 
         <select
           value={prioridadeFiltro ?? ''}
-          onChange={(e) => setPrioridadeFiltro(e.target.value || null)}
+          onChange={(e) => handleFilterChange(() => setPrioridadeFiltro(e.target.value || null))}
           className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Toda prioridade</option>
@@ -209,9 +212,20 @@ export default function PrazosClient({ initial }: Props) {
           <option value="baixa">Baixa</option>
         </select>
 
+        <select
+          value={statusFiltro ?? ''}
+          onChange={(e) => handleFilterChange(() => setStatusFiltro(e.target.value || null))}
+          className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Todo status</option>
+          <option value="pendente">Pendente</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+
         {hasFilters && (
           <button
-            onClick={() => { setSearch(''); setUrgenciaFiltro(null); setPrioridadeFiltro(null); }}
+            onClick={() => { setSearch(''); setUrgenciaFiltro(null); setPrioridadeFiltro(null); setStatusFiltro(null); setPage(0); }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-3.5 w-3.5" />
@@ -233,17 +247,22 @@ export default function PrazosClient({ initial }: Props) {
 
       {/* Lista */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {filtered.length === 0 ? (
+        {isFetching && items.length === 0 ? (
+          <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Carregando prazos…</span>
+          </div>
+        ) : items.length === 0 ? (
           <div className="py-10 text-center">
             <Clock className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhum prazo encontrado.</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {filtered.map((prazo) => {
+            {items.map((prazo) => {
               const urgencia = prazoUrgencia(prazo.data_vencimento);
-              const uCfg = URGENCIA_PRAZO_CONFIG[urgencia];
-              const priCfg = prazo.prioridade ? PRIORIDADE_PROCESSO_CONFIG[prazo.prioridade] : null;
+              const uCfg    = URGENCIA_PRAZO_CONFIG[urgencia];
+              const priCfg  = prazo.prioridade ? PRIORIDADE_PROCESSO_CONFIG[prazo.prioridade] : null;
               const concluido = prazo.status === 'concluido';
 
               return (
@@ -252,7 +271,7 @@ export default function PrazosClient({ initial }: Props) {
                   className={cn(
                     'flex items-start gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors',
                     urgencia === 'vencida' && !concluido && 'bg-rose-500/5',
-                    urgencia === 'hoje' && !concluido && 'bg-orange-500/5',
+                    urgencia === 'hoje'    && !concluido && 'bg-orange-500/5',
                   )}
                 >
                   <button
@@ -300,6 +319,29 @@ export default function PrazosClient({ initial }: Props) {
           </div>
         )}
       </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{total.toLocaleString('pt-BR')} prazo{total !== 1 ? 's' : ''} — Página {page + 1} de {totalPages}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
