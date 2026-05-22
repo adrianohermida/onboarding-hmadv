@@ -137,7 +137,7 @@ export default function GlobalSearch({ open, onClose }: Props) {
                       onMouseEnter={() => setCursor(idx)}
                       className={cn(
                         'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-border/50 last:border-0',
-                        active ? 'bg-primary/8 text-foreground' : 'hover:bg-muted/50 text-foreground',
+                        active ? 'bg-primary/10 text-foreground' : 'hover:bg-muted/50 text-foreground',
                       )}
                     >
                       <cfg.Icon className={cn('h-4 w-4 flex-shrink-0', cfg.cls)} />

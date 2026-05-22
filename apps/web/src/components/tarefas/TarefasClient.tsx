@@ -28,11 +28,6 @@ interface Tarefa {
   casos: { nome_cliente: string } | null;
 }
 
-interface Props {
-  tarefas: Tarefa[];
-  userId: string;
-}
-
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const PRIORIDADE_CONFIG: Record<string, { label: string; cls: string }> = {
