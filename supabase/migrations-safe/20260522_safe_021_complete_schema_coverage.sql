@@ -169,33 +169,42 @@ BEGIN
 
     -- Clientes: leitura de mensagens próprias ou do seu caso
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_mensagens' AND policyname = 'client_re_mensagens_select') THEN
-      CREATE POLICY client_re_mensagens_select ON re_mensagens
-        FOR SELECT TO authenticated
-        USING (
-          remetente_id = auth.uid()
-          OR (
-            caso_id IS NOT NULL
-            AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid())
-          )
-        );
+      BEGIN
+        CREATE POLICY client_re_mensagens_select ON re_mensagens
+          FOR SELECT TO authenticated
+          USING (
+            remetente_id = auth.uid()
+            OR (
+              caso_id IS NOT NULL
+              AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid())
+            )
+          );
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     -- Clientes: INSERT com remetente_id = próprio uid
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_mensagens' AND policyname = 'client_re_mensagens_insert') THEN
-      CREATE POLICY client_re_mensagens_insert ON re_mensagens
-        FOR INSERT TO authenticated
-        WITH CHECK (remetente_id = auth.uid() OR is_any_admin());
+      BEGIN
+        CREATE POLICY client_re_mensagens_insert ON re_mensagens
+          FOR INSERT TO authenticated
+          WITH CHECK (remetente_id = auth.uid() OR is_any_admin());
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     -- Clientes: UPDATE para marcar como lidas (lida = true)
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_mensagens' AND policyname = 'client_re_mensagens_update') THEN
-      CREATE POLICY client_re_mensagens_update ON re_mensagens
-        FOR UPDATE TO authenticated
-        USING (
-          is_any_admin()
-          OR remetente_id = auth.uid()
-          OR (caso_id IS NOT NULL AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid()))
-        );
+      BEGIN
+        CREATE POLICY client_re_mensagens_update ON re_mensagens
+          FOR UPDATE TO authenticated
+          USING (
+            is_any_admin()
+            OR remetente_id = auth.uid()
+            OR (caso_id IS NOT NULL AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid()))
+          );
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     GRANT SELECT, INSERT, UPDATE ON re_mensagens TO authenticated;
@@ -213,12 +222,15 @@ BEGIN
 
     -- Clientes: ver seus próprios agendamentos (por e-mail do auth user)
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_agendamentos' AND policyname = 'client_re_agendamentos_select') THEN
-      CREATE POLICY client_re_agendamentos_select ON re_agendamentos
-        FOR SELECT TO authenticated
-        USING (
-          is_any_admin()
-          OR email_cliente = (SELECT email FROM auth.users WHERE id = auth.uid())
-        );
+      BEGIN
+        CREATE POLICY client_re_agendamentos_select ON re_agendamentos
+          FOR SELECT TO authenticated
+          USING (
+            is_any_admin()
+            OR email_cliente = (SELECT email FROM auth.users WHERE id = auth.uid())
+          );
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     -- Clientes: criar agendamento (qualquer autenticado pode solicitar)
@@ -270,9 +282,12 @@ BEGIN
 
     -- INSERT apenas para admins (ferramenta interna)
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_tarefas' AND policyname = 'admin_re_tarefas_insert') THEN
-      CREATE POLICY admin_re_tarefas_insert ON re_tarefas
-        FOR INSERT TO authenticated
-        WITH CHECK (is_any_admin() AND (responsavel_id = auth.uid() OR responsavel_id IS NULL));
+      BEGIN
+        CREATE POLICY admin_re_tarefas_insert ON re_tarefas
+          FOR INSERT TO authenticated
+          WITH CHECK (is_any_admin() AND (responsavel_id = auth.uid() OR responsavel_id IS NULL));
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     GRANT SELECT, INSERT, UPDATE ON re_tarefas TO authenticated;
@@ -353,15 +368,18 @@ BEGIN
       WHERE table_schema = 'public' AND table_name = 'portal_timeline' AND column_name = 'user_id'
     ) THEN
       IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'portal_timeline' AND policyname = 'own_portal_timeline_select') THEN
-        CREATE POLICY own_portal_timeline_select ON portal_timeline
-          FOR SELECT TO authenticated
-          USING (
-            user_id = auth.uid()
-            OR (
-              caso_id IS NOT NULL
-              AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid())
-            )
-          );
+        BEGIN
+          CREATE POLICY own_portal_timeline_select ON portal_timeline
+            FOR SELECT TO authenticated
+            USING (
+              user_id = auth.uid()
+              OR (
+                caso_id IS NOT NULL
+                AND caso_id IN (SELECT id FROM portal_casos WHERE user_id = auth.uid())
+              )
+            );
+        EXCEPTION WHEN undefined_column THEN NULL;
+        END;
       END IF;
     END IF;
 
@@ -379,9 +397,12 @@ BEGIN
     ALTER TABLE lgpd_consents ENABLE ROW LEVEL SECURITY;
 
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'lgpd_consents' AND policyname = 'own_lgpd_consents') THEN
-      CREATE POLICY own_lgpd_consents ON lgpd_consents
-        FOR ALL TO authenticated
-        USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+      BEGIN
+        CREATE POLICY own_lgpd_consents ON lgpd_consents
+          FOR ALL TO authenticated
+          USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+      EXCEPTION WHEN undefined_column THEN NULL;
+      END;
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'lgpd_consents' AND policyname = 'admin_lgpd_consents_all') THEN
