@@ -6,7 +6,9 @@
       "Bash(git commit -m ' *)",
       "Bash(Get-ChildItem -Path \"d:\\\\Github\\\\onboarding-hmadv\\\\apps\\\\web\\\\src\\\\components\\\\clientes\" -File)",
       "Bash(Select-Object FullName, Name)",
-      "Bash(xargs grep -l \"judiciario\\\\|processos\\\\|publicacoes\")"
+      "Bash(xargs grep -l \"judiciario\\\\|processos\\\\|publicacoes\")",
+      "Bash(xargs grep -l \"processos\\\\|publicacoes\\\\|audiencias\")",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }
