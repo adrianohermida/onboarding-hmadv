@@ -5,16 +5,39 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   Receipt, Upload, Download, Eye, Clock, CheckCircle2,
-  CloudUpload, X, FileText, Plus, AlertTriangle,
+  CloudUpload, X, Plus, AlertTriangle, Search, ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Custa } from '@/app/(workspace)/custas/page';
+import { useDebounce } from '@/lib/hooks/use-global-search';
+
+interface Custa {
+  id: string;
+  user_id: string;
+  caso_id: string | null;
+  titulo: string | null;
+  descricao: string | null;
+  categoria: string;
+  status: string;
+  valor: number;
+  data_lancamento: string;
+  data_vencimento: string | null;
+  comprovante_url: string | null;
+  comprovante_nome: string | null;
+  created_at: string;
+}
+
+interface CustasPaginadas {
+  data: Custa[];
+  total: number;
+  page: number;
+}
 
 interface Props {
-  initial: Custa[];
   isAdmin: boolean;
   userId: string;
 }
+
+const PAGE_SIZE = 50;
 
 const CATEGORIA_LABELS: Record<string, string> = {
   guia:        'Guia judicial',
@@ -41,21 +64,47 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
-function useCustas(initial: Custa[]) {
+function useCustasPaginadas(filtros: { search: string; status: string | null; categoria: string | null }, page: number) {
   const supabase = createClient();
-  return useQuery<Custa[]>({
-    queryKey: ['portal-custas'],
+  return useQuery<CustasPaginadas>({
+    queryKey: ['portal-custas-paginadas', filtros, page],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const to   = from + PAGE_SIZE - 1;
+      let q = supabase
+        .from('portal_custas')
+        .select('id, user_id, caso_id, titulo, descricao, categoria, status, valor, data_lancamento, data_vencimento, comprovante_url, comprovante_nome, created_at', { count: 'exact' })
+        .is('deleted_at', null)
+        .order('data_lancamento', { ascending: false })
+        .range(from, to);
+      if (filtros.search.trim().length >= 2) q = q.ilike('titulo', `%${filtros.search}%`);
+      if (filtros.status)    q = q.eq('status', filtros.status);
+      if (filtros.categoria) q = q.eq('categoria', filtros.categoria);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], total: count ?? 0, page };
+    },
+  });
+}
+
+function useCustasKpis() {
+  const supabase = createClient();
+  return useQuery<{ totalValor: number; totalPago: number; pendentes: number }>({
+    queryKey: ['portal-custas-kpis'],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase
         .from('portal_custas')
-        .select('id, user_id, caso_id, titulo, descricao, categoria, status, valor, data_lancamento, data_vencimento, comprovante_url, comprovante_nome, created_at')
+        .select('valor, status')
         .is('deleted_at', null)
-        .order('data_lancamento', { ascending: false })
-        .limit(200);
-      return data ?? [];
+        .limit(10_000);
+      const rows = data ?? [];
+      const totalValor = rows.reduce((s, r) => s + (r.valor ?? 0), 0);
+      const totalPago  = rows.filter((r) => r.status === 'pago').reduce((s, r) => s + (r.valor ?? 0), 0);
+      const pendentes  = rows.filter((r) => r.status === 'pendente' || r.status === 'vencido').length;
+      return { totalValor, totalPago, pendentes };
     },
-    initialData: initial,
-    staleTime: 30_000,
   });
 }
 
@@ -75,22 +124,10 @@ function useEnviarComprovante() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
-  });
-}
-
-function useAtualizarStatus() {
-  const qc = useQueryClient();
-  const supabase = createClient();
-  return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from('portal_custas')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-custas-paginadas'] });
+      qc.invalidateQueries({ queryKey: ['portal-custas-kpis'] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
   });
 }
 
@@ -98,7 +135,7 @@ function useCriarCusta() {
   const qc = useQueryClient();
   const supabase = createClient();
   return useMutation({
-    mutationFn: async (nova: { titulo: string; categoria: string; valor: number; data_vencimento?: string; descricao?: string }) => {
+    mutationFn: async (nova: { titulo: string; categoria: string; valor: number; data_vencimento?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('portal_custas').insert({
         user_id: user?.id,
@@ -106,12 +143,14 @@ function useCriarCusta() {
         categoria: nova.categoria,
         valor: nova.valor,
         data_vencimento: nova.data_vencimento || null,
-        descricao: nova.descricao || null,
         status: 'pendente',
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['portal-custas-paginadas'] });
+      qc.invalidateQueries({ queryKey: ['portal-custas-kpis'] });
+    },
   });
 }
 
@@ -143,9 +182,7 @@ function UploadModal({ custa, onClose }: { custa: Custa; onClose: () => void }) 
             <X className="h-4 w-4" />
           </button>
         </div>
-
         <p className="text-xs text-muted-foreground">{custa.titulo ?? 'Custa'} — {fmt(custa.valor)}</p>
-
         <div
           onDrop={onDrop}
           onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
@@ -168,12 +205,9 @@ function UploadModal({ custa, onClose }: { custa: Custa; onClose: () => void }) 
           <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }} />
         </div>
-
         <div className="flex gap-2">
           <button onClick={onClose}
-            className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
-            Cancelar
-          </button>
+            className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
           <button onClick={submit} disabled={!file || enviar.isPending}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
             <Upload className="h-3.5 w-3.5" />
@@ -207,16 +241,8 @@ function NovaCustaForm({ onClose }: { onClose: () => void }) {
           <X className="h-4 w-4" />
         </button>
       </div>
-
-      <input
-        autoFocus
-        placeholder="Título da custa*"
-        value={titulo}
-        onChange={(e) => setTitulo(e.target.value)}
-        required
-        className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-      />
-
+      <input autoFocus placeholder="Título da custa*" value={titulo} onChange={(e) => setTitulo(e.target.value)} required
+        className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[11px] text-muted-foreground mb-1">Categoria</label>
@@ -231,13 +257,11 @@ function NovaCustaForm({ onClose }: { onClose: () => void }) {
             className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
         </div>
       </div>
-
       <div>
         <label className="block text-[11px] text-muted-foreground mb-1">Vencimento</label>
         <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
           className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
-
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onClose}
           className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
@@ -250,15 +274,25 @@ function NovaCustaForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default function CustasClient({ initial, isAdmin, userId }: Props) {
-  const { data: custas = initial } = useCustas(initial);
-  const atualizarStatus = useAtualizarStatus();
+export default function CustasClient({ isAdmin }: Props) {
+  const [search, setSearch] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string | null>(null);
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const [uploadFor, setUploadFor] = useState<Custa | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const totalValor = custas.reduce((s, c) => s + c.valor, 0);
-  const totalPago = custas.filter((c) => c.status === 'pago').reduce((s, c) => s + c.valor, 0);
-  const pendentes = custas.filter((c) => c.status === 'pendente' || c.status === 'vencido').length;
+  const debouncedSearch = useDebounce(search, 350);
+  const filtros = { search: debouncedSearch, status: statusFiltro, categoria: categoriaFiltro };
+
+  const { data: paginadas, isFetching } = useCustasPaginadas(filtros, page);
+  const { data: kpis = { totalValor: 0, totalPago: 0, pendentes: 0 } } = useCustasKpis();
+
+  const custas     = paginadas?.data ?? [];
+  const total      = paginadas?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function handleFilterChange(fn: () => void) { fn(); setPage(0); }
 
   return (
     <div className="space-y-5 max-w-2xl">
@@ -268,28 +302,44 @@ export default function CustasClient({ initial, isAdmin, userId }: Props) {
           <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
             <Receipt className="h-3.5 w-3.5 text-blue-500" />
           </div>
-          <p className="text-xl font-bold tabular-nums">{fmt(totalValor)}</p>
+          <p className="text-xl font-bold tabular-nums">{fmt(kpis.totalValor)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Total em custas</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center mb-2">
             <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
           </div>
-          <p className="text-xl font-bold tabular-nums">{fmt(totalPago)}</p>
+          <p className="text-xl font-bold tabular-nums">{fmt(kpis.totalPago)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Pago</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center mb-2">
             <Clock className="h-3.5 w-3.5 text-amber-500" />
           </div>
-          <p className="text-2xl font-bold tabular-nums">{pendentes}</p>
+          <p className="text-2xl font-bold tabular-nums">{kpis.pendentes}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Pendentes</p>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{custas.length} registro{custas.length !== 1 ? 's' : ''}</p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-44">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input type="text" placeholder="Buscar custa..." value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors" />
+        </div>
+        <select value={statusFiltro ?? ''} onChange={(e) => handleFilterChange(() => setStatusFiltro(e.target.value || null))}
+          className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+          <option value="">Todo status</option>
+          {Object.entries(STATUS_CONFIG).map(([v, c]) => <option key={v} value={v}>{c.label}</option>)}
+        </select>
+        <select value={categoriaFiltro ?? ''} onChange={(e) => handleFilterChange(() => setCategoriaFiltro(e.target.value || null))}
+          className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+          <option value="">Toda categoria</option>
+          {Object.entries(CATEGORIA_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <div className="flex-1" />
         {isAdmin && (
           <button onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
@@ -303,10 +353,15 @@ export default function CustasClient({ initial, isAdmin, userId }: Props) {
 
       {/* Lista */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {custas.length === 0 ? (
+        {isFetching && custas.length === 0 ? (
+          <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Carregando custas…</span>
+          </div>
+        ) : custas.length === 0 ? (
           <div className="py-10 text-center">
             <Receipt className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nenhuma custa registrada.</p>
+            <p className="text-sm text-muted-foreground">Nenhuma custa encontrada.</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -319,7 +374,6 @@ export default function CustasClient({ initial, isAdmin, userId }: Props) {
                   <div className={cn('flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5', sCfg.cls)}>
                     <StatusIcon className="h-3.5 w-3.5" />
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-foreground">{c.titulo ?? catLabel}</p>
@@ -333,20 +387,15 @@ export default function CustasClient({ initial, isAdmin, userId }: Props) {
                       <span className="font-semibold text-foreground">{fmt(c.valor)}</span>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {c.comprovante_url ? (
                       <a href={c.comprovante_url} target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Ver comprovante">
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Ver comprovante">
                         <Eye className="h-3.5 w-3.5" />
                       </a>
                     ) : (
-                      <button
-                        onClick={() => setUploadFor(c)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded-lg transition-colors"
-                        title="Enviar comprovante"
-                      >
+                      <button onClick={() => setUploadFor(c)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded-lg transition-colors" title="Enviar comprovante">
                         <Upload className="h-3 w-3" />
                         Comprovante
                       </button>
@@ -358,6 +407,23 @@ export default function CustasClient({ initial, isAdmin, userId }: Props) {
           </div>
         )}
       </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{total.toLocaleString('pt-BR')} registro{total !== 1 ? 's' : ''} — Página {page + 1} de {totalPages}</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {uploadFor && <UploadModal custa={uploadFor} onClose={() => setUploadFor(null)} />}
     </div>

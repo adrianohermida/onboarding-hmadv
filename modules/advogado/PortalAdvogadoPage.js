@@ -830,6 +830,223 @@ function renderPagination(paginated) {
   `;
 }
 
+// ── Per-module hub helpers ────────────────────────────────────────────────────
+
+function getModuleHubKpis(moduleKey, records) {
+  const active   = records.filter(r => !r.archived);
+  const archived = records.filter(r => r.archived).length;
+
+  switch (moduleKey) {
+    case 'clientes': {
+      const onboarding = active.filter(r => String(r.status || '').toLowerCase().includes('onboard')).length;
+      const ativos     = active.filter(r => r.status === 'ativo').length;
+      return [
+        { label: 'Em onboarding', value: onboarding,   tone: onboarding > 0 ? 'warn' : 'ok'   },
+        { label: 'Casos ativos',  value: ativos,        tone: ativos > 0 ? 'ok' : 'muted'      },
+        { label: 'Total ativo',   value: active.length, tone: 'brand'                           },
+      ];
+    }
+    case 'processos': {
+      const emAnd    = active.filter(r => ['ativo', 'em_andamento'].includes(String(r.status || '').toLowerCase())).length;
+      const susp     = active.filter(r => String(r.status || '').toLowerCase().includes('suspenso')).length;
+      const pending  = active.filter(r => !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Em andamento', value: emAnd,   tone: 'brand'                                       },
+        { label: 'Suspensos',    value: susp,     tone: susp > 0 ? 'warn' : 'ok'                     },
+        { label: 'Pendências',   value: pending,  tone: pending > 5 ? 'danger' : pending > 0 ? 'warn' : 'ok' },
+      ];
+    }
+    case 'prazos': {
+      const venc  = active.filter(r => isVencido(r.vencimento) && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      const hoje  = active.filter(r => isHoje(r.vencimento)    && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      const sem   = active.filter(r => isEmBreve(r.vencimento) && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Vencidos',    value: venc, tone: venc > 0 ? 'danger' : 'ok'  },
+        { label: 'Vencem hoje', value: hoje, tone: hoje > 0 ? 'warn' : 'ok'    },
+        { label: 'Esta semana', value: sem,  tone: sem > 0 ? 'brand' : 'muted' },
+      ];
+    }
+    case 'tarefas': {
+      const urg  = active.filter(r => String(r.prioridade || '').toLowerCase() === 'urgente' && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      const alta = active.filter(r => String(r.prioridade || '').toLowerCase() === 'alta'    && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      const venc = active.filter(r => isVencido(r.prazo || r.vencimento) && !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Urgentes',        value: urg,  tone: urg > 0 ? 'danger' : 'ok'  },
+        { label: 'Alta prioridade', value: alta, tone: alta > 0 ? 'warn' : 'ok'   },
+        { label: 'Prazo vencido',   value: venc, tone: venc > 0 ? 'danger' : 'ok' },
+      ];
+    }
+    case 'publicacoes': {
+      const novas   = active.filter(r => ['nova', 'nao_tratada'].includes(String(r.status || '').toLowerCase())).length;
+      const pend    = active.filter(r => r.status === 'pendente').length;
+      const trat    = records.filter(r => ['tratada', 'encerrada'].includes(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Novas',     value: novas, tone: novas > 0 ? 'danger' : 'ok'  },
+        { label: 'Pendentes', value: pend,  tone: pend > 0 ? 'warn' : 'ok'     },
+        { label: 'Tratadas',  value: trat,  tone: 'muted'                       },
+      ];
+    }
+    case 'audiencias': {
+      const agend  = active.filter(r => r.status === 'agendada').length;
+      const prox   = active.filter(r => isHoje(r.data_audiencia) || isEmBreve(r.data_audiencia)).length;
+      const real   = records.filter(r => r.status === 'realizada').length;
+      return [
+        { label: 'Agendadas',   value: agend, tone: agend > 0 ? 'brand' : 'muted' },
+        { label: 'Esta semana', value: prox,  tone: prox > 0 ? 'warn' : 'muted'   },
+        { label: 'Realizadas',  value: real,  tone: 'ok'                           },
+      ];
+    }
+    case 'mensagens': {
+      const aber  = active.filter(r => ['pendente', 'aberta', 'em_andamento'].includes(String(r.status || '').toLowerCase())).length;
+      const sresp = active.filter(r => r.status === 'sem_resposta').length;
+      const res   = records.filter(r => ['fechada', 'resolvida'].includes(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Abertas',      value: aber,  tone: aber > 0 ? 'brand' : 'muted'   },
+        { label: 'Sem resposta', value: sresp, tone: sresp > 0 ? 'danger' : 'ok'    },
+        { label: 'Resolvidas',   value: res,   tone: 'muted'                         },
+      ];
+    }
+    case 'documentos': {
+      const pend  = active.filter(r => ['pendente', 'em_analise', 'aguardando'].includes(String(r.status || '').toLowerCase())).length;
+      const aprov = records.filter(r => r.status === 'aprovado').length;
+      const ass   = records.filter(r => r.status === 'assinado').length;
+      return [
+        { label: 'Pendentes', value: pend,  tone: pend > 0 ? 'warn' : 'ok' },
+        { label: 'Aprovados', value: aprov, tone: 'ok'                      },
+        { label: 'Assinados', value: ass,   tone: 'brand'                   },
+      ];
+    }
+    default: {
+      const pending = active.filter(r => !DONE_STS.has(String(r.status || '').toLowerCase())).length;
+      return [
+        { label: 'Ativos',     value: active.length, tone: 'brand'                    },
+        { label: 'Pendências', value: pending,        tone: pending > 0 ? 'warn' : 'ok' },
+        { label: 'Arquivados', value: archived,       tone: 'muted'                    },
+      ];
+    }
+  }
+}
+
+function getModulePendingItems(moduleKey, records) {
+  const active = records.filter(r => !r.archived && !DONE_STS.has(String(r.status || '').toLowerCase()));
+  switch (moduleKey) {
+    case 'prazos':
+      return active.sort((a, b) => {
+        const uA = isVencido(a.vencimento) ? 0 : isHoje(a.vencimento) ? 1 : isEmBreve(a.vencimento) ? 2 : 3;
+        const uB = isVencido(b.vencimento) ? 0 : isHoje(b.vencimento) ? 1 : isEmBreve(b.vencimento) ? 2 : 3;
+        if (uA !== uB) return uA - uB;
+        return (a.vencimento ? new Date(a.vencimento).getTime() : Infinity) - (b.vencimento ? new Date(b.vencimento).getTime() : Infinity);
+      }).slice(0, 5);
+    case 'tarefas': {
+      const gd = rec => rec.prazo || rec.vencimento;
+      const pm = { urgente: 0, alta: 1, normal: 2, baixa: 3 };
+      return active.sort((a, b) => {
+        const uA = isVencido(gd(a)) ? 0 : isHoje(gd(a)) ? 1 : isEmBreve(gd(a)) ? 2 : 3;
+        const uB = isVencido(gd(b)) ? 0 : isHoje(gd(b)) ? 1 : isEmBreve(gd(b)) ? 2 : 3;
+        if (uA !== uB) return uA - uB;
+        return (pm[String(a.prioridade || 'normal').toLowerCase()] ?? 2) - (pm[String(b.prioridade || 'normal').toLowerCase()] ?? 2);
+      }).slice(0, 5);
+    }
+    case 'publicacoes':
+      return active.filter(r => ['nova', 'nao_tratada', 'pendente'].includes(String(r.status || '').toLowerCase())).slice(0, 5);
+    case 'audiencias':
+      return active.sort((a, b) =>
+        (a.data_audiencia ? new Date(a.data_audiencia).getTime() : Infinity) -
+        (b.data_audiencia ? new Date(b.data_audiencia).getTime() : Infinity)
+      ).slice(0, 5);
+    case 'clientes':
+      return active.filter(r => r.status !== 'ativo').slice(0, 5);
+    default:
+      return active.slice(0, 5);
+  }
+}
+
+function getModuleQuickLinks(moduleKey) {
+  const map = {
+    clientes:    [{ label: 'Jornadas',    href: 'onboarding-v2.html' }, { label: 'Diagnóstico', href: 'financial-dashboard.html' }],
+    processos:   [{ label: 'Publicações', href: 'publicacoes.html'   }, { label: 'Prazos',      href: 'prazos.html'     }],
+    prazos:      [{ label: 'Processos',   href: 'processos.html'     }, { label: 'Tarefas',     href: 'tarefas.html'    }],
+    tarefas:     [{ label: 'Agenda',      href: 'agenda.html'        }, { label: 'Painel',      href: 'painel.html'     }],
+    publicacoes: [{ label: 'Processos',   href: 'processos.html'     }, { label: 'Prazos',      href: 'prazos.html'     }],
+    audiencias:  [{ label: 'Processos',   href: 'processos.html'     }],
+    mensagens:   [{ label: 'Suporte',     href: 'suporte.html'       }],
+    documentos:  [{ label: 'Clientes',    href: 'clientes.html'      }],
+    partes:      [{ label: 'Processos',   href: 'processos.html'     }],
+  };
+  return map[moduleKey] || [];
+}
+
+function getPendingItemUrgency(moduleKey, record) {
+  if (moduleKey === 'prazos')     return prazoUrgency(record.vencimento);
+  if (moduleKey === 'tarefas')    return prazoUrgency(record.prazo || record.vencimento);
+  if (moduleKey === 'audiencias') return prazoUrgency(record.data_audiencia);
+  return null;
+}
+
+function renderModuleHubSection(moduleKey, records, config, paginatedTotal) {
+  const kpis    = getModuleHubKpis(moduleKey, records);
+  const pending = getModulePendingItems(moduleKey, records);
+  const links   = getModuleQuickLinks(moduleKey);
+  const recent  = [...records]
+    .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''))
+    .slice(0, 4);
+
+  const kpisHtml = kpis.map(k => `
+    <div class="hub-kpi hub-kpi--${escapeHtml(k.tone)}">
+      <strong>${k.value}</strong>
+      <span>${escapeHtml(k.label)}</span>
+    </div>`).join('');
+
+  const linksHtml = links.map(l =>
+    `<a class="btn btn-ghost btn-sm" href="${escapeHtml(l.href)}" data-page="${escapeHtml(l.href.replace('.html', ''))}">${escapeHtml(l.label)}</a>`
+  ).join('');
+
+  const pendingHtml = pending.length
+    ? pending.map(r => {
+        const urg = getPendingItemUrgency(moduleKey, r);
+        return `<div class="hub-pending-row">
+          <div class="painel-row-body">
+            <span class="painel-row-title">${escapeHtml(getRecordTitle(r, config))}</span>
+            <span class="painel-row-sub">${escapeHtml(normalizeStatusLabel(r.status))}</span>
+          </div>
+          ${urg ? `<span class="painel-chip painel-chip--${escapeHtml(urg.tone)}">${escapeHtml(urg.label)}</span>` : ''}
+        </div>`;
+      }).join('')
+    : '<div class="painel-empty">Sem pendências — tudo em dia.</div>';
+
+  const recentHtml = recent.length
+    ? recent.map(r => `
+        <div class="hub-activity-row">
+          <span class="painel-row-title">${escapeHtml(getRecordTitle(r, config))}</span>
+          <span class="hub-activity-date">${escapeHtml(formatDate(r.updatedAt || r.createdAt))}</span>
+        </div>`).join('')
+    : '<div class="painel-empty">Sem atividade registrada.</div>';
+
+  return `
+    <div class="module-hub sec">
+      <div class="module-hub-top">
+        <div class="module-hub-kpis">${kpisHtml}</div>
+        <div class="module-hub-quick">
+          ${linksHtml}
+          <span class="module-hub-count"><span data-advogado-kpi="filtered">${paginatedTotal}</span> na visão</span>
+        </div>
+      </div>
+      <div class="module-hub-body">
+        <div class="module-hub-col">
+          <h3 class="module-hub-label">Ações necessárias</h3>
+          <div class="module-hub-list">${pendingHtml}</div>
+        </div>
+        <div class="module-hub-col">
+          <h3 class="module-hub-label">Atividade recente</h3>
+          <div class="module-hub-list">${recentHtml}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function refreshList(host) {
   const view = getPaginatedRecords();
   if (!view) return;

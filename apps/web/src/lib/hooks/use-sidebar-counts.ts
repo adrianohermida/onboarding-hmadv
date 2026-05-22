@@ -45,7 +45,7 @@ export function useSidebarCounts(isAdmin: boolean): SidebarCounts {
         const { count } = await supabase
           .from('re_tarefas')
           .select('id', { count: 'exact', head: true })
-          .eq('status', 'pendente');
+          .in('status', ['pendente', 'em_andamento']);
         return count ?? 0;
       } catch {
         return 0;

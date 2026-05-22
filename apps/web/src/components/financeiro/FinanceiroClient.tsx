@@ -45,10 +45,10 @@ interface Contrato {
 }
 
 interface Props {
-  planos: PlanoPagamento[];
-  custas: Custa[];
-  contratos: Contrato[];
-  clienteMap: Record<string, string>;
+  planos?: PlanoPagamento[];
+  custas?: Custa[];
+  contratos?: Contrato[];
+  clienteMap?: Record<string, string>;
 }
 
 const PLANO_STATUS: Record<string, { label: string; cls: string }> = {
@@ -78,55 +78,81 @@ const ASSINATURA_STATUS: Record<string, { label: string; cls: string }> = {
   recusado: { label: 'Recusado',            cls: 'bg-red-50 text-red-700 border-red-200' },
 };
 
-function useFinanceiro(ip: PlanoPagamento[], ic: Custa[], ico: Contrato[]) {
+function useFinanceiro() {
   const supabase = createClient();
 
-  const { data: planos = ip } = useQuery<PlanoPagamento[]>({
+  const { data: planos = [] } = useQuery<PlanoPagamento[]>({
     queryKey: ['financeiro-planos'],
+    staleTime: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from('portal_planos_pagamento')
         .select('id, user_id, titulo, status, valor_total, parcela_sugerida, prazo_meses, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       return data ?? [];
     },
-    initialData: ip,
-    staleTime: 30_000,
   });
 
-  const { data: custas = ic } = useQuery<Custa[]>({
+  const { data: custas = [] } = useQuery<Custa[]>({
     queryKey: ['financeiro-custas'],
+    staleTime: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from('portal_custas')
         .select('id, user_id, titulo, categoria, status, valor, data_vencimento, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       return data ?? [];
     },
-    initialData: ic,
-    staleTime: 30_000,
   });
 
-  const { data: contratos = ico } = useQuery<Contrato[]>({
+  const { data: contratos = [] } = useQuery<Contrato[]>({
     queryKey: ['financeiro-contratos'],
+    staleTime: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from('portal_contratos')
         .select('id, user_id, titulo, tipo, status, assinatura_status, assinado_em, arquivo_url, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       return data ?? [];
     },
-    initialData: ico,
-    staleTime: 30_000,
   });
 
-  return { planos, custas, contratos };
+  // clienteMap: try nome_cliente first, fallback to nome
+  const { data: clienteMap = {} } = useQuery<Record<string, string>>({
+    queryKey: ['financeiro-cliente-map'],
+    staleTime: 120_000,
+    queryFn: async () => {
+      const map: Record<string, string> = {};
+      // Try nome_cliente first
+      const { data: d1, error: e1 } = await supabase
+        .from('portal_casos')
+        .select('user_id, nome_cliente')
+        .limit(2000);
+      if (!e1 && d1) {
+        for (const r of d1) {
+          if (r.user_id && r.nome_cliente) map[r.user_id] = r.nome_cliente;
+        }
+        if (Object.keys(map).length > 0) return map;
+      }
+      // Fallback: try nome
+      const { data: d2 } = await supabase
+        .from('portal_casos')
+        .select('user_id, nome')
+        .limit(2000);
+      for (const r of (d2 ?? [])) {
+        if (r.user_id && r.nome) map[r.user_id] = r.nome;
+      }
+      return map;
+    },
+  });
+
+  return { planos, custas, contratos, clienteMap };
 }
 
 function fmt(v: number | null | undefined) {
@@ -150,8 +176,8 @@ function Badge({ status, config }: { status: string | null; config: Record<strin
 
 type TabId = 'planos' | 'custas' | 'contratos';
 
-export default function FinanceiroClient({ planos: ip, custas: ic, contratos: ico, clienteMap }: Props) {
-  const { planos, custas, contratos } = useFinanceiro(ip, ic, ico);
+export default function FinanceiroClient(_props: Props) {
+  const { planos, custas, contratos, clienteMap } = useFinanceiro();
   const [tab, setTab] = useState<TabId>('planos');
   const [statusFilter, setStatusFilter] = useState('');
 
