@@ -4,6 +4,7 @@ import Sidebar from '@/components/shell/sidebar/Sidebar';
 import MobileNav from '@/components/shell/mobile/MobileNav';
 import Header from '@/components/shell/header/Header';
 import WorkspaceBootstrap from '@/components/shell/workspace/WorkspaceBootstrap';
+import ShellContent from '@/components/shell/layout/ShellContent';
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -12,24 +13,16 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
 
   return (
     <WorkspaceBootstrap userId={user.id} email={user.email ?? ''}>
-      <div className="min-h-screen flex">
-        {/* Persistent sidebar — desktop */}
+      <div className="min-h-screen flex bg-background">
         <Sidebar />
-
-        {/* Mobile navigation */}
         <MobileNav />
-
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-56 transition-all duration-200" id="workspace-main">
-          {/* Sticky header */}
-          <div className="lg:hidden h-14" /> {/* Spacer for mobile top bar */}
+        <ShellContent>
+          <div className="lg:hidden h-14 flex-shrink-0" />
           <Header />
-
-          {/* Page content */}
           <main className="flex-1 overflow-auto p-4 lg:p-6">
             {children}
           </main>
-        </div>
+        </ShellContent>
       </div>
     </WorkspaceBootstrap>
   );

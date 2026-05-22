@@ -1,6 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+const ADMIN_ROUTES = [
+  '/clientes', '/processos', '/publicacoes', '/prazos',
+  '/tarefas', '/timeline', '/financeiro', '/agenda',
+];
+
+function isAdminRoute(pathname: string) {
+  return ADMIN_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'));
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -22,8 +31,8 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
+
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/convite') || pathname === '/auth/callback';
   const isPublicRoute = pathname === '/' || isAuthRoute;
 
@@ -36,6 +45,18 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === '/login' || pathname === '/')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // Guard admin-only routes — non-admins redirected to dashboard
+  if (user && isAdminRoute(pathname)) {
+    const { data: adminData } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!adminData) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return supabaseResponse;

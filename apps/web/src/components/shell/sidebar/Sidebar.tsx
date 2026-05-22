@@ -100,8 +100,8 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 no-scrollbar space-y-4">
         {sections.map((section) => (
-          <div key={section.label}>
-            {!sidebarCollapsed && (
+          <div key={section.label || 'main'}>
+            {!sidebarCollapsed && section.label && (
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
                 {section.label}
               </p>
