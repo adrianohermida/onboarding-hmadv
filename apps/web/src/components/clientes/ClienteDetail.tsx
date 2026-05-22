@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Clock, User, MapPin, Briefcase, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, User, Briefcase, ChevronDown, ChevronUp, ExternalLink, Gavel } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
 import { formatDate, formatCurrency, getInitials } from '@/lib/utils';
 import type { Tables } from '@/types/database';
 import { WORKFLOW_STATUS_LABELS, FASE_LABELS } from '@/types';
@@ -19,15 +21,45 @@ interface Props {
   timeline: TimelineItem[];
 }
 
-type Tab = 'visao_geral' | 'documentos' | 'timeline';
+type Tab = 'visao_geral' | 'documentos' | 'processos' | 'timeline';
+
+function useProcessosCliente(casoId: string) {
+  return useQuery({
+    queryKey: ['processos-cliente', casoId],
+    staleTime: 120_000,
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('re_processos_judiciais')
+        .select('id, numero_cnj, tribunal, grau, classe_nome, assunto_principal, orgao_julgador, data_distribuicao, ultima_movimentacao, valor_causa')
+        .eq('caso_id', casoId)
+        .order('ultima_movimentacao', { ascending: false });
+      return data ?? [];
+    },
+  });
+}
+
+function grauLabel(grau: number | null) {
+  if (grau === 1) return '1º Grau';
+  if (grau === 2) return '2º Grau';
+  if (grau === 3) return 'Superior';
+  return '—';
+}
+
+function formatCurrencyLocal(val: number | null) {
+  if (val == null) return null;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+}
 
 export default function ClienteDetail({ caso, docs, timeline }: Props) {
   const [tab, setTab] = useState<Tab>('visao_geral');
   const [showAll, setShowAll] = useState(false);
+  const { data: processos = [], isLoading: processosLoading } = useProcessosCliente(caso.id);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'visao_geral', label: 'Visão geral' },
     { id: 'documentos', label: `Documentos (${docs.length})` },
+    { id: 'processos', label: processos.length ? `Processos (${processos.length})` : 'Processos' },
     { id: 'timeline', label: 'Timeline' },
   ];
 
@@ -189,6 +221,59 @@ export default function ClienteDetail({ caso, docs, timeline }: Props) {
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">Nenhum documento</p>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'processos' && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {processosLoading ? (
+            <div className="divide-y divide-border">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="px-4 py-4 flex gap-3 animate-pulse">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-48 bg-muted rounded" />
+                    <div className="h-3 w-32 bg-muted rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : processos.length === 0 ? (
+            <div className="py-10 text-center">
+              <Gavel className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhum processo vinculado</p>
+              <Link href="/processos" className="text-xs text-primary hover:underline mt-1 inline-block">
+                Ver todos os processos
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {processos.map((p) => (
+                <div key={p.id} className="px-4 py-4 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Gavel className="h-4 w-4 text-violet-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-xs font-semibold text-foreground">{p.numero_cnj ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{p.tribunal ?? '—'} · {grauLabel(p.grau)}</p>
+                    {p.classe_nome && <p className="text-xs text-muted-foreground mt-0.5">{p.classe_nome}</p>}
+                    <div className="flex items-center gap-3 mt-1.5">
+                      {p.ultima_movimentacao && (
+                        <span className="text-[10px] text-muted-foreground/70">
+                          Mov. {formatDate(p.ultima_movimentacao)}
+                        </span>
+                      )}
+                      {formatCurrencyLocal(p.valor_causa) && (
+                        <span className="text-[10px] font-medium text-foreground/60">
+                          {formatCurrencyLocal(p.valor_causa)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

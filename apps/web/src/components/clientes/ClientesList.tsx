@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, ChevronRight, Users } from 'lucide-react';
+import { Search, ChevronRight, Users, X } from 'lucide-react';
 import { formatDate, getInitials } from '@/lib/utils';
 import type { ClienteSummary } from '@/types';
 import { FASE_LABELS } from '@/types';
@@ -53,6 +53,13 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
     });
   }
 
+  function clearFilters() {
+    setSearchValue('');
+    startTransition(() => { router.push(pathname); });
+  }
+
+  const hasFilters = !!search || !!fase;
+
   const filtered = fase
     ? clients.filter((c) => c.fase === fase)
     : clients;
@@ -79,6 +86,7 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
           </button>
         </form>
 
+        <div className="flex items-center gap-2">
         <select
           value={fase}
           onChange={(e) => handleFase(e.target.value)}
@@ -88,7 +96,36 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted/60 transition-colors"
+            title="Limpar filtros"
+          >
+            <X className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Limpar</span>
+          </button>
+        )}
+        </div>
       </div>
+
+      {/* Active filter summary */}
+      {hasFilters && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+          {search && (
+            <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+              "{search}"
+            </span>
+          )}
+          {fase && (
+            <span className="inline-flex items-center gap-1 bg-muted rounded-full px-2 py-0.5 font-medium">
+              {FASE_LABELS[fase] ?? fase}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Table — desktop */}
       <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
