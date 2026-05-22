@@ -32,6 +32,8 @@ const expectedAdminCaseLabels = {
 
 const expectedAdminOperations = {
   partes: { title: 'Partes', menuLabel: 'Partes' },
+  audiencias: { title: 'Audiencias', menuLabel: 'Audiencias' },
+  publicacoes: { title: 'Publicacoes', menuLabel: 'Publicacoes' },
 };
 
 describe('navigation contract', () => {
