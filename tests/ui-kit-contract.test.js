@@ -87,10 +87,15 @@ describe('ui kit contract', () => {
   it('is loaded by the existing portal stylesheet and shell bootstrap', () => {
     const componentsCss = fs.readFileSync(path.join(root, 'styles', 'components.css'), 'utf8');
     const appJs = fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8');
+    const layoutCss = fs.readFileSync(path.join(root, 'styles', 'layout.css'), 'utf8');
 
     expect(componentsCss).toContain("@import '../components/ui/index.css'");
     expect(appJs).toContain("import { initUiKit }");
     expect(appJs).toContain('initUiKit(document)');
+    expect(appJs).toContain('data-legal-filter-clear');
+    expect(appJs).not.toContain('Sessão local');
+    expect(layoutCss).toContain('.shell-legal-toolbar-head');
+    expect(layoutCss).toContain('width: 18px !important');
   });
 
   it('keeps app components compact and aligned with the shell design language', () => {
