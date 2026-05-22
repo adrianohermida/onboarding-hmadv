@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"d:\\\\Github\\\\onboarding-hmadv\\\\apps\\\\web\\\\src\\\\app\\\\\\(workspace\\)\" -Directory)",
-      "Bash(Select-Object -ExpandProperty Name)"
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
