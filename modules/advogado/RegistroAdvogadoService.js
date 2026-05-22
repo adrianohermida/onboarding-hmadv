@@ -3,6 +3,7 @@ const TIMELINE_PREFIX = 'portal:advogado:timeline:';
 const AUDIT_PREFIX = 'portal:advogado:audit:';
 const OPERATIONAL_TABLE = 'portal_operational_records';
 const AUDIT_TABLE = 'portal_operational_record_audit';
+const PARTES_LINKS_TABLE = 'portal_partes_vinculos';
 
 let supabaseClientPromise = null;
 let currentWorkspacePromise = null;
@@ -134,6 +135,10 @@ const PROCESSOS_FIELDS = [
 
 const PARTES_FIELDS = [
   { key: 'processo_id', label: 'Processo ID', type: 'text', required: true },
+  { key: 'plano_pagamento_id', label: 'Plano pagamento ID', type: 'text' },
+  { key: 'cliente_user_id', label: 'Cliente user ID', type: 'text' },
+  { key: 'caso_id', label: 'Caso ID', type: 'text' },
+  { key: 'vinculo_status', label: 'Vinculo', type: 'select', options: ['ativo', 'inativo'], required: true },
   { key: 'tenant_id', label: 'Tenant ID', type: 'text' },
   { key: 'nome', label: 'Nome', type: 'text', required: true },
   { key: 'tipo', label: 'Tipo', type: 'text' },
@@ -729,6 +734,75 @@ function mapRemoteRow(row) {
   };
 }
 
+function mapPartesRow(row) {
+  return {
+    id: row.id,
+    processo_id: row.processo_id,
+    plano_pagamento_id: row.plano_pagamento_id,
+    cliente_user_id: row.cliente_user_id,
+    caso_id: row.caso_id,
+    vinculo_status: row.vinculo_status || 'ativo',
+    tenant_id: row.tenant_id,
+    nome: row.nome,
+    tipo: row.tipo,
+    polo: row.polo,
+    documento: row.documento,
+    contact_id_freshsales: row.contact_id_freshsales,
+    tipo_pessoa: row.tipo_pessoa,
+    advogados: row.advogados,
+    fonte: row.fonte,
+    representada_pelo_escritorio: row.representada_pelo_escritorio,
+    cliente_hmadv: row.cliente_hmadv,
+    contato_freshsales_id: row.contato_freshsales_id,
+    principal_no_account: row.principal_no_account,
+    observacao: row.observacao,
+    status: row.status || PARTES_STATUS[0],
+    archived: Boolean(row.archived_at),
+    source: 'supabase',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    archivedAt: row.archived_at,
+    deletedAt: row.deleted_at,
+  };
+}
+
+function toPartesPayload(payload = {}) {
+  const {
+    id,
+    source,
+    createdAt,
+    updatedAt,
+    archivedAt,
+    deletedAt,
+    archived,
+    ...rest
+  } = payload;
+
+  return {
+    processo_id: rest.processo_id || null,
+    plano_pagamento_id: rest.plano_pagamento_id || null,
+    cliente_user_id: rest.cliente_user_id || null,
+    caso_id: rest.caso_id || null,
+    vinculo_status: rest.vinculo_status || 'ativo',
+    tenant_id: rest.tenant_id || null,
+    nome: rest.nome || null,
+    tipo: rest.tipo || null,
+    polo: rest.polo || null,
+    documento: rest.documento || null,
+    contact_id_freshsales: rest.contact_id_freshsales || null,
+    tipo_pessoa: rest.tipo_pessoa || null,
+    advogados: rest.advogados || null,
+    fonte: rest.fonte || null,
+    representada_pelo_escritorio: rest.representada_pelo_escritorio || null,
+    cliente_hmadv: rest.cliente_hmadv || null,
+    contato_freshsales_id: rest.contato_freshsales_id || null,
+    principal_no_account: rest.principal_no_account || null,
+    observacao: rest.observacao || null,
+    status: rest.status || PARTES_STATUS[0],
+    archived_at: archived === true ? (archivedAt || nowIso()) : null,
+  };
+}
+
 function toRemotePayload(moduleKey, payload = {}) {
   const status = payload.status || getAdvogadoModuleConfig(moduleKey)?.status?.[0] || 'ativo';
   const archivedAt = payload.archived === true ? (payload.archivedAt || nowIso()) : null;
@@ -780,6 +854,20 @@ export function getAdvogadoModuleConfig(moduleKey) {
 }
 
 export async function listAdvogadoRecords(moduleKey) {
+  if (moduleKey === 'partes') {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase
+      .from(PARTES_LINKS_TABLE)
+      .select('*')
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false });
+
+    if (!error) return (data || []).map(mapPartesRow);
+
+    console.warn('[RegistroAdvogadoService] Partes list fallback:', error.message);
+    return parseJson(storageKey(moduleKey), []);
+  }
+
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase
     .from(OPERATIONAL_TABLE)
@@ -806,6 +894,63 @@ export async function saveAdvogadoRecord(moduleKey, payload, existingId = null) 
     source: 'local',
     updatedAt: timestamp,
   };
+
+  if (moduleKey === 'partes') {
+    const supabase = await getSupabaseClient();
+    const workspaceId = await getCurrentWorkspaceId();
+    const actor = await getCurrentUserId().catch(() => null);
+    const partesPayload = {
+      ...toPartesPayload(normalized),
+      workspace_id: workspaceId || null,
+      updated_by: actor,
+    };
+
+    if (existingId) {
+      const { data, error } = await supabase
+        .from(PARTES_LINKS_TABLE)
+        .update(partesPayload)
+        .eq('id', existingId)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        await writeAudit(moduleKey, existingId, 'updated', normalized);
+        return mapPartesRow(data);
+      }
+
+      console.warn('[RegistroAdvogadoService] Partes update fallback:', error?.message);
+      const records = parseJson(storageKey(moduleKey), []);
+      const index = records.findIndex(record => record.id === existingId);
+      if (index < 0) throw new Error('Registro não encontrado');
+      records[index] = { ...records[index], ...normalized };
+      persistJson(storageKey(moduleKey), records);
+      addLocalTimelineEvent(moduleKey, existingId, 'updated', 'Registro atualizado', normalized);
+      return records[index];
+    }
+
+    const { data, error } = await supabase
+      .from(PARTES_LINKS_TABLE)
+      .insert({ ...partesPayload, created_by: actor })
+      .select()
+      .single();
+
+    if (!error && data) {
+      await writeAudit(moduleKey, data.id, 'created', normalized);
+      return mapPartesRow(data);
+    }
+
+    console.warn('[RegistroAdvogadoService] Partes insert fallback:', error?.message);
+    const records = parseJson(storageKey(moduleKey), []);
+    const record = {
+      id: makeId(),
+      createdAt: timestamp,
+      ...normalized,
+    };
+    records.unshift(record);
+    persistJson(storageKey(moduleKey), records);
+    addLocalTimelineEvent(moduleKey, record.id, 'created', 'Registro criado', normalized);
+    return record;
+  }
 
   const remotePayload = toRemotePayload(moduleKey, normalized);
   const workspaceId = await getCurrentWorkspaceId();
@@ -863,6 +1008,42 @@ export async function saveAdvogadoRecord(moduleKey, payload, existingId = null) 
 
 export async function archiveAdvogadoRecord(moduleKey, recordId) {
   const timestamp = nowIso();
+  if (moduleKey === 'partes') {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase
+      .from(PARTES_LINKS_TABLE)
+      .update({
+        archived_at: timestamp,
+        status: 'arquivado',
+        vinculo_status: 'inativo',
+        updated_by: await getCurrentUserId().catch(() => null),
+      })
+      .eq('id', recordId)
+      .select()
+      .maybeSingle();
+
+    if (!error && data) {
+      await writeAudit(moduleKey, recordId, 'archived', { archivedAt: timestamp });
+      return mapPartesRow(data);
+    }
+
+    console.warn('[RegistroAdvogadoService] Partes archive fallback:', error?.message);
+    const records = parseJson(storageKey(moduleKey), []);
+    const index = records.findIndex(record => record.id === recordId);
+    if (index < 0) return null;
+    records[index] = {
+      ...records[index],
+      archived: true,
+      status: 'arquivado',
+      vinculo_status: 'inativo',
+      archivedAt: timestamp,
+      updatedAt: timestamp,
+    };
+    persistJson(storageKey(moduleKey), records);
+    addLocalTimelineEvent(moduleKey, recordId, 'archived', 'Registro arquivado', { archivedAt: timestamp });
+    return records[index];
+  }
+
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase
     .from(OPERATIONAL_TABLE)
@@ -894,6 +1075,26 @@ export async function archiveAdvogadoRecord(moduleKey, recordId) {
 
 export async function deleteAdvogadoRecord(moduleKey, recordId) {
   const timestamp = nowIso();
+  if (moduleKey === 'partes') {
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase
+      .from(PARTES_LINKS_TABLE)
+      .update({ deleted_at: timestamp, updated_by: await getCurrentUserId().catch(() => null) })
+      .eq('id', recordId);
+
+    if (!error) {
+      await writeAudit(moduleKey, recordId, 'deleted', { deletedAt: timestamp });
+      return;
+    }
+
+    console.warn('[RegistroAdvogadoService] Partes delete fallback:', error.message);
+    const records = parseJson(storageKey(moduleKey), []);
+    const next = records.filter(record => record.id !== recordId);
+    persistJson(storageKey(moduleKey), next);
+    addLocalTimelineEvent(moduleKey, recordId, 'deleted', 'Registro excluído', { deletedAt: timestamp });
+    return;
+  }
+
   const supabase = await getSupabaseClient();
   const { error } = await supabase
     .from(OPERATIONAL_TABLE)
@@ -947,10 +1148,18 @@ export function filterAdvogadoRecords(records, filters = {}) {
   const query = String(filters.query || '').trim().toLowerCase();
   const status = filters.status || 'todos';
   const archived = filters.archived === true;
+  const processoId = String(filters.processoId || '').trim().toLowerCase();
+  const planoPagamentoId = String(filters.planoPagamentoId || '').trim().toLowerCase();
+  const clienteUserId = String(filters.clienteUserId || '').trim().toLowerCase();
+  const vinculoStatus = filters.vinculoStatus || 'todos';
 
   return records.filter(record => {
     if (Boolean(record.archived) !== archived) return false;
     if (status !== 'todos' && record.status !== status) return false;
+    if (processoId && !String(record.processo_id || '').toLowerCase().includes(processoId)) return false;
+    if (planoPagamentoId && !String(record.plano_pagamento_id || '').toLowerCase().includes(planoPagamentoId)) return false;
+    if (clienteUserId && !String(record.cliente_user_id || '').toLowerCase().includes(clienteUserId)) return false;
+    if (vinculoStatus !== 'todos' && String(record.vinculo_status || 'ativo') !== vinculoStatus) return false;
     if (!query) return true;
     return Object.values(record).some(value => String(value ?? '').toLowerCase().includes(query));
   });

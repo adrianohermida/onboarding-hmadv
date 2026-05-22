@@ -30,6 +30,10 @@ const state = {
   query: '',
   status: 'todos',
   archived: false,
+  processoId: '',
+  planoPagamentoId: '',
+  clienteUserId: '',
+  vinculoStatus: 'todos',
   page: 1,
   pageSize: 8,
 };
@@ -581,14 +585,45 @@ function getPaginatedRecords() {
   const config = getAdvogadoModuleConfig(state.moduleKey);
   if (!config) return null;
 
+  const isPartes = state.moduleKey === 'partes';
   const filtered = filterAdvogadoRecords(state.records, {
     query: state.query,
     status: state.status,
     archived: state.archived,
+    processoId: isPartes ? state.processoId : '',
+    planoPagamentoId: isPartes ? state.planoPagamentoId : '',
+    clienteUserId: isPartes ? state.clienteUserId : '',
+    vinculoStatus: isPartes ? state.vinculoStatus : 'todos',
   });
   const paginated = paginateAdvogadoRecords(filtered, state.page, state.pageSize);
   state.page = paginated.page;
   return { config, paginated };
+}
+
+function renderPartesAdvancedFilters() {
+  if (state.moduleKey !== 'partes') return '';
+  return `
+    <label class="ui-field">
+      <span class="ui-label">Processo ID</span>
+      <input class="ui-input" type="search" value="${escapeHtml(state.processoId)}" data-advogado-filter="processoId" placeholder="Filtrar por processo">
+    </label>
+    <label class="ui-field">
+      <span class="ui-label">Plano ID</span>
+      <input class="ui-input" type="search" value="${escapeHtml(state.planoPagamentoId)}" data-advogado-filter="planoPagamentoId" placeholder="Filtrar por plano">
+    </label>
+    <label class="ui-field">
+      <span class="ui-label">Cliente User ID</span>
+      <input class="ui-input" type="search" value="${escapeHtml(state.clienteUserId)}" data-advogado-filter="clienteUserId" placeholder="Filtrar por cliente">
+    </label>
+    <label class="ui-field">
+      <span class="ui-label">Vínculo</span>
+      <select class="ui-select" data-advogado-filter="vinculoStatus">
+        <option value="todos" ${state.vinculoStatus === 'todos' ? 'selected' : ''}>Todos</option>
+        <option value="ativo" ${state.vinculoStatus === 'ativo' ? 'selected' : ''}>Ativo</option>
+        <option value="inativo" ${state.vinculoStatus === 'inativo' ? 'selected' : ''}>Inativo</option>
+      </select>
+    </label>
+  `;
 }
 
 function renderPagination(paginated) {
@@ -671,6 +706,7 @@ function renderModulePage() {
             <option value="arquivados" ${state.archived ? 'selected' : ''}>Arquivados</option>
           </select>
         </label>
+        ${renderPartesAdvancedFilters()}
       </div>
 
       <div id="advogado-records-host">
@@ -776,8 +812,12 @@ function bindModuleEvents(host) {
     }
 
     const filter = event.target?.dataset?.advogadoFilter;
-    if (filter !== 'query') return;
-    state.query = event.target.value;
+    if (!filter) return;
+    if (filter === 'query') state.query = event.target.value;
+    if (filter === 'processoId') state.processoId = event.target.value;
+    if (filter === 'planoPagamentoId') state.planoPagamentoId = event.target.value;
+    if (filter === 'clienteUserId') state.clienteUserId = event.target.value;
+    if (!['query', 'processoId', 'planoPagamentoId', 'clienteUserId'].includes(filter)) return;
     state.page = 1;
     clearTimeout(queryRenderTimer);
     queryRenderTimer = setTimeout(() => refreshList(host), 120);
@@ -788,6 +828,7 @@ function bindModuleEvents(host) {
     if (!filter) return;
     if (filter === 'status') state.status = event.target.value;
     if (filter === 'archived') state.archived = event.target.value === 'arquivados';
+    if (filter === 'vinculoStatus') state.vinculoStatus = event.target.value;
     state.page = 1;
     refreshList(host);
   });
@@ -905,6 +946,10 @@ export async function bootAdvogadoPage(moduleKey) {
   state.query = '';
   state.status = 'todos';
   state.archived = false;
+  state.processoId = '';
+  state.planoPagamentoId = '';
+  state.clienteUserId = '';
+  state.vinculoStatus = 'todos';
   state.page = 1;
   state.records = await loadModuleRecords(moduleKey);
 

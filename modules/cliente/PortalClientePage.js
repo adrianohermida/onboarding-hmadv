@@ -1,4 +1,11 @@
-import { CaseService, DebtService, DocumentService } from '../../services/database.js';
+import {
+  CaseService,
+  DebtService,
+  DocumentService,
+  CustasService,
+  ContratosService,
+  PlanoPagamentoService,
+} from '../../services/database.js';
 import { financialPlanEngine } from '../financeiro/FinancialPlanEngine.js';
 import { buildCommunicationSnapshot } from '../mensagens/CommunicationCenter.js';
 
@@ -195,26 +202,28 @@ function renderCasePage(data) {
 }
 
 function renderCustasPage(data) {
-  const { debts, nextStep } = data;
-  const estimated = debts.reduce((sum, debt) => sum + (Number(debt.valor || 0) * 0.02), 0);
-  const rows = debts.length
-    ? debts.slice(0, 8).map(debt => `
+  const { custas, nextStep } = data;
+  const estimated = custas.reduce((sum, item) => sum + Number(item.valor || 0), 0);
+  const pending = custas.filter(item => ['pendente', 'emitida', 'vencida'].includes(item.status)).length;
+  const comprovantes = custas.filter(item => item.comprovante_url || item.comprovante_nome).length;
+  const rows = custas.length
+    ? custas.slice(0, 10).map(item => `
       <article class="cliente-list-item">
         <div>
-          <strong>${escapeHtml(debt.credor || 'Credor')}</strong>
-          <span>Guia vinculada ao acompanhamento jurídico</span>
+          <strong>${escapeHtml(item.titulo || item.descricao || 'Custa processual')}</strong>
+          <span>${escapeHtml(normalizeStatus(item.status || 'pendente'))} · ${escapeHtml(item.categoria || 'guia')}</span>
         </div>
-        <small>${formatMoney((Number(debt.valor || 0) * 0.02))}</small>
+        <small>${formatMoney(item.valor)}</small>
       </article>
     `).join('')
-    : '<div class="cliente-empty">As custas aparecem após o cadastro de credores e andamento processual.</div>';
+    : '<div class="cliente-empty">As custas aparecem aqui quando o escritório vincular guias e despesas ao seu caso.</div>';
 
   return `
     ${renderShellHeader('custas', nextStep)}
     <section class="cliente-kpis">
       <article class="cliente-kpi"><span>Custas estimadas</span><strong>${formatMoney(estimated)}</strong><small>base inicial de simulação</small></article>
-      <article class="cliente-kpi"><span>Guias pendentes</span><strong>${debts.length ? debts.slice(0, 8).length : 0}</strong><small>acompanhamento por credor</small></article>
-      <article class="cliente-kpi"><span>Comprovantes</span><strong>0</strong><small>anexe no envio documental</small></article>
+      <article class="cliente-kpi"><span>Guias pendentes</span><strong>${pending}</strong><small>acompanhamento por processo</small></article>
+      <article class="cliente-kpi"><span>Comprovantes</span><strong>${comprovantes}</strong><small>vínculos salvos no portal</small></article>
     </section>
     <section class="cliente-card">
       <div class="cliente-card-head">
@@ -227,22 +236,38 @@ function renderCustasPage(data) {
 }
 
 function renderContractsPage(data) {
-  const { docStats, nextStep } = data;
+  const { contratos, docStats, nextStep } = data;
+  const minutas = contratos.filter(item => ['rascunho', 'minuta', 'em_revisao'].includes(item.status)).length;
+  const aguardando = contratos.filter(item => ['aguardando_aceite', 'enviado'].includes(item.status)).length;
+  const assinados = contratos.filter(item => ['assinado', 'concluido'].includes(item.status)).length;
+  const rows = contratos.length
+    ? contratos.slice(0, 10).map(item => `
+      <article class="cliente-list-item">
+        <div>
+          <strong>${escapeHtml(item.titulo || item.tipo || 'Contrato')}</strong>
+          <span>${escapeHtml(normalizeStatus(item.status || 'rascunho'))}</span>
+        </div>
+        <small class="${['assinado', 'concluido'].includes(item.status) ? 'is-ok' : ''}">${formatDateTime(item.updated_at || item.created_at)}</small>
+      </article>
+    `).join('')
+    : '<div class="cliente-empty">Workflow contratual vazio no momento.</div>';
+
   return `
     ${renderShellHeader('contratos', nextStep)}
     <section class="cliente-kpis">
-      <article class="cliente-kpi"><span>Minutas</span><strong>${docStats.sent > 0 ? 1 : 0}</strong><small>documentação base recebida</small></article>
-      <article class="cliente-kpi"><span>Aguardando aceite</span><strong>${docStats.pending > 0 ? 1 : 0}</strong><small>dependente de pendências</small></article>
-      <article class="cliente-kpi"><span>Assinaturas</span><strong>${docStats.approved > 0 ? 1 : 0}</strong><small>status contratual</small></article>
+      <article class="cliente-kpi"><span>Minutas</span><strong>${minutas}</strong><small>documentação base recebida</small></article>
+      <article class="cliente-kpi"><span>Aguardando aceite</span><strong>${aguardando}</strong><small>dependente de pendências</small></article>
+      <article class="cliente-kpi"><span>Assinaturas</span><strong>${assinados || (docStats.approved > 0 ? 1 : 0)}</strong><small>status contratual</small></article>
     </section>
     <section class="cliente-card">
       <h2>Workflow contratual</h2>
       <div class="cliente-steps">
-        <div class="cliente-step ${docStats.sent > 0 ? 'is-done' : ''}"><span>1</span><strong>Minuta</strong></div>
-        <div class="cliente-step ${docStats.pending === 0 && docStats.sent > 0 ? 'is-done' : ''}"><span>2</span><strong>Aceite</strong></div>
-        <div class="cliente-step ${docStats.approved > 0 ? 'is-done' : ''}"><span>3</span><strong>Assinatura</strong></div>
+        <div class="cliente-step ${minutas > 0 || docStats.sent > 0 ? 'is-done' : ''}"><span>1</span><strong>Minuta</strong></div>
+        <div class="cliente-step ${aguardando === 0 && (minutas > 0 || docStats.sent > 0) ? 'is-done' : ''}"><span>2</span><strong>Aceite</strong></div>
+        <div class="cliente-step ${assinados > 0 || docStats.approved > 0 ? 'is-done' : ''}"><span>3</span><strong>Assinatura</strong></div>
         <div class="cliente-step"><span>4</span><strong>Histórico</strong></div>
       </div>
+      <div class="cliente-list" style="margin-top:14px;">${rows}</div>
       <div class="cliente-help-actions">
         <a class="btn btn-primary btn-sm" href="meus-documentos.html" data-page="meus-documentos">Enviar anexo contratual</a>
         <a class="btn btn-ghost btn-sm" href="financeiro.html" data-page="financeiro">Ver financeiro</a>
@@ -363,21 +388,25 @@ function renderPlanPage(data) {
 }
 
 function renderPaymentPlanPage(data) {
-  const { debtStats, financialPlan, nextStep } = data;
+  const { debtStats, financialPlan, planosPagamento, nextStep } = data;
   const proposal = financialPlan?.proposal || {};
-  const installments = proposal.prazoMeses && proposal.parcelaSugerida
-    ? Array.from({ length: Math.min(proposal.prazoMeses, 12) }).map((_, index) => ({
+  const currentPlan = planosPagamento[0] || null;
+  const effectivePrazo = Number(currentPlan?.prazo_meses || proposal.prazoMeses || 0);
+  const effectiveParcela = Number(currentPlan?.parcela_sugerida || proposal.parcelaSugerida || 0);
+  const effectiveSaldo = Number(currentPlan?.valor_total || proposal.saldoNegociado || 0);
+  const installments = effectivePrazo && effectiveParcela
+    ? Array.from({ length: Math.min(effectivePrazo, 12) }).map((_, index) => ({
       index: index + 1,
-      value: proposal.parcelaSugerida,
+      value: effectiveParcela,
     }))
     : [];
 
   return `
     ${renderShellHeader('plano-pagamento', nextStep)}
     <section class="cliente-kpis">
-      <article class="cliente-kpi"><span>Saldo negociado</span><strong>${formatMoney(proposal.saldoNegociado)}</strong><small>base consolidada</small></article>
-      <article class="cliente-kpi"><span>Parcela sugerida</span><strong>${formatMoney(proposal.parcelaSugerida)}</strong><small>com mínimo existencial</small></article>
-      <article class="cliente-kpi"><span>Prazo estimado</span><strong>${proposal.prazoMeses || 0} meses</strong><small>${debtStats.creditors} credores</small></article>
+      <article class="cliente-kpi"><span>Saldo negociado</span><strong>${formatMoney(effectiveSaldo)}</strong><small>base consolidada</small></article>
+      <article class="cliente-kpi"><span>Parcela sugerida</span><strong>${formatMoney(effectiveParcela)}</strong><small>com mínimo existencial</small></article>
+      <article class="cliente-kpi"><span>Prazo estimado</span><strong>${effectivePrazo || 0} meses</strong><small>${debtStats.creditors} credores</small></article>
     </section>
     <section class="cliente-card">
       <div class="cliente-card-head">
@@ -458,10 +487,13 @@ function renderHelpPage(data) {
 
 async function loadClientData() {
   await CaseService.ensureExists().catch(() => {});
-  const [caso, debts, docs] = await Promise.all([
+  const [caso, debts, docs, custas, contratos, planosPagamento] = await Promise.all([
     CaseService.get().catch(() => null),
     DebtService.list().catch(() => []),
     DocumentService.list().catch(() => []),
+    CustasService.list().catch(() => []),
+    ContratosService.list().catch(() => []),
+    PlanoPagamentoService.list().catch(() => []),
   ]);
   const docStats = getDocStats(docs);
   const debtStats = getDebtStats(debts);
@@ -475,6 +507,9 @@ async function loadClientData() {
     caso,
     debts,
     docs,
+    custas,
+    contratos,
+    planosPagamento,
     docStats,
     debtStats,
     financialPlan,

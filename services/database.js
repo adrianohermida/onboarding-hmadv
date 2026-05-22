@@ -17,6 +17,19 @@ async function getUserId() {
   return user.id;
 }
 
+async function getCaseContext(uid) {
+  const { data: caso, error } = await supabase
+    .from('portal_casos')
+    .select('id, workspace_id')
+    .eq('user_id', uid)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    casoId: caso?.id ?? null,
+    workspaceId: caso?.workspace_id ?? null,
+  };
+}
+
 export async function checkIsAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
@@ -474,6 +487,187 @@ export const DocumentService = {
       .single();
     if (error) throw error;
     return data;
+  },
+};
+
+export const CustasService = {
+  async list() {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_custas')
+      .select('*')
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .order('data_lancamento', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async add(entry) {
+    const uid = await getUserId();
+    const { casoId, workspaceId } = await getCaseContext(uid);
+    const payload = {
+      ...entry,
+      user_id: uid,
+      caso_id: casoId,
+      workspace_id: workspaceId,
+    };
+    const { data, error } = await supabase
+      .from('portal_custas')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, fields) {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_custas')
+      .update(fields)
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async remove(id) {
+    const uid = await getUserId();
+    const { error } = await supabase
+      .from('portal_custas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null);
+    if (error) throw error;
+  },
+};
+
+export const ContratosService = {
+  async list() {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_contratos')
+      .select('*')
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async add(entry) {
+    const uid = await getUserId();
+    const { casoId, workspaceId } = await getCaseContext(uid);
+    const payload = {
+      ...entry,
+      user_id: uid,
+      caso_id: casoId,
+      workspace_id: workspaceId,
+    };
+    const { data, error } = await supabase
+      .from('portal_contratos')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, fields) {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_contratos')
+      .update(fields)
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async remove(id) {
+    const uid = await getUserId();
+    const { error } = await supabase
+      .from('portal_contratos')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null);
+    if (error) throw error;
+  },
+};
+
+export const PlanoPagamentoService = {
+  async list() {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_planos_pagamento')
+      .select('*')
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async upsertFromProposal(proposal = {}, metadata = {}) {
+    const uid = await getUserId();
+    const { casoId, workspaceId } = await getCaseContext(uid);
+    const payload = {
+      user_id: uid,
+      caso_id: casoId,
+      workspace_id: workspaceId,
+      titulo: metadata.titulo || 'Plano sugerido',
+      status: metadata.status || 'em_analise',
+      valor_total: Number(proposal.saldoNegociado || 0),
+      parcela_sugerida: Number(proposal.parcelaSugerida || 0),
+      prazo_meses: Number(proposal.prazoMeses || 0),
+      observacao: proposal.observacao || null,
+      cronograma: Array.isArray(metadata.cronograma) ? metadata.cronograma : [],
+      source: metadata.source || 'portal_cliente',
+      metadata: metadata.metadata || {},
+    };
+
+    const { data, error } = await supabase
+      .from('portal_planos_pagamento')
+      .upsert(payload, { onConflict: 'user_id,titulo', ignoreDuplicates: false })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, fields) {
+    const uid = await getUserId();
+    const { data, error } = await supabase
+      .from('portal_planos_pagamento')
+      .update(fields)
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async remove(id) {
+    const uid = await getUserId();
+    const { error } = await supabase
+      .from('portal_planos_pagamento')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', uid)
+      .is('deleted_at', null);
+    if (error) throw error;
   },
 };
 

@@ -51,7 +51,7 @@ describe('portal do cliente contract', () => {
     const controller = readFile('modules', 'cliente', 'PortalClientePage.js');
     const styles = readFile('styles', 'components.css');
 
-    ['CaseService', 'DebtService', 'DocumentService'].forEach(symbol => {
+    ['CaseService', 'DebtService', 'DocumentService', 'CustasService', 'ContratosService', 'PlanoPagamentoService'].forEach(symbol => {
       expect(controller).toContain(symbol);
     });
     ['documentos.html', 'dividas.html', 'suporte.html', 'onboarding-v2.html', 'financial-dashboard.html', 'custas.html', 'contratos.html', 'plano-pagamento.html'].forEach(route => {
