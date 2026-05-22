@@ -98,44 +98,56 @@ WHERE pdoc.user_id = pc.user_id
   AND pc.workspace_id IS NOT NULL;
 
 -- 2.1) Backfill em registros operacionais legados sem workspace_id
-UPDATE portal_operational_records rec
-SET workspace_id = COALESCE(
-  (
-    SELECT pc.workspace_id
-    FROM portal_casos pc
-    WHERE pc.user_id::text = NULLIF(rec.record_data->>'user_id', '')
-      AND pc.workspace_id IS NOT NULL
-    LIMIT 1
-  ),
-  (
-    SELECT pc.workspace_id
-    FROM portal_casos pc
-    WHERE pc.user_id::text = NULLIF(rec.record_data->>'cliente_user_id', '')
-      AND pc.workspace_id IS NOT NULL
-    LIMIT 1
-  ),
-  (
-    SELECT pc.workspace_id
-    FROM portal_casos pc
-    WHERE pc.user_id::text = NULLIF(rec.record_data->>'cliente_id', '')
-      AND pc.workspace_id IS NOT NULL
-    LIMIT 1
-  ),
-  (
-    SELECT id
-    FROM portal_workspaces
-    WHERE slug = 'hmadv-principal'
-    LIMIT 1
-  )
-)
-WHERE rec.workspace_id IS NULL;
+DO $$
+BEGIN
+  IF to_regclass('public.portal_operational_records') IS NOT NULL THEN
+    EXECUTE $sql$
+      UPDATE portal_operational_records rec
+      SET workspace_id = COALESCE(
+        (
+          SELECT pc.workspace_id
+          FROM portal_casos pc
+          WHERE pc.user_id::text = NULLIF(rec.record_data->>'user_id', '')
+            AND pc.workspace_id IS NOT NULL
+          LIMIT 1
+        ),
+        (
+          SELECT pc.workspace_id
+          FROM portal_casos pc
+          WHERE pc.user_id::text = NULLIF(rec.record_data->>'cliente_user_id', '')
+            AND pc.workspace_id IS NOT NULL
+          LIMIT 1
+        ),
+        (
+          SELECT pc.workspace_id
+          FROM portal_casos pc
+          WHERE pc.user_id::text = NULLIF(rec.record_data->>'cliente_id', '')
+            AND pc.workspace_id IS NOT NULL
+          LIMIT 1
+        ),
+        (
+          SELECT id
+          FROM portal_workspaces
+          WHERE slug = 'hmadv-principal'
+          LIMIT 1
+        )
+      )
+      WHERE rec.workspace_id IS NULL
+    $sql$;
+  END IF;
 
-UPDATE portal_operational_record_audit audit
-SET workspace_id = rec.workspace_id
-FROM portal_operational_records rec
-WHERE audit.record_id = rec.id
-  AND audit.workspace_id IS NULL
-  AND rec.workspace_id IS NOT NULL;
+  IF to_regclass('public.portal_operational_record_audit') IS NOT NULL
+     AND to_regclass('public.portal_operational_records') IS NOT NULL THEN
+    EXECUTE $sql$
+      UPDATE portal_operational_record_audit audit
+      SET workspace_id = rec.workspace_id
+      FROM portal_operational_records rec
+      WHERE audit.record_id = rec.id
+        AND audit.workspace_id IS NULL
+        AND rec.workspace_id IS NOT NULL
+    $sql$;
+  END IF;
+END $$;
 
 -- 3) Garantir membership basico para clientes com caso
 INSERT INTO portal_workspace_members (workspace_id, user_id, role, is_active)
