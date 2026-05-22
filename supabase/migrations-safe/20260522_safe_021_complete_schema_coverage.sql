@@ -242,11 +242,17 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 're_agenda_slots') THEN
 
     -- Clientes: reservar slot disponível (SET disponivel = false)
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_agenda_slots' AND policyname = 'client_re_agenda_slots_book') THEN
-      CREATE POLICY client_re_agenda_slots_book ON re_agenda_slots
-        FOR UPDATE TO authenticated
-        USING  (disponivel = true)   -- só pode atualizar se ainda disponível
-        WITH CHECK (disponivel = false); -- só pode marcar como indisponível
+    -- Só cria a policy se a coluna 'disponivel' existir
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 're_agenda_slots' AND column_name = 'disponivel'
+    ) THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 're_agenda_slots' AND policyname = 'client_re_agenda_slots_book') THEN
+        CREATE POLICY client_re_agenda_slots_book ON re_agenda_slots
+          FOR UPDATE TO authenticated
+          USING  (disponivel = true)
+          WITH CHECK (disponivel = false);
+      END IF;
     END IF;
 
     GRANT SELECT, UPDATE ON re_agenda_slots TO authenticated;
