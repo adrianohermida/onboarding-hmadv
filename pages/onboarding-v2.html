@@ -283,6 +283,8 @@
           <button class="btn btn-primary btn-sm" onclick="document.getElementById('journey-tracker')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">Continuar jornada</button>
         </div>
 
+        <div id="journey-case-summary"></div>
+
         <!-- STEP TRACKER -->
         <div class="jt-wrap" id="journey-tracker" role="navigation" aria-label="Passos da jornada">
           <!-- Rendered by JourneyEngine -->
@@ -322,6 +324,8 @@ import { VideoPlayer }      from '../modules/videos/VideoPlayer.js';
 import { Toast }            from '../modules/ui/Toast.js';
 import { Shell }            from '../modules/ui/Shell.js';
 import { openCnjAnexoIIPrint } from '../js/cnj-pdf-generator.js';
+import { clearDraft } from '../js/cnj-engine.js';
+import { buildCaseContextHref, getCaseFlowSummary } from '../js/case-flow.js';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -340,7 +344,71 @@ let unmountModeSelector = null;
 let formDoc   = null;   // portal_documentos row for formulario_cnj_online
 let anexoDoc  = null;   // portal_documentos row for formulario_cnj_anexo_ii
 let webAnexoGenerated = false; // true after user generates the Annex II via WEB path
+let activeUserId = null;
+let targetUserId = null;
 const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const journeyUrlParams = new URLSearchParams(window.location.search);
+const requestedClientId = journeyUrlParams.get('client');
+
+function isAdminClientView() {
+  return Boolean(isAdminUser && requestedClientId && targetUserId && targetUserId !== activeUserId);
+}
+
+function buildContextHref(pageKey, options = {}) {
+  return buildCaseContextHref(pageKey, {
+    clientId: isAdminClientView() ? targetUserId : null,
+    ...options,
+  });
+}
+
+async function resolveCaseContext() {
+  const { data: { user } } = await supabase.auth.getUser();
+  activeUserId = user?.id || null;
+  targetUserId = isAdminUser && requestedClientId ? requestedClientId : activeUserId;
+  return targetUserId;
+}
+
+function renderCaseSummary() {
+  const host = document.getElementById('journey-case-summary');
+  if (!host) return;
+
+  const summary = getCaseFlowSummary(casoState || {}, { workflowStatus: formDoc?.workflow_status || null });
+  const inspectionCopy = isAdminClientView()
+    ? `
+      <div class="callout callout-blue" style="margin:0 0 12px;">
+        Acompanhamento admin do fluxo do cliente. Use os atalhos abaixo para revisar jornada, formulário e diagnóstico sem perder o contexto do caso.
+      </div>
+    `
+    : '';
+  const restartButton = summary.step > 0 || casoState?.onboarding_done
+    ? `<button type="button" class="btn btn-ghost btn-sm" onclick="window.resetCaseJourney()">Começar de novo</button>`
+    : '';
+
+  host.innerHTML = `
+    ${inspectionCopy}
+    <div class="dyn-card" style="margin-bottom:16px;">
+      <div class="dyn-card-header">
+        <span class="dyn-card-title">Resumo do fluxo CNJ</span>
+        <span class="sec-tag">${escHtml(summary.label)}</span>
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Progresso</label>
+          <div style="font-weight:700;color:var(--navy);">${summary.step}/7 · ${summary.progressPct}%</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Situação</label>
+          <div style="font-weight:700;color:var(--ink);">${escHtml(summary.detail)}</div>
+        </div>
+      </div>
+      <div class="btn-group" style="justify-content:flex-start;flex-wrap:wrap;">
+        <a class="btn btn-primary btn-sm" href="${buildContextHref('onboarding', { source: 'journey' })}">Abrir formulário</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('financial-dashboard')}">Abrir diagnóstico</a>
+        ${restartButton}
+      </div>
+    </div>
+  `;
+}
 
 document.addEventListener('app:user-loaded', (e) => {
   isAdminUser = !!e.detail?.isAdmin;
@@ -384,6 +452,7 @@ async function bootstrap() {
 
   await loadData();
   renderTracker();
+    renderCaseSummary();
   const first = engine.getCurrentStep();
   navigateTo(first?.id ?? JOURNEY_STEPS[0].id);
 }
@@ -414,6 +483,7 @@ document.addEventListener('app:route-will-change', () => {
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════
 async function loadData() {
+    await resolveCaseContext();
   // 1. Load video catalog
   try {
     const videos = await VideoService.listVideos();
@@ -435,7 +505,7 @@ async function loadData() {
     const caso = await supabase
       .from('portal_casos')
       .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj,onboarding_done,cnj_step_atual')
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .eq('user_id', targetUserId)
       .maybeSingle();
     if (caso.data) {
       const d = caso.data;
@@ -474,20 +544,20 @@ async function loadData() {
   // 5. Load caso state + form doc from DB (overrides stale sessionStorage)
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user?.id) {
+    if (user?.id && targetUserId) {
       const [casoRes, formRes, anexoRes] = await Promise.all([
         supabase.from('portal_casos')
           .select('onboarding_done,cnj_step_atual')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .maybeSingle(),
         supabase.from('portal_documentos')
           .select('workflow_status,admin_notes,updated_at')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .eq('tipo', 'formulario_cnj_online')
           .maybeSingle(),
         supabase.from('portal_documentos')
           .select('workflow_status,admin_notes,updated_at')
-          .eq('user_id', user.id)
+          .eq('user_id', targetUserId)
           .eq('tipo', 'formulario_cnj_anexo_ii')
           .maybeSingle(),
       ]);
@@ -924,8 +994,24 @@ function buildAnexoWebPanelHtml() {
       <div class="done-banner" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.2);color:var(--red);margin-bottom:12px;">
         Correção solicitada.${formDoc?.admin_notes ? ` <b>Nota:</b> ${escHtml(formDoc.admin_notes)}` : ''} Corrija e reenvie o formulário guiado.
       </div>
-      <a href="onboarding.html?source=journey" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+      <a href="${buildContextHref('onboarding', { source: 'journey' })}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
         Corrigir formulário →
+      </a>`;
+  }
+
+  if (isAdminClientView()) {
+    return `
+      <div class="glass-info" style="margin-bottom:12px;">
+        <div class="glass-info-title">Acompanhamento administrativo</div>
+        <ul>
+          <li>O cliente ainda precisa concluir o formulário guiado para liberar o Anexo II</li>
+          <li>Use o formulário web para revisar o que já foi salvo até agora</li>
+          <li>Quando o cliente finalizar, o Anexo II poderá ser gerado ou enviado aqui</li>
+        </ul>
+      </div>
+      <a href="${buildContextHref('onboarding', { source: 'journey' })}" class="btn btn-primary"
+         style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
+        ${stepN > 0 ? `Acompanhar formulário do cliente (passo ${stepN}/7) →` : 'Abrir formulário do cliente →'}
       </a>`;
   }
 
@@ -940,7 +1026,7 @@ function buildAnexoWebPanelHtml() {
         <li>Após concluir, o Anexo II será gerado automaticamente aqui</li>
       </ul>
     </div>
-    <a href="onboarding.html?source=journey" class="btn btn-primary"
+    <a href="${buildContextHref('onboarding', { source: 'journey' })}" class="btn btn-primary"
        style="display:inline-flex;align-items:center;gap:8px;margin-bottom:4px">
       ${stepN > 0 ? `Continuar formulário guiado (passo ${stepN}/7) →` : 'Iniciar formulário guiado →'}
     </a>`;
@@ -957,7 +1043,7 @@ window.generateAnexoIIDoc = async function() {
     const { data: caso } = await supabase
       .from('portal_casos')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId || user.id)
       .maybeSingle();
     if (!caso) throw new Error('Dados do caso não encontrados');
 
@@ -982,13 +1068,14 @@ window.generateAnexoIIDoc = async function() {
 
 window.confirmAnexoWebGenerated = async function(stepId) {
   if (!webAnexoGenerated) { Toast.warn('Gere o documento antes de confirmar.'); return; }
+  if (isAdminClientView()) { Toast.warn('O modo admin é apenas de acompanhamento.'); return; }
   const btn = document.getElementById('btn-confirm-web-anexo');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: caso }     = await supabase.from('portal_casos').select('id,workspace_id').eq('user_id', user.id).maybeSingle();
+    const { data: caso }     = await supabase.from('portal_casos').select('id,workspace_id').eq('user_id', targetUserId || user.id).maybeSingle();
     await supabase.from('portal_documentos').upsert({
-      user_id:         user.id,
+      user_id:         targetUserId || user.id,
       tipo:            'formulario_cnj_anexo_ii',
       nome_arquivo:    'Formulário CNJ Anexo II (gerado online)',
       status:          'em_analise',       // legacy field used by dashboard KPI/activity aggregations
@@ -1181,15 +1268,16 @@ window.clearUpload = function() {
 
 window.submitAnexo = async function(stepId) {
   if (!uploadedFile) { Toast.warn('Selecione o PDF antes de enviar.'); return; }
+  if (isAdminClientView()) { Toast.warn('O modo admin é apenas de acompanhamento.'); return; }
   const btn = document.getElementById('btn-submit-anexo');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const path = `${user.id}/anexo_ii/${Date.now()}.pdf`;
+    const path = `${targetUserId || user.id}/anexo_ii/${Date.now()}.pdf`;
     const { error: upErr } = await supabase.storage.from('portal-documentos').upload(path, uploadedFile, { upsert: true });
     if (upErr) throw upErr;
     await supabase.from('portal_documentos').upsert(
-      { user_id: user.id, tipo: 'formulario_cnj_anexo_ii', nome_arquivo: uploadedFile.name, storage_path: path, status: 'em_analise' },
+      { user_id: targetUserId || user.id, tipo: 'formulario_cnj_anexo_ii', nome_arquivo: uploadedFile.name, storage_path: path, status: 'em_analise' },
       { onConflict: 'user_id,tipo' }
     );
     engine.setState(stepId, 'awaiting_review');
@@ -1257,7 +1345,7 @@ function renderCnjFormStep(step, container) {
 
         <div style="background:var(--ice);border:1px solid rgba(26,58,92,.15);border-radius:10px;padding:20px;text-align:center;margin-bottom:14px">
           ${!isDone ? `<div style="font-size:12px;color:var(--ink2);margin-bottom:16px">Tempo estimado: 15–25 minutos. Respostas salvas automaticamente.</div>` : ''}
-          <a href="onboarding.html?source=journey" class="btn ${isDone ? 'btn-outline' : 'btn-primary'}" style="display:inline-flex;align-items:center;gap:8px">
+          <a href="${buildContextHref('onboarding', { source: 'journey' })}" class="btn ${isDone ? 'btn-outline' : 'btn-primary'}" style="display:inline-flex;align-items:center;gap:8px">
             ${btnLabel}
           </a>
           ${isRejected ? `<div style="font-size:11px;color:var(--muted);margin-top:10px">Corrija os pontos indicados e reenvie o formulário.</div>` : ''}
@@ -1292,6 +1380,29 @@ function renderCompletion() {
       </div>
     </div></div>`;
 }
+
+window.resetCaseJourney = async function() {
+  if (!targetUserId) return;
+  if (!window.confirm('Reiniciar a jornada e o formulário deste caso?')) return;
+
+  try {
+    await supabase.from('portal_casos').upsert({
+      user_id: targetUserId,
+      onboarding_done: false,
+      cnj_step_atual: 0,
+      cnj_json: null,
+    }, { onConflict: 'user_id' });
+    await supabase.from('portal_documentos')
+      .update({ workflow_status: null, status: null, storage_path: null, admin_notes: null, updated_at: new Date().toISOString() })
+      .eq('user_id', targetUserId)
+      .in('tipo', ['formulario_cnj_online', 'formulario_cnj_anexo_ii']);
+    if (!isAdminClientView()) clearDraft(activeUserId);
+    sessionStorage.removeItem('journey:states:v2');
+    window.location.href = buildContextHref('onboarding-v2');
+  } catch (_) {
+    Toast.error('Não foi possível reiniciar o fluxo agora.');
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // ERROR STATE

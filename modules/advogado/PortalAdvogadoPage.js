@@ -18,8 +18,10 @@ import {
 } from './ControladoriaOperacional.js';
 import { financialPlanEngine } from '../financeiro/FinancialPlanEngine.js';
 import { buildCommunicationSnapshot } from '../mensagens/CommunicationCenter.js';
+import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '../../js/case-flow.js';
 
 const ADMIN_PAGE_KEYS = ['clientes', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];
 
 const state = {
   moduleKey: '',
@@ -272,6 +274,105 @@ function renderFinancialSimulator() {
         </label>
       </div>
       <div class="financial-simulator-result" data-financial-result></div>
+    </section>
+  `;
+}
+
+function renderCaseManagementPanel() {
+  const summaries = state.remoteClients.map(client => ({
+    client,
+    summary: getCaseFlowSummary(client),
+  }));
+
+  const counts = summaries.reduce((acc, item) => {
+    acc[item.summary.key] = (acc[item.summary.key] || 0) + 1;
+    return acc;
+  }, { not_started: 0, in_progress: 0, submitted: 0, approved: 0, correction: 0 });
+
+  const rows = summaries.length
+    ? summaries.map(({ client, summary }) => `
+        <tr>
+          <td data-label="Cliente">
+            <strong>${escapeHtml(client.full_name || client.email || 'Cliente')}</strong>
+            <div class="advogado-flow-sub">${escapeHtml(client.fase || 'cadastro')} · ${escapeHtml(client.cpf || client.email || 'sem CPF')}</div>
+          </td>
+          <td data-label="Status CNJ">
+            <span class="advogado-flow-pill is-${escapeHtml(summary.tone)}">${escapeHtml(summary.label)}</span>
+            <div class="advogado-flow-sub">${escapeHtml(summary.detail)}</div>
+          </td>
+          <td data-label="Progresso">
+            <strong>${summary.step}/7</strong>
+            <div class="advogado-flow-sub">${summary.progressPct}% concluído</div>
+          </td>
+          <td data-label="Informações">
+            <strong>${client.n_credores || 0}</strong>
+            <div class="advogado-flow-sub">Docs ${client.docs_aprovados || 0} aprov. · ${client.docs_pendentes || 0} pend.</div>
+          </td>
+          <td data-label="Atualização">
+            <strong>${escapeHtml(formatCaseFlowDate(summary.updatedAt))}</strong>
+            <div class="advogado-flow-sub">Último salvamento no caso</div>
+          </td>
+          <td data-label="Ações">
+            <div class="advogado-flow-actions">
+              <a class="btn btn-ghost btn-sm" href="${buildCaseContextHref('onboarding-v2', { clientId: client.user_id })}" data-page="onboarding-v2">Jornada</a>
+              <a class="btn btn-ghost btn-sm" href="${buildCaseContextHref('onboarding', { source: 'journey', clientId: client.user_id })}" data-page="onboarding">Formulário</a>
+              <a class="btn btn-ghost btn-sm" href="${buildCaseContextHref('financial-dashboard', { clientId: client.user_id })}" data-page="financial-dashboard">Diagnóstico</a>
+              <button type="button" class="btn btn-outline btn-sm" data-case-reset="${escapeHtml(client.user_id)}">Reiniciar</button>
+            </div>
+          </td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="6">Nenhum cliente disponível para acompanhamento.</td></tr>';
+
+  return `
+    <section class="sec advogado-case-flow-panel">
+      <div class="sec-header">
+        <div class="sec-num">CNJ</div>
+        <h2 class="sec-title">Gestão do caso</h2>
+        <span class="sec-tag">Jornada, formulário e diagnóstico</span>
+      </div>
+
+      <div class="advogado-kpis advogado-flow-kpis">
+        <div class="ui-stat-card"><span>Não iniciados</span><strong>${counts.not_started}</strong></div>
+        <div class="ui-stat-card"><span>Em progresso</span><strong>${counts.in_progress}</strong></div>
+        <div class="ui-stat-card"><span>Enviados</span><strong>${counts.submitted}</strong></div>
+        <div class="ui-stat-card"><span>Aprovados</span><strong>${counts.approved}</strong></div>
+      </div>
+
+      <div class="advogado-workspace-grid advogado-case-module-grid">
+        ${CASE_MANAGEMENT_PAGES.map(key => {
+          const labels = {
+            'onboarding-v2': ['Jornada', 'Acompanhar a trilha CNJ e retomadas.'],
+            onboarding: ['Formulário', 'Abrir o formulário web preenchido pelo cliente.'],
+            'financial-dashboard': ['Diagnóstico', 'Validar capacidade de pagamento e Anexo II.'],
+            suporte: ['Suporte', 'Consultar chamados e devolutivas do caso.'],
+          };
+          const [title, copy] = labels[key];
+          return `
+            <a class="advogado-module-card" href="${key}.html" data-page="${key}">
+              <span>${escapeHtml(title)}</span>
+              <strong>Fluxo</strong>
+              <small>${escapeHtml(copy)}</small>
+            </a>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="table-wrap advogado-case-flow-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Status CNJ</th>
+              <th>Progresso</th>
+              <th>Informações</th>
+              <th>Atualização</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     </section>
   `;
 }
@@ -638,8 +739,40 @@ async function renderPainelPage(host) {
           <small>cadastro financeiro existente</small>
         </a>
       </div>
+
+      ${renderCaseManagementPanel()}
     </section>
   `;
+}
+
+function bindPainelEvents(host) {
+  host.querySelectorAll('[data-case-reset]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const userId = button.dataset.caseReset;
+      if (!userId) return;
+      if (!window.confirm('Reiniciar jornada e formulário deste cliente?')) return;
+
+      button.disabled = true;
+      try {
+        await AdminService.resetClientJourney(userId);
+        await loadRemoteClients();
+        await renderPainelPage(host);
+        bindPainelEvents(host);
+        window.shellNotify?.({
+          title: 'Fluxo reiniciado',
+          text: 'A jornada e o formulário do cliente foram reabertos para novo preenchimento.',
+          tone: 'warn',
+        });
+      } catch (error) {
+        button.disabled = false;
+        window.shellNotify?.({
+          title: 'Não foi possível reiniciar',
+          text: error?.message || 'Tente novamente em instantes.',
+          tone: 'warn',
+        });
+      }
+    });
+  });
 }
 
 function bindModuleEvents(host) {
@@ -774,6 +907,7 @@ export async function bootAdvogadoPage(moduleKey) {
   if (moduleKey === 'painel') {
     await renderPainelPage(host);
     window.initUiKit?.(host);
+    bindPainelEvents(host);
     return;
   }
 

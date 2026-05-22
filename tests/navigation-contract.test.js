@@ -21,6 +21,13 @@ const expectedBusinessLabels = {
   onboarding: { title: 'Formulário', menuLabel: 'Formulário', sidebarSectionLabel: 'Jornada e suporte' },
 };
 
+const expectedAdminCaseLabels = {
+  'onboarding-v2': { menuLabel: 'Jornada', adminSidebarSectionLabel: 'Gestão do caso' },
+  'financial-dashboard': { menuLabel: 'Diagnóstico', adminSidebarSectionLabel: 'Gestão do caso' },
+  suporte: { menuLabel: 'Suporte', adminSidebarSectionLabel: 'Gestão do caso' },
+  onboarding: { menuLabel: 'Formulário', adminSidebarSectionLabel: 'Gestão do caso' },
+};
+
 describe('navigation contract', () => {
   it('exposes the client portal modules in the expected order', () => {
     const modules = getSidebarModules({ isAdmin: false });
@@ -45,6 +52,16 @@ describe('navigation contract', () => {
     const modules = getSidebarModules({ isAdmin: false });
 
     Object.entries(expectedBusinessLabels).forEach(([key, expected]) => {
+      const module = modules.find(item => item.key === key);
+
+      expect(module).toMatchObject(expected);
+    });
+  });
+
+  it('also exposes the case-management flows in the admin shell', () => {
+    const modules = getSidebarModules({ isAdmin: true });
+
+    Object.entries(expectedAdminCaseLabels).forEach(([key, expected]) => {
       const module = modules.find(item => item.key === key);
 
       expect(module).toMatchObject(expected);

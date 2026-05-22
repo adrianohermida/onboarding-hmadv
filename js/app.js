@@ -880,12 +880,18 @@ function renderSidebarNavigation(isAdmin = false) {
   const sectionMap = new Map();
 
   modules.forEach(module => {
-    const sectionKey = module.sidebarSection || (isAdmin ? 'workspace' : 'portal');
+    const sectionKey = isAdmin
+      ? (module.adminSidebarSection || module.sidebarSection || 'workspace')
+      : (module.sidebarSection || 'portal');
     if (!sectionMap.has(sectionKey)) {
       const section = {
         key: sectionKey,
-        label: module.sidebarSectionLabel || (isAdmin ? 'Workspace' : 'Portal'),
-        order: module.sidebarSectionOrder ?? 999,
+        label: isAdmin
+          ? (module.adminSidebarSectionLabel || module.sidebarSectionLabel || 'Workspace')
+          : (module.sidebarSectionLabel || 'Portal'),
+        order: isAdmin
+          ? (module.adminSidebarSectionOrder ?? module.sidebarSectionOrder ?? 999)
+          : (module.sidebarSectionOrder ?? 999),
         items: [],
       };
       sectionMap.set(sectionKey, section);

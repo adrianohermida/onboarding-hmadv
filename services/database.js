@@ -60,7 +60,7 @@ export const AdminService = {
     const queryFallbackCases = async () => {
       const { data: casos, error: casosError } = await supabase
         .from('portal_casos')
-        .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at')
+        .select('user_id, full_name, cpf, fase, onboarding_done, cnj_step_atual, n_credores, fd_ticket_id, workspace_id, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (!casosError) {
@@ -73,7 +73,7 @@ export const AdminService = {
 
       const { data: casosMin, error: casosMinError } = await supabase
         .from('portal_casos')
-        .select('user_id, full_name, fase, onboarding_done, created_at')
+        .select('user_id, full_name, fase, onboarding_done, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (!casosMinError) {
@@ -120,6 +120,35 @@ export const AdminService = {
       .from('portal_documentos').select('*').eq('user_id', userId);
     if (error) throw error;
     return data || [];
+  },
+
+  async resetClientJourney(userId) {
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('portal_casos')
+      .upsert({
+        user_id: userId,
+        onboarding_done: false,
+        cnj_step_atual: 0,
+        fd_ticket_id: null,
+        cnj_json: null,
+        updated_at: nowIso,
+      }, { onConflict: 'user_id' });
+
+    const { error } = await supabase
+      .from('portal_documentos')
+      .update({
+        workflow_status: null,
+        status: null,
+        storage_path: null,
+        admin_notes: null,
+        updated_at: nowIso,
+      })
+      .eq('user_id', userId)
+      .in('tipo', ['formulario_cnj_online', 'formulario_cnj_anexo_ii']);
+
+    if (error) throw error;
+    return true;
   },
 };
 

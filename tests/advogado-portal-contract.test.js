@@ -5,7 +5,7 @@ import { getRoutes, getSidebarModules } from '../js/navigation.js';
 import { ADVOGADO_MODULES } from '../modules/advogado/RegistroAdvogadoService.js';
 
 const root = process.cwd();
-const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
+const lawyerKeys = ['painel', 'clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro', 'onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding', 'analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia', 'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'];
 const crudKeys = ['clientes', 'documentos', 'dividas', 'planos', 'processos', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 
 function readFile(...parts) {
@@ -33,6 +33,16 @@ describe('portal do advogado contract', () => {
       expect(html).toContain('data-advogado-module-host');
       expect(html).toContain('../js/app.js?v=20260521p');
       expect(html).toContain(`bootAdvogadoPage('${key}')`);
+    });
+  });
+
+  it('ships case-management pages that stay mounted inside the shared shell', () => {
+    ['onboarding-v2', 'financial-dashboard', 'suporte', 'onboarding'].forEach(key => {
+      const html = readFile('pages', `${key}.html`);
+
+      expect(html).toContain('data-component="sidebar"');
+      expect(html).toContain('data-component="header"');
+      expect(html).toContain('../js/app.js?v=20260521p');
     });
   });
 
@@ -71,11 +81,14 @@ describe('portal do advogado contract', () => {
     expect(service).toContain('portal_operational_records');
     expect(service).toContain('portal_operational_record_audit');
     expect(controller).toContain('AdminService.getClients');
+    expect(controller).toContain('resetClientJourney');
+    expect(controller).toContain('Gestão do caso');
     expect(controller).toContain('data-advogado-filter="query"');
     expect(controller).toContain('data-advogado-page="next"');
     expect(controller).toContain('data-action="detail"');
     expect(styles).toContain('@media (max-width: 680px)');
     expect(styles).toContain('.advogado-record-card');
     expect(styles).toContain('.advogado-detail-row');
+    expect(styles).toContain('.advogado-flow-pill');
   });
 });

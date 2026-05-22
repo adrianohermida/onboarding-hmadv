@@ -39,6 +39,7 @@ function normalizeAdminClientRow(row) {
     docs_aprovados: toFiniteNumber(row.docs_aprovados, 0),
     docs_pendentes: toFiniteNumber(row.docs_pendentes, 0),
     created_at: row.created_at || null,
+    updated_at: row.updated_at || row.created_at || null,
   };
 }
 

@@ -462,6 +462,14 @@
         </div>
       </div>
 
+      <div id="form-admin-bar" class="admin-bar" style="display:none; margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="admin-badge">ADMIN</span>
+          <span id="form-mode-context" style="font-size:13px;opacity:.75;">Visualizando modo administrador</span>
+        </div>
+        <div id="form-mode-selector"></div>
+      </div>
+
       <div class="next-action-bar">
         <div class="next-action-copy">
           <div class="next-action-label">Proxima acao</div>
@@ -469,6 +477,8 @@
         </div>
         <button class="btn btn-primary btn-sm" onclick="if (typeof window.goStep === 'function') { const active = document.querySelector('.cnj-step.active'); const step = Number(active?.id?.replace('step-dot-', '') || 1); window.goStep(step); }">Continuar etapa atual</button>
       </div>
+
+      <div id="form-admin-summary"></div>
 
       <!-- Already-submitted / correction banner (shown when onboarding_done=true) -->
       <div id="form-submitted-banner" style="display:none;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
@@ -1073,10 +1083,11 @@
 <!-- ── Scripts ─────────────────────────────────────────────────── -->
 <script type="module">
 import { showToast }                      from '../utils/helpers.js';
-import { CaseService }                    from '../services/database.js';
+import { AdminService, CaseService }      from '../services/database.js';
 import { supabase }                       from '../services/supabase.js';
 import { lookupCPF, lookupCEP }           from '../services/directdata.js';
 import { invokeEdgeFunction, toFriendlyMessage } from '../services/edge.js';
+import { buildCaseContextHref, getCaseFlowSummary } from '../js/case-flow.js';
 import {
   calcAnaliseGlobal, calcPlanoPagamento,
   buildCNJJson, fmtBRL, parseBRL,
@@ -1086,6 +1097,7 @@ import {
 /* ── URL context ────────────────────── */
 const _urlParams   = new URLSearchParams(window.location.search);
 const _fromJourney = _urlParams.get('source') === 'journey';
+const _requestedClientId = _urlParams.get('client');
 
 /* ── Índices dinâmicos ──────────────── */
 let phoneIdx  = 0;
@@ -1094,6 +1106,11 @@ let depIdx    = 0;
 let credorIdx = 0;
 let _userId   = null;
 let _currentStep = 1;
+let _activeUserId = null;
+let _targetUserId = null;
+let _isAdminUser = false;
+let _isReadonlyAdminView = false;
+let _unmountModeSelector = null;
 const STEP_LABELS = {
   1: 'Identificacao do requerente',
   2: 'Dados socioeconomicos',
@@ -1105,6 +1122,49 @@ const STEP_LABELS = {
 };
 const REQUIRED_DOC_IDS = ['doc_rg_cnh', 'doc_cpf_doc', 'doc_residencia', 'doc_renda_doc', 'doc_extratos'];
 
+function buildContextHref(pageKey, options = {}) {
+  return buildCaseContextHref(pageKey, {
+    clientId: _isReadonlyAdminView ? _targetUserId : null,
+    ...options,
+  });
+}
+
+function renderAdminSummary(caso = {}, workflowStatus = null) {
+  const host = document.getElementById('form-admin-summary');
+  if (!host) return;
+  if (!_isReadonlyAdminView) {
+    host.innerHTML = '';
+    return;
+  }
+
+  const summary = getCaseFlowSummary(caso, { workflowStatus });
+  host.innerHTML = `
+    <div class="callout callout-blue" style="margin:0 0 16px;">
+      Você está acompanhando o formulário do cliente em modo leitura. Autosave, envio final e edição ficam bloqueados nesta visualização.
+    </div>
+    <div class="dyn-card" style="margin-bottom:16px;">
+      <div class="dyn-card-header">
+        <span class="dyn-card-title">Resumo do fluxo CNJ</span>
+        <span class="sec-tag">${summary.label}</span>
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Progresso</label>
+          <div style="font-weight:700;color:var(--navy);">${summary.step}/7 · ${summary.progressPct}%</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Situação</label>
+          <div style="font-weight:700;color:var(--ink);">${summary.detail}</div>
+        </div>
+      </div>
+      <div class="btn-group" style="justify-content:flex-start;flex-wrap:wrap;">
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('onboarding-v2')}">Voltar para jornada</a>
+        <a class="btn btn-ghost btn-sm" href="${buildContextHref('financial-dashboard')}">Abrir diagnóstico</a>
+      </div>
+    </div>
+  `;
+}
+
 /* ── Ícones ─────────────────────────── */
 const TRASH = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 const SEARCH_ICO = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>`;
@@ -1115,6 +1175,66 @@ function esc(v) {
     .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
     .replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+function setReadonlyAdminView(enabled) {
+  _isReadonlyAdminView = Boolean(enabled);
+
+  document.querySelectorAll('input, select, textarea, button').forEach(el => {
+    if (!enabled) {
+      if (el.dataset.adminReadonly === 'true') {
+        el.disabled = false;
+        el.readOnly = false;
+        delete el.dataset.adminReadonly;
+      }
+      return;
+    }
+
+    if (el.id === 'btn-finalizar') return;
+    if (el.closest('#form-admin-bar') || el.closest('#form-admin-summary')) return;
+
+    if (el.tagName === 'BUTTON' || el.tagName === 'SELECT') {
+      el.disabled = true;
+      el.dataset.adminReadonly = 'true';
+      return;
+    }
+
+    el.readOnly = true;
+    el.dataset.adminReadonly = 'true';
+  });
+
+  const finalizeBtn = document.getElementById('btn-finalizar');
+  if (finalizeBtn && enabled) {
+    finalizeBtn.disabled = true;
+    finalizeBtn.textContent = 'Modo leitura do administrador';
+  }
+}
+
+document.addEventListener('app:user-loaded', ({ detail }) => {
+  _isAdminUser = !!detail?.isAdmin;
+  const bar = document.getElementById('form-admin-bar');
+  if (!bar) return;
+
+  if (!_isAdminUser) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  if (typeof _unmountModeSelector === 'function') _unmountModeSelector();
+  if (typeof window.mountPortalViewModeSelector === 'function') {
+    _unmountModeSelector = window.mountPortalViewModeSelector('form-mode-selector', {
+      onChange: (mode) => {
+        const contextEl = document.getElementById('form-mode-context');
+        if (contextEl) {
+          contextEl.textContent = mode === 'admin'
+            ? 'Visualizando modo administrador'
+            : 'Visualizando modo cliente';
+        }
+      },
+    });
+    window.setPortalViewMode?.(window.getPortalViewMode?.() || 'admin', { source: 'form-init' });
+  }
+});
 
 /* ── Masks ───────────────────────────── */
 window.applyMaskCPF = function(el) {
@@ -1951,6 +2071,7 @@ function setupCausaChipAccessibility() {
 }
 
 async function doAutosave() {
+  if (_isReadonlyAdminView) return;
   const el  = document.getElementById('autosave-status');
   const txt = document.getElementById('autosave-txt');
   if (el)  el.className = 'saving';
@@ -2021,6 +2142,10 @@ window.gerarPrevia = function() {
    Finalizar
 ════════════════════════════════════════════ */
 window.finalizarCadastro = async function() {
+  if (_isReadonlyAdminView) {
+    showToast('O modo administrador é apenas de acompanhamento.', 'warning');
+    return;
+  }
   const btn = document.getElementById('btn-finalizar');
   const issues = validateStepRequired(7, { focusFirst: true, notify: true });
   if (issues.length) return;
@@ -2043,9 +2168,9 @@ window.finalizarCadastro = async function() {
     try {
       const { data: { user: _u } } = await supabase.auth.getUser();
       const { data: _caso } = await supabase
-        .from('portal_casos').select('id,workspace_id').eq('user_id', _u.id).maybeSingle();
+        .from('portal_casos').select('id,workspace_id').eq('user_id', _userId || _u.id).maybeSingle();
       await supabase.from('portal_documentos').upsert({
-        user_id:         _u.id,
+        user_id:         _userId || _u.id,
         tipo:            'formulario_cnj_online',
         nome_arquivo:    'Formulário CNJ Online',
         status:          'em_analise',       // legacy field used by dashboard KPI/activity aggregations
@@ -2102,7 +2227,7 @@ window.finalizarCadastro = async function() {
     document.dispatchEvent(new CustomEvent('cnj:formulario-concluido', { detail: { ...payload, fd_ticket_id: fdTicketId } }));
     setTimeout(() => {
       window.location.href = _fromJourney
-        ? 'onboarding-v2.html?formulario=concluido'
+        ? buildContextHref('onboarding-v2', { formulario: 'concluido' })
         : 'meu-caso.html';
     }, 2800);
   } catch (e) {
@@ -2115,18 +2240,29 @@ window.finalizarCadastro = async function() {
 /* ════════════════════════════════════════════
    Pré-população a partir do Supabase
 ════════════════════════════════════════════ */
-document.addEventListener('app:user-loaded', ({ detail }) => {
+document.addEventListener('app:user-loaded', async ({ detail }) => {
   const { user, caso } = detail;
-  _userId = user?.id;
+  _activeUserId = user?.id || null;
+  _targetUserId = _isAdminUser && _requestedClientId ? _requestedClientId : _activeUserId;
+  _userId = _targetUserId;
+
+  let currentCase = caso;
+  if (_isAdminUser && _requestedClientId && _requestedClientId !== _activeUserId) {
+    _isReadonlyAdminView = true;
+    currentCase = await AdminService.getClientCaso(_requestedClientId);
+  }
 
   // Show already-submitted banner if form was previously completed
-  if (caso?.onboarding_done) {
+  if (currentCase?.onboarding_done) {
     const banner = document.getElementById('form-submitted-banner');
     const detail2 = document.getElementById('form-submitted-detail');
     const backLink = document.getElementById('form-back-journey-link');
     if (banner) banner.style.display = '';
     if (detail2) detail2.textContent = 'Seu formulário foi enviado ao escritório Hermida Maia Advocacia. Você pode revisar suas respostas abaixo.';
-    if (backLink && _fromJourney) backLink.style.display = '';
+    if (backLink && _fromJourney) {
+      backLink.style.display = '';
+      backLink.href = buildContextHref('onboarding-v2');
+    }
     // Disable the submit button to prevent re-submission
     const btn = document.getElementById('btn-finalizar');
     if (btn) { btn.textContent = 'Formulário já enviado'; btn.disabled = true; }
@@ -2136,11 +2272,11 @@ document.addEventListener('app:user-loaded', ({ detail }) => {
   if (emailEl) emailEl.value = user?.email || '';
 
   // Check portal_documentos workflow_status to determine banner + button state
-  if (caso?.onboarding_done) {
+  if (currentCase?.onboarding_done) {
     supabase
       .from('portal_documentos')
       .select('workflow_status,admin_notes')
-      .eq('user_id', user.id)
+      .eq('user_id', _userId)
       .eq('tipo', 'formulario_cnj_online')
       .maybeSingle()
       .then(({ data: fd }) => {
@@ -2172,54 +2308,61 @@ document.addEventListener('app:user-loaded', ({ detail }) => {
           banner.style.display = '';
         }
 
-        if (_fromJourney && backLink) backLink.style.display = 'inline';
+        if (_fromJourney && backLink) {
+          backLink.style.display = 'inline';
+          backLink.href = buildContextHref('onboarding-v2');
+        }
+
+        renderAdminSummary(currentCase, fd?.workflow_status || null);
       });
   }
 
-  if (!caso) return;
+  if (!currentCase) return;
+
+  renderAdminSummary(currentCase, null);
 
   const s = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.value = val; };
 
   // Step 1
-  s('cpf',             caso.cpf);
-  s('full_name',       caso.full_name);
-  s('data_nascimento', caso.data_nascimento);
-  s('sexo',            caso.sexo);
-  s('estado_civil',    caso.estado_civil);
-  s('profissao',       caso.profissao);
-  s('nome_mae',        caso.nome_mae);
-  s('naturalidade',    caso.naturalidade);
-  s('nacionalidade',   caso.nacionalidade);
-  s('rg',              caso.rg);
-  s('rg_emissor',      caso.rg_emissor);
-  (caso.telefones || []).forEach(t => addPhone(t));
-  (caso.enderecos  || []).forEach(e => addAddress(e));
+  s('cpf',             currentCase.cpf);
+  s('full_name',       currentCase.full_name);
+  s('data_nascimento', currentCase.data_nascimento);
+  s('sexo',            currentCase.sexo);
+  s('estado_civil',    currentCase.estado_civil);
+  s('profissao',       currentCase.profissao);
+  s('nome_mae',        currentCase.nome_mae);
+  s('naturalidade',    currentCase.naturalidade);
+  s('nacionalidade',   currentCase.nacionalidade);
+  s('rg',              currentCase.rg);
+  s('rg_emissor',      currentCase.rg_emissor);
+  (currentCase.telefones || []).forEach(t => addPhone(t));
+  (currentCase.enderecos  || []).forEach(e => addAddress(e));
 
   // Step 2
-  s('situacao_profissional', caso.situacao_profissional);
-  if (caso.renda != null)         s('renda',          fmtBRL(+caso.renda));
-  if (caso.renda_familiar != null) s('renda_familiar', fmtBRL(+caso.renda_familiar));
-  s('n_dependentes', caso.n_dependentes);
+  s('situacao_profissional', currentCase.situacao_profissional);
+  if (currentCase.renda != null)         s('renda',          fmtBRL(+currentCase.renda));
+  if (currentCase.renda_familiar != null) s('renda_familiar', fmtBRL(+currentCase.renda_familiar));
+  s('n_dependentes', currentCase.n_dependentes);
 
-  if (caso.conjugue) {
+  if (currentCase.conjugue) {
     document.getElementById('tem_conjugue').checked = true;
     toggleConjugue();
-    s('conj_nome',            caso.conjugue.nome);
-    s('conj_cpf',             caso.conjugue.cpf);
-    s('conj_data_nascimento', caso.conjugue.data_nascimento);
-    s('conj_rg',              caso.conjugue.rg);
-    s('conj_profissao',       caso.conjugue.profissao);
-    if (caso.conjugue.renda != null) s('conj_renda', fmtBRL(+caso.conjugue.renda));
+    s('conj_nome',            currentCase.conjugue.nome);
+    s('conj_cpf',             currentCase.conjugue.cpf);
+    s('conj_data_nascimento', currentCase.conjugue.data_nascimento);
+    s('conj_rg',              currentCase.conjugue.rg);
+    s('conj_profissao',       currentCase.conjugue.profissao);
+    if (currentCase.conjugue.renda != null) s('conj_renda', fmtBRL(+currentCase.conjugue.renda));
   }
-  (caso.dependentes || []).forEach(d => addDependent(d));
+  (currentCase.dependentes || []).forEach(d => addDependent(d));
 
   // Step 3 — despesas
-  const desp = caso.despesas || {};
+  const desp = currentCase.despesas || {};
   Object.entries(desp).forEach(([k, v]) => { if (v) s('desp_'+k, fmtBRL(v)); });
   updateTotalDespesas();
 
   // Step 3 — patrimônio
-  const pat = caso.patrimonio || {};
+  const pat = currentCase.patrimonio || {};
   s('imovel_situacao',  pat.imovel?.situacao);
   if (pat.imovel?.parcela)   s('imovel_parcela',    fmtBRL(pat.imovel.parcela));
   s('imovel_vencimento',     pat.imovel?.vencimento);
@@ -2228,32 +2371,34 @@ document.addEventListener('app:user-loaded', ({ detail }) => {
   s('veiculo_vencimento',    pat.veiculo?.vencimento);
 
   // Step 4
-  (caso.causas_endividamento || []).forEach(causa => {
+  (currentCase.causas_endividamento || []).forEach(causa => {
     document.querySelector('.causa-chip[data-causa="'+causa+'"]')?.classList.add('selected');
   });
-  s('causas_descricao', caso.causas_descricao);
-  const neg = caso.negativacoes || {};
+  s('causas_descricao', currentCase.causas_descricao);
+  const neg = currentCase.negativacoes || {};
   ['serasa','spc','protestos','acoes_judiciais'].forEach(k => {
     const el = document.getElementById('neg_'+k); if (el && neg[k]) el.checked = true;
   });
   s('neg_observacoes', neg.observacoes);
-  (caso.conhecimento_credito || []).forEach(k => {
+  (currentCase.conhecimento_credito || []).forEach(k => {
     const el = document.getElementById('cred_'+k); if (el) el.checked = true;
   });
 
   // Step 5
-  (caso.credores_cnj || []).forEach(c => addCredor(c));
+  (currentCase.credores_cnj || []).forEach(c => addCredor(c));
 
   // Step 6
-  const plano = caso.plano_pagamento || {};
+  const plano = currentCase.plano_pagamento || {};
   s('plano_prazo',    plano.prazo_meses    || 60);
   s('plano_carencia', plano.carencia_meses || 0);
   if (plano.renda_disponivel != null) s('plano_renda_disp', fmtBRL(plano.renda_disponivel));
   s('plano_observacoes', plano.observacoes);
 
   // Retoma no step salvo
-  const step = Math.min(caso.cnj_step_atual || 1, 7);
+  const step = Math.min(currentCase.cnj_step_atual || 1, 7);
   if (step > 1) goStep(step);
+
+  setReadonlyAdminView(_isReadonlyAdminView);
 });
 
 /* Expõe calcCredor para callbacks inline */
