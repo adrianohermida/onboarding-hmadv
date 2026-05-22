@@ -787,6 +787,28 @@ async function loadClientData() {
   };
 }
 
+function dispatchShellContext(caso, nextStep) {
+  const faseRaw = caso?.fase || 'Cadastro';
+  const faseLabel = String(faseRaw).replace(/_/g, ' ');
+  const statusTone = !caso?.onboarding_done ? 'muted'
+    : ['concluido', 'encerrado'].includes(faseRaw) ? 'ok'
+    : ['suspenso', 'arquivado'].includes(faseRaw) ? 'danger'
+    : 'brand';
+  const meta = [];
+  if (caso?.numero_processo) meta.push(`Proc. ${caso.numero_processo}`);
+
+  document.dispatchEvent(new CustomEvent('shell:set-context', {
+    detail: {
+      entityLabel: 'Caso',
+      title: caso?.full_name || 'Meu caso',
+      status: faseLabel,
+      statusTone,
+      meta,
+      nextAction: nextStep?.href ? { label: nextStep.label, href: nextStep.href } : null,
+    },
+  }));
+}
+
 function mountHubTabListeners(host, hubKey, data, renderContent) {
   host.querySelectorAll('[data-hub-tab]').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -848,6 +870,7 @@ export async function bootClientePage(moduleKey) {
 
   try {
     const data = await loadClientData();
+    dispatchShellContext(data.caso, data.nextStep);
 
     if (moduleKey === 'meu-caso') {
       const activeTab = getActiveHubTab('meu-caso');

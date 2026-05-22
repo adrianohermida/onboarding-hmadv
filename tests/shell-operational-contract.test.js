@@ -48,6 +48,12 @@ describe('operational legal shell contract', () => {
     expect(app).toContain('window.addEventListener(VIEW_MODE_EVENT');
     expect(app).toContain("window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer }");
     expect(app).toContain("window.shellModal = { open: openShellModal, close: closeShellModal }");
+    expect(app).toContain("window.shellContext = { set: setShellContext, clear: clearShellContext }");
+    expect(app).toContain('function setShellContext');
+    expect(app).toContain('function clearShellContext');
+    expect(app).toContain('function renderContextBar');
+    expect(app).toContain("document.addEventListener(SHELL_CONTEXT_EVENT");
+    expect(app).toContain("'app:route-will-change'");
     expect(app).toContain('currentMain.replaceWith(clonedMain)');
     expect(app).not.toContain('window.location.href = absolute;');
   });

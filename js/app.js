@@ -34,6 +34,7 @@ const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
 const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
 const SHELL_ACTIVITIES_KEY = 'portal:activities';
+const SHELL_CONTEXT_EVENT = 'shell:set-context';
 const SHELL_ACTIVITIES_MAX = 50;
 const SHELL_TENANT_CONFIG_KEY = 'portal:tenant-config';
 const SHELL_MAX_RECENT_ROUTES = 6;
@@ -79,6 +80,7 @@ let shellLegalNotificationItems = [];
 let shellLegalNotificationSource = 'session';
 const shellLegalNotificationFilters = { types: [], statuses: [] };
 let shellActivitiesFilter = 'geral';
+let shellContext = null;
 
 function getUserDisplayState(user, isAdmin = false) {
   const email = user?.email || '';
@@ -1746,6 +1748,22 @@ function ensureShellManagers() {
   `;
   document.body.appendChild(modal);
 
+  const contextBar = document.createElement('div');
+  contextBar.id = 'shell-context-bar';
+  contextBar.className = 'shell-context-bar';
+  contextBar.setAttribute('aria-label', 'Contexto atual');
+  contextBar.hidden = true;
+  const mainArea = document.querySelector('.main-area, .main-wrap');
+  const headerHost = mainArea?.querySelector('[data-component="header"]');
+  if (headerHost && mainArea) {
+    headerHost.after(contextBar);
+  } else if (mainArea) {
+    mainArea.prepend(contextBar);
+  }
+
+  document.addEventListener(SHELL_CONTEXT_EVENT, event => setShellContext(event.detail));
+  document.addEventListener('app:route-will-change', () => clearShellContext());
+
   renderMobileWorkspaceNav();
   renderShellNotificationCount();
   renderShellActivityCount();
@@ -1753,6 +1771,7 @@ function ensureShellManagers() {
   window.shellDrawer = { open: openShellDrawer, close: closeShellDrawer };
   window.shellModal = { open: openShellModal, close: closeShellModal };
   window.shellNotify = addShellNotification;
+  window.shellContext = { set: setShellContext, clear: clearShellContext };
 }
 
 function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Meu Escritório', body = '' } = {}) {
@@ -1928,6 +1947,53 @@ function openGlobalSearchPanelBindOnly() {
 
 function openNotificationsPanel() {
   openWorkspacePanel();
+}
+
+/* ── CONTEXT BAR ─────────────────────────────── */
+
+function renderContextBar() {
+  const bar = document.getElementById('shell-context-bar');
+  if (!bar) return;
+
+  if (!shellContext) {
+    bar.hidden = true;
+    return;
+  }
+
+  const {
+    entityLabel = 'Caso',
+    title = '',
+    status = '',
+    statusTone = 'brand',
+    meta = [],
+    nextAction = null,
+  } = shellContext;
+
+  const metaHtml = meta.filter(Boolean).map(m =>
+    `<span class="shell-context-sep" aria-hidden="true">·</span><span class="shell-context-meta">${escapeShellHtml(m)}</span>`
+  ).join('');
+
+  bar.hidden = false;
+  bar.innerHTML = `
+    <div class="shell-context-inner">
+      <span class="shell-context-entity">${escapeShellHtml(entityLabel)}</span>
+      <span class="shell-context-title">${escapeShellHtml(title)}</span>
+      ${status ? `<span class="shell-context-sep" aria-hidden="true">·</span><span class="shell-context-status is-${escapeShellHtml(statusTone)}">${escapeShellHtml(status)}</span>` : ''}
+      ${metaHtml}
+      <span class="shell-context-spacer"></span>
+      ${nextAction?.href ? `<a href="${escapeShellHtml(nextAction.href)}" data-page="${escapeShellHtml(nextAction.href.replace('.html', ''))}" class="shell-context-action">${escapeShellHtml(nextAction.label)}</a>` : ''}
+    </div>
+  `;
+}
+
+function setShellContext(ctx) {
+  shellContext = ctx || null;
+  renderContextBar();
+}
+
+function clearShellContext() {
+  shellContext = null;
+  renderContextBar();
 }
 
 /* ── ATIVIDADES RECENTES ──────────────────────── */

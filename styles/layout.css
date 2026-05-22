@@ -1741,6 +1741,91 @@ body.app-loaded .sk { display: none !important; }
 }
 .hub-tab-content { min-height: 120px; }
 
+/* ── CONTEXT BAR ─────────────────────────────── */
+.shell-context-bar {
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  background: var(--line2);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.shell-context-bar[hidden] { display: none; }
+.shell-context-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 12px;
+  overflow: hidden;
+}
+.shell-context-entity {
+  background: var(--navy);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.shell-context-title {
+  font-weight: 600;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  flex-shrink: 1;
+}
+.shell-context-sep {
+  color: var(--line);
+  flex-shrink: 0;
+  user-select: none;
+}
+.shell-context-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.shell-context-status.is-ok     { background: rgba(22,163,74,.1);  color: #15803d; }
+.shell-context-status.is-warn   { background: rgba(217,119,6,.1);  color: #92400e; }
+.shell-context-status.is-danger { background: rgba(220,38,38,.1);  color: #b91c1c; }
+.shell-context-status.is-brand  { background: rgba(46,109,164,.1); color: var(--navy); }
+.shell-context-status.is-muted  { background: rgba(100,116,139,.1); color: var(--muted); }
+.shell-context-meta {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.shell-context-spacer { flex: 1; min-width: 8px; }
+.shell-context-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(46,109,164,.08);
+  transition: background .14s;
+}
+.shell-context-action:hover { background: rgba(46,109,164,.18); }
+
+@media (max-width: 767px) {
+  .shell-context-bar { padding: 0 12px; height: 34px; }
+  .shell-context-meta { display: none; }
+  .shell-context-sep:has(+ .shell-context-meta) { display: none; }
+  .shell-context-title { max-width: 120px; }
+}
+
 /* ── ATIVIDADES RECENTES ──────────────────────── */
 .shell-activity-filters {
   display: flex;
