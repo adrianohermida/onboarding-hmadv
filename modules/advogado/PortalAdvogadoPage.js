@@ -199,12 +199,13 @@ function openRecordForm(record = null) {
   if (!config) return;
   const isEdit = Boolean(record);
   const canEdit = !record || record.source !== 'supabase';
+  const supportsInlineQuickClient = ['processos', 'partes'].includes(state.moduleKey);
   const title = `${isEdit ? 'Editar' : 'Criar'} ${config.singular}`;
 
   const body = `
     <form class="advogado-form" id="advogado-record-form" data-record-id="${escapeHtml(record?.id || '')}">
       <div class="advogado-form-top-actions">
-        ${['processos', 'partes'].includes(state.moduleKey) ? '<button type="button" class="btn btn-ghost btn-sm" data-advogado-create-client>Cadastro rápido de cliente</button>' : ''}
+        ${supportsInlineQuickClient ? '<button type="button" class="btn btn-ghost btn-sm" data-advogado-toggle-quick-client>Novo cliente PF/PJ</button>' : ''}
         <button type="button" class="btn btn-ghost btn-sm" data-advogado-toggle-advanced>Ver mais</button>
       </div>
       <div class="advogado-form-grid">
@@ -218,6 +219,41 @@ function openRecordForm(record = null) {
           </select>
         </label>
       </div>
+      ${supportsInlineQuickClient ? `
+        <section class="advogado-quick-client" data-advogado-quick-client hidden>
+          <h3 class="advogado-quick-client-title">Cadastrar cliente e associar automaticamente</h3>
+          <div class="advogado-form-grid">
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">Tipo pessoa</span>
+              <select class="ui-select" name="quick_cliente_tipo_pessoa">
+                <option value="PF">PF</option>
+                <option value="PJ">PJ</option>
+              </select>
+            </label>
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">Nome</span>
+              <input class="ui-input" name="quick_cliente_nome" type="text">
+            </label>
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">CPF</span>
+              <input class="ui-input" name="quick_cliente_cpf" type="text">
+            </label>
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">CNPJ</span>
+              <input class="ui-input" name="quick_cliente_cnpj" type="text">
+            </label>
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">E-mail</span>
+              <input class="ui-input" name="quick_cliente_email" type="email">
+            </label>
+            <label class="ui-field advogado-form-field">
+              <span class="ui-label">WhatsApp</span>
+              <input class="ui-input" name="quick_cliente_whatsapp" type="text">
+            </label>
+          </div>
+          <p class="advogado-form-hint">Se nenhum cliente existente for selecionado, o cadastro rápido será usado no vínculo.</p>
+        </section>
+      ` : ''}
       ${canEdit ? '' : '<p class="advogado-form-hint">Registro vindo do Supabase. Crie um acompanhamento local para editar informações operacionais.</p>'}
       <div class="advogado-form-actions">
         <button type="button" class="btn btn-ghost" data-advogado-close-modal>Cancelar</button>
@@ -234,18 +270,45 @@ function openRecordForm(record = null) {
     const button = form.querySelector('[data-advogado-toggle-advanced]');
     if (button) button.textContent = visible ? 'Ver menos' : 'Ver mais';
   });
-  form?.querySelector('[data-advogado-create-client]')?.addEventListener('click', () => {
-    window.shellModal?.close?.();
-    window.shellNotify?.({
-      title: 'Cadastro de cliente',
-      text: 'Abra o módulo Clientes para cadastrar PF/PJ e depois associe no processo/parte.',
-      tone: 'brand',
-    });
-    window.location.href = 'clientes.html';
+  form?.querySelector('[data-advogado-toggle-quick-client]')?.addEventListener('click', () => {
+    const section = form.querySelector('[data-advogado-quick-client]');
+    if (!section) return;
+    const shouldShow = section.hasAttribute('hidden');
+    if (shouldShow) section.removeAttribute('hidden');
+    else section.setAttribute('hidden', 'hidden');
+    const button = form.querySelector('[data-advogado-toggle-quick-client]');
+    if (button) button.textContent = shouldShow ? 'Fechar novo cliente' : 'Novo cliente PF/PJ';
   });
   form?.addEventListener('submit', async event => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(form).entries());
+
+    const quickClientName = String(payload.quick_cliente_nome || '').trim();
+    const selectedClient = String(payload.cliente_user_id || payload.cliente_id || '').trim();
+    const shouldCreateQuickClient = supportsInlineQuickClient && !selectedClient && quickClientName;
+
+    if (shouldCreateQuickClient) {
+      const quickClientPayload = {
+        tipo_pessoa: payload.quick_cliente_tipo_pessoa || 'PF',
+        nome: quickClientName,
+        full_name: quickClientName,
+        cpf: payload.quick_cliente_cpf || '',
+        cnpj: payload.quick_cliente_cnpj || '',
+        email: payload.quick_cliente_email || '',
+        whatsapp: payload.quick_cliente_whatsapp || '',
+        status: 'em_onboarding',
+      };
+
+      const createdClient = await saveAdvogadoRecord('clientes', quickClientPayload);
+      const linkedClientId = createdClient?.id || createdClient?.user_id || quickClientPayload.email || quickClientName;
+      if (payload.cliente_user_id !== undefined) payload.cliente_user_id = linkedClientId;
+      if (payload.cliente_id !== undefined) payload.cliente_id = linkedClientId;
+    }
+
+    Object.keys(payload).forEach((key) => {
+      if (key.startsWith('quick_cliente_')) delete payload[key];
+    });
+
     await saveAdvogadoRecord(state.moduleKey, payload, isEdit ? record.id : null);
     window.shellModal?.close?.();
     await refreshRecords();

@@ -763,7 +763,22 @@ td { padding: 9px 14px; vertical-align: middle; }
 .advogado-form-top-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-bottom: 10px;
+}
+
+.advogado-quick-client {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed rgba(46,109,164,.35);
+  border-radius: 12px;
+  background: rgba(46,109,164,.04);
+}
+
+.advogado-quick-client-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--navy);
 }
 
 .advogado-advanced-field {
