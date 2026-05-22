@@ -20,7 +20,7 @@ import { financialPlanEngine } from '../financeiro/FinancialPlanEngine.js';
 import { buildCommunicationSnapshot } from '../mensagens/CommunicationCenter.js';
 import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '../../js/case-flow.js';
 
-const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'audiencias', 'publicacoes', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
+const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];
 
 const state = {

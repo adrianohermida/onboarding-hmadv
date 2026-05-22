@@ -220,6 +220,216 @@ const PUBLICACOES_FIELDS = [
   { key: 'fs_sync_next_retry', label: 'FS sync proxima tentativa', type: 'datetime-local' },
 ];
 
+const MOVIMENTACOES_STATUS = [
+  'nova',
+  'classificada',
+  'com_prazo',
+  'sincronizada',
+  'arquivada',
+];
+
+const PRAZOS_STATUS = [
+  'aberto',
+  'em_andamento',
+  'suspenso',
+  'concluido',
+  'vencido',
+  'arquivado',
+];
+
+const FINANCEIRO_PROCESSUAL_STATUS = [
+  'pago',
+  'pendente',
+  'vencido',
+  'parcelado',
+  'arquivado',
+];
+
+const CUSTAS_PROCESSUAIS_STATUS = [
+  'pendente',
+  'emitida',
+  'paga',
+  'vencida',
+  'parcelada',
+  'arquivada',
+];
+
+const TPU_STATUS = [
+  'ativo',
+  'importado',
+  'atualizado',
+  'pendente_sync',
+  'arquivado',
+];
+
+const ORGAOS_JUDICIARIOS_STATUS = [
+  'ativo',
+  'em_revisao',
+  'homologado',
+  'inativo',
+  'arquivado',
+];
+
+const SERVENTIAS_STATUS = [
+  'ativa',
+  'em_validacao',
+  'homologada',
+  'inativa',
+  'arquivada',
+];
+
+const RELACOES_PROCESSUAIS_STATUS = [
+  'ativo',
+  'em_analise',
+  'vinculado',
+  'inativo',
+  'arquivado',
+];
+
+const MOVIMENTACOES_FIELDS = [
+  { key: 'processo_id', label: 'Processo ID', type: 'text', required: true },
+  { key: 'fonte', label: 'Fonte', type: 'select', options: ['DATAJUD', 'TRIBUNAL', 'PUBLICACAO', 'MANUAL'] },
+  { key: 'data_movimentacao', label: 'Data movimentacao', type: 'datetime-local' },
+  { key: 'conteudo', label: 'Conteudo', type: 'textarea', required: true },
+  { key: 'hash_integridade', label: 'Hash integridade', type: 'text' },
+  { key: 'movimento_tpu_id', label: 'Movimento TPU ID', type: 'text' },
+  { key: 'codigo', label: 'Codigo movimento', type: 'number' },
+  { key: 'descricao', label: 'Descricao movimento', type: 'text' },
+  { key: 'data_movimento', label: 'Data movimento', type: 'datetime-local' },
+  { key: 'data_andamento', label: 'Data andamento', type: 'datetime-local' },
+  { key: 'tipo_movimento_id', label: 'Tipo movimento ID', type: 'number' },
+  { key: 'tipo_movimento_nome', label: 'Tipo movimento nome', type: 'text' },
+  { key: 'complemento', label: 'Complemento', type: 'textarea' },
+  { key: 'freshsales_activity_id', label: 'Freshsales activity ID', type: 'text' },
+  { key: 'fs_activity_id', label: 'FS activity legacy ID', type: 'text' },
+  { key: 'fs_synced_at', label: 'FS synced at', type: 'datetime-local' },
+  { key: 'tpu_status', label: 'Status TPU', type: 'text' },
+  { key: 'tpu_resolvido_em', label: 'TPU resolvido em', type: 'datetime-local' },
+  { key: 'raw_payload', label: 'Raw payload (JSON)', type: 'textarea' },
+  { key: 'observacao', label: 'Observacao operacional', type: 'textarea' },
+];
+
+const PRAZOS_FIELDS = [
+  { key: 'processo_id', label: 'Processo ID', type: 'text', required: true },
+  { key: 'publicacao_id', label: 'Publicacao ID', type: 'text' },
+  { key: 'movimento_id', label: 'Movimento ID', type: 'text' },
+  { key: 'audiencia_id', label: 'Audiencia ID', type: 'text' },
+  { key: 'prazo_regra_id', label: 'Prazo regra ID', type: 'text' },
+  { key: 'evento_tipo', label: 'Evento tipo', type: 'text', required: true },
+  { key: 'titulo', label: 'Titulo', type: 'text', required: true },
+  { key: 'data_base', label: 'Data base', type: 'date', required: true },
+  { key: 'data_inicio_contagem', label: 'Data inicio contagem', type: 'date', required: true },
+  { key: 'data_vencimento', label: 'Data vencimento', type: 'date', required: true },
+  { key: 'status', label: 'Status', type: 'select', options: PRAZOS_STATUS },
+  { key: 'prioridade', label: 'Prioridade', type: 'select', options: ['baixa', 'media', 'alta', 'critica'] },
+  { key: 'observacoes_ia', label: 'Observacoes IA', type: 'textarea' },
+  { key: 'freshsales_task_id', label: 'Freshsales task ID', type: 'text' },
+  { key: 'google_event_id', label: 'Google event ID', type: 'text' },
+  { key: 'google_calendar_id', label: 'Google calendar ID', type: 'text' },
+  { key: 'metadata', label: 'Metadata (JSON)', type: 'textarea' },
+  { key: 'ato_praticado', label: 'Ato praticado (regra)', type: 'text' },
+  { key: 'base_legal', label: 'Base legal (regra)', type: 'text' },
+  { key: 'prazo_dias', label: 'Prazo dias (regra)', type: 'number' },
+  { key: 'tipo_contagem', label: 'Tipo contagem (regra)', type: 'select', options: ['dias_uteis', 'dias_corridos'] },
+  { key: 'alias', label: 'Alias da regra', type: 'text' },
+  { key: 'memoria_calculo', label: 'Memoria calculo (tarefa)', type: 'textarea' },
+  { key: 'tipo_prazo', label: 'Tipo prazo (tarefa)', type: 'text' },
+];
+
+const FINANCEIRO_PROCESSUAL_FIELDS = [
+  { key: 'processo_id', label: 'Processo ID', type: 'text', required: true },
+  { key: 'data', label: 'Data', type: 'datetime-local', required: true },
+  { key: 'descricao', label: 'Descricao', type: 'text', required: true },
+  { key: 'categoria', label: 'Categoria', type: 'select', options: ['custa', 'despesa', 'honorario', 'guia', 'reembolso', 'outro'] },
+  { key: 'centro_custo', label: 'Centro de custo', type: 'text' },
+  { key: 'valor', label: 'Valor', type: 'number', required: true },
+  { key: 'situacao', label: 'Situacao', type: 'select', options: FINANCEIRO_PROCESSUAL_STATUS },
+  { key: 'criado_em', label: 'Criado em', type: 'datetime-local' },
+  { key: 'observacao', label: 'Observacao', type: 'textarea' },
+];
+
+const CUSTAS_PROCESSUAIS_FIELDS = [
+  { key: 'processo_id', label: 'Processo ID', type: 'text', required: true },
+  { key: 'descricao', label: 'Descricao da custa', type: 'text', required: true },
+  { key: 'categoria', label: 'Categoria', type: 'select', options: ['guia', 'taxa', 'emolumento', 'diligencia', 'deslocamento', 'outro'] },
+  { key: 'valor', label: 'Valor', type: 'number', required: true },
+  { key: 'data', label: 'Data de emissao', type: 'datetime-local' },
+  { key: 'situacao', label: 'Situacao', type: 'select', options: CUSTAS_PROCESSUAIS_STATUS },
+  { key: 'data_vencimento', label: 'Data vencimento', type: 'date' },
+  { key: 'comprovante', label: 'Comprovante (URL/ID)', type: 'text' },
+  { key: 'observacao', label: 'Observacao', type: 'textarea' },
+];
+
+const TPU_FIELDS = [
+  { key: 'tipo_tpu', label: 'Tipo TPU', type: 'select', options: ['classe', 'assunto', 'movimento', 'documento', 'orgao'], required: true },
+  { key: 'codigo_cnj', label: 'Codigo CNJ', type: 'number', required: true },
+  { key: 'nome', label: 'Nome', type: 'text', required: true },
+  { key: 'descricao', label: 'Descricao', type: 'textarea' },
+  { key: 'sigla', label: 'Sigla', type: 'text' },
+  { key: 'tipo', label: 'Tipo movimento', type: 'select', options: ['despacho', 'decisao', 'sentenca', 'acordao', 'intimacao', 'citacao', 'outro'] },
+  { key: 'gera_prazo', label: 'Gera prazo', type: 'select', options: BOOLEAN_OPTIONS },
+  { key: 'prazo_sugerido_dias', label: 'Prazo sugerido (dias)', type: 'number' },
+  { key: 'area_direito', label: 'Area do direito', type: 'text' },
+  { key: 'codigo_pai_cnj', label: 'Codigo pai CNJ', type: 'number' },
+  { key: 'tribunal', label: 'Tribunal', type: 'text' },
+  { key: 'municipio', label: 'Municipio', type: 'text' },
+  { key: 'uf', label: 'UF', type: 'text' },
+  { key: 'grau', label: 'Grau', type: 'text' },
+  { key: 'ativa', label: 'Ativa', type: 'select', options: BOOLEAN_OPTIONS },
+  { key: 'versao_cnj', label: 'Versao CNJ', type: 'number' },
+  { key: 'gateway_synced_at', label: 'Gateway synced at', type: 'datetime-local' },
+  { key: 'glossario', label: 'Glossario', type: 'textarea' },
+  { key: 'gateway_payload', label: 'Gateway payload (JSON)', type: 'textarea' },
+];
+
+const ORGAOS_JUDICIARIOS_FIELDS = [
+  { key: 'codigo_cnj', label: 'Codigo CNJ', type: 'number', required: true },
+  { key: 'nome', label: 'Nome do orgao', type: 'text', required: true },
+  { key: 'tribunal', label: 'Tribunal', type: 'text', required: true },
+  { key: 'grau', label: 'Grau', type: 'text' },
+  { key: 'orgao_julgador', label: 'Orgao julgador', type: 'text' },
+  { key: 'especialidade', label: 'Especialidade', type: 'text' },
+  { key: 'tipo', label: 'Tipo', type: 'text' },
+  { key: 'municipio', label: 'Municipio', type: 'text' },
+  { key: 'uf', label: 'UF', type: 'text' },
+  { key: 'juizo_100_digital', label: 'Juizo 100% digital', type: 'select', options: BOOLEAN_OPTIONS },
+  { key: 'competencia', label: 'Competencia', type: 'text' },
+  { key: 'serventia_id', label: 'Serventia ID', type: 'text' },
+  { key: 'metadata', label: 'Metadata (JSON)', type: 'textarea' },
+  { key: 'ativa', label: 'Ativa', type: 'select', options: BOOLEAN_OPTIONS },
+];
+
+const SERVENTIAS_FIELDS = [
+  { key: 'tribunal', label: 'Tribunal', type: 'text', required: true },
+  { key: 'nome_serventia', label: 'Nome da serventia', type: 'text', required: true },
+  { key: 'numero_serventia', label: 'Numero serventia', type: 'text' },
+  { key: 'tipo_orgao', label: 'Tipo orgao', type: 'text' },
+  { key: 'competencia', label: 'Competencia', type: 'text' },
+  { key: 'codigo_municipio_ibge', label: 'Codigo municipio IBGE', type: 'text' },
+  { key: 'municipio', label: 'Municipio', type: 'text' },
+  { key: 'uf', label: 'UF', type: 'text' },
+  { key: 'endereco', label: 'Endereco', type: 'text' },
+  { key: 'cep', label: 'CEP', type: 'text' },
+  { key: 'telefone', label: 'Telefone', type: 'text' },
+  { key: 'email', label: 'E-mail', type: 'email' },
+  { key: 'horario_funcionamento', label: 'Horario funcionamento', type: 'text' },
+  { key: 'origem', label: 'Origem', type: 'text' },
+  { key: 'geolocalizacao', label: 'Geolocalizacao (JSON)', type: 'textarea' },
+  { key: 'metadata', label: 'Metadata (JSON)', type: 'textarea' },
+  { key: 'ativa', label: 'Ativa', type: 'select', options: BOOLEAN_OPTIONS },
+];
+
+const RELACOES_PROCESSUAIS_FIELDS = [
+  { key: 'processo_pai_id', label: 'Processo pai ID', type: 'text', required: true },
+  { key: 'processo_filho_id', label: 'Processo filho ID', type: 'text', required: true },
+  { key: 'numero_cnj_pai', label: 'CNJ pai', type: 'text', required: true },
+  { key: 'numero_cnj_filho', label: 'CNJ filho', type: 'text', required: true },
+  { key: 'tipo_relacao', label: 'Tipo relacao', type: 'select', options: ['apenso', 'incidente', 'recurso', 'dependencia'], required: true },
+  { key: 'status', label: 'Status', type: 'select', options: ['ativo', 'inativo'] },
+  { key: 'observacoes', label: 'Observacoes', type: 'textarea' },
+  { key: 'grafo', label: 'Grafo relacional (JSON)', type: 'textarea' },
+];
+
 export const ADVOGADO_MODULES = {
   clientes: {
     title: 'Clientes',
@@ -314,6 +524,70 @@ export const ADVOGADO_MODULES = {
     primaryField: 'numero_processo_api',
     status: PUBLICACOES_STATUS,
     fields: PUBLICACOES_FIELDS,
+  },
+  movimentacoes: {
+    title: 'Movimentacoes',
+    singular: 'movimentacao',
+    description: 'Timeline juridica unificada para movimentos, andamentos e sincronizacao processual.',
+    primaryField: 'conteudo',
+    status: MOVIMENTACOES_STATUS,
+    fields: MOVIMENTACOES_FIELDS,
+  },
+  prazos: {
+    title: 'Prazos',
+    singular: 'prazo',
+    description: 'Gestao completa de prazos calculados, regras, eventos e tarefas processuais.',
+    primaryField: 'titulo',
+    status: PRAZOS_STATUS,
+    fields: PRAZOS_FIELDS,
+  },
+  'financeiro-processual': {
+    title: 'Financeiro Processual',
+    singular: 'lancamento',
+    description: 'Controle financeiro do processo com custas, despesas, honorarios e situacao de pagamento.',
+    primaryField: 'descricao',
+    status: FINANCEIRO_PROCESSUAL_STATUS,
+    fields: FINANCEIRO_PROCESSUAL_FIELDS,
+  },
+  'custas-processuais': {
+    title: 'Custas',
+    singular: 'custa',
+    description: 'Operacao de custas judiciais, guias e comprovantes vinculados ao processo.',
+    primaryField: 'descricao',
+    status: CUSTAS_PROCESSUAIS_STATUS,
+    fields: CUSTAS_PROCESSUAIS_FIELDS,
+  },
+  tpu: {
+    title: 'TPU',
+    singular: 'item tpu',
+    description: 'Catalogo TPU CNJ para classes, assuntos, movimentos, documentos e orgaos.',
+    primaryField: 'nome',
+    status: TPU_STATUS,
+    fields: TPU_FIELDS,
+  },
+  'orgaos-judiciarios': {
+    title: 'Orgaos Judiciarios',
+    singular: 'orgao',
+    description: 'Cadastro e consulta operacional de orgaos julgadores e juizos.',
+    primaryField: 'nome',
+    status: ORGAOS_JUDICIARIOS_STATUS,
+    fields: ORGAOS_JUDICIARIOS_FIELDS,
+  },
+  serventias: {
+    title: 'Serventias',
+    singular: 'serventia',
+    description: 'Gestao de serventias CNJ com competencia, comarca, contatos e origem de dados.',
+    primaryField: 'nome_serventia',
+    status: SERVENTIAS_STATUS,
+    fields: SERVENTIAS_FIELDS,
+  },
+  'relacoes-processuais': {
+    title: 'Relacoes Processuais',
+    singular: 'relacao',
+    description: 'Vinculos entre processos (apenso, incidente, recurso, dependencia) com visao de grafo.',
+    primaryField: 'numero_cnj_filho',
+    status: RELACOES_PROCESSUAIS_STATUS,
+    fields: RELACOES_PROCESSUAIS_FIELDS,
   },
   tarefas: {
     title: 'Tarefas',
