@@ -4,31 +4,28 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
-  MessageSquare, Send, User, ChevronLeft, Search, CheckCheck, Circle,
+  MessageSquare, Send, User, ChevronLeft, Search, CheckCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmptyState from '../ui/EmptyState';
 
 interface Mensagem {
   id: string;
-  caso_id: string | null;
-  remetente_id: string | null;
-  conteudo: string;
-  lida: boolean;
-  criado_em: string;
-  casos: { nome_cliente: string } | null;
+  user_id: string;
+  from_role: string;
+  from_name: string | null;
+  text: string;
+  ts: string;
 }
 
 interface Conversa {
-  casoId: string | null;
+  userId: string;
   nomeCliente: string;
   mensagens: Mensagem[];
-  naoLidas: number;
   ultimaMensagem: Mensagem;
 }
 
 interface Props {
-  mensagens: Mensagem[];
   isAdmin: boolean;
   currentUserId: string;
 }
@@ -47,76 +44,63 @@ function formatDataCurta(iso: string) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-function useMensagens(initial: Mensagem[]) {
+function useMensagens(isAdmin: boolean, currentUserId: string) {
   const supabase = createClient();
   return useQuery<Mensagem[]>({
-    queryKey: ['mensagens'],
+    queryKey: ['mensagens', isAdmin, currentUserId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('re_mensagens')
-        .select('id, caso_id, remetente_id, conteudo, lida, criado_em, casos(nome_cliente)')
-        .order('criado_em', { ascending: false })
-        .limit(200);
+      let q = supabase
+        .from('re_messages')
+        .select('id, user_id, from_role, from_name, text, ts')
+        .order('ts', { ascending: false })
+        .limit(500);
+      if (!isAdmin) q = q.eq('user_id', currentUserId);
+      const { data } = await q;
       return data ?? [];
     },
-    initialData: initial,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
 }
 
-function useEnviarMensagem() {
+function useEnviarMensagem(isAdmin: boolean, currentUserId: string) {
   const qc = useQueryClient();
   const supabase = createClient();
   return useMutation({
-    mutationFn: async ({ casoId, conteudo }: { casoId: string | null; conteudo: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('re_mensagens').insert({
-        caso_id: casoId,
-        remetente_id: user?.id,
-        conteudo: conteudo.trim(),
-        lida: false,
+    mutationFn: async ({ targetUserId, text }: { targetUserId: string; text: string }) => {
+      const { error } = await supabase.from('re_messages').insert({
+        user_id: targetUserId,
+        from_role: isAdmin ? 'admin' : 'user',
+        from_name: null,
+        text: text.trim(),
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['mensagens'] }),
-  });
-}
-
-function useMarcarLida() {
-  const qc = useQueryClient();
-  const supabase = createClient();
-  return useMutation({
-    mutationFn: async (ids: string[]) => {
-      if (!ids.length) return;
-      await supabase.from('re_mensagens').update({ lida: true }).in('id', ids);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['mensagens'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mensagens', isAdmin, currentUserId] }),
   });
 }
 
 function buildConversas(mensagens: Mensagem[]): Conversa[] {
   const map = new Map<string, Mensagem[]>();
   for (const m of mensagens) {
-    const key = m.caso_id ?? 'sem-caso';
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(m);
+    if (!map.has(m.user_id)) map.set(m.user_id, []);
+    map.get(m.user_id)!.push(m);
   }
 
   const conversas: Conversa[] = [];
-  for (const [casoId, msgs] of map.entries()) {
-    const sorted = [...msgs].sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime());
+  for (const [userId, msgs] of map.entries()) {
+    const sorted = [...msgs].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+    const clientMsg = msgs.find((m) => m.from_role !== 'admin' && m.from_role !== 'agent');
     conversas.push({
-      casoId: casoId === 'sem-caso' ? null : casoId,
-      nomeCliente: msgs[0].casos?.nome_cliente ?? 'Geral',
+      userId,
+      nomeCliente: clientMsg?.from_name ?? `Cliente ${userId.slice(0, 6)}`,
       mensagens: sorted,
-      naoLidas: msgs.filter((m) => !m.lida).length,
       ultimaMensagem: sorted[sorted.length - 1],
     });
   }
 
   return conversas.sort((a, b) =>
-    new Date(b.ultimaMensagem.criado_em).getTime() - new Date(a.ultimaMensagem.criado_em).getTime(),
+    new Date(b.ultimaMensagem.ts).getTime() - new Date(a.ultimaMensagem.ts).getTime(),
   );
 }
 
@@ -132,7 +116,7 @@ function ConversaItem({
   currentUserId: string;
 }) {
   const ultima = conversa.ultimaMensagem;
-  const isMinha = ultima.remetente_id === currentUserId;
+  const isMinha = ultima.user_id === currentUserId && ultima.from_role !== 'user';
 
   return (
     <button
@@ -143,27 +127,18 @@ function ConversaItem({
       )}
     >
       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0 uppercase">
-        {conversa.nomeCliente.split(' ')[0][0]}
+        {conversa.nomeCliente[0]}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p className={cn('text-sm truncate', conversa.naoLidas > 0 ? 'font-semibold' : 'font-medium')}>
-            {conversa.nomeCliente}
-          </p>
+          <p className="text-sm truncate font-medium">{conversa.nomeCliente}</p>
           <span className="text-[10px] text-muted-foreground flex-shrink-0">
-            {formatDataCurta(ultima.criado_em)}
+            {formatDataCurta(ultima.ts)}
           </span>
         </div>
         <div className="flex items-center gap-1 mt-0.5">
           {isMinha && <CheckCheck className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-          <p className={cn('text-xs truncate flex-1', conversa.naoLidas > 0 ? 'text-foreground' : 'text-muted-foreground')}>
-            {ultima.conteudo}
-          </p>
-          {conversa.naoLidas > 0 && (
-            <span className="ml-1 flex-shrink-0 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
-              {conversa.naoLidas}
-            </span>
-          )}
+          <p className="text-xs truncate flex-1 text-muted-foreground">{ultima.text}</p>
         </div>
       </div>
     </button>
@@ -173,21 +148,20 @@ function ConversaItem({
 function ThreadView({
   conversa,
   currentUserId,
+  isAdmin,
   onBack,
 }: {
   conversa: Conversa;
   currentUserId: string;
+  isAdmin: boolean;
   onBack: () => void;
 }) {
   const [texto, setTexto] = useState('');
-  const enviar = useEnviarMensagem();
-  const marcarLida = useMarcarLida();
+  const enviar = useEnviarMensagem(isAdmin, currentUserId);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    const naoLidas = conversa.mensagens.filter((m) => !m.lida && m.remetente_id !== currentUserId).map((m) => m.id);
-    if (naoLidas.length > 0) marcarLida.mutate(naoLidas);
   }, [conversa.mensagens.length]);
 
   async function submit(e: React.FormEvent) {
@@ -195,14 +169,13 @@ function ThreadView({
     if (!texto.trim() || enviar.isPending) return;
     const txt = texto;
     setTexto('');
-    await enviar.mutateAsync({ casoId: conversa.casoId, conteudo: txt });
+    await enviar.mutateAsync({ targetUserId: conversa.userId, text: txt });
   }
 
   let lastDate = '';
 
   return (
     <div className="flex flex-col h-full">
-      {/* Thread header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background">
         <button
           onClick={onBack}
@@ -211,19 +184,22 @@ function ThreadView({
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase flex-shrink-0">
-          {conversa.nomeCliente.split(' ')[0][0]}
+          {conversa.nomeCliente[0]}
         </div>
         <div>
           <p className="text-sm font-semibold">{conversa.nomeCliente}</p>
-          <p className="text-xs text-muted-foreground">{conversa.mensagens.length} mensage{conversa.mensagens.length !== 1 ? 'ns' : 'm'}</p>
+          <p className="text-xs text-muted-foreground">
+            {conversa.mensagens.length} mensage{conversa.mensagens.length !== 1 ? 'ns' : 'm'}
+          </p>
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
         {conversa.mensagens.map((m) => {
-          const isMinha = m.remetente_id === currentUserId;
-          const dataLabel = formatDataCurta(m.criado_em);
+          const isMinha = isAdmin
+            ? m.from_role === 'admin' || m.from_role === 'agent'
+            : m.from_role === 'user';
+          const dataLabel = formatDataCurta(m.ts);
           const showDate = dataLabel !== lastDate;
           lastDate = dataLabel;
 
@@ -243,9 +219,9 @@ function ThreadView({
                     ? 'bg-primary text-primary-foreground rounded-br-sm'
                     : 'bg-muted text-foreground rounded-bl-sm',
                 )}>
-                  <p className="text-sm leading-relaxed">{m.conteudo}</p>
+                  <p className="text-sm leading-relaxed">{m.text}</p>
                   <p className={cn('text-[10px] mt-1 text-right', isMinha ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
-                    {formatHora(m.criado_em)}
+                    {formatHora(m.ts)}
                   </p>
                 </div>
               </div>
@@ -255,7 +231,6 @@ function ThreadView({
         <div ref={bottomRef} />
       </div>
 
-      {/* Compose */}
       <form onSubmit={submit} className="flex items-end gap-2 px-4 py-3 border-t border-border flex-shrink-0 bg-background">
         <textarea
           value={texto}
@@ -278,21 +253,22 @@ function ThreadView({
   );
 }
 
-export default function MensagensClient({ mensagens: initial, isAdmin, currentUserId }: Props) {
-  const { data: mensagens = initial } = useMensagens(initial);
+export default function MensagensClient({ isAdmin, currentUserId }: Props) {
+  const { data: mensagens = [] } = useMensagens(isAdmin, currentUserId);
   const [search, setSearch] = useState('');
   const [conversaAtiva, setConversaAtiva] = useState<string | null>(null);
 
-  const conversas = buildConversas(mensagens);
-  const totalNaoLidas = mensagens.filter((m) => !m.lida && m.remetente_id !== currentUserId).length;
+  const conversas = isAdmin
+    ? buildConversas(mensagens)
+    : (mensagens.length > 0 ? [{ userId: currentUserId, nomeCliente: 'Minha conversa', mensagens: [...mensagens].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime()), ultimaMensagem: mensagens[0] }] : []);
 
   const conversasFiltradas = search.trim()
     ? conversas.filter((c) => c.nomeCliente.toLowerCase().includes(search.toLowerCase()) ||
-        c.ultimaMensagem.conteudo.toLowerCase().includes(search.toLowerCase()))
+        c.ultimaMensagem.text.toLowerCase().includes(search.toLowerCase()))
     : conversas;
 
   const conversaAtual = conversaAtiva !== null
-    ? conversas.find((c) => (c.casoId ?? 'sem-caso') === conversaAtiva) ?? null
+    ? conversas.find((c) => c.userId === conversaAtiva) ?? null
     : null;
 
   return (
@@ -303,43 +279,43 @@ export default function MensagensClient({ mensagens: initial, isAdmin, currentUs
         'w-full lg:w-72 lg:flex-shrink-0',
         conversaAtual && 'hidden lg:flex lg:flex-col',
       )}>
-        {/* Header lista */}
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 mb-2">
             <p className="text-sm font-semibold">Mensagens</p>
-            {totalNaoLidas > 0 && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary text-primary-foreground">
-                {totalNaoLidas}
+            {conversas.length > 0 && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
+                {conversas.length}
               </span>
             )}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar conversa..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-            />
-          </div>
+          {isAdmin && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar conversa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+              />
+            </div>
+          )}
         </div>
 
-        {/* Lista */}
         <div className="flex-1 overflow-y-auto">
           {conversasFiltradas.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
               title="Nenhuma conversa"
-              description={search ? 'Nenhuma conversa corresponde à busca.' : 'As mensagens dos clientes aparecerão aqui.'}
+              description={search ? 'Nenhuma conversa corresponde à busca.' : 'As mensagens aparecerão aqui.'}
             />
           ) : (
             conversasFiltradas.map((c) => (
               <ConversaItem
-                key={c.casoId ?? 'sem-caso'}
+                key={c.userId}
                 conversa={c}
-                ativa={conversaAtiva === (c.casoId ?? 'sem-caso')}
-                onClick={() => setConversaAtiva(c.casoId ?? 'sem-caso')}
+                ativa={conversaAtiva === c.userId}
+                onClick={() => setConversaAtiva(c.userId)}
                 currentUserId={currentUserId}
               />
             ))
@@ -356,6 +332,7 @@ export default function MensagensClient({ mensagens: initial, isAdmin, currentUs
           <ThreadView
             conversa={conversaAtual}
             currentUserId={currentUserId}
+            isAdmin={isAdmin}
             onBack={() => setConversaAtiva(null)}
           />
         ) : (

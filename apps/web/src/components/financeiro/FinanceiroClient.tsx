@@ -123,30 +123,17 @@ function useFinanceiro() {
     },
   });
 
-  // clienteMap: try nome_cliente first, fallback to nome
   const { data: clienteMap = {} } = useQuery<Record<string, string>>({
     queryKey: ['financeiro-cliente-map'],
     staleTime: 120_000,
     queryFn: async () => {
       const map: Record<string, string> = {};
-      // Try nome_cliente first
-      const { data: d1, error: e1 } = await supabase
+      const { data } = await supabase
         .from('portal_casos')
-        .select('user_id, nome_cliente')
+        .select('user_id, full_name')
         .limit(2000);
-      if (!e1 && d1) {
-        for (const r of d1) {
-          if (r.user_id && r.nome_cliente) map[r.user_id] = r.nome_cliente;
-        }
-        if (Object.keys(map).length > 0) return map;
-      }
-      // Fallback: try nome
-      const { data: d2 } = await supabase
-        .from('portal_casos')
-        .select('user_id, nome')
-        .limit(2000);
-      for (const r of (d2 ?? [])) {
-        if (r.user_id && r.nome) map[r.user_id] = r.nome;
+      for (const r of (data ?? [])) {
+        if (r.user_id && r.full_name) map[r.user_id] = r.full_name;
       }
       return map;
     },

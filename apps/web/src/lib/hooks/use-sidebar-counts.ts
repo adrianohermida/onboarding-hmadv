@@ -43,9 +43,9 @@ export function useSidebarCounts(isAdmin: boolean): SidebarCounts {
     queryFn: async () => {
       try {
         const { count } = await supabase
-          .from('re_tarefas')
+          .from('re_tasks')
           .select('id', { count: 'exact', head: true })
-          .in('status', ['pendente', 'em_andamento']);
+          .not('status', 'in', '("done","cancelled","concluida","cancelada")');
         return count ?? 0;
       } catch {
         return 0;
@@ -60,9 +60,9 @@ export function useSidebarCounts(isAdmin: boolean): SidebarCounts {
     queryFn: async () => {
       try {
         const { count } = await supabase
-          .from('re_mensagens')
+          .from('re_messages')
           .select('id', { count: 'exact', head: true })
-          .eq('lida', false);
+          .eq('from_role', 'user');
         return count ?? 0;
       } catch {
         return 0;
