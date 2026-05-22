@@ -5,6 +5,22 @@ import CustasClient from '@/components/custas/CustasClient';
 
 export const metadata: Metadata = { title: 'Custas' };
 
+export interface Custa {
+  id: string;
+  user_id: string;
+  caso_id: string | null;
+  titulo: string | null;
+  descricao: string | null;
+  categoria: string;
+  status: string;
+  valor: number;
+  data_lancamento: string;
+  data_vencimento: string | null;
+  comprovante_url: string | null;
+  comprovante_nome: string | null;
+  created_at: string;
+}
+
 export default async function CustasPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -18,33 +34,12 @@ export default async function CustasPage() {
 
   const isAdmin = !!adminData;
 
-  // Comprovantes de pagamento — documentos do tipo custas/guia
-  let docsQuery = supabase
-    .from('portal_documentos')
-    .select('id, tipo, nome, url, workflow_status, mime_type, file_size, created_at, updated_at, user_id, admin_notes')
-    .in('tipo', ['comprovante_pagamento', 'guia_judicial', 'taxa', 'custas', 'comprovante_custas'])
+  const { data: custas } = await supabase
+    .from('portal_custas')
+    .select('id, user_id, caso_id, titulo, descricao, categoria, status, valor, data_lancamento, data_vencimento, comprovante_url, comprovante_nome, created_at')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(100);
+    .order('data_lancamento', { ascending: false })
+    .limit(200);
 
-  if (!isAdmin) docsQuery = docsQuery.eq('user_id', user.id);
-
-  // Dados financeiros (valor_custas por caso)
-  let finQuery = supabase
-    .from('re_dados_financeiros')
-    .select('id, caso_id, valor_custas, casos(nome_cliente, user_id)');
-
-  const [{ data: comprovantes }, { data: dadosFinanceiros }] = await Promise.all([
-    docsQuery,
-    isAdmin ? finQuery.limit(50) : finQuery.eq('casos.user_id', user.id).limit(10),
-  ]);
-
-  return (
-    <CustasClient
-      comprovantes={comprovantes ?? []}
-      dadosFinanceiros={dadosFinanceiros ?? []}
-      isAdmin={isAdmin}
-      userId={user.id}
-    />
-  );
+  return <CustasClient initial={(custas ?? []) as Custa[]} isAdmin={isAdmin} userId={user.id} />;
 }

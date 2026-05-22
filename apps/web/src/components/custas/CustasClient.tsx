@@ -1,278 +1,365 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Receipt, Upload, Download, Eye, Clock, CheckCircle2, CloudUpload, X, FileText } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { formatDate } from '@/lib/utils';
+import {
+  Receipt, Upload, Download, Eye, Clock, CheckCircle2,
+  CloudUpload, X, FileText, Plus, AlertTriangle,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { WorkflowStatus } from '@/types/database';
-
-interface Comprovante {
-  id: string;
-  tipo: string;
-  nome: string | null;
-  url: string | null;
-  workflow_status: WorkflowStatus;
-  mime_type: string | null;
-  file_size: number | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  admin_notes: string | null;
-}
-
-interface DadoFinanceiro {
-  id: string;
-  caso_id: string;
-  valor_custas: number | null;
-  casos: { nome_cliente: string; user_id: string } | null;
-}
+import type { Custa } from '@/app/(workspace)/custas/page';
 
 interface Props {
-  comprovantes: Comprovante[];
-  dadosFinanceiros: DadoFinanceiro[];
+  initial: Custa[];
   isAdmin: boolean;
   userId: string;
 }
 
-function fmt(v: number | null | undefined) {
-  if (!v) return '—';
+const CATEGORIA_LABELS: Record<string, string> = {
+  guia:        'Guia judicial',
+  taxa:        'Taxa',
+  distribuicao:'Distribuição',
+  citacao:     'Citação',
+  pericia:     'Perícia',
+  outro:       'Outro',
+};
+
+const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ElementType }> = {
+  pendente:  { label: 'Pendente',   cls: 'bg-amber-500/10 text-amber-500',  icon: Clock },
+  pago:      { label: 'Pago',       cls: 'bg-green-500/10 text-green-500',  icon: CheckCircle2 },
+  vencido:   { label: 'Vencido',    cls: 'bg-rose-500/10 text-rose-500',    icon: AlertTriangle },
+  cancelado: { label: 'Cancelado',  cls: 'bg-muted text-muted-foreground',  icon: X },
+};
+
+function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function formatBytes(b: number | null) {
-  if (!b) return null;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
-  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+function formatDate(iso: string | null) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
-function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+function useCustas(initial: Custa[]) {
+  const supabase = createClient();
+  return useQuery<Custa[]>({
+    queryKey: ['portal-custas'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('portal_custas')
+        .select('id, user_id, caso_id, titulo, descricao, categoria, status, valor, data_lancamento, data_vencimento, comprovante_url, comprovante_nome, created_at')
+        .is('deleted_at', null)
+        .order('data_lancamento', { ascending: false })
+        .limit(200);
+      return data ?? [];
+    },
+    initialData: initial,
+    staleTime: 30_000,
+  });
+}
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+function useEnviarComprovante() {
+  const qc = useQueryClient();
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const ext = file.name.split('.').pop() ?? 'pdf';
+      const path = `custas/${id}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path);
+      const { error } = await supabase
+        .from('portal_custas')
+        .update({ comprovante_url: publicUrl, comprovante_nome: file.name, status: 'pago', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
+  });
+}
+
+function useAtualizarStatus() {
+  const qc = useQueryClient();
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from('portal_custas')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
+  });
+}
+
+function useCriarCusta() {
+  const qc = useQueryClient();
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async (nova: { titulo: string; categoria: string; valor: number; data_vencimento?: string; descricao?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from('portal_custas').insert({
+        user_id: user?.id,
+        titulo: nova.titulo,
+        categoria: nova.categoria,
+        valor: nova.valor,
+        data_vencimento: nova.data_vencimento || null,
+        descricao: nova.descricao || null,
+        status: 'pendente',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['portal-custas'] }),
+  });
+}
+
+function UploadModal({ custa, onClose }: { custa: Custa; onClose: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [drag, setDrag] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const enviar = useEnviarComprovante();
+
+  const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDragging(false);
+    setDrag(false);
     const f = e.dataTransfer.files[0];
     if (f) setFile(f);
   }, []);
 
-  async function upload() {
+  async function submit() {
     if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
-
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/custas/${Date.now()}.${ext}`;
-      const { error: storageErr } = await supabase.storage.from('documentos').upload(path, file);
-      if (storageErr) throw storageErr;
-
-      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path);
-
-      const { error: dbErr } = await supabase.from('portal_documentos').insert({
-        user_id: user.id,
-        tipo: 'comprovante_custas',
-        nome: file.name,
-        url: publicUrl,
-        mime_type: file.type,
-        file_size: file.size,
-        direction: 'entrada',
-        workflow_status: 'enviado',
-      });
-      if (dbErr) throw dbErr;
-
-      onSuccess();
-    } catch (err: any) {
-      setError(err?.message ?? 'Erro ao enviar comprovante');
-    } finally {
-      setUploading(false);
-    }
+    await enviar.mutateAsync({ id: custa.id, file });
+    onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-background rounded-2xl border border-border shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <CloudUpload className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold">Enviar Comprovante</h2>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold">Enviar comprovante</p>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-5 space-y-4">
-          <div
-            className={cn(
-              'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors',
-              dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30',
-            )}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-          >
-            <input ref={inputRef} type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
-            {file ? (
-              <div className="flex items-center justify-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">{file.name}</span>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                  className="p-0.5 rounded-full hover:bg-muted text-muted-foreground">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-foreground font-medium">Arraste ou clique para selecionar</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG</p>
-              </>
-            )}
-          </div>
-          {error && <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
-          <div className="flex gap-2 pt-1">
-            <button onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
-              Cancelar
-            </button>
-            <button onClick={upload} disabled={!file || uploading}
-              className="flex-1 px-4 py-2.5 text-sm bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              {uploading
-                ? <><div className="h-4 w-4 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" /> Enviando…</>
-                : <><Upload className="h-4 w-4" /> Enviar</>}
-            </button>
-          </div>
+
+        <p className="text-xs text-muted-foreground">{custa.titulo ?? 'Custa'} — {fmt(custa.valor)}</p>
+
+        <div
+          onDrop={onDrop}
+          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors',
+            drag ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30',
+          )}
+        >
+          <CloudUpload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+          {file ? (
+            <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">Arraste o comprovante aqui</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">PDF, JPG, PNG — até 10 MB</p>
+            </>
+          )}
+          <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }} />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+            Cancelar
+          </button>
+          <button onClick={submit} disabled={!file || enviar.isPending}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            <Upload className="h-3.5 w-3.5" />
+            {enviar.isPending ? 'Enviando…' : 'Enviar'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-export default function CustasClient({ comprovantes, dadosFinanceiros, isAdmin, userId }: Props) {
-  const [showUpload, setShowUpload] = useState(false);
+function NovaCustaForm({ onClose }: { onClose: () => void }) {
+  const [titulo, setTitulo] = useState('');
+  const [categoria, setCategoria] = useState('guia');
+  const [valor, setValor] = useState('');
+  const [vencimento, setVencimento] = useState('');
+  const criar = useCriarCusta();
 
-  const totalCustas = dadosFinanceiros.reduce((s, d) => s + (d.valor_custas ?? 0), 0);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!titulo.trim() || !valor) return;
+    await criar.mutateAsync({ titulo: titulo.trim(), categoria, valor: parseFloat(valor), data_vencimento: vencimento });
+    onClose();
+  }
 
   return (
-    <>
-      {showUpload && (
-        <UploadModal onClose={() => setShowUpload(false)} onSuccess={() => { setShowUpload(false); window.location.reload(); }} />
-      )}
+    <form onSubmit={submit} className="bg-card border border-border rounded-xl p-4 space-y-3 mb-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Nova custa</p>
+        <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
-      <div className="space-y-6">
-        {/* KPI */}
-        {totalCustas > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground mb-1">Total de custas mapeadas</p>
-              <p className="text-2xl font-bold text-foreground">{fmt(totalCustas)}</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground mb-1">Comprovantes enviados</p>
-              <p className="text-2xl font-bold text-foreground">{comprovantes.length}</p>
-            </div>
-          </div>
-        )}
+      <input
+        autoFocus
+        placeholder="Título da custa*"
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value)}
+        required
+        className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+      />
 
-        {/* Toolbar */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {comprovantes.length} comprovante{comprovantes.length !== 1 ? 's' : ''}
-          </p>
-          {!isAdmin && (
-            <button
-              onClick={() => setShowUpload(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Enviar comprovante
-            </button>
-          )}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[11px] text-muted-foreground mb-1">Categoria</label>
+          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            {Object.entries(CATEGORIA_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
         </div>
+        <div>
+          <label className="block text-[11px] text-muted-foreground mb-1">Valor (R$)*</label>
+          <input type="number" min="0" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} required
+            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
+        </div>
+      </div>
 
-        {/* Lista de comprovantes */}
-        {comprovantes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground border border-dashed border-border rounded-xl">
-            <Receipt className="h-8 w-8 opacity-40" />
-            <p className="text-sm font-medium">Nenhum comprovante enviado</p>
-            {!isAdmin && (
-              <>
-                <p className="text-xs text-center max-w-xs">
-                  Envie comprovantes de pagamento de custas processuais, guias e taxas aqui.
-                </p>
-                <button
-                  onClick={() => setShowUpload(true)}
-                  className="mt-1 flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  Enviar o primeiro comprovante
-                </button>
-              </>
-            )}
+      <div>
+        <label className="block text-[11px] text-muted-foreground mb-1">Vencimento</label>
+        <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
+          className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button type="button" onClick={onClose}
+          className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
+        <button type="submit" disabled={!titulo.trim() || !valor || criar.isPending}
+          className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
+          {criar.isPending ? 'Criando…' : 'Criar'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function CustasClient({ initial, isAdmin, userId }: Props) {
+  const { data: custas = initial } = useCustas(initial);
+  const atualizarStatus = useAtualizarStatus();
+  const [uploadFor, setUploadFor] = useState<Custa | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
+  const totalValor = custas.reduce((s, c) => s + c.valor, 0);
+  const totalPago = custas.filter((c) => c.status === 'pago').reduce((s, c) => s + c.valor, 0);
+  const pendentes = custas.filter((c) => c.status === 'pendente' || c.status === 'vencido').length;
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
+            <Receipt className="h-3.5 w-3.5 text-blue-500" />
+          </div>
+          <p className="text-xl font-bold tabular-nums">{fmt(totalValor)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Total em custas</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center mb-2">
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+          </div>
+          <p className="text-xl font-bold tabular-nums">{fmt(totalPago)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pago</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center mb-2">
+            <Clock className="h-3.5 w-3.5 text-amber-500" />
+          </div>
+          <p className="text-2xl font-bold tabular-nums">{pendentes}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pendentes</p>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{custas.length} registro{custas.length !== 1 ? 's' : ''}</p>
+        {isAdmin && (
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            <Plus className="h-3.5 w-3.5" />
+            Nova custa
+          </button>
+        )}
+      </div>
+
+      {showForm && <NovaCustaForm onClose={() => setShowForm(false)} />}
+
+      {/* Lista */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        {custas.length === 0 ? (
+          <div className="py-10 text-center">
+            <Receipt className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma custa registrada.</p>
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="divide-y divide-border">
-              {comprovantes.map((doc) => (
-                <div key={doc.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                    <Receipt className="h-4 w-4 text-muted-foreground" />
+          <div className="divide-y divide-border">
+            {custas.map((c) => {
+              const sCfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.pendente;
+              const StatusIcon = sCfg.icon;
+              const catLabel = CATEGORIA_LABELS[c.categoria] ?? c.categoria;
+              return (
+                <div key={c.id} className="flex items-start gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors">
+                  <div className={cn('flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5', sCfg.cls)}>
+                    <StatusIcon className="h-3.5 w-3.5" />
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {doc.nome || doc.tipo.replace(/_/g, ' ')}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-muted-foreground">{formatDate(doc.created_at)}</span>
-                      {formatBytes(doc.file_size) && (
-                        <span className="text-xs text-muted-foreground/60">{formatBytes(doc.file_size)}</span>
-                      )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-foreground">{c.titulo ?? catLabel}</p>
+                      <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', sCfg.cls)}>
+                        {sCfg.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                      <span>{catLabel}</span>
+                      {c.data_vencimento && <span>Vence {formatDate(c.data_vencimento)}</span>}
+                      <span className="font-semibold text-foreground">{fmt(c.valor)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {doc.workflow_status === 'aprovado' ? (
-                      <span className="flex items-center gap-1 text-xs text-green-500">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Aprovado
-                      </span>
-                    ) : doc.workflow_status === 'em_analise' ? (
-                      <span className="flex items-center gap-1 text-xs text-amber-500">
-                        <Clock className="h-3.5 w-3.5" /> Em análise
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5" /> {doc.workflow_status.replace(/_/g, ' ')}
-                      </span>
-                    )}
-                    {doc.url && (
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer"
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {c.comprovante_url ? (
+                      <a href={c.comprovante_url} target="_blank" rel="noopener noreferrer"
                         className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Visualizar">
+                        title="Ver comprovante">
                         <Eye className="h-3.5 w-3.5" />
                       </a>
-                    )}
-                    {doc.url && (
-                      <a href={doc.url} download
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Baixar">
-                        <Download className="h-3.5 w-3.5" />
-                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setUploadFor(c)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded-lg transition-colors"
+                        title="Enviar comprovante"
+                      >
+                        <Upload className="h-3 w-3" />
+                        Comprovante
+                      </button>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </div>
-    </>
+
+      {uploadFor && <UploadModal custa={uploadFor} onClose={() => setUploadFor(null)} />}
+    </div>
   );
 }

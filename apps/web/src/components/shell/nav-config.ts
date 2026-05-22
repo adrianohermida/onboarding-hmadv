@@ -1,7 +1,7 @@
 import {
-  LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
+  LayoutDashboard, Users, FileText, CreditCard,
   DollarSign, Calendar, CheckSquare, MessageSquare, Gavel, Newspaper,
-  Scale, FileCheck, Receipt, HelpCircle,
+  Scale, FileCheck, Receipt, HelpCircle, Clock,
 } from 'lucide-react';
 import type { useSidebarCounts } from '@/lib/hooks/use-sidebar-counts';
 
@@ -24,6 +24,8 @@ export const ADMIN_SECTIONS: NavSection[] = [
       { href: '/dashboard',    label: 'Painel',       icon: LayoutDashboard },
       { href: '/clientes',     label: 'Clientes',     icon: Users },
       { href: '/processos',    label: 'Processos',    icon: Gavel },
+      { href: '/prazos',       label: 'Prazos',       icon: Clock },
+      { href: '/audiencias',   label: 'Audiências',   icon: Calendar },
       { href: '/publicacoes',  label: 'Publicações',  icon: Newspaper,    countKey: 'publicacoes' },
       { href: '/tarefas',      label: 'Tarefas',      icon: CheckSquare,  countKey: 'tarefas' },
     ],
