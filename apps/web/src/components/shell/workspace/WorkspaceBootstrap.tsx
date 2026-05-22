@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function WorkspaceBootstrap({ userId, email, children }: Props) {
-  const { setUser } = useWorkspaceStore();
+  const { setUser, setViewMode } = useWorkspaceStore();
 
   useEffect(() => {
     async function bootstrap() {
@@ -28,15 +28,22 @@ export default function WorkspaceBootstrap({ userId, email, children }: Props) {
       const user: AuthUser = {
         id: userId,
         email,
-        role: adminData?.role === 'platform_admin' ? 'master_admin' : isAdmin ? 'tenant_admin' : 'cliente',
+        role: adminData?.role === 'platform_admin'
+          ? 'master_admin'
+          : isAdmin
+            ? 'tenant_admin'
+            : 'cliente',
         isAdmin,
         workspaceId: null,
         nome: meta.nome ?? meta.full_name ?? undefined,
       };
+
       setUser(user);
+      // Sync viewMode with actual role so nav renders correctly immediately
+      setViewMode(isAdmin ? 'advogado' : 'cliente');
     }
     bootstrap();
-  }, [userId, email, setUser]);
+  }, [userId, email, setUser, setViewMode]);
 
   return <>{children}</>;
 }
