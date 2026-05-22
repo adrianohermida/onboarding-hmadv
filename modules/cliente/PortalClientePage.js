@@ -891,6 +891,134 @@ function mountCaseActionListeners(host) {
   });
 }
 
+// ── Sprint 5 render functions ─────────────────────────────────────────────────
+
+function renderMeusProcessosHubContent(tabKey, data) {
+  switch (tabKey) {
+    case 'prazos':     return renderMeoCasoPrazosTab(data);
+    case 'andamentos': return renderMeoCasoAndamentosTab(data);
+    default:           return renderMeoCasoProcessosTab(data);
+  }
+}
+
+function renderVisaoGeralPage(data) {
+  const { caso, docStats, debtStats, nextStep, contratos } = data;
+  const faseLabel = caso?.fase ? String(caso.fase).replace(/_/g, ' ') : 'Cadastro';
+  const steps = [
+    ['Dados iniciais', !!caso?.onboarding_done],
+    ['Dívidas cadastradas', debtStats.creditors > 0],
+    ['Documentos enviados', docStats.pending === 0],
+    ['Em análise pela equipe', !!caso?.onboarding_done && debtStats.creditors > 0],
+  ];
+  const quickLinks = [
+    { key: 'meus-casos',     label: 'Meus Casos',   desc: 'Detalhes e jornada do caso' },
+    { key: 'meus-processos', label: 'Processos',    desc: escapeHtml(caso?.numero_processo || 'A definir') },
+    { key: 'honorarios',     label: 'Honorários',   desc: `${contratos.length} contrato(s)` },
+    { key: 'meus-documentos', label: 'Documentos',  desc: `${docStats.approved}/${docStats.total} aprovados` },
+    { key: 'atendimento',    label: 'Atendimento',  desc: 'Mensagens e suporte' },
+    { key: 'marketplace',    label: 'Marketplace',  desc: 'Serviços jurídicos' },
+  ];
+  return `
+    <section class="cliente-page">
+      <div class="page-header">
+        <h1>Visão Geral</h1>
+        <p>Resumo do seu caso e próximas ações.</p>
+      </div>
+      ${nextStep ? `
+        <div class="vg-next-action">
+          <div class="vg-next-label">
+            <strong>${escapeHtml(nextStep.label)}</strong>
+            <p>${escapeHtml(nextStep.text)}</p>
+          </div>
+          <a href="${escapeHtml(nextStep.href)}" data-page="${escapeHtml(nextStep.href.replace('.html', ''))}" class="btn btn-primary btn-sm">${escapeHtml(nextStep.action || 'Ver')}</a>
+        </div>
+      ` : ''}
+      <div class="vg-status-strip">
+        <div class="vg-status-item"><span>Fase do caso</span><strong>${escapeHtml(faseLabel)}</strong></div>
+        <div class="vg-status-item"><span>Documentos</span><strong>${docStats.approved}/${docStats.total}</strong></div>
+        <div class="vg-status-item"><span>Credores</span><strong>${debtStats.creditors}</strong></div>
+        <div class="vg-status-item"><span>Contratos</span><strong>${contratos.length}</strong></div>
+      </div>
+      <div class="vg-journey">
+        <div class="vg-journey-title">Sua jornada</div>
+        <div class="vg-journey-list">
+          ${steps.map(([label, done]) => `
+            <div class="vg-journey-item ${done ? 'is-done' : ''}">
+              <span class="vg-journey-dot" aria-hidden="true"></span>
+              <span>${escapeHtml(label)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="vg-nav-grid">
+        ${quickLinks.map(link => `
+          <a href="${escapeHtml(link.key)}.html" data-page="${escapeHtml(link.key)}" class="vg-nav-card">
+            <strong>${escapeHtml(link.label)}</strong>
+            <small>${escapeHtml(link.desc)}</small>
+          </a>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function renderMarketplacePage() {
+  const services = [
+    { id: 'diligencias',    label: 'Diligências',         desc: 'Busca de informações e documentos' },
+    { id: 'correspondentes', label: 'Correspondentes',    desc: 'Representação em outras comarcas' },
+    { id: 'calculos',       label: 'Cálculos Jurídicos',  desc: 'Atualização de débitos e liquidação' },
+    { id: 'protocolos',     label: 'Protocolos',          desc: 'Petições e documentos em cartório' },
+    { id: 'certidoes',      label: 'Certidões',           desc: 'Certidões negativas e judiciais' },
+    { id: 'pareceres',      label: 'Pareceres',           desc: 'Consulta jurídica especializada' },
+    { id: 'consultorias',   label: 'Consultorias',        desc: 'Assessoria em áreas específicas' },
+    { id: 'audiencias',     label: 'Audiências',          desc: 'Representação em audiências remotas' },
+    { id: 'pericias',       label: 'Perícias',            desc: 'Laudos técnicos e periciais' },
+  ];
+  return `
+    <section class="cliente-page">
+      <div class="page-header">
+        <h1>Marketplace Jurídico</h1>
+        <p>Solicite serviços complementares ao seu caso.</p>
+      </div>
+      <div class="marketplace-grid">
+        ${services.map(s => `
+          <button type="button" class="marketplace-card" data-service="${escapeHtml(s.id)}">
+            <strong>${escapeHtml(s.label)}</strong>
+            <small>${escapeHtml(s.desc)}</small>
+            <span class="marketplace-cta">Solicitar</span>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function renderConfiguracoesPage() {
+  const sections = [
+    { title: 'Perfil',         desc: 'Atualize seus dados pessoais e informações de contato.',     action: 'open-account-modal', view: 'perfil',       label: 'Editar perfil' },
+    { title: 'Conta',          desc: 'Configurações de acesso, senha e segurança.',                action: 'open-account-modal', view: 'conta',        label: 'Gerenciar conta' },
+    { title: 'Preferências',   desc: 'Controle como e quando você recebe atualizações do portal.', action: 'open-account-modal', view: 'preferencias',  label: 'Preferências' },
+    { title: 'Permissões',     desc: 'Visualize suas permissões e nível de acesso.',               action: 'open-account-modal', view: 'permissoes',   label: 'Ver permissões' },
+  ];
+  return `
+    <section class="cliente-page">
+      <div class="page-header">
+        <h1>Configurações</h1>
+        <p>Gerencie sua conta, notificações e preferências do portal.</p>
+      </div>
+      <div class="config-sections">
+        ${sections.map(s => `
+          <section class="config-section">
+            <h2>${escapeHtml(s.title)}</h2>
+            <p>${escapeHtml(s.desc)}</p>
+            <button type="button" class="btn btn-ghost btn-sm" data-shell-action="${escapeHtml(s.action)}" data-account-view="${escapeHtml(s.view)}">${escapeHtml(s.label)}</button>
+          </section>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
 export async function bootClientePage(moduleKey) {
   const host = document.querySelector('[data-cliente-module-host]');
   if (!host) return;
@@ -967,6 +1095,95 @@ export async function bootClientePage(moduleKey) {
       `;
       window.initUiKit?.(host);
       mountHubTabListeners(host, 'ajuda', data, renderAtendimentoHubContent);
+      return;
+    }
+
+    // ── Sprint 5 — new sidebar hubs ───────────────────────────────────────
+
+    if (moduleKey === 'visao-geral') {
+      host.innerHTML = renderVisaoGeralPage(data);
+      window.initUiKit?.(host);
+      return;
+    }
+
+    if (moduleKey === 'meus-casos') {
+      const activeTab = getActiveHubTab('meus-casos');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Meus Casos</h1>
+            <p>Acompanhe sua jornada com clareza, sem termos complicados.</p>
+          </div>
+          ${renderHubNav('meus-casos', activeTab)}
+          <div class="hub-tab-content">${renderMeoCasoHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountCaseActionListeners(host);
+      mountHubTabListeners(host, 'meus-casos', data, renderMeoCasoHubContent);
+      return;
+    }
+
+    if (moduleKey === 'meus-processos') {
+      const activeTab = getActiveHubTab('meus-processos');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Processos</h1>
+            <p>Acompanhe os processos judiciais vinculados ao seu caso.</p>
+          </div>
+          ${renderHubNav('meus-processos', activeTab)}
+          <div class="hub-tab-content">${renderMeusProcessosHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'meus-processos', data, renderMeusProcessosHubContent);
+      return;
+    }
+
+    if (moduleKey === 'honorarios') {
+      const activeTab = getActiveHubTab('honorarios');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Honorários</h1>
+            <p>Contratos, custas, parcelas e dívidas do seu caso.</p>
+          </div>
+          ${renderHubNav('honorarios', activeTab)}
+          <div class="hub-tab-content">${renderFinancialHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'honorarios', data, renderFinancialHubContent);
+      return;
+    }
+
+    if (moduleKey === 'atendimento') {
+      const activeTab = getActiveHubTab('atendimento');
+      host.innerHTML = `
+        <section class="cliente-page">
+          <div class="page-header">
+            <h1>Atendimento</h1>
+            <p>Mensagens, suporte e jornada do seu caso.</p>
+          </div>
+          ${renderHubNav('atendimento', activeTab)}
+          <div class="hub-tab-content">${renderAtendimentoHubContent(activeTab, data)}</div>
+        </section>
+      `;
+      window.initUiKit?.(host);
+      mountHubTabListeners(host, 'atendimento', data, renderAtendimentoHubContent);
+      return;
+    }
+
+    if (moduleKey === 'marketplace') {
+      host.innerHTML = renderMarketplacePage();
+      window.initUiKit?.(host);
+      return;
+    }
+
+    if (moduleKey === 'configuracoes') {
+      host.innerHTML = renderConfiguracoesPage();
+      window.initUiKit?.(host);
       return;
     }
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules, PORTAL_MODULES } from '../js/navigation.js';
 
-const expectedClientSidebarKeys = ['meu-caso', 'financeiro', 'meus-documentos', 'ajuda'];
+const expectedClientSidebarKeys = [
+  'visao-geral', 'meus-casos', 'meus-processos', 'honorarios',
+  'meus-documentos', 'atendimento', 'marketplace', 'configuracoes',
+];
 
 const expectedAdminRelacionamento = {
   mensagens: { menuLabel: 'Mensagens', adminSidebarSectionLabel: 'Relacionamento' },

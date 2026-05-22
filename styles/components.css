@@ -1892,3 +1892,165 @@ td { padding: 9px 14px; vertical-align: middle; }
   .next-action-text { font-size: 11px; }
   table { min-width: 0; }
 }
+
+/* ── VISÃO GERAL ──────────────────────────────── */
+.vg-next-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--line2);
+  border-radius: var(--r);
+  border-left: 3px solid var(--blue);
+  margin-bottom: 20px;
+}
+.vg-next-label { flex: 1; min-width: 0; }
+.vg-next-label strong { display: block; font-size: 14px; color: var(--navy); margin-bottom: 2px; }
+.vg-next-label p { margin: 0; font-size: 13px; color: var(--muted); }
+
+.vg-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.vg-status-item {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.vg-status-item span {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.vg-status-item strong { font-size: 22px; color: var(--navy); font-weight: 700; }
+
+.vg-journey {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.vg-journey-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 14px;
+}
+.vg-journey-list { display: grid; gap: 10px; }
+.vg-journey-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.vg-journey-item.is-done { color: var(--ink); }
+.vg-journey-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  flex-shrink: 0;
+  background: transparent;
+  transition: background .15s, border-color .15s;
+}
+.vg-journey-item.is-done .vg-journey-dot { background: var(--ok); border-color: var(--ok); }
+
+.vg-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.vg-nav-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  text-decoration: none;
+  transition: border-color .14s, box-shadow .14s;
+}
+.vg-nav-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(46,109,164,.12);
+}
+.vg-nav-card strong { font-size: 13px; font-weight: 600; color: var(--navy); }
+.vg-nav-card small  { font-size: 11px; color: var(--muted); }
+
+/* ── MARKETPLACE JURÍDICO ─────────────────────── */
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.marketplace-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .14s, box-shadow .14s;
+}
+.marketplace-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(46,109,164,.12);
+}
+.marketplace-card strong { font-size: 13px; font-weight: 600; color: var(--navy); }
+.marketplace-card small  { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.marketplace-cta {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* ── CONFIGURAÇÕES ────────────────────────────── */
+.config-sections { display: grid; gap: 10px; }
+.config-section {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 18px 20px;
+}
+.config-section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+  margin: 0 0 4px;
+}
+.config-section p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+@media (max-width: 767px) {
+  .vg-status-strip     { grid-template-columns: repeat(2, 1fr); }
+  .vg-nav-grid         { grid-template-columns: repeat(2, 1fr); }
+  .marketplace-grid    { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .vg-nav-grid         { grid-template-columns: 1fr; }
+  .marketplace-grid    { grid-template-columns: 1fr; }
+  .vg-status-strip     { grid-template-columns: repeat(2, 1fr); }
+}

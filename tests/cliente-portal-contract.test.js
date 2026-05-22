@@ -4,13 +4,20 @@ import { describe, expect, it } from 'vitest';
 import { getRoutes, getSidebarModules } from '../js/navigation.js';
 
 const root = process.cwd();
-const clientKeys = ['meu-caso', 'financeiro', 'meus-documentos', 'ajuda'];
+const clientKeys = [
+  'visao-geral', 'meus-casos', 'meus-processos', 'honorarios',
+  'meus-documentos', 'atendimento', 'marketplace', 'configuracoes',
+];
 
 const hubContentMarkers = {
-  'meu-caso':      ['Seu caminho no portal', 'Ações rápidas'],
-  financeiro:      ['Workflow contratual', 'Cronograma de pagamento'],
+  'visao-geral':    ['Próxima ação', 'Serviços jurídicos'],
+  'meus-casos':     ['Prazos do caso', 'Andamentos do caso'],
+  'meus-processos': ['Prazos do caso', 'Andamentos do caso'],
+  honorarios:       ['Cronograma de pagamento', 'Workflow contratual'],
   'meus-documentos': ['Lista de documentos', 'Enviar documento'],
-  ajuda:           ['Dúvidas frequentes', 'Falar com o escritório'],
+  atendimento:      ['Canais de Atendimento', 'Falar com o escritório'],
+  marketplace:      ['Diligências', 'Busca de informações e documentos'],
+  configuracoes:    ['Perfil', 'Editar perfil'],
 };
 
 function readFile(...parts) {
