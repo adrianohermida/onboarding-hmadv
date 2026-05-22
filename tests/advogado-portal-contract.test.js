@@ -9,9 +9,9 @@ const root = process.cwd();
 const lawyerKeys = [
   'painel',
   'clientes', 'processos', 'publicacoes', 'prazos', 'tarefas', 'agenda', 'audiencias',
-  'financeiro', 'custas-processuais', 'financeiro-processual',
+  'financeiro', 'custas-processuais',
   'mensagens', 'onboarding-v2', 'suporte', 'partes',
-  'analytics', 'ai-copilot',
+  'analytics', 'ai-copilot', 'gestao',
 ];
 
 const crudKeys = [
@@ -63,7 +63,7 @@ describe('portal do advogado contract', () => {
   });
 
   it('ships shell-mounted enterprise pages for the operating system modules', () => {
-    ['analytics', 'ai-copilot', 'experiencia-cliente', 'financeiro-inteligencia',
+    ['analytics', 'ai-copilot', 'gestao', 'experiencia-cliente', 'financeiro-inteligencia',
      'operacoes-juridicas', 'compliance', 'platform-os', 'ui-os', 'workspace-os', 'billing-os'].forEach(key => {
       const html = readFile('pages', `${key}.html`);
 

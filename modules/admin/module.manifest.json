@@ -1,0 +1,8 @@
+{
+  "module": "admin",
+  "key": "gestao",
+  "title": "Gestão Administrativa",
+  "route": "/pages/gestao.html",
+  "permissions": ["admin"],
+  "lazy": true
+}

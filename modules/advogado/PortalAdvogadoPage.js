@@ -1216,6 +1216,151 @@ async function loadInternalUsers() {
   }
 }
 
+// ── Admin Financeiro Hub ──────────────────────────────────────────────────────
+
+function renderAdminFinanceiroRecordList(records, emptyMsg) {
+  if (!records.length) return `<p class="advogado-empty">${escapeHtml(emptyMsg)}</p>`;
+  return records.slice(0, 15).map(record => `
+    <article class="advogado-record-card">
+      <div class="advogado-record-main">
+        <strong>${escapeHtml(record.descricao || record.tipo || record.titulo || 'Registro')}</strong>
+        <span class="advogado-flow-pill">${escapeHtml(record.status || 'pendente')}</span>
+      </div>
+      <div class="advogado-detail-row">
+        <span>${escapeHtml(record.cliente_nome || record.cliente_id || '-')}</span>
+        <strong>${formatMoney(record.valor)}</strong>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderAdminFinanceiroHonorarios(data) {
+  const records = data.honRecords;
+  const total = records.reduce((sum, record) => sum + Number(record.valor || 0), 0);
+  const pending = records.filter(record => ['pendente', 'emitida'].includes(record.status)).length;
+  const paid = records.filter(record => ['pago', 'quitado', 'concluido'].includes(record.status)).length;
+  return `
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Total honorários</span><div class="kpi-value">${formatMoney(total)}</div></div>
+      <div class="kpi kpi-warn"><span class="kpi-label">Pendentes</span><div class="kpi-value">${pending}</div></div>
+      <div class="kpi kpi-ok"><span class="kpi-label">Quitados</span><div class="kpi-value">${paid}</div></div>
+    </div>
+    <div class="advogado-record-list" style="margin-top:16px;">
+      ${renderAdminFinanceiroRecordList(records, 'Nenhum honorário registrado.')}
+    </div>
+  `;
+}
+
+function renderAdminFinanceiroCobrancas(data) {
+  const records = data.cobRecords;
+  const total = records.reduce((sum, record) => sum + Number(record.valor || 0), 0);
+  const overdue = records.filter(record => ['vencida', 'inadimplente'].includes(record.status)).length;
+  return `
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Total cobranças</span><div class="kpi-value">${formatMoney(total)}</div></div>
+      <div class="kpi kpi-warn"><span class="kpi-label">Em atraso</span><div class="kpi-value">${overdue}</div></div>
+      <div class="kpi"><span class="kpi-label">Registros</span><div class="kpi-value">${records.length}</div></div>
+    </div>
+    <div class="advogado-record-list" style="margin-top:16px;">
+      ${renderAdminFinanceiroRecordList(records, 'Nenhuma cobrança registrada.')}
+    </div>
+  `;
+}
+
+function renderAdminFinanceiroAnalise(data) {
+  return `
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Clientes ativos</span><div class="kpi-value">${data.clients.length}</div></div>
+      <div class="kpi"><span class="kpi-label">Diagnóstico</span><div class="kpi-value">Ativo</div><div class="kpi-hint">Comprometimento e renda</div></div>
+      <div class="kpi kpi-ok"><span class="kpi-label">Base CNJ</span><div class="kpi-value">Operacional</div></div>
+    </div>
+    <article class="advogado-record-card" style="margin-top:16px;">
+      <h3 style="margin-bottom:8px;">Análise Financeira de Casos</h3>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Renda, mínimo existencial, dívidas e proposta de pagamento por cliente. Acompanhe a evolução do comprometimento e base de negociação.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn btn-primary btn-sm" href="financeiro-inteligencia.html" data-page="financeiro-inteligencia">Abrir análise completa</a>
+        <a class="btn btn-ghost btn-sm" href="financial-dashboard.html" data-page="financial-dashboard">Dashboard financeiro</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminFinanceiroDashboard(data) {
+  return `
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Casos monitorados</span><div class="kpi-value">${data.clients.length}</div></div>
+      <div class="kpi kpi-ok"><span class="kpi-label">Dashboard</span><div class="kpi-value">Disponível</div></div>
+    </div>
+    <article class="advogado-record-card" style="margin-top:16px;">
+      <h3 style="margin-bottom:8px;">Dashboard Financeiro</h3>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Visão consolidada de receitas, cobranças, diagnóstico CNJ e planos de pagamento. Inclui gráficos de evolução e alertas de risco financeiro.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn btn-primary btn-sm" href="financial-dashboard.html" data-page="financial-dashboard">Abrir dashboard completo</a>
+        <a class="btn btn-ghost btn-sm" href="financeiro-inteligencia.html" data-page="financeiro-inteligencia">Análise financeira</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminFinanceiroTab(tabKey, data) {
+  switch (tabKey) {
+    case 'cobrancas':    return renderAdminFinanceiroCobrancas(data);
+    case 'inteligencia': return renderAdminFinanceiroAnalise(data);
+    case 'dashboard':    return renderAdminFinanceiroDashboard(data);
+    default:             return renderAdminFinanceiroHonorarios(data);
+  }
+}
+
+async function renderAdminFinanceiroHub(host) {
+  const tabs = [
+    { key: 'honorarios',   label: 'Honorários' },
+    { key: 'cobrancas',    label: 'Cobranças' },
+    { key: 'inteligencia', label: 'Análise' },
+    { key: 'dashboard',    label: 'Dashboard' },
+  ];
+  const hash = (window.location.hash || '').replace('#', '');
+  const activeTab = tabs.some(t => t.key === hash) ? hash : 'honorarios';
+
+  const [honRecords, cobRecords, clients] = await Promise.all([
+    loadModuleRecords('financeiro').catch(() => []),
+    loadModuleRecords('financeiro-processual').catch(() => []),
+    AdminService.getClients().catch(() => []),
+  ]);
+
+  const hubData = { honRecords, cobRecords, clients };
+
+  host.innerHTML = `
+    <section class="advogado-page" data-advogado-module="financeiro">
+      <div class="page-header">
+        <h1>Financeiro</h1>
+        <p>Honorários, cobranças, análise e diagnóstico financeiro dos casos.</p>
+      </div>
+      <nav class="hub-tabs" aria-label="Abas financeiro">
+        ${tabs.map(t => `
+          <a class="hub-tab${t.key === activeTab ? ' is-active' : ''}"
+             href="#${t.key}" data-hub-tab="${t.key}">${escapeHtml(t.label)}</a>
+        `).join('')}
+      </nav>
+      <div class="hub-tab-content">${renderAdminFinanceiroTab(activeTab, hubData)}</div>
+    </section>
+  `;
+  window.initUiKit?.(host);
+
+  host.querySelectorAll('[data-hub-tab]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tabKey = link.dataset.hubTab;
+      window.history.replaceState(null, '', `#${tabKey}`);
+      host.querySelectorAll('.hub-tab').forEach(a => a.classList.toggle('is-active', a.dataset.hubTab === tabKey));
+      const contentEl = host.querySelector('.hub-tab-content');
+      if (contentEl) {
+        contentEl.innerHTML = renderAdminFinanceiroTab(tabKey, hubData);
+        window.initUiKit?.(contentEl);
+      }
+    });
+  });
+}
+
 export async function bootAdvogadoPage(moduleKey) {
   const host = document.querySelector('[data-advogado-module-host]');
   if (!host) return;
@@ -1227,6 +1372,11 @@ export async function bootAdvogadoPage(moduleKey) {
     await renderPainelPage(host);
     window.initUiKit?.(host);
     bindPainelEvents(host);
+    return;
+  }
+
+  if (moduleKey === 'financeiro') {
+    await renderAdminFinanceiroHub(host);
     return;
   }
 

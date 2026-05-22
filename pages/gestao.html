@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Gestão | Hermida Maia Advocacia</title>
+  <link rel="stylesheet" href="../styles/variables.css?v=20260523a" />
+  <link rel="stylesheet" href="../styles/main.css?v=20260523a" />
+  <link rel="stylesheet" href="../styles/layout.css?v=20260523a" />
+  <link rel="stylesheet" href="../styles/components.css?v=20260523a" />
+</head>
+<body>
+  <div class="portal-shell">
+    <div data-component="sidebar"></div>
+    <div class="main-area">
+      <div data-component="header"></div>
+      <main class="page-content">
+        <div data-gestao-host></div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="../js/app.js?v=20260523a"></script>
+  <script type="module">
+    import { bootGestaoPage } from '../modules/admin/GestaoAdminPage.js?v=20260523a';
+    document.addEventListener('app:ready', () => bootGestaoPage(), { once: true });
+  </script>
+</body>
+</html>

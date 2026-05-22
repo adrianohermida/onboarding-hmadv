@@ -36,6 +36,7 @@ export const FEATURE_FLAGS = {
   onboardingLegacy: true,
   analytics: true,
   aiCopilot: true,
+  gestaoPortal: true,
   clientExperience: true,
   financialIntelligence: true,
   legalOperations: true,
@@ -94,7 +95,7 @@ export const PORTAL_MODULES = [
 
   { key: 'financeiro',              title: 'Honorários',          menuLabel: 'Honorários',     parent: 'Painel', order: 110, visible: true, roles: ['admin'], feature: 'financeiro',          icon: 'wallet',        adminSidebarSection: 'financeiro-adm', adminSidebarSectionLabel: 'Financeiro', adminSidebarSectionOrder: 30 },
   { key: 'custas-processuais',      title: 'Custas',              menuLabel: 'Custas',         parent: 'Painel', order: 120, visible: true, roles: ['admin'], feature: 'custasProcessuais',    icon: 'receipt',       adminSidebarSection: 'financeiro-adm', adminSidebarSectionLabel: 'Financeiro', adminSidebarSectionOrder: 30 },
-  { key: 'financeiro-processual',   title: 'Financeiro Processual', menuLabel: 'Cobranças',    parent: 'Painel', order: 130, visible: true, roles: ['admin'], feature: 'financeiroProcessual', icon: 'wallet-cards',  adminSidebarSection: 'financeiro-adm', adminSidebarSectionLabel: 'Financeiro', adminSidebarSectionOrder: 30 },
+  { key: 'financeiro-processual',   title: 'Financeiro Processual', menuLabel: 'Cobranças',    parent: 'Painel', order: 130, visible: false, roles: ['admin'], feature: 'financeiroProcessual', icon: 'wallet-cards' },
 
   // ── Admin — Relacionamento ─────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ export const PORTAL_MODULES = [
 
   { key: 'analytics',        title: 'Indicadores',         menuLabel: 'Indicadores',    parent: 'Painel', order: 200, visible: true, roles: ['admin'], feature: 'analytics',          icon: 'chart-scatter',   adminSidebarSection: 'gestao', adminSidebarSectionLabel: 'Gestão', adminSidebarSectionOrder: 50 },
   { key: 'ai-copilot',       title: 'Assistente Jurídico', menuLabel: 'Assistente IA',  parent: 'Painel', order: 210, visible: true, roles: ['admin'], feature: 'aiCopilot',          icon: 'sparkles',        adminSidebarSection: 'gestao', adminSidebarSectionLabel: 'Gestão', adminSidebarSectionOrder: 50 },
+  { key: 'gestao',           title: 'Gestão do Portal',    menuLabel: 'Gestão',         parent: 'Painel', order: 220, visible: true, roles: ['admin'], feature: 'gestaoPortal',        icon: 'settings-2',      adminSidebarSection: 'gestao', adminSidebarSectionLabel: 'Gestão', adminSidebarSectionOrder: 50 },
 
   // ── Admin — sub-pages (routable, not in sidebar) ──────────────────────────
 

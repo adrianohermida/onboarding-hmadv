@@ -15,7 +15,6 @@ const expectedAdminOperations = {
   publicacoes:           { title: 'Publicações',           menuLabel: 'Publicações' },
   prazos:                { title: 'Prazos',                menuLabel: 'Prazos' },
   'custas-processuais':  { title: 'Custas',                menuLabel: 'Custas' },
-  'financeiro-processual': { title: 'Financeiro Processual', menuLabel: 'Cobranças' },
 };
 
 describe('navigation contract', () => {
