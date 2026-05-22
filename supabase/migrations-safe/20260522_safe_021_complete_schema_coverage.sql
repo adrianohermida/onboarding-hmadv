@@ -136,24 +136,26 @@ END $$;
 -- ════════════════════════════════════════════════════════════
 
 -- Schema public — módulos de conversas, tarefas, documentos
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE re_mensagens;          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE re_tarefas;            EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE re_agendamentos;       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE re_agenda_slots;       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_casos;          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_documentos;     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_custas;         EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_contratos;      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_planos_pagamento;        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_cnj_notifications;       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_cnj_timeline;            EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE portal_partes_vinculos;         EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- CORREÇÃO: EXCEPTION WHEN duplicate_object não captura 42P01 (undefined_table).
+-- Solução: verificar IF EXISTS antes do ALTER PUBLICATION.
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='re_mensagens')          THEN ALTER PUBLICATION supabase_realtime ADD TABLE re_mensagens;           END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='re_tarefas')            THEN ALTER PUBLICATION supabase_realtime ADD TABLE re_tarefas;             END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='re_agendamentos')       THEN ALTER PUBLICATION supabase_realtime ADD TABLE re_agendamentos;         END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='re_agenda_slots')       THEN ALTER PUBLICATION supabase_realtime ADD TABLE re_agenda_slots;         END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_casos')          THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_casos;            END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_documentos')     THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_documentos;       END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_custas')         THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_custas;           END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_contratos')      THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_contratos;        END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_planos_pagamento') THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_planos_pagamento; END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_cnj_notifications') THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_cnj_notifications; END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_cnj_timeline')   THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_cnj_timeline;    END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_partes_vinculos') THEN ALTER PUBLICATION supabase_realtime ADD TABLE portal_partes_vinculos; END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Schema judiciário — publicações, processos, prazos
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.publicacoes;      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.processos;        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.audiencias;       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.prazo_calculado;  EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='judiciario' AND tablename='publicacoes')    THEN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.publicacoes;    END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='judiciario' AND tablename='processos')      THEN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.processos;      END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='judiciario' AND tablename='audiencias')     THEN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.audiencias;     END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='judiciario' AND tablename='prazo_calculado') THEN ALTER PUBLICATION supabase_realtime ADD TABLE judiciario.prazo_calculado; END IF; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- BLOCO 3: re_mensagens — Políticas de acesso cliente + admin
@@ -496,12 +498,13 @@ DO $$ BEGIN GRANT EXECUTE ON FUNCTION current_workspace_id()                    
 -- em todas as tabelas com PKs auto-geradas (serial/bigserial)
 -- ════════════════════════════════════════════════════════════
 
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public      TO authenticated;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA judiciario  TO authenticated;
+DO $$ BEGIN GRANT USAGE ON ALL SEQUENCES IN SCHEMA public      TO authenticated; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN GRANT USAGE ON ALL SEQUENCES IN SCHEMA judiciario  TO authenticated; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- Herdar em novos objetos criados futuramente
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT USAGE ON SEQUENCES TO authenticated;
+DO $$ BEGIN
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO authenticated;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- BLOCO 16: anon role — grants mínimos para rotas públicas

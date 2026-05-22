@@ -117,14 +117,25 @@ DO $$ BEGIN
 END $$;
 
 -- Índices trigrama em portal_casos
+-- Verifica qual é o nome real da coluna de nome (varia entre projetos)
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='portal_casos') THEN
-    CREATE INDEX IF NOT EXISTS idx_portal_casos_nome_cliente_trgm
-      ON portal_casos USING GIN (nome_cliente gin_trgm_ops);
-    CREATE INDEX IF NOT EXISTS idx_portal_casos_cpf_trgm
-      ON portal_casos USING GIN (cpf gin_trgm_ops);
-    CREATE INDEX IF NOT EXISTS idx_portal_casos_email
-      ON portal_casos (email);
+    -- Coluna nome_cliente (alguns projetos)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='portal_casos' AND column_name='nome_cliente') THEN
+      CREATE INDEX IF NOT EXISTS idx_portal_casos_nome_cliente_trgm ON portal_casos USING GIN (nome_cliente gin_trgm_ops);
+    END IF;
+    -- Coluna nome (outros projetos)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='portal_casos' AND column_name='nome') THEN
+      CREATE INDEX IF NOT EXISTS idx_portal_casos_nome_trgm ON portal_casos USING GIN (nome gin_trgm_ops);
+    END IF;
+    -- Coluna cpf
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='portal_casos' AND column_name='cpf') THEN
+      CREATE INDEX IF NOT EXISTS idx_portal_casos_cpf_trgm ON portal_casos USING GIN (cpf gin_trgm_ops);
+    END IF;
+    -- Coluna email
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='portal_casos' AND column_name='email') THEN
+      CREATE INDEX IF NOT EXISTS idx_portal_casos_email ON portal_casos (email);
+    END IF;
   END IF;
 END $$;
 
@@ -216,6 +227,7 @@ BEGIN
   END;
 
   -- ── Clientes (portal_casos) ───────────────────────────────
+  -- Tenta coluna nome_cliente; se não existir, faz fallback para nome.
   BEGIN
     RETURN QUERY
     SELECT
@@ -231,7 +243,27 @@ BEGIN
         OR c.email        ILIKE '%' || p_query || '%'
     ORDER BY c.created_at DESC NULLS LAST
     LIMIT p_limit;
-  EXCEPTION WHEN undefined_table OR undefined_column THEN
+  EXCEPTION WHEN undefined_column THEN
+    -- Fallback: coluna é "nome" neste projeto
+    BEGIN
+      RETURN QUERY
+      SELECT
+        'cliente'::text,
+        c.id::uuid,
+        coalesce(c.nome, c.email, 'Cliente')::text,
+        coalesce(c.cpf, c.telefone, c.fase, '')::text,
+        ('/clientes/' || c.id::text)::text
+      FROM portal_casos c
+      WHERE
+             c.nome  ILIKE '%' || p_query || '%'
+          OR c.cpf   ILIKE '%' || p_query || '%'
+          OR c.email ILIKE '%' || p_query || '%'
+      ORDER BY c.created_at DESC NULLS LAST
+      LIMIT p_limit;
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  WHEN undefined_table THEN
     NULL;
   END;
 

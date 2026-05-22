@@ -2,6 +2,8 @@
 -- Migration 020: Full CRUD Access Hardening — All Modules
 -- Garante que todos os módulos consigam fazer SELECT/INSERT/UPDATE
 -- no Supabase conectado. Seguro para reaplicar (idempotente).
+-- v2: todos os GRANTs envolvidos em DO/EXCEPTION para evitar
+--     falha 42P01 quando tabelas ainda não existem.
 -- ============================================================
 
 -- ════════════════════════════════════════════════════════════
@@ -10,21 +12,19 @@
 -- mesmo de chegar nas políticas RLS.
 -- ════════════════════════════════════════════════════════════
 
-GRANT USAGE ON SCHEMA judiciario TO anon;
-GRANT USAGE ON SCHEMA judiciario TO authenticated;
+DO $$ BEGIN GRANT USAGE ON SCHEMA judiciario TO anon;           EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN GRANT USAGE ON SCHEMA judiciario TO authenticated;  EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- Leitura em todas as tabelas do schema judiciário
-GRANT SELECT ON ALL TABLES IN SCHEMA judiciario TO authenticated;
+DO $$ BEGIN GRANT SELECT ON ALL TABLES IN SCHEMA judiciario TO authenticated; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
--- Escrita nas tabelas que possuem mutações nos hooks
-GRANT INSERT, UPDATE ON
-  judiciario.processos,
-  judiciario.audiencias,
-  judiciario.prazo_calculado,
-  judiciario.publicacoes,
-  judiciario.financeiro_processual,
-  judiciario.partes
-TO authenticated;
+-- Escrita por tabela (separado para não falhar em bloco se 1 não existir)
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.processos              TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.audiencias             TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.prazo_calculado        TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.publicacoes            TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.financeiro_processual  TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT INSERT, UPDATE ON judiciario.partes                 TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- tasks_freshsales: INSERT de tarefas locais (se existir)
 DO $$
@@ -38,13 +38,13 @@ BEGIN
 END $$;
 
 -- Sequences: necessário para PKs geradas automaticamente em INSERT
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA judiciario TO authenticated;
+DO $$ BEGIN GRANT USAGE ON ALL SEQUENCES IN SCHEMA judiciario TO authenticated; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- Novos objetos criados futuramente herdam o mesmo acesso
-ALTER DEFAULT PRIVILEGES IN SCHEMA judiciario
-  GRANT SELECT ON TABLES TO authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA judiciario
-  GRANT USAGE ON SEQUENCES TO authenticated;
+DO $$ BEGIN
+  ALTER DEFAULT PRIVILEGES IN SCHEMA judiciario GRANT SELECT   ON TABLES    TO authenticated;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA judiciario GRANT USAGE    ON SEQUENCES TO authenticated;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- BLOCO 2: re_tarefas — RLS + políticas + grants
@@ -204,51 +204,51 @@ BEGIN
   END IF;
 END $$;
 
-GRANT SELECT ON admin_users TO authenticated;
+DO $$ BEGIN GRANT SELECT ON admin_users TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- BLOCO 7: Tabelas PUBLIC — Garantir grants completos
--- Idempotente: GRANT não falha se já existir.
+-- Cada GRANT isolado em DO/EXCEPTION para não falhar em bloco.
 -- ════════════════════════════════════════════════════════════
 
 -- Tabelas core do portal
-GRANT SELECT, INSERT, UPDATE ON portal_casos               TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_documentos          TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_dividas             TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_casos               TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_documentos          TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_dividas             TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Módulos do cliente (Financeiro, Custas, Contratos)
-GRANT SELECT, INSERT, UPDATE ON portal_custas              TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_contratos           TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_planos_pagamento    TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_custas              TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_contratos           TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_planos_pagamento    TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Workflow de documentos
-GRANT SELECT, INSERT, UPDATE ON portal_document_requests   TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_document_comments   TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_document_requests   TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_document_comments   TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Partes vinculadas e registros operacionais
-GRANT SELECT, INSERT, UPDATE ON portal_partes_vinculos     TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_operational_records TO authenticated;
-GRANT SELECT, INSERT         ON portal_operational_record_audit TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_partes_vinculos     TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_operational_records TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT         ON portal_operational_record_audit TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Notificações e timeline
-GRANT SELECT, INSERT         ON portal_cnj_timeline        TO authenticated;
-GRANT SELECT, UPDATE         ON portal_cnj_notifications   TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT         ON portal_cnj_timeline        TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, UPDATE         ON portal_cnj_notifications   TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Workspaces e membros
-GRANT SELECT, INSERT, UPDATE ON portal_workspaces          TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON portal_workspace_members   TO authenticated;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_workspaces          TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON portal_workspace_members   TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
--- Onboarding e auditoria de download (SELECT já concedido)
-GRANT SELECT ON onboarding_videos           TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON onboarding_video_progress TO authenticated;
-GRANT SELECT ON portal_download_audit       TO authenticated;
+-- Onboarding e auditoria de download
+DO $$ BEGIN GRANT SELECT                 ON onboarding_videos          TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT, INSERT, UPDATE ON onboarding_video_progress  TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN GRANT SELECT                 ON portal_download_audit      TO authenticated; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
 -- Sequences: INSERT com PKs auto-geradas no schema public
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+DO $$ BEGIN GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════
 -- BLOCO 8: Verificar RLS habilitado em tabelas críticas
--- ALTER TABLE ... ENABLE ROW LEVEL SECURITY é idempotente.
+-- ALTER TABLE IF EXISTS é idempotente — sem risco.
 -- ════════════════════════════════════════════════════════════
 
 ALTER TABLE IF EXISTS portal_casos               ENABLE ROW LEVEL SECURITY;
