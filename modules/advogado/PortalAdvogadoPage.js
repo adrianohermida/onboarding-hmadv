@@ -759,6 +759,7 @@ function renderRows(rows, config) {
               <div class="advogado-actions">
                 <button type="button" class="btn btn-ghost btn-sm" data-action="timeline">Timeline</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-action="detail">Detalhe</button>
+                ${state.moduleKey === 'clientes' ? '<button type="button" class="btn btn-ghost btn-sm" data-action="invite">Convidar acesso</button>' : ''}
                 <button type="button" class="btn btn-ghost btn-sm" data-action="edit" ${readOnly ? 'disabled' : ''}>Editar</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-action="archive" ${readOnly || record.archived ? 'disabled' : ''}>Arquivar</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-action="delete" ${readOnly ? 'disabled' : ''}>Excluir</button>
@@ -1083,6 +1084,31 @@ function bindModuleEvents(host) {
 
     if (actionButton.dataset.action === 'timeline') openTimeline(record);
     if (actionButton.dataset.action === 'detail') openDetail(record);
+    if (actionButton.dataset.action === 'invite') {
+      const email = String(record.email || '').trim();
+      if (!email) {
+        window.shellNotify?.({
+          title: 'Convite não enviado',
+          text: 'Cliente sem e-mail cadastrado. Atualize o cadastro antes de convidar.',
+          tone: 'warn',
+        });
+        return;
+      }
+
+      AdminService.sendClientInvite({ email }).then(() => {
+        window.shellNotify?.({
+          title: 'Convite enviado',
+          text: `Link de acesso enviado para ${email}.`,
+          tone: 'brand',
+        });
+      }).catch((error) => {
+        window.shellNotify?.({
+          title: 'Falha ao enviar convite',
+          text: error?.message || 'Tente novamente em instantes.',
+          tone: 'warn',
+        });
+      });
+    }
     if (actionButton.dataset.action === 'edit') openRecordForm(record);
     if (actionButton.dataset.action === 'archive') {
       archiveAdvogadoRecord(state.moduleKey, record.id).then(refreshRecords);

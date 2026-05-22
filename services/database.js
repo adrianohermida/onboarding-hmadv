@@ -35,6 +35,19 @@ export async function checkIsAdmin() {
   if (!user) return false;
   const { data: isAdminRpc, error: rpcError } = await supabase.rpc('is_any_admin');
   if (!rpcError && typeof isAdminRpc === 'boolean') return isAdminRpc;
+
+  // Fallback de compatibilidade: usuário interno de workspace também deve
+  // conseguir operar os módulos administrativos do shell.
+  const { data: memberRow } = await supabase
+    .from('portal_workspace_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .in('role', ['owner', 'admin', 'advogado', 'colaborador', 'financeiro'])
+    .limit(1)
+    .maybeSingle();
+  if (memberRow) return true;
+
   const { data } = await supabase
     .from('admin_users')
     .select('user_id')
@@ -163,6 +176,38 @@ export const AdminService = {
       email: '',
       role: item.role || 'admin',
     }));
+  },
+
+  async sendClientInvite({ email, redirectTo = null }) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) throw new Error('E-mail do cliente é obrigatório para enviar convite.');
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: redirectTo || window.location.origin,
+        shouldCreateUser: true,
+      },
+    });
+
+    if (error) throw error;
+    return { ok: true };
+  },
+
+  async ensureClientWorkspaceMember({ userId, workspaceId, invitedBy = null }) {
+    if (!userId || !workspaceId) return { ok: false, skipped: true };
+    const { error } = await supabase
+      .from('portal_workspace_members')
+      .upsert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        role: 'member',
+        is_active: true,
+        invited_by: invitedBy || null,
+      }, { onConflict: 'workspace_id,user_id' });
+
+    if (error) throw error;
+    return { ok: true };
   },
 
   async resetClientJourney(userId) {
