@@ -100,11 +100,14 @@ describe('ui kit contract', () => {
     const admin = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'dashboard', 'AdminDashboard.tsx'), 'utf8');
     const cliente = fs.readFileSync(path.join(root, 'apps', 'web', 'src', 'components', 'dashboard', 'ClienteDashboard.tsx'), 'utf8');
 
-    [kpi, empty, panel, admin, cliente].forEach(source => {
+    [kpi, empty, admin, cliente].forEach(source => {
       expect(source).toContain('rounded-lg');
       expect(source).not.toContain('rounded-xl');
       expect(source).not.toContain('backdrop-blur');
     });
+    expect(panel).toContain('rounded-md');
+    expect(panel).not.toContain('rounded-xl');
+    expect(panel).not.toContain('backdrop-blur');
 
     expect(admin).toContain('space-y-4');
     expect(cliente).toContain('Jornada concluída');
