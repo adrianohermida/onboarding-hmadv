@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
   DollarSign, Calendar, CheckSquare, MessageSquare, Gavel, Newspaper,
-  Scale, Settings, LogOut,
+  Scale, FileCheck, Receipt, HelpCircle,
 } from 'lucide-react';
 import type { useSidebarCounts } from '@/lib/hooks/use-sidebar-counts';
 
@@ -46,13 +46,14 @@ export const CLIENT_SECTIONS: NavSection[] = [
       { href: '/dashboard',    label: 'Painel',       icon: LayoutDashboard },
       { href: '/onboarding',   label: 'Meu Caso',     icon: Scale },
       { href: '/documentos',   label: 'Documentos',   icon: FileText,     countKey: 'documentos' },
+      { href: '/contratos',    label: 'Contratos',    icon: FileCheck },
     ],
   },
   {
     label: 'Financeiro',
     items: [
       { href: '/planos',       label: 'Plano',        icon: CreditCard },
-      { href: '/dividas',      label: 'Dívidas',      icon: TrendingDown },
+      { href: '/custas',       label: 'Custas',       icon: Receipt },
     ],
   },
   {
@@ -60,6 +61,7 @@ export const CLIENT_SECTIONS: NavSection[] = [
     items: [
       { href: '/agenda',       label: 'Agenda',       icon: Calendar },
       { href: '/mensagens',    label: 'Mensagens',    icon: MessageSquare, countKey: 'mensagens' },
+      { href: '/ajuda',        label: 'Ajuda',        icon: HelpCircle },
     ],
   },
 ];

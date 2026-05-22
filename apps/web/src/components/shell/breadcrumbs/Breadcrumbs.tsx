@@ -7,20 +7,23 @@ import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
 
 const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: 'Painel',
-  clientes: 'Clientes',
-  novo: 'Novo',
-  onboarding: 'Meu Caso',
-  documentos: 'Documentos',
-  dividas: 'Minhas Dívidas',
-  planos: 'Plano de Pagamento',
-  financeiro: 'Financeiro',
-  agenda: 'Agenda',
-  tarefas: 'Tarefas',
-  mensagens: 'Mensagens',
-  processos: 'Processos',
-  publicacoes: 'Publicações',
+  dashboard:     'Painel',
+  clientes:      'Clientes',
+  novo:          'Novo',
+  onboarding:    'Meu Caso',
+  documentos:    'Documentos',
+  contratos:     'Contratos',
+  custas:        'Custas',
+  dividas:       'Dívidas',
+  planos:        'Plano',
+  financeiro:    'Financeiro',
+  agenda:        'Agenda',
+  tarefas:       'Tarefas',
+  mensagens:     'Mensagens',
+  processos:     'Processos',
+  publicacoes:   'Publicações',
   configuracoes: 'Configurações',
+  ajuda:         'Ajuda',
 };
 
 function labelForSegment(segment: string, isAdmin: boolean): string {

@@ -8,19 +8,22 @@ import NotificationBell from '../notifications/NotificationBell';
 import Breadcrumbs from '../breadcrumbs/Breadcrumbs';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Painel',
-  '/clientes': 'Clientes',
-  '/onboarding': 'Meu Caso',
-  '/documentos': 'Documentos',
-  '/dividas': 'Minhas Dívidas',
-  '/planos': 'Plano de Pagamento',
-  '/financeiro': 'Financeiro',
-  '/agenda': 'Agenda',
-  '/tarefas': 'Tarefas',
-  '/mensagens': 'Mensagens',
-  '/processos': 'Processos',
-  '/publicacoes': 'Publicações',
+  '/dashboard':     'Painel',
+  '/clientes':      'Clientes',
+  '/onboarding':    'Meu Caso',
+  '/documentos':    'Documentos',
+  '/contratos':     'Contratos',
+  '/custas':        'Custas',
+  '/dividas':       'Dívidas',
+  '/planos':        'Plano de Pagamento',
+  '/financeiro':    'Financeiro',
+  '/agenda':        'Agenda',
+  '/tarefas':       'Tarefas',
+  '/mensagens':     'Mensagens',
+  '/processos':     'Processos',
+  '/publicacoes':   'Publicações',
   '/configuracoes': 'Configurações',
+  '/ajuda':         'Ajuda',
 };
 
 function getTitle(pathname: string): string {
