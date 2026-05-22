@@ -102,6 +102,11 @@ function isAdvancedField(moduleKey, fieldKey) {
   return (advancedByModule[moduleKey] || []).includes(fieldKey);
 }
 
+function getModuleHref(moduleKey) {
+  if (!moduleKey) return '#';
+  return `${moduleKey}.html`;
+}
+
 function localRecordsWithRemoteClients(moduleKey) {
   const local = state.localRecords || [];
   if (moduleKey !== 'clientes') return local;
@@ -300,7 +305,7 @@ function openRecordForm(record = null) {
       };
 
       const createdClient = await saveAdvogadoRecord('clientes', quickClientPayload);
-      const linkedClientId = createdClient?.id || createdClient?.user_id || quickClientPayload.email || quickClientName;
+      const linkedClientId = createdClient?.user_id || createdClient?.email || createdClient?.nome || createdClient?.id || quickClientPayload.email || quickClientName;
       if (payload.cliente_user_id !== undefined) payload.cliente_user_id = linkedClientId;
       if (payload.cliente_id !== undefined) payload.cliente_id = linkedClientId;
     }
@@ -379,6 +384,7 @@ async function openDetail(record) {
           <div class="advogado-audit-item">
             <strong>${escapeHtml(getAdvogadoModuleConfig(item.moduleKey)?.title || item.moduleKey)}</strong>
             <span>${item.count} vínculo(s)</span>
+            <a class="btn btn-ghost btn-sm" href="${escapeHtml(getModuleHref(item.moduleKey))}">Abrir módulo</a>
           </div>
         `).join('')}
       </div>
