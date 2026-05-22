@@ -29,7 +29,11 @@
       "Bash(gh pr *)",
       "Bash(gh run *)",
       "Bash(cat .gitignore)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(xargs grep -l \"useQuery\\\\|useMutation\")",
+      "Bash(xargs grep -l \"drawer\\\\|panel\\\\|slide\")",
+      "Bash(xargs grep -l \"adminFetch\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

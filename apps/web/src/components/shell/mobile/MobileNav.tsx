@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Menu, X, LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
-  Scale, LogOut, DollarSign, Calendar, CheckSquare, MessageSquare, Gavel,
+  Scale, LogOut, DollarSign, Calendar, CheckSquare, MessageSquare, Gavel, Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -25,6 +25,7 @@ const NAV = [
   { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, adminOnly: true },
   { href: '/mensagens', label: 'Mensagens', icon: MessageSquare },
   { href: '/processos', label: 'Processos', icon: Gavel },
+  { href: '/publicacoes', label: 'Publicações', icon: Newspaper, adminOnly: true },
 ];
 
 export default function MobileNav() {

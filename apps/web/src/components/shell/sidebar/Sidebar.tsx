@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, FileText, CreditCard, TrendingDown,
   Settings, LogOut, ChevronLeft, ChevronRight, Scale,
-  DollarSign, Calendar, CheckSquare, MessageSquare, Gavel,
+  DollarSign, Calendar, CheckSquare, MessageSquare, Gavel, Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, adminOnly: true },
   { href: '/mensagens', label: 'Mensagens', icon: MessageSquare },
   { href: '/processos', label: 'Processos', icon: Gavel },
+  { href: '/publicacoes', label: 'Publicações', icon: Newspaper, adminOnly: true },
 ];
 
 export default function Sidebar() {
