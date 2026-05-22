@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { FileText, Upload, X, Check, CloudUpload, ChevronRight } from 'lucide-react';
+import { FileText, Upload, X, CloudUpload, ChevronRight, ChevronLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/utils';
 import { WORKFLOW_STATUS_LABELS } from '@/types';
@@ -42,6 +42,8 @@ interface Props {
   isAdmin: boolean;
   status?: string;
   page: number;
+  total: number;
+  pageSize: number;
 }
 
 function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
@@ -195,7 +197,7 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   );
 }
 
-export default function DocumentosList({ docs, isAdmin, status = '', page }: Props) {
+export default function DocumentosList({ docs, isAdmin, status = '', page, total, pageSize }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -362,6 +364,31 @@ export default function DocumentosList({ docs, isAdmin, status = '', page }: Pro
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {total > pageSize && (
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-muted-foreground">
+              {total} documentos — Página {page} de {Math.ceil(total / pageSize)}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => startTransition(() => router.push(buildUrl({ status: status || undefined, page: String(page - 1) })))}
+                disabled={page <= 1 || isPending}
+                className="p-1.5 rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => startTransition(() => router.push(buildUrl({ status: status || undefined, page: String(page + 1) })))}
+                disabled={page >= Math.ceil(total / pageSize) || isPending}
+                className="p-1.5 rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

@@ -20,7 +20,7 @@ export default async function DocumentosPage({ searchParams }: { searchParams: S
 
   let query = supabase
     .from('portal_documentos')
-    .select('id, tipo, nome, workflow_status, direction, user_id, created_at, updated_at')
+    .select('id, tipo, nome, workflow_status, direction, user_id, created_at, updated_at', { count: 'exact' })
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
     .range(offset, offset + limit - 1);
@@ -28,15 +28,15 @@ export default async function DocumentosPage({ searchParams }: { searchParams: S
   if (!isAdmin) query = query.eq('user_id', user?.id ?? '');
   if (searchParams.status) query = query.eq('workflow_status', searchParams.status);
 
-  const { data: docs } = await query;
+  const { data: docs, count } = await query;
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-semibold">Documentos</h1>
-        <p className="text-sm text-muted-foreground">{docs?.length ?? 0} documentos</p>
+        <p className="text-sm text-muted-foreground">{count ?? 0} documentos</p>
       </div>
-      <DocumentosList docs={docs ?? []} isAdmin={isAdmin} status={searchParams.status} page={page} />
+      <DocumentosList docs={docs ?? []} isAdmin={isAdmin} status={searchParams.status} page={page} total={count ?? 0} pageSize={limit} />
     </div>
   );
 }
