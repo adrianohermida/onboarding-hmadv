@@ -75,20 +75,63 @@ function diasAtraso(iso: string | null) {
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
-function useTarefas(initial: Tarefa[]) {
+interface TarefasFiltros {
+  status: 'abertas' | 'concluidas' | 'todas';
+  prioridade: string;
+  search: string;
+}
+
+interface TarefasPaginadas {
+  data: Tarefa[];
+  total: number;
+}
+
+function useTarefasPaginadas(filtros: TarefasFiltros, page: number) {
   const supabase = createClient();
-  return useQuery<Tarefa[]>({
-    queryKey: ['tarefas'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('re_tarefas')
-        .select('id, titulo, descricao, status, prioridade, tipo, caso_id, responsavel_id, data_vencimento, criado_em, casos(nome_cliente)')
-        .order('data_vencimento', { ascending: true })
-        .limit(200);
-      return data ?? [];
-    },
-    initialData: initial,
+  return useQuery<TarefasPaginadas>({
+    queryKey: ['tarefas-paginadas', filtros, page],
     staleTime: 30_000,
+    queryFn: async () => {
+      const from = page * TAREFAS_PAGE_SIZE;
+      const to = from + TAREFAS_PAGE_SIZE - 1;
+
+      let q = supabase
+        .from('re_tarefas')
+        .select('id, titulo, descricao, status, prioridade, tipo, caso_id, responsavel_id, data_vencimento, criado_em, casos(nome_cliente)', { count: 'exact' })
+        .order('data_vencimento', { ascending: true })
+        .range(from, to);
+
+      if (filtros.status === 'abertas') q = q.in('status', ['pendente', 'em_andamento']);
+      else if (filtros.status === 'concluidas') q = q.eq('status', 'concluida');
+      if (filtros.prioridade) q = q.eq('prioridade', filtros.prioridade);
+      if (filtros.search.trim().length >= 2) q = q.ilike('titulo', `%${filtros.search.trim()}%`);
+
+      const { data, count, error } = await q;
+      if (error) throw error;
+      return { data: (data ?? []) as Tarefa[], total: count ?? 0 };
+    },
+  });
+}
+
+function useTarefasContagens() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: ['tarefas-contagens'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [abertas, concluidas, vencidas, criticas] = await Promise.all([
+        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento']),
+        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('status', 'concluida'),
+        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento']).lt('data_vencimento', new Date().toISOString()),
+        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('prioridade', 'critica').not('status', 'eq', 'concluida'),
+      ]);
+      return {
+        abertas:    abertas.count ?? 0,
+        concluidas: concluidas.count ?? 0,
+        vencidas:   vencidas.count ?? 0,
+        criticas:   criticas.count ?? 0,
+      };
+    },
   });
 }
 
@@ -365,28 +408,29 @@ function KanbanView({ tarefas, onToggle, onMover }: {
 
 type ViewMode = 'lista' | 'kanban';
 
-export default function TarefasClient({ tarefas: initial, userId: _userId }: Props) {
-  const { data: tarefas = [] } = useTarefas(initial);
+export default function TarefasClient({ userId: _userId }: { tarefas?: Tarefa[]; userId: string }) {
   const atualizar = useAtualizarStatus();
   const [view, setView] = useState<ViewMode>('lista');
-  const [filtro, setFiltro] = useState<'abertas' | 'concluidas' | 'todas'>('abertas');
+  const [statusFiltro, setStatusFiltro] = useState<'abertas' | 'concluidas' | 'todas'>('abertas');
   const [prioridadeFiltro, setPrioridadeFiltro] = useState('');
+  const [rawSearch, setRawSearch] = useState('');
+  const [page, setPage] = useState(0);
   const [showForm, setShowForm] = useState(false);
 
-  const filtered = tarefas
-    .filter((t) => {
-      if (filtro === 'abertas') return t.status === 'pendente' || t.status === 'em_andamento';
-      if (filtro === 'concluidas') return t.status === 'concluida';
-      return true;
-    })
-    .filter((t) => !prioridadeFiltro || t.prioridade === prioridadeFiltro);
+  const debouncedSearch = useDebounce(rawSearch, 350);
 
-  const counts = {
-    abertas:    tarefas.filter((t) => t.status === 'pendente' || t.status === 'em_andamento').length,
-    concluidas: tarefas.filter((t) => t.status === 'concluida').length,
-    vencidas:   tarefas.filter((t) => isOverdue(t.data_vencimento, t.status)).length,
-    criticas:   tarefas.filter((t) => t.prioridade === 'critica' && t.status !== 'concluida').length,
-  };
+  const filtros: TarefasFiltros = { status: statusFiltro, prioridade: prioridadeFiltro, search: debouncedSearch };
+  const { data: result, isFetching } = useTarefasPaginadas(filtros, page);
+  const { data: counts = { abertas: 0, concluidas: 0, vencidas: 0, criticas: 0 } } = useTarefasContagens();
+
+  const tarefas = result?.data ?? [];
+  const total = result?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / TAREFAS_PAGE_SIZE));
+
+  function handleStatusChange(v: 'abertas' | 'concluidas' | 'todas') {
+    setStatusFiltro(v);
+    setPage(0);
+  }
 
   function handleToggle(t: Tarefa) {
     atualizar.mutate({ id: t.id, novoStatus: t.status === 'concluida' ? 'pendente' : 'concluida' });
@@ -410,7 +454,7 @@ export default function TarefasClient({ tarefas: initial, userId: _userId }: Pro
             <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center mb-2', k.dot)}>
               <k.Icon className={cn('h-3.5 w-3.5', k.icn)} />
             </div>
-            <p className="text-2xl font-bold tabular-nums">{k.value}</p>
+            <p className="text-2xl font-bold tabular-nums">{k.value.toLocaleString('pt-BR')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{k.label}</p>
           </div>
         ))}
@@ -418,14 +462,26 @@ export default function TarefasClient({ tarefas: initial, userId: _userId }: Pro
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* Search */}
+        <div className="relative min-w-44">
+          <CheckSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Buscar título..."
+            value={rawSearch}
+            onChange={(e) => { setRawSearch(e.target.value); setPage(0); }}
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors"
+          />
+        </div>
+
         <div className="flex gap-1 p-1 bg-muted rounded-lg">
           {([['abertas', 'Em aberto'], ['concluidas', 'Concluídas'], ['todas', 'Todas']] as const).map(([v, l]) => (
             <button
               key={v}
-              onClick={() => setFiltro(v)}
+              onClick={() => handleStatusChange(v)}
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                filtro === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                statusFiltro === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {l}
@@ -435,7 +491,7 @@ export default function TarefasClient({ tarefas: initial, userId: _userId }: Pro
 
         <select
           value={prioridadeFiltro}
-          onChange={(e) => setPrioridadeFiltro(e.target.value)}
+          onChange={(e) => { setPrioridadeFiltro(e.target.value); setPage(0); }}
           className="px-2.5 py-1.5 text-xs bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Toda prioridade</option>
@@ -444,28 +500,19 @@ export default function TarefasClient({ tarefas: initial, userId: _userId }: Pro
           ))}
         </select>
 
-        <div className="flex-1" />
+        <div className="flex items-center gap-2 ml-auto">
+          {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          <span className="text-xs text-muted-foreground">{total.toLocaleString('pt-BR')} tarefa{total !== 1 ? 's' : ''}</span>
+        </div>
 
         {/* View toggle */}
         <div className="flex gap-0.5 p-1 bg-muted rounded-lg">
-          <button
-            onClick={() => setView('lista')}
-            title="Lista"
-            className={cn(
-              'p-1.5 rounded-md transition-colors',
-              view === 'lista' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
+          <button onClick={() => setView('lista')} title="Lista"
+            className={cn('p-1.5 rounded-md transition-colors', view === 'lista' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
             <List className="h-3.5 w-3.5" />
           </button>
-          <button
-            onClick={() => setView('kanban')}
-            title="Kanban"
-            className={cn(
-              'p-1.5 rounded-md transition-colors',
-              view === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
+          <button onClick={() => setView('kanban')} title="Kanban"
+            className={cn('p-1.5 rounded-md transition-colors', view === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
             <LayoutGrid className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -482,25 +529,42 @@ export default function TarefasClient({ tarefas: initial, userId: _userId }: Pro
 
       {/* Views */}
       {view === 'kanban' ? (
-        <KanbanView
-          tarefas={filtro === 'todas' ? tarefas : filtered}
-          onToggle={handleToggle}
-          onMover={handleMover}
-        />
+        <KanbanView tarefas={tarefas} onToggle={handleToggle} onMover={handleMover} />
       ) : (
-        filtered.length === 0 ? (
+        tarefas.length === 0 && !isFetching ? (
           <EmptyState
             icon={CheckSquare}
             title="Nenhuma tarefa encontrada"
-            description={filtro === 'abertas' ? 'Nenhuma tarefa em aberto.' : 'Nenhuma tarefa encontrada.'}
+            description={statusFiltro === 'abertas' ? 'Nenhuma tarefa em aberto.' : 'Nenhuma tarefa encontrada.'}
           />
         ) : (
           <div className="space-y-2">
-            {filtered.map((t) => (
+            {tarefas.map((t) => (
               <TarefaCard key={t.id} tarefa={t} onToggle={() => handleToggle(t)} />
             ))}
           </div>
         )
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0 || isFetching}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+          </button>
+          <span className="text-xs text-muted-foreground">Página {page + 1} de {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1 || isFetching}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          >
+            Próxima <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );
