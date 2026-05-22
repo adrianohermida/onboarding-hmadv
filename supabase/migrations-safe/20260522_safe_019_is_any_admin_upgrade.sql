@@ -167,21 +167,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_operational_records') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_operational_records_all ON portal_operational_records;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_operational_records'
         AND policyname = 'admin_operational_records_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_operational_records_portal ON portal_operational_records
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -190,21 +190,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_operational_record_audit') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_operational_record_audit_all ON portal_operational_record_audit;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_operational_record_audit'
         AND policyname = 'admin_operational_record_audit_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_operational_record_audit_portal ON portal_operational_record_audit
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -213,17 +213,17 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_document_comments') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS own_visible_document_comments ON portal_document_comments;
       DROP POLICY IF EXISTS insert_own_or_admin_document_comments ON portal_document_comments;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_document_comments'
         AND policyname = 'doc_comments_select_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY doc_comments_select_portal ON portal_document_comments
           FOR SELECT TO authenticated
           USING (
@@ -238,7 +238,7 @@ BEGIN
               )
             )
           );
-      $$;
+      $q$;
     END IF;
 
     IF NOT EXISTS (
@@ -246,7 +246,7 @@ BEGIN
       WHERE tablename = 'portal_document_comments'
         AND policyname = 'doc_comments_insert_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY doc_comments_insert_portal ON portal_document_comments
           FOR INSERT TO authenticated
           WITH CHECK (
@@ -261,7 +261,7 @@ BEGIN
               )
             )
           );
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -270,21 +270,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_partes_vinculos') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_partes_vinculos ON portal_partes_vinculos;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_partes_vinculos'
         AND policyname = 'admin_partes_vinculos_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_partes_vinculos_portal ON portal_partes_vinculos
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -293,21 +293,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_custas') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_portal_custas ON portal_custas;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_custas'
         AND policyname = 'admin_portal_custas_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_portal_custas_portal ON portal_custas
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -316,21 +316,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_contratos') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_portal_contratos ON portal_contratos;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_contratos'
         AND policyname = 'admin_portal_contratos_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_portal_contratos_portal ON portal_contratos
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
@@ -339,21 +339,21 @@ END $$;
 DO $$
 BEGIN
   IF to_regclass('public.portal_planos_pagamento') IS NOT NULL THEN
-    EXECUTE $$
+    EXECUTE $q$
       DROP POLICY IF EXISTS admin_portal_planos_pagamento ON portal_planos_pagamento;
-    $$;
+    $q$;
 
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE tablename = 'portal_planos_pagamento'
         AND policyname = 'admin_portal_planos_pagamento_portal'
     ) THEN
-      EXECUTE $$
+      EXECUTE $q$
         CREATE POLICY admin_portal_planos_pagamento_portal ON portal_planos_pagamento
           FOR ALL TO authenticated
           USING (is_any_portal_admin())
           WITH CHECK (is_any_portal_admin());
-      $$;
+      $q$;
     END IF;
   END IF;
 END $$;
