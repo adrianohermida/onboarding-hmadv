@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   X, Gavel, Calendar, DollarSign, Users, Clock, AlertTriangle,
   CheckCircle2, Plus, Scale, TrendingUp, ChevronRight, Eye, EyeOff,
-  Activity, FileText, Shield,
+  Activity, FileText, Shield, ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -510,12 +511,17 @@ export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }:
             <p className="font-mono text-sm font-bold text-foreground truncate">{p.numero_cnj ?? 'Sem número'}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{p.tribunal ?? '—'} · {p.comarca ?? '—'}</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {statusCfg && (
               <span className={cn('text-[10px] font-semibold px-2 py-1 rounded-full', statusCfg.cls)}>
                 {statusCfg.label}
               </span>
             )}
+            <Link href={`/processos/${p.id}`}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Abrir central do processo">
+              <ExternalLink className="h-4 w-4" />
+            </Link>
             <button onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
               <X className="h-4 w-4" />

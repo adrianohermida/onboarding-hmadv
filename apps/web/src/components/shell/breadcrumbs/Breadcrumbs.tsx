@@ -21,6 +21,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   tarefas:       'Tarefas',
   mensagens:     'Mensagens',
   processos:     'Processos',
+  // UUIDs de processo serão truncados pelo fallback de isUuid → 'Central'
   prazos:        'Prazos',
   audiencias:    'Audiências',
   publicacoes:   'Publicações',
@@ -40,6 +41,11 @@ function isUuid(s: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
 
+const UUID_CONTEXT_LABELS: Record<string, string> = {
+  processos: 'Central',
+  clientes:  'Perfil',
+}
+
 interface Crumb {
   label: string;
   href: string;
@@ -56,7 +62,9 @@ export default function Breadcrumbs({ className }: { className?: string }) {
   // Build crumbs
   const crumbs: Crumb[] = segments.map((seg, idx) => {
     const href = '/' + segments.slice(0, idx + 1).join('/');
-    const label = isUuid(seg) ? 'Detalhe' : labelForSegment(seg, isAdmin);
+    const parentSeg = idx > 0 ? segments[idx - 1] : '';
+    const uuidLabel = UUID_CONTEXT_LABELS[parentSeg] ?? 'Detalhe';
+    const label = isUuid(seg) ? uuidLabel : labelForSegment(seg, isAdmin);
     return { label, href, current: idx === segments.length - 1 };
   });
 
