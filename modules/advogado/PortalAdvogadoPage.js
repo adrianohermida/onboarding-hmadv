@@ -27,6 +27,7 @@ const state = {
   moduleKey: '',
   records: [],
   remoteClients: [],
+  internalUsers: [],
   query: '',
   status: 'todos',
   archived: false,
@@ -70,6 +71,37 @@ function getRecordTitle(record, config) {
   return record[config.primaryField] || record.nome || record.cliente || record.titulo || record.descricao || 'Registro';
 }
 
+function getInternalUserOptions() {
+  return state.internalUsers.map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
+}
+
+function getClientOptions() {
+  return state.remoteClients.map((item) => ({
+    value: item.user_id || item.email || item.full_name,
+    label: item.full_name || item.email || 'Cliente',
+  }));
+}
+
+function isResponsibleField(fieldKey) {
+  return ['responsavel_id', 'advogado_responsavel_id', 'created_by_id', 'updated_by_id'].includes(fieldKey);
+}
+
+function isClientField(fieldKey) {
+  return ['cliente_id', 'cliente_user_id', 'user_id'].includes(fieldKey);
+}
+
+function isAdvancedField(moduleKey, fieldKey) {
+  const advancedByModule = {
+    clientes: ['full_name', 'whatsapp', 'telefone', 'workspace_id', 'onboarding_done', 'cnj_step_atual', 'responsavel_id', 'cidade', 'estado', 'metadata', 'observacao'],
+    processos: ['assunto_ids', 'orgao_julgador_tpu_id', 'fs_sync_hash', 'datajud_payload_hash', 'parser_tribunal_schema', 'parser_grau', 'parser_sistema', 'status_evento_origem'],
+    partes: ['tenant_id', 'advogados', 'fonte', 'contact_id_freshsales', 'contato_freshsales_id', 'principal_no_account', 'observacao'],
+  };
+  return (advancedByModule[moduleKey] || []).includes(fieldKey);
+}
+
 function localRecordsWithRemoteClients(moduleKey) {
   const local = state.localRecords || [];
   if (moduleKey !== 'clientes') return local;
@@ -97,13 +129,43 @@ async function loadModuleRecords(moduleKey) {
   return localRecordsWithRemoteClients(moduleKey);
 }
 
-function renderField(field, record = {}) {
+function renderField(field, record = {}, moduleKey = '') {
   const value = record[field.key] ?? '';
   const required = field.required ? 'required' : '';
 
+  if (isResponsibleField(field.key)) {
+    const options = getInternalUserOptions();
+    return `
+      <label class="ui-field advogado-form-field ${isAdvancedField(moduleKey, field.key) ? 'advogado-advanced-field' : ''}">
+        <span class="ui-label">${escapeHtml(field.label)}</span>
+        <select class="ui-select" name="${field.key}" ${required}>
+          <option value="">Selecionar responsável interno</option>
+          ${options.map(option => `
+            <option value="${escapeHtml(option.value)}" ${String(value) === option.value ? 'selected' : ''}>${escapeHtml(option.label)}</option>
+          `).join('')}
+        </select>
+      </label>
+    `;
+  }
+
+  if (isClientField(field.key)) {
+    const options = getClientOptions();
+    return `
+      <label class="ui-field advogado-form-field ${isAdvancedField(moduleKey, field.key) ? 'advogado-advanced-field' : ''}">
+        <span class="ui-label">${escapeHtml(field.label)}</span>
+        <select class="ui-select" name="${field.key}" ${required}>
+          <option value="">Associar cliente existente</option>
+          ${options.map(option => `
+            <option value="${escapeHtml(option.value)}" ${String(value) === option.value ? 'selected' : ''}>${escapeHtml(option.label)}</option>
+          `).join('')}
+        </select>
+      </label>
+    `;
+  }
+
   if (field.type === 'textarea') {
     return `
-      <label class="ui-field advogado-form-field advogado-form-field-full">
+      <label class="ui-field advogado-form-field advogado-form-field-full ${isAdvancedField(moduleKey, field.key) ? 'advogado-advanced-field' : ''}">
         <span class="ui-label">${escapeHtml(field.label)}</span>
         <textarea class="ui-textarea" name="${field.key}" rows="3" ${required}>${escapeHtml(value)}</textarea>
       </label>
@@ -112,7 +174,7 @@ function renderField(field, record = {}) {
 
   if (field.type === 'select') {
     return `
-      <label class="ui-field advogado-form-field">
+      <label class="ui-field advogado-form-field ${isAdvancedField(moduleKey, field.key) ? 'advogado-advanced-field' : ''}">
         <span class="ui-label">${escapeHtml(field.label)}</span>
         <select class="ui-select" name="${field.key}" ${required}>
           <option value="">Selecionar</option>
@@ -125,7 +187,7 @@ function renderField(field, record = {}) {
   }
 
   return `
-    <label class="ui-field advogado-form-field">
+    <label class="ui-field advogado-form-field ${isAdvancedField(moduleKey, field.key) ? 'advogado-advanced-field' : ''}">
       <span class="ui-label">${escapeHtml(field.label)}</span>
       <input class="ui-input" name="${field.key}" type="${field.type || 'text'}" value="${escapeHtml(value)}" ${required}>
     </label>
@@ -141,8 +203,12 @@ function openRecordForm(record = null) {
 
   const body = `
     <form class="advogado-form" id="advogado-record-form" data-record-id="${escapeHtml(record?.id || '')}">
+      <div class="advogado-form-top-actions">
+        ${['processos', 'partes'].includes(state.moduleKey) ? '<button type="button" class="btn btn-ghost btn-sm" data-advogado-create-client>Cadastro rápido de cliente</button>' : ''}
+        <button type="button" class="btn btn-ghost btn-sm" data-advogado-toggle-advanced>Ver mais</button>
+      </div>
       <div class="advogado-form-grid">
-        ${config.fields.map(field => renderField(field, record || {})).join('')}
+        ${config.fields.map(field => renderField(field, record || {}, state.moduleKey)).join('')}
         <label class="ui-field advogado-form-field">
           <span class="ui-label">Status</span>
           <select class="ui-select" name="status" ${canEdit ? '' : 'disabled'}>
@@ -162,6 +228,21 @@ function openRecordForm(record = null) {
 
   window.shellModal?.open?.({ title, body });
   const form = document.getElementById('advogado-record-form');
+  form?.classList.remove('show-advanced');
+  form?.querySelector('[data-advogado-toggle-advanced]')?.addEventListener('click', () => {
+    const visible = form.classList.toggle('show-advanced');
+    const button = form.querySelector('[data-advogado-toggle-advanced]');
+    if (button) button.textContent = visible ? 'Ver menos' : 'Ver mais';
+  });
+  form?.querySelector('[data-advogado-create-client]')?.addEventListener('click', () => {
+    window.shellModal?.close?.();
+    window.shellNotify?.({
+      title: 'Cadastro de cliente',
+      text: 'Abra o módulo Clientes para cadastrar PF/PJ e depois associe no processo/parte.',
+      tone: 'brand',
+    });
+    window.location.href = 'clientes.html';
+  });
   form?.addEventListener('submit', async event => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(form).entries());
@@ -201,6 +282,45 @@ async function openTimeline(record) {
 async function openDetail(record) {
   const config = getAdvogadoModuleConfig(state.moduleKey);
   const audit = await listAdvogadoAudit(state.moduleKey, record.id);
+  const shouldShow360 = ['processos', 'clientes', 'documentos', 'tarefas', 'agenda', 'financeiro'].includes(state.moduleKey);
+  let view360 = '';
+  if (shouldShow360) {
+    const modules360 = ['clientes', 'processos', 'documentos', 'tarefas', 'agenda', 'financeiro', 'partes'];
+    const references = [
+      record.cliente_user_id,
+      record.cliente_id,
+      record.user_id,
+      record.processo_id,
+      record.numero_cnj,
+      record.cliente,
+      record.nome,
+    ].filter(Boolean).map(value => String(value).toLowerCase());
+
+    const related = await Promise.all(modules360.map(async (moduleKey) => {
+      try {
+        const rows = await listAdvogadoRecords(moduleKey);
+        const count = rows.filter((row) => {
+          if (row.id === record.id && moduleKey === state.moduleKey) return false;
+          return Object.values(row).some(value => references.some(ref => String(value ?? '').toLowerCase().includes(ref)));
+        }).length;
+        return { moduleKey, count };
+      } catch (_) {
+        return { moduleKey, count: 0 };
+      }
+    }));
+
+    view360 = `
+      <div class="advogado-audit-box">
+        <h3>Integração 360</h3>
+        ${related.map((item) => `
+          <div class="advogado-audit-item">
+            <strong>${escapeHtml(getAdvogadoModuleConfig(item.moduleKey)?.title || item.moduleKey)}</strong>
+            <span>${item.count} vínculo(s)</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
   const fields = config.fields.map(field => {
     const value = record[field.key];
     return `
@@ -218,6 +338,7 @@ async function openDetail(record) {
         <span>${escapeHtml(normalizeStatusLabel(record.status))}</span>
       </div>
       <div class="advogado-detail-grid">${fields}</div>
+      ${view360}
       <div class="advogado-audit-box">
         <h3>Auditoria</h3>
         ${audit.length ? audit.slice(0, 8).map(event => `
@@ -929,11 +1050,25 @@ async function loadRemoteClients() {
   }
 }
 
+async function loadInternalUsers() {
+  try {
+    state.internalUsers = await AdminService.getInternalUsers();
+  } catch (error) {
+    state.internalUsers = [];
+    window.shellNotify?.({
+      title: 'Usuários internos indisponíveis',
+      text: error?.message || 'Não foi possível listar responsáveis internos.',
+      tone: 'warn',
+    });
+  }
+}
+
 export async function bootAdvogadoPage(moduleKey) {
   const host = document.querySelector('[data-advogado-module-host]');
   if (!host) return;
 
   await loadRemoteClients();
+  await loadInternalUsers();
 
   if (moduleKey === 'painel') {
     await renderPainelPage(host);

@@ -760,6 +760,20 @@ td { padding: 9px 14px; vertical-align: middle; }
   gap: 12px;
 }
 
+.advogado-form-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.advogado-advanced-field {
+  display: none;
+}
+
+.advogado-form.show-advanced .advogado-advanced-field {
+  display: grid;
+}
+
 .advogado-form-field-full {
   grid-column: 1 / -1;
 }
