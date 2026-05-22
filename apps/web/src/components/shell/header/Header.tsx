@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/prazos':        'Prazos',
   '/audiencias':    'Audiências',
   '/publicacoes':   'Publicações',
+  '/timeline':      'Timeline Jurídica',
   '/configuracoes': 'Configurações',
   '/ajuda':         'Ajuda',
 };

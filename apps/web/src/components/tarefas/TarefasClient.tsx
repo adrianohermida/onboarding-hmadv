@@ -5,9 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   CheckSquare, Clock, AlertTriangle, Plus, X, Calendar,
-  Circle, CheckCircle2, ChevronDown,
+  Circle, CheckCircle2, List, LayoutGrid, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import EmptyState from '../ui/EmptyState';
 
 interface Tarefa {
   id: string;
@@ -15,6 +16,7 @@ interface Tarefa {
   descricao: string | null;
   status: string;
   prioridade: string | null;
+  tipo: string | null;
   caso_id: string | null;
   responsavel_id: string | null;
   data_vencimento: string | null;
@@ -27,28 +29,47 @@ interface Props {
   userId: string;
 }
 
+// ── Config ────────────────────────────────────────────────────────────────────
+
 const PRIORIDADE_CONFIG: Record<string, { label: string; cls: string }> = {
-  alta:  { label: 'Alta',  cls: 'bg-rose-500/10 text-rose-500 ring-rose-500/20' },
-  media: { label: 'Média', cls: 'bg-amber-500/10 text-amber-500 ring-amber-500/20' },
-  baixa: { label: 'Baixa', cls: 'bg-green-500/10 text-green-500 ring-green-500/20' },
+  critica: { label: 'Crítica', cls: 'bg-red-500/10 text-red-600 ring-red-400/30' },
+  alta:    { label: 'Alta',    cls: 'bg-rose-500/10 text-rose-500 ring-rose-400/30' },
+  media:   { label: 'Média',  cls: 'bg-amber-500/10 text-amber-600 ring-amber-400/30' },
+  baixa:   { label: 'Baixa',  cls: 'bg-green-500/10 text-green-600 ring-green-400/30' },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pendente:     'Pendente',
-  em_andamento: 'Em andamento',
-  concluida:    'Concluída',
-  cancelada:    'Cancelada',
+const TIPO_CONFIG: Record<string, { label: string; cls: string }> = {
+  processual:     { label: 'Processual',  cls: 'bg-violet-500/10 text-violet-600' },
+  administrativo: { label: 'Adm.',        cls: 'bg-blue-500/10 text-blue-600' },
+  financeiro:     { label: 'Financeiro',  cls: 'bg-green-500/10 text-green-700' },
+  cliente:        { label: 'Cliente',     cls: 'bg-teal-500/10 text-teal-700' },
+  audiencia:      { label: 'Audiência',   cls: 'bg-orange-500/10 text-orange-700' },
+  diligencia:     { label: 'Diligência',  cls: 'bg-slate-500/10 text-slate-700' },
 };
+
+const KANBAN_COLS: { status: string; label: string; headerCls: string }[] = [
+  { status: 'pendente',     label: 'Pendente',     headerCls: 'border-amber-300 bg-amber-50 text-amber-800' },
+  { status: 'em_andamento', label: 'Em andamento', headerCls: 'border-blue-300 bg-blue-50 text-blue-800' },
+  { status: 'concluida',    label: 'Concluída',    headerCls: 'border-green-300 bg-green-50 text-green-800' },
+];
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
 
 function isOverdue(dateStr: string | null, status: string) {
-  if (!dateStr) return false;
-  if (status === 'concluida' || status === 'cancelada') return false;
+  if (!dateStr || status === 'concluida' || status === 'cancelada') return false;
   return new Date(dateStr) < new Date();
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
+
+function diasAtraso(iso: string | null) {
+  if (!iso) return null;
+  return Math.ceil((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 function useTarefas(initial: Tarefa[]) {
   const supabase = createClient();
@@ -57,9 +78,9 @@ function useTarefas(initial: Tarefa[]) {
     queryFn: async () => {
       const { data } = await supabase
         .from('re_tarefas')
-        .select('id, titulo, descricao, status, prioridade, caso_id, responsavel_id, data_vencimento, criado_em, casos(nome_cliente)')
+        .select('id, titulo, descricao, status, prioridade, tipo, caso_id, responsavel_id, data_vencimento, criado_em, casos(nome_cliente)')
         .order('data_vencimento', { ascending: true })
-        .limit(100);
+        .limit(200);
       return data ?? [];
     },
     initialData: initial,
@@ -67,20 +88,18 @@ function useTarefas(initial: Tarefa[]) {
   });
 }
 
-function useToggleStatus() {
+function useAtualizarStatus() {
   const qc = useQueryClient();
   const supabase = createClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const novoStatus = status === 'concluida' ? 'pendente' : 'concluida';
+    mutationFn: async ({ id, novoStatus }: { id: string; novoStatus: string }) => {
       await supabase.from('re_tarefas').update({ status: novoStatus }).eq('id', id);
-      return novoStatus;
     },
-    onMutate: async ({ id, status }) => {
+    onMutate: async ({ id, novoStatus }) => {
       await qc.cancelQueries({ queryKey: ['tarefas'] });
       const prev = qc.getQueryData<Tarefa[]>(['tarefas']);
       qc.setQueryData<Tarefa[]>(['tarefas'], (old) =>
-        old?.map((t) => t.id === id ? { ...t, status: status === 'concluida' ? 'pendente' : 'concluida' } : t) ?? []
+        old?.map((t) => t.id === id ? { ...t, status: novoStatus } : t) ?? []
       );
       return { prev };
     },
@@ -95,12 +114,16 @@ function useCriarTarefa() {
   const qc = useQueryClient();
   const supabase = createClient();
   return useMutation({
-    mutationFn: async (nova: { titulo: string; descricao?: string; prioridade: string; data_vencimento?: string }) => {
+    mutationFn: async (nova: {
+      titulo: string; descricao?: string; prioridade: string;
+      tipo?: string; data_vencimento?: string;
+    }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('re_tarefas').insert({
         titulo: nova.titulo,
         descricao: nova.descricao || null,
         prioridade: nova.prioridade,
+        tipo: nova.tipo || null,
         data_vencimento: nova.data_vencimento || null,
         responsavel_id: user?.id,
         status: 'pendente',
@@ -111,17 +134,20 @@ function useCriarTarefa() {
   });
 }
 
+// ── NovaTarefaForm ────────────────────────────────────────────────────────────
+
 function NovaTarefaForm({ onClose }: { onClose: () => void }) {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [prioridade, setPrioridade] = useState('media');
+  const [tipo, setTipo] = useState('');
   const [vencimento, setVencimento] = useState('');
   const criar = useCriarTarefa();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!titulo.trim()) return;
-    await criar.mutateAsync({ titulo: titulo.trim(), descricao, prioridade, data_vencimento: vencimento });
+    await criar.mutateAsync({ titulo: titulo.trim(), descricao, prioridade, tipo, data_vencimento: vencimento });
     onClose();
   }
 
@@ -129,20 +155,18 @@ function NovaTarefaForm({ onClose }: { onClose: () => void }) {
     <form onSubmit={submit} className="bg-card border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between mb-1">
         <p className="text-sm font-semibold">Nova tarefa</p>
-        <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+        <button type="button" onClick={onClose}
+          className="p-1 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
           <X className="h-4 w-4" />
         </button>
       </div>
-
       <input
-        autoFocus
-        placeholder="Título da tarefa*"
+        autoFocus required
+        placeholder="Título da tarefa *"
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
         className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-        required
       />
-
       <textarea
         placeholder="Descrição (opcional)"
         value={descricao}
@@ -150,38 +174,39 @@ function NovaTarefaForm({ onClose }: { onClose: () => void }) {
         rows={2}
         className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
       />
-
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="block text-[11px] text-muted-foreground mb-1">Prioridade</label>
-          <select
-            value={prioridade}
-            onChange={(e) => setPrioridade(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-          >
+          <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="critica">Crítica</option>
             <option value="alta">Alta</option>
             <option value="media">Média</option>
             <option value="baixa">Baixa</option>
           </select>
         </div>
         <div>
+          <label className="block text-[11px] text-muted-foreground mb-1">Tipo</label>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">Geral</option>
+            {Object.entries(TIPO_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </div>
+        <div>
           <label className="block text-[11px] text-muted-foreground mb-1">Vencimento</label>
-          <input
-            type="date"
-            value={vencimento}
-            onChange={(e) => setVencimento(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
+            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
         </div>
       </div>
-
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onClose}
           className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
           Cancelar
         </button>
         <button type="submit" disabled={!titulo.trim() || criar.isPending}
-          className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
+          className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+          {criar.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           {criar.isPending ? 'Criando…' : 'Criar tarefa'}
         </button>
       </div>
@@ -189,36 +214,197 @@ function NovaTarefaForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default function TarefasClient({ tarefas: initial, userId }: Props) {
-  const { data: tarefas = [] } = useTarefas(initial);
-  const toggle = useToggleStatus();
-  const [filtro, setFiltro] = useState<string>('abertas');
-  const [showForm, setShowForm] = useState(false);
+// ── TarefaCard ────────────────────────────────────────────────────────────────
 
-  const filtered = tarefas.filter((t) => {
-    if (filtro === 'abertas') return t.status === 'pendente' || t.status === 'em_andamento';
-    if (filtro === 'concluidas') return t.status === 'concluida';
-    return true;
-  });
-
-  const counts = {
-    abertas: tarefas.filter((t) => t.status === 'pendente' || t.status === 'em_andamento').length,
-    concluidas: tarefas.filter((t) => t.status === 'concluida').length,
-    vencidas: tarefas.filter((t) => isOverdue(t.data_vencimento, t.status)).length,
-  };
+function TarefaCard({
+  tarefa, compact = false, onToggle, onMover,
+}: {
+  tarefa: Tarefa; compact?: boolean;
+  onToggle: () => void;
+  onMover?: (novoStatus: string) => void;
+}) {
+  const overdue = isOverdue(tarefa.data_vencimento, tarefa.status);
+  const done = tarefa.status === 'concluida';
+  const atraso = overdue ? diasAtraso(tarefa.data_vencimento) : null;
+  const pCfg = tarefa.prioridade ? PRIORIDADE_CONFIG[tarefa.prioridade] : null;
+  const tipoCfg = tarefa.tipo ? TIPO_CONFIG[tarefa.tipo] : null;
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className={cn(
+      'rounded-xl border bg-card transition-all',
+      overdue && !done ? 'border-rose-300 bg-rose-50/30' : 'border-border hover:border-primary/30',
+      done && 'opacity-60',
+      compact ? 'p-3' : 'p-4',
+    )}>
+      <div className="flex items-start gap-2.5">
+        <button
+          onClick={onToggle}
+          className={cn('flex-shrink-0 mt-0.5 transition-colors',
+            done ? 'text-green-500' : overdue ? 'text-rose-500' : 'text-muted-foreground hover:text-primary')}
+        >
+          {done ? <CheckCircle2 className="h-5 w-5" />
+            : overdue ? <AlertTriangle className="h-5 w-5" />
+            : <Circle className="h-5 w-5" />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <p className={cn('text-sm font-medium leading-snug', done && 'line-through text-muted-foreground')}>
+            {tarefa.titulo}
+          </p>
+
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            {pCfg && (
+              <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded ring-1 ring-inset', pCfg.cls)}>
+                {pCfg.label}
+              </span>
+            )}
+            {tipoCfg && (
+              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', tipoCfg.cls)}>
+                {tipoCfg.label}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            {tarefa.casos?.nome_cliente && (
+              <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
+                {tarefa.casos.nome_cliente}
+              </span>
+            )}
+            {tarefa.data_vencimento && (
+              <span className={cn('flex items-center gap-1 text-[11px]',
+                overdue && !done ? 'text-rose-500 font-medium' : 'text-muted-foreground')}>
+                <Calendar className="h-3 w-3" />
+                {overdue && !done && atraso
+                  ? `Venceu ${atraso}d atrás`
+                  : formatDate(tarefa.data_vencimento)}
+              </span>
+            )}
+          </div>
+
+          {!compact && tarefa.descricao && (
+            <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
+              {tarefa.descricao}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {onMover && !done && (
+        <div className="flex gap-1 mt-2.5 pt-2 border-t border-border/60">
+          {KANBAN_COLS.filter((c) => c.status !== tarefa.status && c.status !== 'concluida').map((col) => (
+            <button
+              key={col.status}
+              onClick={() => onMover(col.status)}
+              className="flex-1 text-[10px] text-muted-foreground hover:text-foreground py-1 rounded-lg hover:bg-muted transition-colors text-center"
+            >
+              → {col.label}
+            </button>
+          ))}
+          <button
+            onClick={() => onMover('concluida')}
+            className="flex-1 text-[10px] text-green-600 py-1 rounded-lg hover:bg-green-50 transition-colors text-center"
+          >
+            ✓ Concluir
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Kanban ────────────────────────────────────────────────────────────────────
+
+function KanbanView({ tarefas, onToggle, onMover }: {
+  tarefas: Tarefa[];
+  onToggle: (t: Tarefa) => void;
+  onMover: (id: string, status: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {KANBAN_COLS.map((col) => {
+        const colTarefas = tarefas.filter((t) => t.status === col.status);
+        return (
+          <div key={col.status} className="flex flex-col">
+            <div className={cn(
+              'flex items-center justify-between px-3 py-2.5 rounded-xl border mb-3',
+              col.headerCls,
+            )}>
+              <span className="text-xs font-semibold">{col.label}</span>
+              <span className="text-xs font-bold tabular-nums">{colTarefas.length}</span>
+            </div>
+            <div className="space-y-2">
+              {colTarefas.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border py-8 text-center">
+                  <p className="text-xs text-muted-foreground">Sem tarefas</p>
+                </div>
+              ) : (
+                colTarefas.map((t) => (
+                  <TarefaCard
+                    key={t.id}
+                    tarefa={t}
+                    compact
+                    onToggle={() => onToggle(t)}
+                    onMover={(novoStatus) => onMover(t.id, novoStatus)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+type ViewMode = 'lista' | 'kanban';
+
+export default function TarefasClient({ tarefas: initial, userId: _userId }: Props) {
+  const { data: tarefas = [] } = useTarefas(initial);
+  const atualizar = useAtualizarStatus();
+  const [view, setView] = useState<ViewMode>('lista');
+  const [filtro, setFiltro] = useState<'abertas' | 'concluidas' | 'todas'>('abertas');
+  const [prioridadeFiltro, setPrioridadeFiltro] = useState('');
+  const [showForm, setShowForm] = useState(false);
+
+  const filtered = tarefas
+    .filter((t) => {
+      if (filtro === 'abertas') return t.status === 'pendente' || t.status === 'em_andamento';
+      if (filtro === 'concluidas') return t.status === 'concluida';
+      return true;
+    })
+    .filter((t) => !prioridadeFiltro || t.prioridade === prioridadeFiltro);
+
+  const counts = {
+    abertas:    tarefas.filter((t) => t.status === 'pendente' || t.status === 'em_andamento').length,
+    concluidas: tarefas.filter((t) => t.status === 'concluida').length,
+    vencidas:   tarefas.filter((t) => isOverdue(t.data_vencimento, t.status)).length,
+    criticas:   tarefas.filter((t) => t.prioridade === 'critica' && t.status !== 'concluida').length,
+  };
+
+  function handleToggle(t: Tarefa) {
+    atualizar.mutate({ id: t.id, novoStatus: t.status === 'concluida' ? 'pendente' : 'concluida' });
+  }
+
+  function handleMover(id: string, novoStatus: string) {
+    atualizar.mutate({ id, novoStatus });
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Em aberto', value: counts.abertas, icon: Clock, cls: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Vencidas',  value: counts.vencidas, icon: AlertTriangle, cls: 'text-rose-500', bg: 'bg-rose-500/10' },
-          { label: 'Concluídas', value: counts.concluidas, icon: CheckCircle2, cls: 'text-green-500', bg: 'bg-green-500/10' },
+          { label: 'Em aberto',  value: counts.abertas,    Icon: Clock,         dot: 'bg-blue-500/10',   icn: 'text-blue-500' },
+          { label: 'Vencidas',   value: counts.vencidas,   Icon: AlertTriangle, dot: 'bg-rose-500/10',   icn: 'text-rose-500' },
+          { label: 'Críticas',   value: counts.criticas,   Icon: AlertTriangle, dot: 'bg-orange-500/10', icn: 'text-orange-500' },
+          { label: 'Concluídas', value: counts.concluidas, Icon: CheckCircle2,  dot: 'bg-green-500/10',  icn: 'text-green-500' },
         ].map((k) => (
           <div key={k.label} className="bg-card border border-border rounded-xl p-4">
-            <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center mb-2', k.bg)}>
-              <k.icon className={cn('h-3.5 w-3.5', k.cls)} />
+            <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center mb-2', k.dot)}>
+              <k.Icon className={cn('h-3.5 w-3.5', k.icn)} />
             </div>
             <p className="text-2xl font-bold tabular-nums">{k.value}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{k.label}</p>
@@ -227,7 +413,7 @@ export default function TarefasClient({ tarefas: initial, userId }: Props) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="flex gap-1 p-1 bg-muted rounded-lg">
           {([['abertas', 'Em aberto'], ['concluidas', 'Concluídas'], ['todas', 'Todas']] as const).map(([v, l]) => (
             <button
@@ -242,91 +428,76 @@ export default function TarefasClient({ tarefas: initial, userId }: Props) {
             </button>
           ))}
         </div>
+
+        <select
+          value={prioridadeFiltro}
+          onChange={(e) => setPrioridadeFiltro(e.target.value)}
+          className="px-2.5 py-1.5 text-xs bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Toda prioridade</option>
+          {Object.entries(PRIORIDADE_CONFIG).map(([k, v]) => (
+            <option key={k} value={k}>{v.label}</option>
+          ))}
+        </select>
+
         <div className="flex-1" />
+
+        {/* View toggle */}
+        <div className="flex gap-0.5 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setView('lista')}
+            title="Lista"
+            className={cn(
+              'p-1.5 rounded-md transition-colors',
+              view === 'lista' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <List className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setView('kanban')}
+            title="Kanban"
+            className={cn(
+              'p-1.5 rounded-md transition-colors',
+              view === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" />
-          Nova tarefa
+          <Plus className="h-3.5 w-3.5" /> Nova tarefa
         </button>
       </div>
 
-      {/* Formulário novo */}
       {showForm && <NovaTarefaForm onClose={() => setShowForm(false)} />}
 
-      {/* Lista */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        {filtered.length === 0 ? (
-          <div className="py-10 text-center">
-            <CheckSquare className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {filtro === 'abertas' ? 'Nenhuma tarefa em aberto' : 'Nenhuma tarefa encontrada'}
-            </p>
-          </div>
+      {/* Views */}
+      {view === 'kanban' ? (
+        <KanbanView
+          tarefas={filtro === 'todas' ? tarefas : filtered}
+          onToggle={handleToggle}
+          onMover={handleMover}
+        />
+      ) : (
+        filtered.length === 0 ? (
+          <EmptyState
+            icon={CheckSquare}
+            title="Nenhuma tarefa encontrada"
+            description={filtro === 'abertas' ? 'Nenhuma tarefa em aberto.' : 'Nenhuma tarefa encontrada.'}
+          />
         ) : (
-          <div className="divide-y divide-border">
-            {filtered.map((t) => {
-              const overdue = isOverdue(t.data_vencimento, t.status);
-              const done = t.status === 'concluida';
-              const pCfg = t.prioridade ? PRIORIDADE_CONFIG[t.prioridade] : null;
-              return (
-                <div
-                  key={t.id}
-                  className={cn(
-                    'flex items-start gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors',
-                    overdue && 'bg-rose-500/5',
-                  )}
-                >
-                  {/* Toggle status */}
-                  <button
-                    onClick={() => toggle.mutate({ id: t.id, status: t.status })}
-                    className="flex-shrink-0 mt-0.5 text-muted-foreground hover:text-primary transition-colors"
-                    title={done ? 'Reabrir' : 'Marcar como concluída'}
-                  >
-                    {done
-                      ? <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      : <Circle className="h-5 w-5" />}
-                  </button>
-
-                  {/* Conteúdo */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className={cn('text-sm font-medium', done && 'line-through text-muted-foreground')}>
-                        {t.titulo}
-                      </p>
-                      {pCfg && (
-                        <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded ring-1 ring-inset', pCfg.cls)}>
-                          {pCfg.label}
-                        </span>
-                      )}
-                      {overdue && (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500">
-                          <AlertTriangle className="h-3 w-3" /> Vencida
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      {t.casos && (
-                        <span className="text-xs text-muted-foreground">{t.casos.nome_cliente}</span>
-                      )}
-                      {t.data_vencimento && (
-                        <span className={cn('flex items-center gap-1 text-xs', overdue ? 'text-rose-500' : 'text-muted-foreground')}>
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(t.data_vencimento)}
-                        </span>
-                      )}
-                    </div>
-                    {t.descricao && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{t.descricao}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-2">
+            {filtered.map((t) => (
+              <TarefaCard key={t.id} tarefa={t} onToggle={() => handleToggle(t)} />
+            ))}
           </div>
-        )}
-      </div>
+        )
+      )}
     </div>
   );
 }
