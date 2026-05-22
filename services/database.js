@@ -135,6 +135,36 @@ export const AdminService = {
     return data || [];
   },
 
+  async getInternalUsers() {
+    const fromProfiles = await supabase
+      .from('admin_profiles')
+      .select('id, email, full_name, role, is_active')
+      .eq('is_active', true)
+      .order('full_name', { ascending: true });
+
+    if (!fromProfiles.error) {
+      return (fromProfiles.data || []).map((item) => ({
+        id: item.id,
+        name: item.full_name || item.email || 'Usuário interno',
+        email: item.email || '',
+        role: item.role || 'admin',
+      }));
+    }
+
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('user_id, role')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    return (data || []).map((item) => ({
+      id: item.user_id,
+      name: item.user_id,
+      email: '',
+      role: item.role || 'admin',
+    }));
+  },
+
   async resetClientJourney(userId) {
     const nowIso = new Date().toISOString();
     await supabase
