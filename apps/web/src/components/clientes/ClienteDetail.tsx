@@ -36,7 +36,6 @@ interface Custa {
   status: string;
   valor: number;
   data_vencimento: string | null;
-  comprovante_url: string | null;
   created_at: string;
 }
 
@@ -306,7 +305,7 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
                     <p className="text-xs text-muted-foreground mt-0.5">{p.tribunal ?? '—'} · {grauLabel(p.grau)}</p>
                     {p.classe_nome && <p className="text-xs text-muted-foreground">{p.classe_nome}</p>}
                     <div className="flex items-center gap-3 mt-1.5">
-                      {p.ultima_movimentacao && <span className="text-[10px] text-muted-foreground">Mov. {formatDate(p.ultima_movimentacao)}</span>}
+                      {p.data_ultima_movimentacao && <span className="text-[10px] text-muted-foreground">Mov. {formatDate(p.data_ultima_movimentacao)}</span>}
                       {p.valor_causa && <span className="text-[10px] font-medium text-muted-foreground">{fmt(p.valor_causa)}</span>}
                     </div>
                   </div>
