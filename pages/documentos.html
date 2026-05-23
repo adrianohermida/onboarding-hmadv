@@ -875,6 +875,7 @@ async function bootstrap() {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAll() {
+  if (!controller.engine) return;
   const stats = controller.engine.getStats();
   renderKPIs(stats);
   renderProgress(stats);
@@ -1090,6 +1091,7 @@ window.scrollToDoc = (tipo) => {
 // ── View Mode ─────────────────────────────────────────────────────────────────
 window.setViewMode = (mode) => {
   controller.setViewMode(mode);
+  if (!controller.engine) return;
   renderAll();
 };
 
