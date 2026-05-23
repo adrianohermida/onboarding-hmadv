@@ -26,6 +26,8 @@ const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboa
 const REMOTE_PAGE_CACHE_MAX = 80;
 const PERF_SLA_TARGET_MS = 450;
 const STRESS_TEST_MAX_PAGES = 20;
+const PERF_HISTORY_KEY_PREFIX = 'portal:advogado:perf-history:';
+const PERF_HISTORY_MAX_ENTRIES = 180;
 
 const state = {
   moduleKey: '',
@@ -67,6 +69,7 @@ const state = {
 let queryRenderTimer = null;
 let remoteRequestSequence = 0;
 const remotePageCache = new Map();
+let lastPerfPersistAt = 0;
 
 function buildRemoteQueryState(moduleKey, page, pageSize) {
   return {
@@ -140,6 +143,64 @@ function shouldAutoRunStressTest() {
   return url.searchParams.get('stress') === '1';
 }
 
+function getPerfHistoryKey(moduleKey = state.moduleKey) {
+  return `${PERF_HISTORY_KEY_PREFIX}${moduleKey || 'global'}`;
+}
+
+function readPerfHistory(moduleKey = state.moduleKey) {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(getPerfHistoryKey(moduleKey));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePerfHistory(moduleKey, entries) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getPerfHistoryKey(moduleKey), JSON.stringify(entries.slice(0, PERF_HISTORY_MAX_ENTRIES)));
+  } catch {}
+}
+
+function appendPerfHistory(entry) {
+  if (!entry?.moduleKey) return;
+  const current = readPerfHistory(entry.moduleKey);
+  current.unshift(entry);
+  writePerfHistory(entry.moduleKey, current);
+}
+
+function clearPerfHistory(moduleKey = state.moduleKey) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(getPerfHistoryKey(moduleKey));
+  } catch {}
+}
+
+function buildRegression(current, previous) {
+  if (!Number.isFinite(current) || !Number.isFinite(previous)) return null;
+  const delta = current - previous;
+  const pct = previous > 0 ? (delta / previous) * 100 : null;
+  return { delta, pct };
+}
+
+function getRegressionSnapshot(moduleKey = state.moduleKey, source = state.perf.source) {
+  const history = readPerfHistory(moduleKey);
+  const perfEntries = history.filter((item) => item?.type === 'perf' && item?.source === source && Number.isFinite(item?.totalMs));
+  const stressEntries = history.filter((item) => item?.type === 'stress' && Number.isFinite(item?.avgTotalMs));
+
+  return {
+    perf: perfEntries.length >= 2 ? buildRegression(perfEntries[0].totalMs, perfEntries[1].totalMs) : null,
+    stress: stressEntries.length >= 2 ? buildRegression(stressEntries[0].avgTotalMs, stressEntries[1].avgTotalMs) : null,
+    runs: {
+      perf: perfEntries.length,
+      stress: stressEntries.length,
+    },
+  };
+}
+
 function metricTone(ms) {
   if (ms === null || ms === undefined) return 'muted';
   if (ms <= PERF_SLA_TARGET_MS) return 'ok';
@@ -148,14 +209,33 @@ function metricTone(ms) {
 }
 
 function updatePerfMetric({ queryMs = null, renderMs = null, totalMs = null, items = 0, source = 'runtime' } = {}) {
+  const nowIso = new Date().toISOString();
   state.perf = {
     queryMs,
     renderMs,
     totalMs,
     items,
     source,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
   };
+
+  const nowTs = Date.now();
+  const throttled = source === 'local-filter' && (nowTs - lastPerfPersistAt) < 600;
+  if (throttled) return;
+
+  lastPerfPersistAt = nowTs;
+  appendPerfHistory({
+    type: 'perf',
+    moduleKey: state.moduleKey,
+    source,
+    queryMs,
+    renderMs,
+    totalMs,
+    items,
+    page: state.page,
+    pageSize: state.pageSize,
+    at: nowIso,
+  });
 }
 
 function percentile(values = [], ratio = 0.95) {
@@ -215,6 +295,22 @@ async function runStressTest(host) {
       renderInto(host);
     }
   } finally {
+    const finalStress = state.stress;
+    if ((finalStress?.pagesTested || 0) > 0) {
+      appendPerfHistory({
+        type: 'stress',
+        moduleKey: state.moduleKey,
+        pageSize: state.pageSize,
+        pagesTested: finalStress.pagesTested,
+        avgQueryMs: finalStress.avgQueryMs,
+        avgRenderMs: finalStress.avgRenderMs,
+        avgTotalMs: finalStress.avgTotalMs,
+        p95TotalMs: finalStress.p95TotalMs,
+        withinSlaPct: finalStress.withinSlaPct,
+        at: new Date().toISOString(),
+      });
+    }
+
     state.page = originalPage;
     state.records = originalRecords;
     state.totalRecords = originalTotal;
@@ -1384,9 +1480,24 @@ function formatPerfMs(value) {
   return `${Number(value).toFixed(1)} ms`;
 }
 
+function formatRegression(regression) {
+  if (!regression) return '-';
+  const sign = regression.delta > 0 ? '+' : '';
+  const pct = regression.pct === null || regression.pct === undefined ? '' : ` (${sign}${regression.pct.toFixed(1)}%)`;
+  return `${sign}${regression.delta.toFixed(1)} ms${pct}`;
+}
+
+function regressionTone(regression) {
+  if (!regression) return 'muted';
+  if (regression.delta <= 0) return 'ok';
+  if (regression.delta <= PERF_SLA_TARGET_MS * 0.25) return 'warn';
+  return 'danger';
+}
+
 function renderPerformancePanel(paginated) {
   const perf = state.perf;
   const stress = state.stress;
+  const regression = getRegressionSnapshot(state.moduleKey, perf.source);
   return `
     <section class="sec advogado-perf-panel" data-advogado-perf>
       <div class="module-hub-top" style="align-items:flex-start;gap:14px;">
@@ -1400,6 +1511,7 @@ function renderPerformancePanel(paginated) {
           <span class="ui-badge hub-kpi--${metricTone(perf.totalMs)}">Total: ${formatPerfMs(perf.totalMs)}</span>
           <span class="ui-badge">Fonte: ${escapeHtml(perf.source || 'runtime')}</span>
           <button type="button" class="btn btn-ghost btn-sm" data-perf-action="stress" ${stress.running ? 'disabled' : ''}>${stress.running ? 'Stress test em execução…' : 'Stress test'}</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-perf-action="clear-history">Limpar histórico</button>
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
@@ -1407,6 +1519,9 @@ function renderPerformancePanel(paginated) {
         <span class="ui-badge hub-kpi--${metricTone(stress.avgTotalMs)}">Média total: ${formatPerfMs(stress.avgTotalMs)}</span>
         <span class="ui-badge hub-kpi--${metricTone(stress.p95TotalMs)}">P95 total: ${formatPerfMs(stress.p95TotalMs)}</span>
         <span class="ui-badge">Dentro do SLA: ${stress.withinSlaPct === null || stress.withinSlaPct === undefined ? '-' : `${stress.withinSlaPct}%`}</span>
+        <span class="ui-badge hub-kpi--${regressionTone(regression.perf)}">Regressão (exec. anterior): ${formatRegression(regression.perf)}</span>
+        <span class="ui-badge hub-kpi--${regressionTone(regression.stress)}">Regressão stress: ${formatRegression(regression.stress)}</span>
+        <span class="ui-badge">Histórico: perf ${regression.runs.perf} · stress ${regression.runs.stress}</span>
       </div>
     </section>
   `;
@@ -1806,6 +1921,13 @@ function bindModuleEvents(host) {
     const perfButton = event.target.closest('[data-perf-action="stress"]');
     if (perfButton) {
       runStressTest(host);
+      return;
+    }
+
+    const clearPerfButton = event.target.closest('[data-perf-action="clear-history"]');
+    if (clearPerfButton) {
+      clearPerfHistory(state.moduleKey);
+      renderInto(host);
       return;
     }
 
