@@ -62,17 +62,22 @@ jobs:
             fi
           done
 
-          # Injeta config runtime de Supabase com secrets do GitHub no artifact publicado
-          cat > storybook-static/js/runtime-config.js << EOF
-          (function initRuntimeSupabaseConfig() {
-            window.__HM_SUPABASE__ = {
-              defaultUrl: '${SUPABASE_URL}',
-              defaultKey: '${SUPABASE_ANON_KEY}',
-              messagingUrl: '${SUPABASE_URL_MESSAGING}',
-              messagingKey: '${SUPABASE_ANON_KEY_MESSAGING}'
+          # Sanitiza secrets para evitar quebra de JS por quebras de linha/conteúdo acidental extra
+          DEFAULT_KEY_SANITIZED="$(printf '%s' "$SUPABASE_ANON_KEY" | head -n1 | tr -d '\r')"
+          MESSAGING_KEY_SANITIZED="$(printf '%s' "$SUPABASE_ANON_KEY_MESSAGING" | head -n1 | tr -d '\r')"
+
+          # Injeta config runtime de Supabase com serialização segura (JSON.stringify)
+          node -e '
+            const fs = require("node:fs");
+            const payload = {
+              defaultUrl: process.env.SUPABASE_URL || "",
+              defaultKey: process.env.DEFAULT_KEY_SANITIZED || "",
+              messagingUrl: process.env.SUPABASE_URL_MESSAGING || "",
+              messagingKey: process.env.MESSAGING_KEY_SANITIZED || ""
             };
-          })();
-          EOF
+            const js = `(function initRuntimeSupabaseConfig() {\n  window.__HM_SUPABASE__ = ${JSON.stringify(payload, null, 2)};\n})();\n`;
+            fs.writeFileSync("storybook-static/js/runtime-config.js", js, "utf8");
+          '
 
           cat > storybook-static/index.html << 'EOF'
           <!doctype html>
