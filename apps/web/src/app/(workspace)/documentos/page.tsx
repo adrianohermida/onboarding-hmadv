@@ -20,7 +20,7 @@ export default async function DocumentosPage({ searchParams }: { searchParams: S
 
   let query = supabase
     .from('portal_documentos')
-    .select('id, tipo, nome, workflow_status, direction, user_id, created_at, updated_at', { count: 'exact' })
+    .select('id, tipo, nome_arquivo, workflow_status, direction, user_id, created_at, updated_at', { count: 'exact' })
     .is('deleted_at', null)
     .order('updated_at', { ascending: false })
     .range(offset, offset + limit - 1);

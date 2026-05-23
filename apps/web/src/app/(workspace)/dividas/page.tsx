@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import DividasList from '@/components/dividas/DividasList';
 
 export const metadata: Metadata = { title: 'Dívidas' };
@@ -15,36 +14,40 @@ export default async function DiviasPage() {
   const isAdmin = !!adminData;
 
   if (isAdmin) {
-    // Admin: list all cases with dividas populated
-    const { data: casos } = await supabase
-      .from('portal_casos')
-      .select('id, user_id, nome, dividas, fase, created_at')
-      .not('dividas', 'eq', '[]')
-      .not('dividas', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const [{ data: dividas }, { data: casos }] = await Promise.all([
+      supabase
+        .from('portal_dividas')
+        .select('id, user_id, credor, tipo, valor, situacao, negativado, numero_contrato, data_vencimento')
+        .order('data_vencimento', { ascending: true })
+        .limit(200),
+      supabase
+        .from('portal_casos')
+        .select('user_id, full_name, fase'),
+    ]);
+
+    const clienteMap: Record<string, { nome: string; fase: string }> = {};
+    for (const c of casos ?? []) {
+      if (c.user_id) clienteMap[c.user_id] = { nome: c.full_name ?? '—', fase: c.fase ?? 'cadastro' };
+    }
 
     return (
       <div className="space-y-4">
         <h1 className="text-lg font-semibold">Dívidas</h1>
-        <DividasList casos={casos ?? []} isAdmin />
+        <DividasList dividas={dividas ?? []} clienteMap={clienteMap} isAdmin />
       </div>
     );
   }
 
-  // Cliente: their own case
-  const { data: caso } = await supabase
-    .from('portal_casos')
-    .select('id, user_id, nome, dividas, fase, created_at')
+  const { data: dividas } = await supabase
+    .from('portal_dividas')
+    .select('id, user_id, credor, tipo, valor, situacao, negativado, numero_contrato, data_vencimento')
     .eq('user_id', user?.id ?? '')
-    .maybeSingle();
-
-  if (!caso) redirect('/dashboard');
+    .order('data_vencimento', { ascending: true });
 
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-semibold">Minhas Dívidas</h1>
-      <DividasList casos={[caso]} isAdmin={false} />
+      <DividasList dividas={dividas ?? []} clienteMap={{}} isAdmin={false} />
     </div>
   );
 }

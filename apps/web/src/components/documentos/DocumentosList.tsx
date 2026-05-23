@@ -29,7 +29,7 @@ const TIPO_OPTIONS = [
 interface Doc {
   id: string;
   tipo: string;
-  nome: string | null;
+  nome_arquivo: string | null;
   workflow_status: WorkflowStatus;
   direction: string;
   user_id: string;
@@ -75,13 +75,11 @@ function UploadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       const { error: storageErr } = await supabase.storage.from('documentos').upload(path, file);
       if (storageErr) throw storageErr;
 
-      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path);
-
       const { error: dbErr } = await supabase.from('portal_documentos').insert({
         user_id: user.id,
         tipo,
-        nome: file.name,
-        url: publicUrl,
+        nome_arquivo: file.name,
+        storage_path: path,
         mime_type: file.type,
         file_size: file.size,
         direction: 'entrada',
@@ -277,7 +275,7 @@ export default function DocumentosList({ docs, isAdmin, status = '', page, total
                       <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                         <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
-                      <span className="font-medium capitalize">{doc.nome || doc.tipo.replace(/_/g, ' ')}</span>
+                      <span className="font-medium capitalize">{doc.nome_arquivo || doc.tipo.replace(/_/g, ' ')}</span>
                     </div>
                   </td>
                   {isAdmin && (
@@ -345,7 +343,7 @@ export default function DocumentosList({ docs, isAdmin, status = '', page, total
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate capitalize">{doc.nome || doc.tipo.replace(/_/g, ' ')}</p>
+                <p className="text-sm font-medium truncate capitalize">{doc.nome_arquivo || doc.tipo.replace(/_/g, ' ')}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(doc.updated_at)}</p>
               </div>
               <StatusBadge status={doc.workflow_status} labels={WORKFLOW_STATUS_LABELS} />

@@ -29,7 +29,7 @@ export default async function DashboardPage() {
 
   const { data: caso } = await supabase
     .from('portal_casos')
-    .select('id, nome, fase, onboarding_done, cnj_step_atual, created_at')
+    .select('id, full_name, fase, onboarding_done, cnj_step_atual, created_at')
     .eq('user_id', user?.id ?? '')
     .maybeSingle();
 

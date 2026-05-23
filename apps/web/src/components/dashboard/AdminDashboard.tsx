@@ -34,8 +34,8 @@ function useAdminCounts() {
         prazosResult,
         audienciasResult,
       ] = await Promise.all([
-        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
-        supabase.from('re_processos_judiciais').select('id', { count: 'exact', head: true }),
+        supabase.from('re_tasks').select('id', { count: 'exact', head: true }).not('status', 'in', '("done","cancelled","concluida","cancelada")'),
+        (supabase as any).schema('judiciario').from('processos').select('id', { count: 'exact', head: true }),
         (supabase as any)
           .schema('judiciario')
           .from('publicacoes')

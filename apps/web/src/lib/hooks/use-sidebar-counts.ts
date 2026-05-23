@@ -23,11 +23,9 @@ export function useSidebarCounts(isAdmin: boolean): SidebarCounts {
     enabled: isAdmin,
     queryFn: async () => {
       try {
-        const { count } = await jud()
+        const { count } = await supabase
           .from('publicacoes')
-          .select('id', { count: 'exact', head: true })
-          .eq('lido', false)
-          .eq('ativo', true);
+          .select('id', { count: 'exact', head: true });
         return count ?? 0;
       } catch {
         return 0;

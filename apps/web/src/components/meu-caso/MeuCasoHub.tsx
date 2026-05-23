@@ -14,14 +14,13 @@ interface Caso {
   id: string;
   fase: string | null;
   cnj_step_atual: number | null;
-  nome_cliente: string | null;
-  status: string | null;
+  full_name: string | null;
   created_at: string;
 }
 
 interface Documento {
   id: string;
-  nome: string;
+  nome_arquivo: string | null;
   workflow_status: string;
   tipo: string | null;
 }
@@ -46,11 +45,9 @@ interface Processo {
 
 interface Prazo {
   id: string;
-  descricao: string;
-  data_prazo: string;
-  tipo: string | null;
-  urgente: boolean | null;
-  cumprido: boolean | null;
+  titulo: string;
+  data_vencimento: string;
+  concluido: boolean | null;
 }
 
 interface Props {
@@ -244,7 +241,7 @@ function DocumentosView({ documentos }: { documentos: Documento[] }) {
       {documentos.map((d) => (
         <div key={d.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/20 transition-colors">
           <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <p className="text-sm flex-1 truncate">{d.nome}</p>
+          <p className="text-sm flex-1 truncate">{d.nome_arquivo || d.tipo || '—'}</p>
           <span className={cn(
             'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0',
             STATUS_STYLE[d.workflow_status] ?? 'bg-gray-100 text-gray-600',
@@ -264,21 +261,21 @@ function PrazosView({ prazos }: { prazos: Prazo[] }) {
     <div className="space-y-2">
       {prazos.map((p) => {
         const dias = Math.ceil(
-          (new Date(p.data_prazo).getTime() - Date.now()) / 86400000,
+          (new Date(p.data_vencimento).getTime() - Date.now()) / 86400000,
         );
+        const urgente = dias <= 3;
         return (
           <div key={p.id} className={cn(
             'flex items-center gap-4 p-4 rounded-xl border bg-card',
-            p.urgente ? 'border-red-300 bg-red-50/30' : 'border-border',
+            urgente ? 'border-red-300 bg-red-50/30' : 'border-border',
           )}>
-            <Clock className={cn('h-5 w-5 flex-shrink-0', p.urgente ? 'text-red-500' : 'text-muted-foreground')} />
+            <Clock className={cn('h-5 w-5 flex-shrink-0', urgente ? 'text-red-500' : 'text-muted-foreground')} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{p.descricao}</p>
-              <p className="text-xs text-muted-foreground">{p.tipo ?? 'Prazo'}</p>
+              <p className="text-sm font-medium">{p.titulo}</p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-sm font-semibold">{formatDate(p.data_prazo)}</p>
-              <p className={cn('text-xs', dias <= 3 ? 'text-red-600 font-medium' : 'text-muted-foreground')}>
+              <p className="text-sm font-semibold">{formatDate(p.data_vencimento)}</p>
+              <p className={cn('text-xs', urgente ? 'text-red-600 font-medium' : 'text-muted-foreground')}>
                 {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `${dias} dias`}
               </p>
             </div>
@@ -300,7 +297,7 @@ export default function MeuCasoHub({ caso, documentos, plano, processos, prazos 
       <div>
         <h2 className="text-lg font-semibold">Meu Caso</h2>
         <p className="text-sm text-muted-foreground">
-          {caso?.nome_cliente ?? 'Seu processo jurídico'}
+          {caso?.full_name ?? 'Seu processo jurídico'}
         </p>
       </div>
 
