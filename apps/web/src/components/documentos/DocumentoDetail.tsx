@@ -29,6 +29,12 @@ export default function DocumentoDetail({ doc, isAdmin }: Props) {
   const [adminNotes, setAdminNotes] = useState(doc.admin_notes ?? '');
   const [isPending, startTransition] = useTransition();
 
+  const nomeArquivo = (doc as any).nome_arquivo as string | null || doc.nome;
+  const storagePath = (doc as any).storage_path as string | null;
+  const fileUrl = doc.url || (storagePath
+    ? createClient().storage.from('documentos').getPublicUrl(storagePath).data.publicUrl
+    : null);
+
   function updateStatus(newStatus: string) {
     startTransition(async () => {
       const supabase = createClient();
@@ -56,7 +62,7 @@ export default function DocumentoDetail({ doc, isAdmin }: Props) {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold capitalize">{doc.nome || doc.tipo.replace(/_/g, ' ')}</h1>
+          <h1 className="text-lg font-semibold capitalize">{nomeArquivo || doc.tipo.replace(/_/g, ' ')}</h1>
           <p className="text-xs text-muted-foreground">
             Enviado em {formatDate(doc.created_at)} · Atualizado em {formatDate(doc.updated_at)}
           </p>
@@ -65,17 +71,17 @@ export default function DocumentoDetail({ doc, isAdmin }: Props) {
       </div>
 
       {/* File preview / download */}
-      {doc.url && (
+      {fileUrl && (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{doc.nome || 'Arquivo'}</span>
+              <span className="text-sm font-medium">{nomeArquivo || 'Arquivo'}</span>
               {doc.file_size && <span className="text-xs text-muted-foreground">({formatBytes(doc.file_size)})</span>}
             </div>
             <div className="flex gap-2">
               <a
-                href={doc.url}
+                href={fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -83,7 +89,7 @@ export default function DocumentoDetail({ doc, isAdmin }: Props) {
                 <Eye className="h-4 w-4" />
               </a>
               <a
-                href={doc.url}
+                href={fileUrl}
                 download
                 className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
@@ -94,7 +100,7 @@ export default function DocumentoDetail({ doc, isAdmin }: Props) {
           {doc.mime_type?.startsWith('image/') && (
             <div className="p-4 flex items-center justify-center bg-muted/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={doc.url} alt={doc.nome ?? doc.tipo} className="max-h-80 rounded-lg object-contain" />
+              <img src={fileUrl} alt={nomeArquivo ?? doc.tipo} className="max-h-80 rounded-lg object-contain" />
             </div>
           )}
         </div>
