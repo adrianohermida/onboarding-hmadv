@@ -4,7 +4,11 @@
   "description": "Portal Jurídico do Superendividado — frontend modular para acompanhamento de casos de superendividamento",
   "scripts": {
     "dev": "npx serve . -l 3000",
+    "web:dev": "npm --prefix apps/web run dev",
     "build": "echo 'Site estático — sem build step necessário'",
+    "web:build": "npm --prefix apps/web run build",
+    "web:start": "npm --prefix apps/web run start",
+    "web:type-check": "npm --prefix apps/web run type-check",
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
     "test": "node platform/scripts/run-portal-tests.mjs",
     "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1"
