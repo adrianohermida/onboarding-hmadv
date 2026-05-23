@@ -1,0 +1,444 @@
+/**
+ * Recupera Empresas Design System - Mobile First Responsive System
+ * 
+ * Breakpoints (Mobile-First):
+ * - sm: 480px   (Small phones, landscape)
+ * - md: 768px   (Tablets, large phones)
+ * - lg: 1024px  (Laptops, small desktops)
+ * - xl: 1280px  (Desktops)
+ * - 2xl: 1536px (Large screens)
+ */
+
+/* ===========================
+   BASE STYLES (Mobile Default)
+   All components start mobile-first
+   =========================== */
+
+/* Safe area for notched devices */
+@supports (padding: max(0px)) {
+  .ds-safe-area {
+    padding-left: max(var(--ds-space-3), env(safe-area-inset-left));
+    padding-right: max(var(--ds-space-3), env(safe-area-inset-right));
+    padding-bottom: max(var(--ds-space-3), env(safe-area-inset-bottom));
+    padding-top: max(var(--ds-space-3), env(safe-area-inset-top));
+  }
+  
+  .ds-safe-area-top {
+    padding-top: max(var(--ds-space-4), env(safe-area-inset-top));
+  }
+  
+  .ds-safe-area-bottom {
+    padding-bottom: max(var(--ds-space-4), env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  min-width: 320px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Ensure images are responsive by default */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ===========================
+   SMALL PHONES (≥480px)
+   Slightly larger than smallest phones
+   =========================== */
+@media (min-width: 480px) {
+  :root {
+    --ds-container-padding: var(--ds-space-4);
+  }
+  
+  .ds-card {
+    padding: var(--ds-space-5);
+  }
+  
+  .ds-btn-sm {
+    min-height: 40px;
+  }
+}
+
+/* ===========================
+   TABLETS (≥768px)
+   Two-column layouts become viable
+   =========================== */
+@media (min-width: 768px) {
+  :root {
+    --ds-container-padding: var(--ds-space-6);
+  }
+  
+  /* Typography adjustments */
+  .ds-h1 {
+    font-size: var(--ds-font-size-4xl);
+  }
+  
+  .ds-h2 {
+    font-size: var(--ds-font-size-3xl);
+  }
+  
+  /* Grid system base */
+  .ds-grid {
+    display: grid;
+    gap: var(--ds-space-4);
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .ds-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  /* Card spacing in grids */
+  .ds-grid .ds-card {
+    padding: var(--ds-space-5);
+  }
+  
+  /* Table becomes horizontal scroll instead of stacked */
+  .ds-table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Modal becomes centered with max-width */
+  .ds-modal {
+    max-width: 600px;
+    margin: var(--ds-space-10) auto;
+    border-radius: var(--ds-radius-xl);
+  }
+  
+  /* Slideover from right */
+  .ds-slideover {
+    width: 480px;
+    max-width: 75vw;
+  }
+  
+  /* Navigation can expand */
+  .ds-nav-mobile {
+    display: none;
+  }
+  
+  .ds-nav-desktop {
+    display: flex;
+  }
+}
+
+/* ===========================
+   LAPTOPS (≥1024px)
+   Full multi-column layouts
+   =========================== */
+@media (min-width: 1024px) {
+  :root {
+    --ds-container-padding: var(--ds-space-8);
+  }
+  
+  .ds-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .ds-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .ds-grid-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  /* Larger cards with more whitespace */
+  .ds-card {
+    padding: var(--ds-space-6);
+  }
+  
+  /* Modal wider */
+  .ds-modal {
+    max-width: 720px;
+  }
+  
+  .ds-modal-lg {
+    max-width: 960px;
+  }
+  
+  /* Slideover wider */
+  .ds-slideover {
+    width: 640px;
+    max-width: 50vw;
+  }
+  
+  /* Tables full width */
+  .ds-table {
+    width: 100%;
+  }
+}
+
+/* ===========================
+   DESKTOPS (≥1280px)
+   Optimal viewing experience
+   =========================== */
+@media (min-width: 1280px) {
+  :root {
+    --ds-container-padding: var(--ds-space-10);
+  }
+  
+  .ds-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .ds-modal {
+    max-width: 800px;
+  }
+  
+  .ds-modal-lg {
+    max-width: 1080px;
+  }
+  
+  .ds-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ===========================
+   LARGE SCREENS (≥1536px)
+   Extra wide displays
+   =========================== */
+@media (min-width: 1536px) {
+  .ds-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  
+  .ds-container {
+    max-width: 1440px;
+  }
+}
+
+/* ===========================
+   TOUCH DEVICE OPTIMIZATIONS
+   Applied when pointer is coarse (finger touch)
+   =========================== */
+@media (pointer: coarse) {
+  /* Increase touch targets */
+  .ds-btn {
+    min-height: var(--ds-touch-target-comfortable);
+    padding: var(--ds-space-3) var(--ds-space-5);
+  }
+  
+  .ds-input,
+  .ds-select {
+    min-height: var(--ds-touch-target-comfortable);
+    font-size: max(var(--ds-font-size-md), 16px); /* Prevent iOS zoom */
+  }
+  
+  /* Larger interactive areas */
+  .ds-checkbox,
+  .ds-radio {
+    min-width: 24px;
+    min-height: 24px;
+  }
+  
+  /* Remove hover effects that don't work on touch */
+  .ds-card-interactive:hover {
+    transform: none;
+  }
+}
+
+/* ===========================
+   LANDSCAPE MOBILE OPTIMIZATIONS
+   When device is in landscape orientation
+   =========================== */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce vertical spacing */
+  .ds-modal {
+    margin: var(--ds-space-4) auto;
+    max-height: calc(100vh - var(--ds-space-8));
+    overflow-y: auto;
+  }
+  
+  .ds-slideover {
+    max-height: 100vh;
+  }
+  
+  /* Compact headers */
+  .ds-h1 {
+    font-size: var(--ds-font-size-2xl);
+  }
+}
+
+/* ===========================
+   PRINT STYLES
+   =========================== */
+@media print {
+  :root {
+    --ds-color-bg-0: #ffffff;
+    --ds-color-bg-200: #ffffff;
+    --ds-color-ink-900: #000000;
+    --ds-shadow-sm: none;
+    --ds-shadow-md: none;
+    --ds-shadow-lg: none;
+  }
+  
+  .ds-no-print {
+    display: none !important;
+  }
+  
+  .ds-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+  }
+  
+  .ds-btn {
+    background: none;
+    color: #000;
+    border: 1px solid #000;
+  }
+  
+  a.ds-link {
+    text-decoration: underline;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+  }
+}
+
+/* ===========================
+   HIGH CONTRAST MODE
+   For users who prefer high contrast
+   =========================== */
+@media (prefers-contrast: high) {
+  .ds-btn-primary {
+    border: 2px solid currentColor;
+  }
+  
+  .ds-input,
+  .ds-select,
+  .ds-textarea {
+    border-width: 2px;
+  }
+  
+  .ds-card {
+    border-width: 2px;
+  }
+}
+
+/* ===========================
+   REDUCED MOTION
+   For users who prefer reduced motion
+   =========================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .ds-skeleton {
+    animation: none;
+    background: var(--ds-color-ink-100);
+  }
+}
+
+/* ===========================
+   DARK MODE SUPPORT (Future)
+   Placeholder for dark mode implementation
+   =========================== */
+@media (prefers-color-scheme: dark) {
+  /* Dark mode tokens will be defined in themes/dark.css */
+  /* This is a placeholder for future dark mode support */
+}
+
+/* ===========================
+   UTILITY CLASSES
+   Responsive visibility helpers
+   =========================== */
+
+/* Hide on mobile, show on tablet+ */
+.ds-hide-sm {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .ds-hide-sm {
+    display: block !important;
+  }
+  .ds-hide-sm-inline {
+    display: inline !important;
+  }
+  .ds-hide-sm-flex {
+    display: flex !important;
+  }
+  .ds-hide-sm-grid {
+    display: grid !important;
+  }
+}
+
+/* Hide on tablet+, show on mobile */
+@media (min-width: 768px) {
+  .ds-show-sm-only {
+    display: none !important;
+  }
+}
+
+/* Hide on desktop, show on laptop- */
+@media (min-width: 1280px) {
+  .ds-hide-lg {
+    display: none !important;
+  }
+}
+
+/* Stack columns on mobile, row on tablet+ */
+.ds-flex-col-sm {
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .ds-flex-col-sm {
+    flex-direction: row;
+  }
+}
+
+/* Responsive spacing utilities */
+.ds-mb-responsive {
+  margin-bottom: var(--ds-space-4);
+}
+
+@media (min-width: 768px) {
+  .ds-mb-responsive {
+    margin-bottom: var(--ds-space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  .ds-mb-responsive {
+    margin-bottom: var(--ds-space-8);
+  }
+}
+
+.ds-gap-responsive {
+  gap: var(--ds-space-3);
+}
+
+@media (min-width: 768px) {
+  .ds-gap-responsive {
+    gap: var(--ds-space-4);
+  }
+}
+
+@media (min-width: 1024px) {
+  .ds-gap-responsive {
+    gap: var(--ds-space-6);
+  }
+}
