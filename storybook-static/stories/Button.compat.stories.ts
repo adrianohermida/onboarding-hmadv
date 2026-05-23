@@ -77,3 +77,80 @@ export const Danger: Story = {
     children: 'Excluir',
   },
 };
+
+export const Sizes: Story = {
+  render: () => `
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <button class="ds-btn ds-btn-primary ds-btn-sm">Small (32px)</button>
+      <button class="ds-btn ds-btn-primary ds-btn-md">Medium (40px)</button>
+      <button class="ds-btn ds-btn-primary ds-btn-lg">Large (48px)</button>
+      <button class="ds-btn ds-btn-primary ds-btn-xl">XL (56px)</button>
+    </div>
+  `,
+};
+
+export const BlockMobile: Story = {
+  args: {
+    block: true,
+    children: 'Botao Full Width',
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    loading: true,
+    children: 'Salvando...',
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    disabled: true,
+    children: 'Nao clicavel',
+  },
+};
+
+export const WithIcon: Story = {
+  args: {
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+    children: 'Continuar',
+  },
+};
+
+export const IconOnly: Story = {
+  render: () => `
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="ds-btn ds-btn-secondary ds-btn-icon" aria-label="Editar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+      <button class="ds-btn ds-btn-secondary ds-btn-icon" aria-label="Excluir">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </button>
+    </div>
+  `,
+};
+
+export const ButtonGroup: Story = {
+  render: () => `
+    <div class="ds-btn-group" role="group" aria-label="Acoes do documento">
+      <button class="ds-btn ds-btn-outline ds-btn-sm">Visualizar</button>
+      <button class="ds-btn ds-btn-outline ds-btn-sm">Editar</button>
+      <button class="ds-btn ds-btn-outline ds-btn-sm">Compartilhar</button>
+    </div>
+  `,
+};
+
+export const MobileStacked: Story = {
+  render: () => `
+    <div class="ds-btn-stack-mobile">
+      <button class="ds-btn ds-btn-primary ds-btn-block-mobile">Acao Principal</button>
+      <button class="ds-btn ds-btn-secondary ds-btn-block-mobile">Acao Secundaria</button>
+    </div>
+  `,
+};
