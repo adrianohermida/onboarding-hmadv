@@ -4,8 +4,7 @@ const config: StorybookConfig = {
   stories: [
     {
       directory: '../design-system/stories',
-      files: '**/*.stories.@(js|jsx|mjs|ts|tsx)',
-      titlePrefix: 'Design System'
+      files: '**/*.stories.@(js|jsx|mjs|ts|tsx)'
     }
   ],
   addons: [
