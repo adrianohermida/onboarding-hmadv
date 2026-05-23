@@ -222,7 +222,7 @@ export default function ProcessosClient() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<string>('');
-  const [bulkResponsavel, setBulkResponsavel] = useState<string>('');
+  const [bulkResponsaveis, setBulkResponsaveis] = useState<string[]>([]);
 
   const debouncedSearch = useDebounce(rawSearch, 350);
 
@@ -310,9 +310,9 @@ export default function ProcessosClient() {
   }
 
   async function handleBulkResponsavelApply() {
-    if (!bulkResponsavel || !selectedIds.length) return;
-    await bulkAtualizar.mutateAsync({ ids: selectedIds, patch: { responsavel: bulkResponsavel } });
-    setBulkResponsavel('');
+    if (!bulkResponsaveis.length || !selectedIds.length) return;
+    await bulkAtualizar.mutateAsync({ ids: selectedIds, patch: { responsavel: bulkResponsaveis.join(',') } });
+    setBulkResponsaveis([]);
   }
 
   async function handleBulkMerge() {
@@ -429,17 +429,26 @@ export default function ProcessosClient() {
           >
             Aplicar status
           </button>
-          <ResponsavelSelect
-            value={bulkResponsavel || null}
-            onChange={(next) => setBulkResponsavel(next || '')}
-            options={responsaveisInternos}
-            allLabel="Responsável interno..."
-            placeholder="Responsável interno"
-            className="min-w-[280px]"
-          />
+          <div className="flex items-center gap-2">
+            <select
+              multiple
+              value={bulkResponsaveis}
+              onChange={(event) => {
+                const values = Array.from(event.currentTarget.selectedOptions).map((opt) => opt.value);
+                setBulkResponsaveis(values);
+              }}
+              className="min-w-[280px] max-w-[360px] px-2.5 py-1.5 text-xs bg-background border border-border rounded-md"
+              title="Seleção múltipla de responsáveis internos"
+            >
+              {responsaveisInternos.map((item) => (
+                <option key={item.user_id} value={item.user_id}>{item.label}</option>
+              ))}
+            </select>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Seleção múltipla</span>
+          </div>
           <button
             onClick={handleBulkResponsavelApply}
-            disabled={!bulkResponsavel || isBusy}
+            disabled={!bulkResponsaveis.length || isBusy}
             className="px-2.5 py-1.5 text-xs rounded-md border border-border hover:bg-muted disabled:opacity-50"
           >
             Aplicar responsável
@@ -521,7 +530,14 @@ export default function ProcessosClient() {
                           ? <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset', priCfg.cls)}>{priCfg.label}</span>
                           : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{responsavelLabelById.get(String(p.responsavel || '').trim()) || p.responsavel || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {String(p.responsavel || '')
+                          .split(',')
+                          .map((id) => id.trim())
+                          .filter(Boolean)
+                          .map((id) => responsavelLabelById.get(id) || id)
+                          .join(' · ') || '—'}
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {formatDate(p.data_ultima_movimentacao)}
                       </td>

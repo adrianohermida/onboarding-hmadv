@@ -554,6 +554,7 @@ export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }:
           <Link href="/custas-processuais" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Custas</Link>
           <Link href="/mensagens" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Mensagens</Link>
           <Link href="/suporte" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Suporte</Link>
+          <Link href="/partes" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Partes</Link>
           <Link href="/onboarding-v2" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Jornada</Link>
           <Link href="/processos" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Viewpage completa</Link>
         </div>

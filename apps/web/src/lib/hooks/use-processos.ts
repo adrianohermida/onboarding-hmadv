@@ -572,8 +572,20 @@ export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
       const from = page * PROCESSOS_PAGE_SIZE;
       const to = from + PROCESSOS_PAGE_SIZE - 1;
       const search = String(filtros.search || '').trim();
+      const searchLower = search.toLowerCase();
       const cnjDigits = onlyDigits(search);
       const cnjStructured = cnjDigits.length === 20 ? formatCnjDigits(cnjDigits) : '';
+
+      let parteProcessoIds: string[] = [];
+      if (search.length >= 2) {
+        const { data: partesData } = await jud()
+          .from('partes')
+          .select('processo_id')
+          .ilike('nome', `%${search}%`)
+          .not('processo_id', 'is', null)
+          .limit(250);
+        parteProcessoIds = Array.from(new Set((partesData ?? []).map((row: any) => row?.processo_id).filter(Boolean)));
+      }
 
       const baseSelect = 'id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at';
       const extendedSelect = `id, numero_cnj, titulo, polo_ativo, polo_passivo, responsavel, ${baseSelect.replace('id, numero_cnj, ', '')}`;
@@ -597,6 +609,7 @@ export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
             extended ? `responsavel.ilike.%${search}%` : '',
             extended ? `polo_ativo.ilike.%${search}%` : '',
             extended ? `polo_passivo.ilike.%${search}%` : '',
+            parteProcessoIds.length ? `id.in.(${parteProcessoIds.join(',')})` : '',
           ].filter(Boolean);
           q = q.or(ors.join(','));
         }
@@ -604,6 +617,9 @@ export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
         if (filtros.status === 'ativo') q = q.in('status', ['em_andamento', 'aguardando', 'ativo']);
         else if (filtros.status === 'baixado') q = q.in('status', ['baixado', 'encerrado', 'arquivado']);
         else if (filtros.status) q = q.eq('status', filtros.status);
+        else if (searchLower === 'ativo') q = q.in('status', ['em_andamento', 'aguardando', 'ativo']);
+        else if (searchLower === 'baixado') q = q.in('status', ['baixado', 'encerrado', 'arquivado']);
+        else if (searchLower === 'suspenso') q = q.eq('status', 'suspenso');
 
         if (filtros.prioridade) q = q.eq('prioridade', filtros.prioridade);
         if (extended && filtros.responsavel) q = q.ilike('responsavel', `%${filtros.responsavel}%`);
