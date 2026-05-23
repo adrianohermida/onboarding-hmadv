@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { Search, X, ChevronRight, ChevronLeft, Gavel, Loader2, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { Search, X, ChevronRight, ChevronLeft, Gavel, Loader2, AlertCircle, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useProcessosPaginados,
@@ -25,6 +25,7 @@ import ProcessoDetalhePanel from './ProcessoDetalhePanel';
 
 const STATUS_OPTIONS = ['em_andamento', 'aguardando', 'suspenso', 'encerrado', 'arquivado'] as const;
 const PRIORIDADE_OPTIONS = ['critica', 'alta', 'media', 'baixa'] as const;
+const ROLE_ORDER = ['master_admin', 'tenant_admin', 'advogado', 'colaborador'];
 
 function formatDate(iso: string | null) {
   if (!iso) return '—';
@@ -44,6 +45,172 @@ function buildProcessTitle(p: Processo) {
   const ativo = p.polo_ativo || 'Polo ativo';
   const passivo = p.polo_passivo || 'Polo passivo';
   return `${formattedCnj} (${ativo} x ${passivo})`;
+}
+
+function roleGroupLabel(role: string) {
+  const key = String(role || '').trim();
+  if (key === 'master_admin') return 'Master Admin';
+  if (key === 'tenant_admin') return 'Admin';
+  if (key === 'advogado') return 'Advogado';
+  if (key === 'colaborador') return 'Colaborador';
+  return key || 'Outros';
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function renderHighlightedText(text: string, query: string) {
+  const source = String(text || '');
+  const normalizedQuery = String(query || '').trim();
+  if (!normalizedQuery) return source;
+  const regex = new RegExp(`(${escapeRegex(normalizedQuery)})`, 'ig');
+  const chunks = source.split(regex);
+  return chunks.map((chunk, index) => {
+    const matched = chunk.toLowerCase() === normalizedQuery.toLowerCase();
+    if (!matched) return <span key={`${chunk}-${index}`}>{chunk}</span>;
+    return (
+      <mark key={`${chunk}-${index}`} className="rounded bg-amber-200/70 px-0.5 text-foreground">
+        {chunk}
+      </mark>
+    );
+  });
+}
+
+function ResponsavelSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  allLabel,
+  className = '',
+}: {
+  value: string | null;
+  onChange: (next: string | null) => void;
+  options: Array<{ user_id: string; role: string; label: string; email: string | null }>;
+  placeholder: string;
+  allLabel?: string;
+  className?: string;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const selectedLabel = useMemo(
+    () => options.find((item) => item.user_id === value)?.label || '',
+    [options, value]
+  );
+
+  const grouped = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = !query
+      ? options
+      : options.filter((item) => {
+          const hay = `${item.label} ${item.email || ''} ${item.role}`.toLowerCase();
+          return hay.includes(query);
+        });
+
+    const buckets = new Map<string, typeof filtered>();
+    filtered.forEach((item) => {
+      const key = item.role || 'outros';
+      const current = buckets.get(key) || [];
+      current.push(item);
+      buckets.set(key, current);
+    });
+
+    const groupedEntries = Array.from(buckets.entries())
+      .sort((a, b) => {
+        const ai = ROLE_ORDER.indexOf(a[0]);
+        const bi = ROLE_ORDER.indexOf(b[0]);
+        if (ai === -1 && bi === -1) return a[0].localeCompare(b[0], 'pt-BR');
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+      .map(([role, items]) => ({ role, label: roleGroupLabel(role), items }));
+
+    return groupedEntries;
+  }, [options, search]);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
+
+  useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className={cn('relative', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="w-full px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-left flex items-center justify-between gap-2"
+      >
+        <span className="truncate text-foreground/90">{selectedLabel || allLabel || placeholder}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-40 mt-1 w-full min-w-[320px] rounded-lg border border-border bg-background shadow-lg">
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar responsável"
+                className="w-full pl-8 pr-2 py-1.5 text-xs bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-auto p-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                onChange(null);
+                setOpen(false);
+              }}
+              className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-muted flex items-center justify-between"
+            >
+              <span>{allLabel || 'Todos'}</span>
+              {!value ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+            </button>
+
+            {grouped.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-muted-foreground">Nenhum responsável encontrado.</p>
+            ) : grouped.map((group) => (
+              <div key={group.role} className="mt-1">
+                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                {group.items.map((item) => (
+                  <button
+                    key={item.user_id}
+                    type="button"
+                    onClick={() => {
+                      onChange(item.user_id);
+                      setOpen(false);
+                    }}
+                    className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-muted flex items-start justify-between gap-2"
+                  >
+                    <span className="min-w-0 truncate">{renderHighlightedText(item.label, search)}</span>
+                    {value === item.user_id ? <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" /> : null}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ProcessosClient() {
@@ -202,16 +369,14 @@ export default function ProcessosClient() {
           ))}
         </select>
 
-        <select
-          value={responsavelFiltro ?? ''}
-          onChange={(e) => handleFilterChange(setResponsavelFiltro, e.target.value || null)}
-          className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">Todos responsáveis</option>
-          {responsaveisInternos.map((item) => (
-            <option key={item.user_id} value={item.user_id}>{item.label}</option>
-          ))}
-        </select>
+        <ResponsavelSelect
+          value={responsavelFiltro}
+          onChange={(next) => handleFilterChange(setResponsavelFiltro, next)}
+          options={responsaveisInternos}
+          allLabel="Todos responsáveis"
+          placeholder="Responsável"
+          className="min-w-[260px]"
+        />
 
         {hasFilters && (
           <button
@@ -264,16 +429,14 @@ export default function ProcessosClient() {
           >
             Aplicar status
           </button>
-          <select
-            value={bulkResponsavel}
-            onChange={(e) => setBulkResponsavel(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-background border border-border rounded-md"
-          >
-            <option value="">Responsável interno...</option>
-            {responsaveisInternos.map((item) => (
-              <option key={item.user_id} value={item.user_id}>{item.label}</option>
-            ))}
-          </select>
+          <ResponsavelSelect
+            value={bulkResponsavel || null}
+            onChange={(next) => setBulkResponsavel(next || '')}
+            options={responsaveisInternos}
+            allLabel="Responsável interno..."
+            placeholder="Responsável interno"
+            className="min-w-[280px]"
+          />
           <button
             onClick={handleBulkResponsavelApply}
             disabled={!bulkResponsavel || isBusy}
