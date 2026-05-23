@@ -154,7 +154,7 @@ function ResponsavelSelect({
         onClick={() => setOpen((current) => !current)}
         className="w-full px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-left flex items-center justify-between gap-2"
       >
-        <span className="truncate text-foreground/90">{selectedLabel || allLabel || placeholder}</span>
+        <span className="truncate text-foreground/90">{renderHighlightedText(selectedLabel || allLabel || placeholder, search)}</span>
         <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
       </button>
 
