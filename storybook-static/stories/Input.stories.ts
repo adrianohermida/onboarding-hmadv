@@ -12,9 +12,38 @@ import '../components/base-v2.css';
  * - Validação nativa do HTML5
  */
 
+// Template base
+function Template({ type, size, state, label, placeholder, helperText, required }: any) {
+  const isError = state === 'error';
+  const isDisabled = state === 'disabled';
+  const isFocus = state === 'focus';
+
+  return `
+    <div class="ds-form-group" style="max-width: 400px;">
+      <label class="ds-label ${required ? 'is-required' : ''}" for="input-${type}">
+        ${label}
+        ${required ? '<span class="ds-required">*</span>' : ''}
+      </label>
+
+      <input
+        type="${type}"
+        id="input-${type}"
+        class="ds-input ds-input-${size} ${isError ? 'is-error' : ''} ${isFocus ? 'is-focused' : ''}"
+        placeholder="${placeholder}"
+        ${isDisabled ? 'disabled' : ''}
+        ${required ? 'required' : ''}
+        ${isError ? 'aria-invalid="true"' : ''}
+      />
+
+      ${helperText || isError ? `<span class="ds-helper-text ${isError ? 'is-error' : ''}">${helperText || 'Campo inválido'}</span>` : ''}
+    </div>
+  `;
+}
+
 const meta = {
   title: 'Componentes/Inputs',
   tags: ['autodocs'],
+  render: Template,
   argTypes: {
     type: {
       control: 'select',
@@ -61,34 +90,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// Template base
-const Template = ({ type, size, state, label, placeholder, helperText, required }: any) => {
-  const isError = state === 'error';
-  const isDisabled = state === 'disabled';
-  const isFocus = state === 'focus';
-  
-  return `
-    <div class="ds-form-group" style="max-width: 400px;">
-      <label class="ds-label ${required ? 'is-required' : ''}" for="input-${type}">
-        ${label}
-        ${required ? '<span class="ds-required">*</span>' : ''}
-      </label>
-      
-      <input 
-        type="${type}" 
-        id="input-${type}"
-        class="ds-input ds-input-${size} ${isError ? 'is-error' : ''} ${isFocus ? 'is-focused' : ''}"
-        placeholder="${placeholder}"
-        ${isDisabled ? 'disabled' : ''}
-        ${required ? 'required' : ''}
-        ${isError ? 'aria-invalid="true"' : ''}
-      />
-      
-      ${helperText || isError ? `<span class="ds-helper-text ${isError ? 'is-error' : ''}">${helperText || 'Campo inválido'}</span>` : ''}
-    </div>
-  `;
-};
 
 /**
  * ### Text Input

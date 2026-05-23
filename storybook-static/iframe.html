@@ -508,8 +508,32 @@
     console.warn('unable to connect to top frame for connecting dev tools');
   }
 </script>
+<script>
+  (function () {
+    try {
+      var url = new URL(window.location.href);
+      var storyId = url.searchParams.get('id');
+      if (!storyId) return;
 
-    <script type="module" crossorigin src="./assets/iframe-4IMKMaZ2.js"></script>
+      var normalizedId = storyId;
+
+      if (storyId.indexOf('componentes-botões--') === 0) {
+        normalizedId = storyId.replace('componentes-botões--', 'design-system-componentes-botões--');
+      } else if (storyId.indexOf('componentes-botoes--') === 0) {
+        normalizedId = storyId.replace('componentes-botoes--', 'design-system-componentes-botões--');
+      }
+
+      if (normalizedId !== storyId) {
+        url.searchParams.set('id', normalizedId);
+        window.location.replace(url.toString());
+      }
+    } catch (err) {
+      console.warn('storybook id pre-normalization failed', err);
+    }
+  })();
+</script>
+
+    <script type="module" crossorigin src="./assets/iframe-CkIfwZUn.js"></script>
   </head>
 
   <body>

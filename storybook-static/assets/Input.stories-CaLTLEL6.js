@@ -1,10 +1,23 @@
-/* empty css                */const h={title:"Componentes/Inputs",tags:["autodocs"],argTypes:{type:{control:"select",options:["text","email","password","number","tel","date","search"],description:"Tipo do input"},size:{control:"select",options:["sm","md","lg"],description:"Tamanho do input"},state:{control:"select",options:["default","focus","error","disabled"],description:"Estado do input"},label:{control:"text",description:"Label do campo"},placeholder:{control:"text",description:"Placeholder text"},helperText:{control:"text",description:"Texto de ajuda"},required:{control:"boolean",description:"Campo obrigatório"}},args:{type:"text",size:"md",state:"default",label:"Nome Completo",placeholder:"Digite seu nome",helperText:"",required:!1},parameters:{docs:{description:{component:`## Inputs do Design System Recupera Empresas\r
-\r
-Campos de formulário responsivos mobile-first com:\r
-- Labels acessíveis\r
-- Estados: focus, error, disabled\r
-- Suporte a dark mode\r
-- Validação nativa do HTML5`}}}},e={args:{type:"text",label:"Nome Completo",placeholder:"Digite seu nome"}},s={args:{type:"email",label:"E-mail",placeholder:"seu@email.com",helperText:"Enviaremos confirmação para este e-mail"}},a={args:{type:"password",label:"Senha",placeholder:"••••••••",helperText:"Mínimo 8 caracteres"}},r={args:{type:"number",label:"Idade",placeholder:"0"}},t={args:{type:"tel",label:"Telefone",placeholder:"(11) 99999-9999",helperText:"Formato: (XX) XXXXX-XXXX"}},n={args:{type:"date",label:"Data de Nascimento"}},l={render:()=>`
+/* empty css                */function T({type:h,size:v,state:x,label:w,placeholder:S,helperText:y,required:f}){const g=x==="error";return`
+    <div class="ds-form-group" style="max-width: 400px;">
+      <label class="ds-label ${f?"is-required":""}" for="input-${h}">
+        ${w}
+        ${f?'<span class="ds-required">*</span>':""}
+      </label>
+
+      <input
+        type="${h}"
+        id="input-${h}"
+        class="ds-input ds-input-${v} ${g?"is-error":""} ${x==="focus"?"is-focused":""}"
+        placeholder="${S}"
+        ${x==="disabled"?"disabled":""}
+        ${f?"required":""}
+        ${g?'aria-invalid="true"':""}
+      />
+
+      ${y||g?`<span class="ds-helper-text ${g?"is-error":""}">${y||"Campo inválido"}</span>`:""}
+    </div>
+  `}const E={title:"Componentes/Inputs",tags:["autodocs"],render:T,argTypes:{type:{control:"select",options:["text","email","password","number","tel","date","search"],description:"Tipo do input"},size:{control:"select",options:["sm","md","lg"],description:"Tamanho do input"},state:{control:"select",options:["default","focus","error","disabled"],description:"Estado do input"},label:{control:"text",description:"Label do campo"},placeholder:{control:"text",description:"Placeholder text"},helperText:{control:"text",description:"Texto de ajuda"},required:{control:"boolean",description:"Campo obrigatório"}},args:{type:"text",size:"md",state:"default",label:"Nome Completo",placeholder:"Digite seu nome",helperText:"",required:!1}},e={args:{type:"text",label:"Nome Completo",placeholder:"Digite seu nome"}},s={args:{type:"email",label:"E-mail",placeholder:"seu@email.com",helperText:"Enviaremos confirmação para este e-mail"}},a={args:{type:"password",label:"Senha",placeholder:"••••••••",helperText:"Mínimo 8 caracteres"}},r={args:{type:"number",label:"Idade",placeholder:"0"}},t={args:{type:"tel",label:"Telefone",placeholder:"(11) 99999-9999",helperText:"Formato: (XX) XXXXX-XXXX"}},l={args:{type:"date",label:"Data de Nascimento"}},n={render:()=>`
     <div class="ds-form-group" style="max-width: 400px;">
       <label class="ds-label" for="search-input">Buscar</label>
       <div class="ds-input-wrapper ds-input-with-icon">
@@ -205,13 +218,13 @@ Apenas números`,...r.parameters?.docs?.description}}};t.parameters={...t.parame
     helperText: 'Formato: (XX) XXXXX-XXXX'
   }
 }`,...t.parameters?.docs?.source},description:{story:`### Tel Input\r
-Telefone (mobile optimized)`,...t.parameters?.docs?.description}}};n.parameters={...n.parameters,docs:{...n.parameters?.docs,source:{originalSource:`{
+Telefone (mobile optimized)`,...t.parameters?.docs?.description}}};l.parameters={...l.parameters,docs:{...l.parameters?.docs,source:{originalSource:`{
   args: {
     type: 'date',
     label: 'Data de Nascimento'
   }
-}`,...n.parameters?.docs?.source},description:{story:`### Date Input\r
-Seletor de data`,...n.parameters?.docs?.description}}};l.parameters={...l.parameters,docs:{...l.parameters?.docs,source:{originalSource:`{
+}`,...l.parameters?.docs?.source},description:{story:`### Date Input\r
+Seletor de data`,...l.parameters?.docs?.description}}};n.parameters={...n.parameters,docs:{...n.parameters?.docs,source:{originalSource:`{
   render: () => \`
     <div class="ds-form-group" style="max-width: 400px;">
       <label class="ds-label" for="search-input">Buscar</label>
@@ -229,8 +242,8 @@ Seletor de data`,...n.parameters?.docs?.description}}};l.parameters={...l.parame
       </div>
     </div>
   \`
-}`,...l.parameters?.docs?.source},description:{story:`### Search Input\r
-Busca com ícone`,...l.parameters?.docs?.description}}};o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{
+}`,...n.parameters?.docs?.source},description:{story:`### Search Input\r
+Busca com ícone`,...n.parameters?.docs?.description}}};o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{
   args: {
     type: 'email',
     state: 'error',
@@ -423,4 +436,4 @@ Otimizado para mobile (touch-friendly)`,...u.parameters?.docs?.description}}};b.
     </div>
   \`
 }`,...b.parameters?.docs?.source},description:{story:`### Floating Label\r
-Label animado (estilo Material Design)`,...b.parameters?.docs?.description}}};const x=["Text","Email","Password","Number","Tel","Date","Search","ErrorState","DisabledState","Required","Sizes","WithHelperText","InputGroup","MobileOptimized","FloatingLabel"];export{n as Date,i as DisabledState,s as Email,o as ErrorState,b as FloatingLabel,m as InputGroup,u as MobileOptimized,r as Number,a as Password,d as Required,l as Search,p as Sizes,t as Tel,e as Text,c as WithHelperText,x as __namedExportsOrder,h as default};
+Label animado (estilo Material Design)`,...b.parameters?.docs?.description}}};const I=["Text","Email","Password","Number","Tel","Date","Search","ErrorState","DisabledState","Required","Sizes","WithHelperText","InputGroup","MobileOptimized","FloatingLabel"];export{l as Date,i as DisabledState,s as Email,o as ErrorState,b as FloatingLabel,m as InputGroup,u as MobileOptimized,r as Number,a as Password,d as Required,n as Search,p as Sizes,t as Tel,e as Text,c as WithHelperText,I as __namedExportsOrder,E as default};

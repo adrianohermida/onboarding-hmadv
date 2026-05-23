@@ -1,10 +1,18 @@
-/* empty css                */const m={title:"Componentes/Cards",tags:["autodocs"],argTypes:{variant:{control:"select",options:["default","elevated","outlined","interactive"],description:"Variante visual do card"},size:{control:"select",options:["sm","md","lg","full"],description:"Tamanho do card"},padding:{control:"select",options:["none","sm","md","lg"],description:"Espaçamento interno"},clickable:{control:"boolean",description:"Card clicável (interativo)"}},args:{variant:"default",size:"md",padding:"md",clickable:!1},parameters:{docs:{description:{component:`## Cards do Design System Recupera Empresas\r
+/* empty css                */const f={title:"Componentes/Cards",tags:["autodocs"],render:y,argTypes:{variant:{control:"select",options:["default","elevated","outlined","interactive"],description:"Variante visual do card"},size:{control:"select",options:["sm","md","lg","full"],description:"Tamanho do card"},padding:{control:"select",options:["none","sm","md","lg"],description:"Espaçamento interno"},clickable:{control:"boolean",description:"Card clicável (interativo)"}},args:{variant:"default",size:"md",padding:"md",clickable:!1},parameters:{docs:{description:{component:`## Cards do Design System Recupera Empresas\r
 \r
 Cards responsivos mobile-first com:\r
 - Layout adaptativo (stack em mobile, grid em desktop)\r
 - Suporte a dark mode\r
 - Acessibilidade WCAG AA\r
-- Estados de hover e focus`}}}},e={args:{title:"Card Padrão",children:"<p>Este é um card simples, ideal para listas e grids de conteúdo.</p>"}},a={args:{variant:"elevated",title:"Card Elevado",children:"<p>Card com sombra para destacar conteúdo importante.</p>"}},d={args:{variant:"outlined",title:"Card com Borda",children:"<p>Card com borda sutil, bom para separar seções.</p>"}},s={args:{variant:"interactive",clickable:!0,title:"Card Clicável",children:"<p>Passe o mouse ou use Tab para ver os estados de hover e focus.</p>"}},r={render:()=>`
+- Estados de hover e focus`}}}};function y(u={}){const{variant:g="default",size:v="md",padding:h="md",clickable:p=!1,title:m="Card Padrão",children:b="<p>Conteúdo do card</p>"}=u;return`
+  <article class="ds-card ds-card-${g} ds-card-${v} ds-card-p-${h} ${p?"is-clickable":""}" 
+           ${p?'tabindex="0" role="button"':""}>
+    ${m?`<header class="ds-card-header"><h3 class="ds-card-title">${m}</h3></header>`:""}
+    <div class="ds-card-body">
+      ${b}
+    </div>
+  </article>
+`}const a={args:{title:"Card Padrão",children:"<p>Este é um card simples, ideal para listas e grids de conteúdo.</p>"}},e={args:{variant:"elevated",title:"Card Elevado",children:"<p>Card com sombra para destacar conteúdo importante.</p>"}},d={args:{variant:"outlined",title:"Card com Borda",children:"<p>Card com borda sutil, bom para separar seções.</p>"}},s={args:{variant:"interactive",clickable:!0,title:"Card Clicável",children:"<p>Passe o mouse ou use Tab para ver os estados de hover e focus.</p>"}},r={render:()=>`
     <div style="display: flex; flex-direction: column; gap: 1rem;">
       <article class="ds-card ds-card-sm ds-card-p-sm">
         <div class="ds-card-body">
@@ -147,20 +155,20 @@ Cards responsivos mobile-first com:\r
         </div>
       </article>
     </div>
-  `};e.parameters={...e.parameters,docs:{...e.parameters?.docs,source:{originalSource:`{
+  `};a.parameters={...a.parameters,docs:{...a.parameters?.docs,source:{originalSource:`{
   args: {
     title: 'Card Padrão',
     children: '<p>Este é um card simples, ideal para listas e grids de conteúdo.</p>'
   }
-}`,...e.parameters?.docs?.source},description:{story:`### Default\r
-Card padrão sem elevação`,...e.parameters?.docs?.description}}};a.parameters={...a.parameters,docs:{...a.parameters?.docs,source:{originalSource:`{
+}`,...a.parameters?.docs?.source},description:{story:`### Default\r
+Card padrão sem elevação`,...a.parameters?.docs?.description}}};e.parameters={...e.parameters,docs:{...e.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'elevated',
     title: 'Card Elevado',
     children: '<p>Card com sombra para destacar conteúdo importante.</p>'
   }
-}`,...a.parameters?.docs?.source},description:{story:`### Elevated\r
-Card com sombra (elevado)`,...a.parameters?.docs?.description}}};d.parameters={...d.parameters,docs:{...d.parameters?.docs,source:{originalSource:`{
+}`,...e.parameters?.docs?.source},description:{story:`### Elevated\r
+Card com sombra (elevado)`,...e.parameters?.docs?.description}}};d.parameters={...d.parameters,docs:{...d.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'outlined',
     title: 'Card com Borda',
@@ -339,4 +347,4 @@ Estado de carregamento`,...i.parameters?.docs?.description}}};l.parameters={...l
     </div>
   \`
 }`,...l.parameters?.docs?.source},description:{story:`### Mobile Stack\r
-Empilhado em mobile, lado a lado em desktop`,...l.parameters?.docs?.description}}};const u=["Default","Elevated","Outlined","Interactive","Sizes","WithHeaderFooter","ResponsiveGrid","WithImage","WithStatusBadge","SkeletonLoading","MobileStack"];export{e as Default,a as Elevated,s as Interactive,l as MobileStack,d as Outlined,o as ResponsiveGrid,r as Sizes,i as SkeletonLoading,t as WithHeaderFooter,c as WithImage,n as WithStatusBadge,u as __namedExportsOrder,m as default};
+Empilhado em mobile, lado a lado em desktop`,...l.parameters?.docs?.description}}};const x=["Default","Elevated","Outlined","Interactive","Sizes","WithHeaderFooter","ResponsiveGrid","WithImage","WithStatusBadge","SkeletonLoading","MobileStack"];export{a as Default,e as Elevated,s as Interactive,l as MobileStack,d as Outlined,o as ResponsiveGrid,r as Sizes,i as SkeletonLoading,t as WithHeaderFooter,c as WithImage,n as WithStatusBadge,x as __namedExportsOrder,f as default};
