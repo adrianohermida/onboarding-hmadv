@@ -367,7 +367,11 @@
 
           if (mode === 'magic') {
             if (!email) throw new Error('Informe o e-mail para enviar o magic link.');
-            await window.AuthManager.sendMagicLink(email);
+            const magicFn = window.AuthManager.sendMagicLink || window.AuthManager.sendOtp;
+            if (typeof magicFn !== 'function') {
+              throw new Error('Fluxo magic link indisponível nesta versão de autenticação.');
+            }
+            await magicFn.call(window.AuthManager, email);
             setStatus('Magic link enviado. Confira sua caixa de entrada.', 'success');
           }
 
