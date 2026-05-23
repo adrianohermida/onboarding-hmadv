@@ -1,6 +1,0 @@
-.ds-h1 { font: 700 30px/1.2 var(--ds-font-family-sans); color: var(--theme-brand); }
-.ds-h2 { font: 700 24px/1.25 var(--ds-font-family-sans); color: var(--theme-brand); }
-.ds-h3 { font: 700 20px/1.3 var(--ds-font-family-sans); color: var(--theme-brand); }
-.ds-body { font: 400 var(--ds-font-size-md)/1.65 var(--ds-font-family-sans); color: var(--theme-text); }
-.ds-caption { font: 500 var(--ds-font-size-sm)/1.45 var(--ds-font-family-sans); color: var(--theme-text-muted); }
-.ds-legal { font: 400 var(--ds-font-size-xs)/1.5 var(--ds-font-family-sans); color: var(--theme-text-muted); }
