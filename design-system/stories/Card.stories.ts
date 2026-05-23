@@ -15,6 +15,7 @@ import '../components/base-v2.css';
 const meta = {
   title: 'Componentes/Cards',
   tags: ['autodocs'],
+  render: Template,
   argTypes: {
     variant: {
       control: 'select',
@@ -48,15 +49,26 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Template base
-const Template = ({ variant, size, padding, clickable, title, children }: any) => `
+const Template = (args: any = {}) => {
+  const {
+    variant = 'default',
+    size = 'md',
+    padding = 'md',
+    clickable = false,
+    title = 'Card Padrão',
+    children = '<p>Conteúdo do card</p>',
+  } = args;
+
+  return `
   <article class="ds-card ds-card-${variant} ds-card-${size} ds-card-p-${padding} ${clickable ? 'is-clickable' : ''}" 
            ${clickable ? 'tabindex="0" role="button"' : ''}>
     ${title ? `<header class="ds-card-header"><h3 class="ds-card-title">${title}</h3></header>` : ''}
     <div class="ds-card-body">
-      ${children || '<p>Conteúdo do card</p>'}
+      ${children}
     </div>
   </article>
 `;
+};
 
 /**
  * ### Default
