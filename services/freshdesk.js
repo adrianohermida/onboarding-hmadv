@@ -99,7 +99,7 @@ export const FreshdeskService = {
       body: { action: 'list_tickets', ...filters },
       includeApiKey: false,
       timeoutMs: 18000,
-      retries: 1,
+      retries: 0,
     });
     return normalizeTicketListResponse(response, filters);
   },
@@ -110,7 +110,7 @@ export const FreshdeskService = {
       body: { action: 'get_contact' },
       includeApiKey: false,
       timeoutMs: 12000,
-      retries: 1,
+      retries: 0,
     });
     return response?.contact || null;
   },
