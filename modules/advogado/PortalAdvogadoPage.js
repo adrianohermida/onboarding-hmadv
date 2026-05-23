@@ -1,17 +1,5 @@
 import { AdminService } from '../../services/database.js';
-import {
-  ADVOGADO_MODULES,
-  archiveAdvogadoRecord,
-  deleteAdvogadoRecord,
-  filterAdvogadoRecords,
-  getAdvogadoModuleConfig,
-  listAdvogadoRecords,
-  listAdvogadoAudit,
-  listAdvogadoTimeline,
-  listAdvogadoRecordsPage,
-  paginateAdvogadoRecords,
-  saveAdvogadoRecord,
-} from './RegistroAdvogadoService.js';
+import * as RegistroAdvogadoService from './RegistroAdvogadoService.js';
 import {
   buildOperationalControl,
   buildOperationalNotification,
@@ -20,6 +8,45 @@ import {
 import { financialPlanEngine } from '../financeiro/FinancialPlanEngine.js';
 import { buildCommunicationSnapshot } from '../mensagens/CommunicationCenter.js';
 import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '../../js/case-flow.js';
+
+const {
+  ADVOGADO_MODULES,
+  archiveAdvogadoRecord,
+  deleteAdvogadoRecord,
+  filterAdvogadoRecords,
+  getAdvogadoModuleConfig,
+  listAdvogadoRecords,
+  listAdvogadoAudit,
+  listAdvogadoTimeline,
+  paginateAdvogadoRecords,
+  saveAdvogadoRecord,
+} = RegistroAdvogadoService;
+
+const listAdvogadoRecordsPage = RegistroAdvogadoService.listAdvogadoRecordsPage
+  ? RegistroAdvogadoService.listAdvogadoRecordsPage.bind(RegistroAdvogadoService)
+  : async (moduleKey, options = {}) => {
+      const page = Math.max(1, Number(options.page || 1));
+      const pageSize = Math.max(1, Number(options.pageSize || 100));
+      const query = String(options.query || '').trim();
+      const status = String(options.status || 'todos').trim();
+      const archived = options.archived === true;
+      const processoId = String(options.processoId || '').trim();
+      const planoPagamentoId = String(options.planoPagamentoId || '').trim();
+      const clienteUserId = String(options.clienteUserId || '').trim();
+      const vinculoStatus = String(options.vinculoStatus || 'todos').trim();
+
+      const rows = await listAdvogadoRecords(moduleKey);
+      const filtered = filterAdvogadoRecords(rows, {
+        query,
+        status,
+        archived,
+        processoId,
+        planoPagamentoId,
+        clienteUserId,
+        vinculoStatus,
+      });
+      return paginateAdvogadoRecords(filtered, page, pageSize);
+    };
 
 const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];

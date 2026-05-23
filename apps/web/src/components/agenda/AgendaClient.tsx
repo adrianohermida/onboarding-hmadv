@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   Calendar, Clock, MapPin, User, CheckCircle2,
-  AlertCircle, ChevronLeft, ChevronRight, Gavel,
+  AlertCircle, ChevronLeft, ChevronRight, Gavel, Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import EmptyState from '../ui/EmptyState';

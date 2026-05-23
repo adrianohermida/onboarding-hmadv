@@ -4,7 +4,7 @@ import type { CrmConversation, CrmMessage, SendCrmMessageInput } from './types';
 type RealtimeHandler<T> = (payload: T) => void;
 
 export class ConversationalService {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(private readonly supabase: SupabaseClient<any, any, any, any, any>) {}
 
   async listInbox(params: {
     tenantId?: string | null;

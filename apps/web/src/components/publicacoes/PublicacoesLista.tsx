@@ -3,7 +3,7 @@
 import { useRef, useCallback } from 'react';
 import { Inbox, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Publicacao, PublicacaoFiltros, PublicacaoSecao } from './types';
+import type { Publicacao, PublicacaoFiltros as PublicacaoFiltrosType, PublicacaoSecao } from './types';
 import { usePublicacoes } from '@/lib/hooks/use-publicacoes';
 import PublicacaoCard from './PublicacaoCard';
 import PublicacaoSkeleton from './PublicacaoSkeleton';
@@ -11,8 +11,8 @@ import PublicacaoFiltros from './PublicacaoFiltros';
 
 interface Props {
   secao: PublicacaoSecao;
-  filtros: PublicacaoFiltros;
-  onFiltrosChange: (f: PublicacaoFiltros) => void;
+  filtros: PublicacaoFiltrosType;
+  onFiltrosChange: (f: PublicacaoFiltrosType) => void;
   selecionadaId: string | null;
   onSelecionar: (p: Publicacao) => void;
   initialData?: Publicacao[];

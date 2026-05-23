@@ -17,6 +17,11 @@ export type UserRole = 'master_admin' | 'tenant_admin' | 'advogado' | 'colaborad
 export interface Database {
   public: {
     Tables: {
+      [key: string]: {
+        Row: any;
+        Insert: any;
+        Update: any;
+      };
       admin_users: {
         Row: { user_id: string; role: string; created_at: string };
         Insert: { user_id: string; role?: string; created_at?: string };
@@ -148,8 +153,13 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['portal_workspace_members']['Row']>;
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      [key: string]: {
+        Row: any;
+      };
+    };
     Functions: {
+      [key: string]: { Args: any; Returns: any };
       is_any_admin: { Args: Record<string, never>; Returns: boolean };
       is_platform_admin: { Args: Record<string, never>; Returns: boolean };
       admin_get_clients: {
