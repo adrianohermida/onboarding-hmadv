@@ -3,46 +3,275 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Recupera Empresas</title>
+  <title>Login - Hermida Maia Advocacia</title>
   <link rel="stylesheet" href="../design-system/tokens/core-v2.css">
   <link rel="stylesheet" href="../design-system/components/base-v2.css">
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--ds-color-bg); }
-    .login-container { width: 100%; max-width: 400px; padding: 2rem; }
-    .hidden { display: none; }
-    .error-msg { color: var(--ds-color-error); font-size: 0.875rem; margin-top: 0.5rem; }
+    :root {
+      --brand-primary: #0e4c92;
+      --brand-secondary: #0f172a;
+      --brand-accent: #f59e0b;
+      --brand-surface: #ffffff;
+      --brand-muted: #64748b;
+      --brand-border: #dbe4f0;
+      --brand-error: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Nunito Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(245, 158, 11, 0.22), transparent 35%),
+        radial-gradient(circle at 90% 80%, rgba(14, 76, 146, 0.18), transparent 33%),
+        linear-gradient(140deg, #f7fafc, #e9f2ff 48%, #ffffff);
+      color: var(--brand-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .login-shell {
+      width: 100%;
+      max-width: 980px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      border: 1px solid var(--brand-border);
+      border-radius: 24px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 30px 90px rgba(15, 23, 42, 0.15);
+    }
+
+    .brand-panel {
+      padding: 3rem 2.5rem;
+      background: linear-gradient(165deg, #0b2f5f, #0e4c92 48%, #1d6bcc);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-panel::after {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      background: rgba(245, 158, 11, 0.25);
+      right: -120px;
+      bottom: -140px;
+    }
+
+    .brand-logo {
+      width: 98px;
+      height: 98px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      padding: 0.35rem;
+      margin-bottom: 1rem;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.9rem;
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-subtitle {
+      margin-top: 0.8rem;
+      margin-bottom: 1.4rem;
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 32ch;
+    }
+
+    .brand-points {
+      margin: 0;
+      padding-left: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .brand-points li {
+      margin-bottom: 0.55rem;
+    }
+
+    .login-panel {
+      padding: 2.4rem 2.2rem;
+      background: var(--brand-surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.45rem;
+      color: #0f172a;
+    }
+
+    .panel-subtitle {
+      margin: 0.5rem 0 1.5rem;
+      color: var(--brand-muted);
+      font-size: 0.95rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.78rem 0.9rem;
+      font-size: 0.96rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: #fff;
+      color: #0f172a;
+    }
+
+    .input:focus {
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 3px rgba(14, 76, 146, 0.16);
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 0.45rem;
+      font-size: 0.89rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .submit-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 0.82rem 1rem;
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0e4c92, #2563eb);
+      transition: transform 0.15s ease, filter 0.2s ease;
+      margin-top: 0.2rem;
+    }
+
+    .submit-btn:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      color: var(--brand-error);
+      font-size: 0.875rem;
+      margin: 0.2rem 0 0.85rem;
+      min-height: 1.05rem;
+    }
+
+    .status-msg {
+      color: var(--brand-muted);
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .login-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-panel {
+        padding: 2rem 1.5rem;
+      }
+
+      .brand-title {
+        font-size: 1.55rem;
+      }
+
+      .login-panel {
+        padding: 1.6rem 1.35rem 1.7rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="ds-card ds-card--elevated ds-card--md ds-card--pad-md">
-      <h1 class="ds-text-xl ds-font-bold ds-text-center ds-mb-lg">Acesso ao Portal</h1>
-      
-      <form id="loginForm">
-        <div class="ds-form-group ds-mb-md">
-          <label for="email" class="ds-label">E-mail</label>
-          <input type="email" id="email" class="ds-input" required placeholder="seu@email.com">
+  <div class="login-shell">
+    <section class="brand-panel">
+      <img class="brand-logo" src="../assets/logo1.webp" alt="Hermida Maia Advocacia">
+      <h1 class="brand-title">Hermida Maia Advocacia</h1>
+      <p class="brand-subtitle">Portal jurídico com autenticação Supabase e acesso por perfil administrativo.</p>
+      <ul class="brand-points">
+        <li>Gestão centralizada de clientes e processos</li>
+        <li>Reconhecimento automático de usuário administrador</li>
+        <li>Sincronização de sessão entre módulos do portal</li>
+      </ul>
+    </section>
+
+    <section class="login-panel">
+      <h2 class="panel-title">Entrar no portal</h2>
+      <p class="panel-subtitle">Use suas credenciais para acessar as páginas administrativas e de cliente.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email" class="label">E-mail</label>
+          <input type="email" id="email" class="input" required placeholder="seu@email.com" autocomplete="email">
         </div>
-        
-        <div class="ds-form-group ds-mb-lg">
-          <label for="password" class="ds-label">Senha</label>
-          <input type="password" id="password" class="ds-input" required placeholder="••••••••">
+
+        <div class="field">
+          <label for="password" class="label">Senha</label>
+          <input type="password" id="password" class="input" required placeholder="••••••••" autocomplete="current-password">
         </div>
 
         <div id="errorMsg" class="error-msg hidden"></div>
 
-        <button type="submit" id="submitBtn" class="ds-btn ds-btn-primary ds-btn-block">
+        <button type="submit" id="submitBtn" class="submit-btn">
           Entrar
         </button>
+
+        <div class="status-msg" id="statusMsg">Conectando com Supabase...</div>
       </form>
-    </div>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/auth-manager.js"></script>
   <script>
+    const defaultRuntimeSupabase = {
+      defaultUrl: 'https://sspvizogbcyigquqycsz.supabase.co',
+      defaultKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs',
+      messagingUrl: 'https://fmtmcblvzfisenhvcjoo.supabase.co',
+      messagingKey: localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') || null,
+    };
+    window.__HM_SUPABASE__ = {
+      ...defaultRuntimeSupabase,
+      ...(window.__HM_SUPABASE__ || {}),
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
+      const statusMsg = document.getElementById('statusMsg');
       await window.AuthManager.init();
+      statusMsg.textContent = 'Supabase conectado';
 
       // Se já estiver logado, redireciona
       if (window.AuthManager.currentUser) {
@@ -56,15 +285,23 @@
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+          errorMsg.textContent = 'Informe e-mail e senha para continuar.';
+          errorMsg.classList.remove('hidden');
+          return;
+        }
 
         submitBtn.disabled = true;
         submitBtn.textContent = 'Autenticando...';
+        statusMsg.textContent = 'Validando credenciais...';
         errorMsg.classList.add('hidden');
 
         try {
           await window.AuthManager.login(email, password);
+          statusMsg.textContent = 'Autenticação concluída. Redirecionando...';
           
           // Redirecionamento baseado no perfil
           if (window.AuthManager.isAdmin()) {
@@ -75,6 +312,7 @@
         } catch (err) {
           errorMsg.textContent = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
           errorMsg.classList.remove('hidden');
+          statusMsg.textContent = 'Falha de autenticação.';
           submitBtn.disabled = false;
           submitBtn.textContent = 'Entrar';
         }
