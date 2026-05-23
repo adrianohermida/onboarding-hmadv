@@ -3,21 +3,30 @@
   "version": "1.0.0",
   "description": "Portal Jurídico do Superendividado — frontend modular para acompanhamento de casos de superendividamento",
   "scripts": {
-    "dev":    "npx serve . -l 3000",
-    "build":  "echo 'Site estático — sem build step necessário'",
+    "dev": "npx serve . -l 3000",
+    "build": "echo 'Site estático — sem build step necessário'",
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
-    "test":   "node platform/scripts/run-portal-tests.mjs",
+    "test": "node platform/scripts/run-portal-tests.mjs",
     "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1"
   },
   "repository": {
     "type": "git",
-    "url":  "https://github.com/adrianohermida/onboarding-hmadv.git"
+    "url": "https://github.com/adrianohermida/onboarding-hmadv.git"
   },
-  "author":  "Adriano Hermida Maia",
+  "author": "Adriano Hermida Maia",
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "jsdom": "^26.1.0",
+    "typescript": "^6.0.3",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   }
 }

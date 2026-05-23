@@ -98,6 +98,12 @@ export interface RiscoProcessual {
   atualizado_em: string | null;
 }
 
+export interface ResponsavelInternoOption {
+  user_id: string;
+  role: string;
+  label: string;
+}
+
 // ─── Hooks de leitura ────────────────────────────────────────────────────────
 
 export function useProcessos() {
@@ -131,16 +137,68 @@ export function useProcessos() {
 }
 
 export function useResponsaveisInternos() {
-  return useQuery<Array<{ user_id: string; role: string }>>({
+  return useQuery<ResponsavelInternoOption[]>({
     queryKey: ['responsaveis-internos'],
     staleTime: 120_000,
     queryFn: async () => {
-      const { data, error } = await createClient()
+      const client = createClient();
+      const { data, error } = await client
         .from('portal_workspace_members')
-        .select('user_id, role')
+        .select('user_id, role, metadata')
         .in('role', ['master_admin', 'tenant_admin', 'advogado', 'colaborador']);
       if (error) throw error;
-      return (data ?? []) as Array<{ user_id: string; role: string }>;
+
+      const members = (data ?? []) as Array<{ user_id: string; role: string; metadata?: any }>;
+      const uniqueMembers = Array.from(new Map(members.map((item) => [item.user_id, item])).values());
+      const userIds = uniqueMembers.map((item) => item.user_id).filter(Boolean);
+
+      const roleLabels: Record<string, string> = {
+        master_admin: 'Master Admin',
+        tenant_admin: 'Admin',
+        advogado: 'Advogado',
+        colaborador: 'Colaborador',
+      };
+
+      const namesByUserId = new Map<string, string>();
+
+      const collectNames = (rows: Array<any> = []) => {
+        rows.forEach((row) => {
+          const uid = String(row?.user_id || '').trim();
+          if (!uid || namesByUserId.has(uid)) return;
+          const candidate = String(
+            row?.full_name || row?.nome_cliente || row?.nome || row?.display_name || ''
+          ).trim();
+          if (candidate) namesByUserId.set(uid, candidate);
+        });
+      };
+
+      if (userIds.length) {
+        try {
+          const { data: casoNames } = await client
+            .from('portal_casos')
+            .select('user_id, full_name, nome_cliente, nome')
+            .in('user_id', userIds)
+            .limit(Math.max(20, userIds.length * 2));
+          collectNames(casoNames as any[]);
+        } catch (_) {
+          // Column shape can vary by environment; ignore and keep fallback logic.
+        }
+      }
+
+      return uniqueMembers
+        .map((item) => {
+          const uid = String(item.user_id || '').trim();
+          const role = String(item.role || '').trim();
+          const metaName = String(item?.metadata?.full_name || item?.metadata?.display_name || item?.metadata?.name || '').trim();
+          const dbName = namesByUserId.get(uid) || '';
+          const roleLabel = roleLabels[role] || (role || 'Usuário interno');
+          const shortId = uid ? uid.slice(0, 8) : 'sem-id';
+          const friendly = metaName || dbName;
+          const label = friendly ? `${friendly} (${roleLabel})` : `${roleLabel} · ${shortId}`;
+          return { user_id: uid, role, label };
+        })
+        .filter((item) => item.user_id)
+        .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
     },
   });
 }

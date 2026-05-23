@@ -80,6 +80,10 @@ export default function ProcessosClient() {
   const selected = selectedId ? processos.find((p) => p.id === selectedId) ?? null : null;
   const hasFilters = !!rawSearch || !!statusFiltro || !!prioridadeFiltro || !!responsavelFiltro;
   const pageIds = useMemo(() => processos.map((p) => p.id), [processos]);
+  const responsavelLabelById = useMemo(
+    () => new Map(responsaveisInternos.map((item) => [item.user_id, item.label])),
+    [responsaveisInternos]
+  );
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
   const cnjDigits = onlyDigits(rawSearch);
   const looksLikeCnj = cnjDigits.length === 20;
@@ -205,7 +209,7 @@ export default function ProcessosClient() {
         >
           <option value="">Todos responsáveis</option>
           {responsaveisInternos.map((item) => (
-            <option key={item.user_id} value={item.user_id}>{item.role} · {item.user_id.slice(0, 8)}</option>
+            <option key={item.user_id} value={item.user_id}>{item.label}</option>
           ))}
         </select>
 
@@ -267,7 +271,7 @@ export default function ProcessosClient() {
           >
             <option value="">Responsável interno...</option>
             {responsaveisInternos.map((item) => (
-              <option key={item.user_id} value={item.user_id}>{item.role} · {item.user_id.slice(0, 8)}</option>
+              <option key={item.user_id} value={item.user_id}>{item.label}</option>
             ))}
           </select>
           <button
@@ -354,7 +358,7 @@ export default function ProcessosClient() {
                           ? <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset', priCfg.cls)}>{priCfg.label}</span>
                           : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{p.responsavel || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{responsavelLabelById.get(String(p.responsavel || '').trim()) || p.responsavel || '—'}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {formatDate(p.data_ultima_movimentacao)}
                       </td>
