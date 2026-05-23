@@ -3,80 +3,383 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Recupera Empresas</title>
-  <link rel="stylesheet" href="../design-system/tokens/core-v2.css">
-  <link rel="stylesheet" href="../design-system/components/base-v2.css">
+  <title>Login - Hermida Maia Advocacia</title>
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--ds-color-bg); }
-    .login-container { width: 100%; max-width: 400px; padding: 2rem; }
+    :root {
+      --brand-primary: #0f4d92;
+      --brand-primary-strong: #0a386f;
+      --brand-secondary: #0f172a;
+      --brand-accent: #f59e0b;
+      --bg-soft: #f4f8ff;
+      --line: #dbe4f0;
+      --text-muted: #64748b;
+      --danger: #b91c1c;
+      --ok: #166534;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Nunito Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(245, 158, 11, 0.22), transparent 34%),
+        radial-gradient(circle at 90% 84%, rgba(15, 77, 146, 0.2), transparent 36%),
+        linear-gradient(140deg, #f9fbff, #edf5ff 46%, #ffffff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      color: var(--brand-secondary);
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1020px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.16);
+    }
+
+    .brand {
+      background: linear-gradient(160deg, var(--brand-primary-strong), var(--brand-primary) 52%, #2b7dd9);
+      color: #fff;
+      padding: 2.6rem 2.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand::after {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      right: -120px;
+      bottom: -140px;
+      background: rgba(245, 158, 11, 0.22);
+    }
+
+    .brand-logo {
+      width: 92px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.32);
+      padding: 0.3rem;
+      background: rgba(255,255,255,0.14);
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.85rem;
+      line-height: 1.15;
+    }
+
+    .brand p {
+      margin: 0.9rem 0 1.4rem;
+      color: rgba(255,255,255,0.9);
+      max-width: 35ch;
+    }
+
+    .brand ul {
+      margin: 0;
+      padding-left: 1.15rem;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .brand li { margin-bottom: 0.5rem; }
+
+    .panel {
+      padding: 2rem 1.6rem;
+      background: #fff;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    .panel .subtitle {
+      margin: 0.45rem 0 1.2rem;
+      color: var(--text-muted);
+      font-size: 0.93rem;
+    }
+
+    .field { margin-bottom: 0.85rem; }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.38rem;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.72rem 0.85rem;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease;
+      background: #fff;
+      color: #0f172a;
+    }
+
+    .input:focus,
+    .select:focus {
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 3px rgba(15, 77, 146, 0.14);
+    }
+
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 0.78rem 0.95rem;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, var(--brand-primary), #2563eb);
+      cursor: pointer;
+      margin-top: 0.2rem;
+    }
+
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .notice {
+      margin-top: 0.8rem;
+      font-size: 0.86rem;
+      min-height: 1.1rem;
+    }
+
+    .notice.error { color: var(--danger); }
+    .notice.success { color: var(--ok); }
+    .notice.info { color: var(--text-muted); }
+
     .hidden { display: none; }
-    .error-msg { color: var(--ds-color-error); font-size: 0.875rem; margin-top: 0.5rem; }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      .brand { padding: 1.6rem 1.2rem; }
+      .brand h1 { font-size: 1.45rem; }
+      .panel { padding: 1.25rem 1.1rem 1.45rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="ds-card ds-card--elevated ds-card--md ds-card--pad-md">
-      <h1 class="ds-text-xl ds-font-bold ds-text-center ds-mb-lg">Acesso ao Portal</h1>
-      
-      <form id="loginForm">
-        <div class="ds-form-group ds-mb-md">
-          <label for="email" class="ds-label">E-mail</label>
-          <input type="email" id="email" class="ds-input" required placeholder="seu@email.com">
-        </div>
-        
-        <div class="ds-form-group ds-mb-lg">
-          <label for="password" class="ds-label">Senha</label>
-          <input type="password" id="password" class="ds-input" required placeholder="••••••••">
+  <div class="shell">
+    <section class="brand">
+      <img class="brand-logo" src="../assets/logo1.webp" alt="Hermida Maia Advocacia">
+      <h1>Hermida Maia Advocacia</h1>
+      <p>Autenticação Supabase unificada para portal administrativo e portal do cliente.</p>
+      <ul>
+        <li>Login com senha</li>
+        <li>Magic link e OTP</li>
+        <li>Cadastro e recuperação de senha</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Acesso ao Portal</h2>
+      <p class="subtitle">Escolha o fluxo de autenticação abaixo.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="authMode">Fluxo</label>
+          <select id="authMode" class="select">
+            <option value="password">Login com senha</option>
+            <option value="register">Cadastro</option>
+            <option value="magic">Magic link</option>
+            <option value="otp">Verificar OTP</option>
+            <option value="recover">Recuperar senha</option>
+            <option value="set-password">Definir nova senha</option>
+          </select>
         </div>
 
-        <div id="errorMsg" class="error-msg hidden"></div>
+        <div class="field" id="nameField">
+          <label for="fullName">Nome completo</label>
+          <input id="fullName" class="input" type="text" placeholder="Seu nome completo">
+        </div>
 
-        <button type="submit" id="submitBtn" class="ds-btn ds-btn-primary ds-btn-block">
-          Entrar
-        </button>
+        <div class="field" id="emailField">
+          <label for="email">E-mail</label>
+          <input id="email" class="input" type="email" placeholder="seu@email.com" autocomplete="email">
+        </div>
+
+        <div class="field" id="otpField">
+          <label for="otp">Código OTP</label>
+          <input id="otp" class="input" type="text" placeholder="Código recebido por e-mail">
+        </div>
+
+        <div class="field" id="passwordField">
+          <label for="password">Senha</label>
+          <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <div class="field" id="confirmPasswordField">
+          <label for="confirmPassword">Confirmar senha</label>
+          <input id="confirmPassword" class="input" type="password" placeholder="Repita a senha">
+        </div>
+
+        <button id="submitBtn" class="btn" type="submit">Continuar</button>
+        <div id="statusMsg" class="notice info">Conectando com Supabase...</div>
       </form>
-    </div>
+    </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/auth-manager.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      await window.AuthManager.init();
+    const defaultRuntimeSupabase = {
+      defaultUrl: 'https://sspvizogbcyigquqycsz.supabase.co',
+      defaultKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs',
+      messagingUrl: 'https://fmtmcblvzfisenhvcjoo.supabase.co',
+      messagingKey: localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') || null,
+    };
 
-      // Se já estiver logado, redireciona
-      if (window.AuthManager.currentUser) {
-        window.location.href = window.AuthManager.isAdmin() ? '/admin/index.html' : '/pages/dashboard.html';
+    window.__HM_SUPABASE__ = {
+      ...defaultRuntimeSupabase,
+      ...(window.__HM_SUPABASE__ || {}),
+    };
+
+    function setStatus(message, type = 'info') {
+      const statusMsg = document.getElementById('statusMsg');
+      statusMsg.textContent = message;
+      statusMsg.className = `notice ${type}`;
+    }
+
+    function setVisible(id, visible) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('hidden', !visible);
+    }
+
+    function getModeConfig(mode) {
+      const map = {
+        password: { name: false, email: true, otp: false, password: true, confirm: false, label: 'Entrar' },
+        register: { name: true, email: true, otp: false, password: true, confirm: true, label: 'Cadastrar' },
+        magic: { name: false, email: true, otp: false, password: false, confirm: false, label: 'Enviar magic link' },
+        otp: { name: false, email: true, otp: true, password: false, confirm: false, label: 'Validar OTP' },
+        recover: { name: false, email: true, otp: false, password: false, confirm: false, label: 'Enviar recuperação' },
+        'set-password': { name: false, email: false, otp: false, password: true, confirm: true, label: 'Atualizar senha' },
+      };
+      return map[mode] || map.password;
+    }
+
+    function applyMode(mode) {
+      const config = getModeConfig(mode);
+      setVisible('nameField', config.name);
+      setVisible('emailField', config.email);
+      setVisible('otpField', config.otp);
+      setVisible('passwordField', config.password);
+      setVisible('confirmPasswordField', config.confirm);
+      document.getElementById('submitBtn').textContent = config.label;
+    }
+
+    function getModeFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get('mode') || '';
+      if (mode === 'recovery') return 'set-password';
+      return mode;
+    }
+
+    async function redirectByRole() {
+      window.location.href = window.AuthManager.getRedirectPath();
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const form = document.getElementById('loginForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const authMode = document.getElementById('authMode');
+
+      const initialMode = getModeFromUrl();
+      if (initialMode) authMode.value = initialMode;
+      applyMode(authMode.value);
+
+      await window.AuthManager.init();
+      setStatus('Supabase conectado', 'success');
+
+      if (window.AuthManager.currentUser && authMode.value !== 'set-password') {
+        await redirectByRole();
         return;
       }
 
-      const form = document.getElementById('loginForm');
-      const submitBtn = document.getElementById('submitBtn');
-      const errorMsg = document.getElementById('errorMsg');
+      authMode.addEventListener('change', () => {
+        applyMode(authMode.value);
+        setStatus('Fluxo pronto para autenticação.', 'info');
+      });
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const mode = authMode.value;
+        const email = (document.getElementById('email').value || '').trim();
+        const otp = (document.getElementById('otp').value || '').trim();
+        const password = document.getElementById('password').value || '';
+        const confirmPassword = document.getElementById('confirmPassword').value || '';
+        const fullName = (document.getElementById('fullName').value || '').trim();
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Autenticando...';
-        errorMsg.classList.add('hidden');
+        setStatus('Processando autenticação...', 'info');
 
         try {
-          await window.AuthManager.login(email, password);
-          
-          // Redirecionamento baseado no perfil
-          if (window.AuthManager.isAdmin()) {
-            window.location.href = '/admin/index.html'; // Admin Shell
-          } else {
-            window.location.href = '/pages/dashboard.html';
+          if (mode === 'password') {
+            if (!email || !password) throw new Error('Informe e-mail e senha.');
+            await window.AuthManager.login(email, password);
+            await redirectByRole();
+            return;
           }
-        } catch (err) {
-          errorMsg.textContent = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
-          errorMsg.classList.remove('hidden');
+
+          if (mode === 'register') {
+            if (!email || !password) throw new Error('Informe e-mail e senha para cadastro.');
+            if (password !== confirmPassword) throw new Error('As senhas não conferem.');
+            const metadata = fullName ? { nome: fullName, full_name: fullName } : {};
+            const data = await window.AuthManager.register(email, password, metadata);
+            if (data?.session) {
+              await redirectByRole();
+              return;
+            }
+            setStatus('Cadastro criado. Verifique seu e-mail para confirmar a conta.', 'success');
+          }
+
+          if (mode === 'magic') {
+            if (!email) throw new Error('Informe o e-mail para enviar o magic link.');
+            await window.AuthManager.sendMagicLink(email);
+            setStatus('Magic link enviado. Confira sua caixa de entrada.', 'success');
+          }
+
+          if (mode === 'otp') {
+            if (!email || !otp) throw new Error('Informe e-mail e código OTP.');
+            await window.AuthManager.verifyOtp(email, otp, 'email');
+            await redirectByRole();
+            return;
+          }
+
+          if (mode === 'recover') {
+            if (!email) throw new Error('Informe o e-mail para recuperação.');
+            await window.AuthManager.requestPasswordRecovery(email);
+            setStatus('E-mail de recuperação enviado. Abra o link recebido.', 'success');
+          }
+
+          if (mode === 'set-password') {
+            if (!password) throw new Error('Informe a nova senha.');
+            if (password !== confirmPassword) throw new Error('As senhas não conferem.');
+            await window.AuthManager.updatePassword(password);
+            setStatus('Senha atualizada. Redirecionando...', 'success');
+            await redirectByRole();
+            return;
+          }
+        } catch (error) {
+          setStatus(error?.message || 'Erro de autenticação no Supabase.', 'error');
+        } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Entrar';
         }
       });
     });
