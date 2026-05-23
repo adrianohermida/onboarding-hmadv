@@ -241,6 +241,7 @@ let suporteUnauthNotified = false;
 let freshdeskAuthUnavailable = false;
 let suporteStartupInitDone = false;
 let suporteLastUserLoadedKey = null;
+let suporteTicketSubmitting = false;
 
 const byId = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -629,6 +630,8 @@ window.showNewTicketModal  = () => {
 window.closeNewTicketModal = () => document.getElementById('modal-new-ticket').classList.remove('show');
 
 window.submitTicket = async function() {
+  if (suporteTicketSubmitting) return;
+
   if (isReadonlyAdminView) {
     showToast('Modo leitura do administrador: criação de chamado desabilitada.', 'warn');
     return;
@@ -641,19 +644,19 @@ window.submitTicket = async function() {
   if (files.length > 5) { showToast('Envie no máximo 5 anexos por chamado.', 'warn'); return; }
 
   const btn = document.getElementById('btn-submit-ticket');
+  suporteTicketSubmitting = true;
   btn.disabled = true; btn.textContent = 'Enviando...';
 
   try {
-    if (freshdeskAuthUnavailable) {
-      const hasSession = await ensureFreshdeskSession();
-      if (!hasSession) {
-        showToast('Sessão de suporte expirada. Faça login novamente.', 'warn');
-        renderUnauthenticatedState('Sessão ausente para criar chamados. Faça login novamente.');
-        return;
-      }
-      freshdeskAuthUnavailable = false;
-      suporteUnauthNotified = false;
+    const hasSession = await ensureFreshdeskSession();
+    if (!hasSession) {
+      freshdeskAuthUnavailable = true;
+      showToast('Sessão de suporte expirada. Faça login novamente.', 'warn');
+      renderUnauthenticatedState('Sessão ausente para criar chamados. Faça login novamente.');
+      return;
     }
+    freshdeskAuthUnavailable = false;
+    suporteUnauthNotified = false;
 
     const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'], attachments: files });
 
@@ -697,6 +700,7 @@ window.submitTicket = async function() {
       showToast(err?.message || 'Erro ao criar chamado. Tente novamente.', 'error');
     }
   } finally {
+    suporteTicketSubmitting = false;
     btn.disabled = false; btn.textContent = 'Enviar chamado';
   }
 };
