@@ -40,8 +40,8 @@ describe('crm conversational messaging contract', () => {
 
     expect(mensagens).not.toContain('refetchInterval');
     expect(atendimento).not.toContain('refetchInterval');
-    expect(mensagens).toContain("supabase.channel(`legacy-mensagens:");
-    expect(atendimento).toContain("supabase.channel(`atendimento-mensagens:");
+    expect(mensagens).toContain("channel(`legacy-mensagens:");
+    expect(atendimento).toContain("channel(`atendimento-mensagens:");
     expect(atendimento).toContain("table: 're_mensagens'");
     expect(service).toContain("from('vw_crm_inbox')");
     expect(service).toContain("from('crm_messages')");
