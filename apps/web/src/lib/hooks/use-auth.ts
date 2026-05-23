@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useWorkspaceStore } from '@/store/workspace';
 import type { AuthUser } from '@/types';
@@ -42,7 +43,7 @@ export function useAuth() {
 
     loadUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent) => {
       if (event === 'SIGNED_OUT') { setUser(null); setLoading(false); }
       if (event === 'SIGNED_IN') loadUser();
     });

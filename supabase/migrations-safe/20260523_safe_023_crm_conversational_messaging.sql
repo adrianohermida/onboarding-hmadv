@@ -601,6 +601,8 @@ TO authenticated;
 GRANT EXECUTE ON FUNCTION can_access_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION can_write_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION current_workspace_id() TO authenticated;
+REVOKE EXECUTE ON FUNCTION set_crm_tenant_id() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION touch_crm_conversation_from_message() FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE VIEW vw_crm_inbox WITH (security_invoker = true) AS
 SELECT
