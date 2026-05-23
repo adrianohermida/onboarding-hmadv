@@ -48,7 +48,7 @@ jobs:
           cp pages/login.html storybook-static/login/index.html
 
           # Compatibilidade de nome de arquivo antigo/novo do auth manager
-          cp js/uth-manager.js storybook-static/js/auth-manager.js
+          cp js/auth-manager.js storybook-static/js/auth-manager.js
 
           # Publica diretórios necessários para as páginas do app
           for dir in admin pages js styles assets components design-system services shared utils; do
