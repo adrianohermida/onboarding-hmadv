@@ -30,6 +30,39 @@ async function getCaseContext(uid) {
   };
 }
 
+async function getLatestCaseRow(uid, select = '*') {
+  const { data, error } = await supabase
+    .from('portal_casos')
+    .select(select)
+    .eq('user_id', uid)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
+async function saveCaseByUser(uid, fields = {}) {
+  const existing = await getLatestCaseRow(uid, 'id').catch(() => null);
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from('portal_casos')
+      .update(fields)
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase
+    .from('portal_casos')
+    .insert({ user_id: uid, ...fields })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function checkIsAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
@@ -130,9 +163,7 @@ export const AdminService = {
     return queryFallbackCases();
   },
   async getClientCaso(userId) {
-    const { data, error } = await supabase
-      .from('portal_casos').select('*').eq('user_id', userId).maybeSingle();
-    if (error) throw error;
+    const data = await getLatestCaseRow(userId, '*');
     return normalizeCaseData(data);
   },
   async getClientDebts(userId) {
@@ -221,16 +252,13 @@ export const AdminService = {
 
   async resetClientJourney(userId) {
     const nowIso = new Date().toISOString();
-    await supabase
-      .from('portal_casos')
-      .upsert({
-        user_id: userId,
-        onboarding_done: false,
-        cnj_step_atual: 0,
-        fd_ticket_id: null,
-        cnj_json: null,
-        updated_at: nowIso,
-      }, { onConflict: 'user_id' });
+    await saveCaseByUser(userId, {
+      onboarding_done: false,
+      cnj_step_atual: 0,
+      fd_ticket_id: null,
+      cnj_json: null,
+      updated_at: nowIso,
+    });
 
     const { error } = await supabase
       .from('portal_documentos')
@@ -252,20 +280,42 @@ export const AdminService = {
 export const CaseService = {
   async get() {
     const uid = await getUserId();
-    const { data, error } = await supabase
-      .from('portal_casos')
-      .select('*')
-      .eq('user_id', uid)
-      .maybeSingle();
-    if (error) throw error;
-    return normalizeCaseData(data);
+    // Prefer a controlled column list to reduce breakage when environments drift.
+    const safeSelect = [
+      'id',
+      'user_id',
+      'workspace_id',
+      'full_name',
+      'fase',
+      'onboarding_done',
+      'numero_processo',
+      'cnj_step_atual',
+      'renda_mensal',
+      'renda_familiar',
+      'numero_dependentes',
+      'despesas_json',
+      'created_at',
+      'updated_at',
+    ].join(', ');
+    try {
+      const data = await getLatestCaseRow(uid, safeSelect);
+      return normalizeCaseData(data);
+    } catch (_) {
+      // Compatibility fallback for databases missing some columns from safeSelect.
+      const data = await getLatestCaseRow(uid, 'id, user_id, full_name, fase, onboarding_done, created_at, updated_at');
+      return normalizeCaseData(data);
+    }
   },
 
   async ensureExists() {
     const uid = await getUserId();
-    await supabase
-      .from('portal_casos')
-      .upsert({ user_id: uid }, { onConflict: 'user_id', ignoreDuplicates: true });
+    const existingCaso = await getLatestCaseRow(uid, 'id').catch(() => null);
+    if (!existingCaso?.id) {
+      const { error } = await supabase
+        .from('portal_casos')
+        .insert({ user_id: uid });
+      if (error && error.code !== '23505') throw error;
+    }
     await supabase
       .from('portal_documentos')
       .upsert(
@@ -276,29 +326,17 @@ export const CaseService = {
 
   async save(fields) {
     const uid = await getUserId();
-    const { data, error } = await supabase
-      .from('portal_casos')
-      .upsert({ ...fields, user_id: uid })
-      .select()
-      .single();
-    if (error) throw error;
+    const data = await saveCaseByUser(uid, fields);
     return normalizeCaseData(data);
   },
 
   /** Salva step CNJ e atualiza cnj_step_atual se avançou */
   async saveCNJStep(step, fields) {
     const uid = await getUserId();
-    const payload = {
+    const data = await saveCaseByUser(uid, {
       ...fields,
-      user_id:        uid,
       cnj_step_atual: step,
-    };
-    const { data, error } = await supabase
-      .from('portal_casos')
-      .upsert(payload, { onConflict: 'user_id' })
-      .select()
-      .single();
-    if (error) throw error;
+    });
     return normalizeCaseData(data);
   },
 };
@@ -581,11 +619,15 @@ export const CustasService = {
       .from('portal_custas')
       .select('*')
       .eq('user_id', uid)
-      .is('deleted_at', null)
-      .order('data_lancamento', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    const rows = (data || []).filter(item => !item?.deleted_at);
+    rows.sort((a, b) => {
+      const ad = new Date(a?.data_lancamento || a?.created_at || 0).getTime();
+      const bd = new Date(b?.data_lancamento || b?.created_at || 0).getTime();
+      return bd - ad;
+    });
+    return rows;
   },
 
   async add(entry) {
@@ -613,7 +655,6 @@ export const CustasService = {
       .update(fields)
       .eq('id', id)
       .eq('user_id', uid)
-      .is('deleted_at', null)
       .select()
       .single();
     if (error) throw error;
@@ -626,8 +667,7 @@ export const CustasService = {
       .from('portal_custas')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', uid)
-      .is('deleted_at', null);
+      .eq('user_id', uid);
     if (error) throw error;
   },
 };
@@ -639,10 +679,15 @@ export const ContratosService = {
       .from('portal_contratos')
       .select('*')
       .eq('user_id', uid)
-      .is('deleted_at', null)
-      .order('updated_at', { ascending: false });
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    const rows = (data || []).filter(item => !item?.deleted_at);
+    rows.sort((a, b) => {
+      const ad = new Date(a?.updated_at || a?.created_at || 0).getTime();
+      const bd = new Date(b?.updated_at || b?.created_at || 0).getTime();
+      return bd - ad;
+    });
+    return rows;
   },
 
   async add(entry) {
@@ -670,7 +715,6 @@ export const ContratosService = {
       .update(fields)
       .eq('id', id)
       .eq('user_id', uid)
-      .is('deleted_at', null)
       .select()
       .single();
     if (error) throw error;
@@ -683,8 +727,7 @@ export const ContratosService = {
       .from('portal_contratos')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', uid)
-      .is('deleted_at', null);
+      .eq('user_id', uid);
     if (error) throw error;
   },
 };
