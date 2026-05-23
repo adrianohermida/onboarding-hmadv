@@ -213,6 +213,150 @@ function ResponsavelSelect({
   );
 }
 
+function BulkResponsavelMultiSelect({
+  values,
+  onChange,
+  options,
+  className = '',
+}: {
+  values: string[];
+  onChange: (next: string[]) => void;
+  options: Array<{ user_id: string; role: string; label: string; email: string | null }>;
+  className?: string;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const selectedLabels = useMemo(
+    () => values
+      .map((id) => options.find((item) => item.user_id === id)?.label || id)
+      .filter(Boolean),
+    [options, values]
+  );
+
+  const grouped = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = !query
+      ? options
+      : options.filter((item) => {
+          const hay = `${item.label} ${item.email || ''} ${item.role}`.toLowerCase();
+          return hay.includes(query);
+        });
+
+    const buckets = new Map<string, typeof filtered>();
+    filtered.forEach((item) => {
+      const key = item.role || 'outros';
+      const current = buckets.get(key) || [];
+      current.push(item);
+      buckets.set(key, current);
+    });
+
+    return Array.from(buckets.entries())
+      .sort((a, b) => {
+        const ai = ROLE_ORDER.indexOf(a[0]);
+        const bi = ROLE_ORDER.indexOf(b[0]);
+        if (ai === -1 && bi === -1) return a[0].localeCompare(b[0], 'pt-BR');
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+      .map(([role, items]) => ({ role, label: roleGroupLabel(role), items }));
+  }, [options, search]);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
+
+  function toggleValue(userId: string) {
+    if (values.includes(userId)) {
+      onChange(values.filter((id) => id !== userId));
+      return;
+    }
+    onChange([...values, userId]);
+  }
+
+  return (
+    <div ref={rootRef} className={cn('relative min-w-[320px]', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="w-full px-2.5 py-1.5 text-xs bg-background border border-border rounded-md text-left flex items-center justify-between gap-2"
+      >
+        <span className="truncate text-muted-foreground">{selectedLabels.length ? `${selectedLabels.length} selecionado(s)` : 'Responsável interno...'}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+      </button>
+
+      {selectedLabels.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {selectedLabels.map((label, index) => (
+            <span key={`${label}-${index}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-foreground/90">
+              <span className="max-w-[220px] truncate">{label}</span>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const id = values[index];
+                  onChange(values.filter((item) => item !== id));
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="absolute z-40 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar responsável"
+                className="w-full pl-8 pr-2 py-1.5 text-xs bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-auto p-1.5">
+            {grouped.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-muted-foreground">Nenhum responsável encontrado.</p>
+            ) : grouped.map((group) => (
+              <div key={group.role} className="mt-1">
+                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                {group.items.map((item) => {
+                  const selected = values.includes(item.user_id);
+                  return (
+                    <button
+                      key={item.user_id}
+                      type="button"
+                      onClick={() => toggleValue(item.user_id)}
+                      className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-muted flex items-start justify-between gap-2"
+                    >
+                      <span className="min-w-0 truncate">{renderHighlightedText(item.label, search)}</span>
+                      {selected ? <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProcessosClient() {
   const [rawSearch, setRawSearch] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<string | null>(null);
@@ -429,23 +573,11 @@ export default function ProcessosClient() {
           >
             Aplicar status
           </button>
-          <div className="flex items-center gap-2">
-            <select
-              multiple
-              value={bulkResponsaveis}
-              onChange={(event) => {
-                const values = Array.from(event.currentTarget.selectedOptions).map((opt) => opt.value);
-                setBulkResponsaveis(values);
-              }}
-              className="min-w-[280px] max-w-[360px] px-2.5 py-1.5 text-xs bg-background border border-border rounded-md"
-              title="Seleção múltipla de responsáveis internos"
-            >
-              {responsaveisInternos.map((item) => (
-                <option key={item.user_id} value={item.user_id}>{item.label}</option>
-              ))}
-            </select>
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Seleção múltipla</span>
-          </div>
+          <BulkResponsavelMultiSelect
+            values={bulkResponsaveis}
+            onChange={setBulkResponsaveis}
+            options={responsaveisInternos}
+          />
           <button
             onClick={handleBulkResponsavelApply}
             disabled={!bulkResponsaveis.length || isBusy}
