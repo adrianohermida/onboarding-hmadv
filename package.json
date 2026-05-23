@@ -11,7 +11,9 @@
     "web:type-check": "npm --prefix apps/web run type-check",
     "deploy": "git add -A && git commit -m \"deploy: atualizar portal\" && git push origin main",
     "test": "node platform/scripts/run-portal-tests.mjs",
-    "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1"
+    "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "repository": {
     "type": "git",
@@ -21,10 +23,13 @@
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
+    "@storybook/html": "^8.6.14",
+    "@storybook/addon-essentials": "^8.6.14",
     "@types/node": "^25.9.1",
     "chromatic": "^17.0.0",
     "install": "^0.13.0",
     "jsdom": "^26.1.0",
+    "storybook": "^8.6.14",
     "vitest": "^3.2.4"
   },
   "dependencies": {

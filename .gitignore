@@ -1,4 +1,12 @@
-(onboarding-hmadv is a single modified file that appears to be a source/config file based on the name, and there are no build artifacts, dependencies, or temp files in the changes - so no ignores are needed)
+```
+# Environment variables
+.env*
 
+<<<<<<< HEAD
 (empty)
 node_modules
+=======
+# Executable file
+onboarding-hmadv
+```
+>>>>>>> 7c92752809c074cac8a6670dfc578653dd7ff972
