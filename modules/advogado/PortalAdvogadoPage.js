@@ -1857,7 +1857,11 @@ function bindModuleEvents(host) {
     state.page = 1;
     clearRemotePageCache();
     clearTimeout(queryRenderTimer);
-    queryRenderTimer = setTimeout(() => refreshList(host), state.remotePagination ? 280 : 120);
+    if (state.remotePagination) {
+      queryRenderTimer = setTimeout(() => refreshList(host), 280);
+    } else {
+      queryRenderTimer = setTimeout(() => refreshList(host), 120);
+    }
   });
 
   host.addEventListener('change', event => {
