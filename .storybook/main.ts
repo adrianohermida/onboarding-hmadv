@@ -2,7 +2,11 @@ import type { StorybookConfig } from '@storybook/html-vite';
 
 const config: StorybookConfig = {
   stories: [
-    '../design-system/stories/**/*.stories.@(js|jsx|mjs|ts|tsx)'
+    {
+      directory: '../design-system/stories',
+      files: '**/*.stories.@(js|jsx|mjs|ts|tsx)',
+      titlePrefix: 'Design System'
+    }
   ],
   addons: [
     '@storybook/addon-essentials'
