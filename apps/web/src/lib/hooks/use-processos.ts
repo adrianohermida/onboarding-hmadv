@@ -102,6 +102,7 @@ export interface ResponsavelInternoOption {
   user_id: string;
   role: string;
   label: string;
+  email: string | null;
 }
 
 // ─── Hooks de leitura ────────────────────────────────────────────────────────
@@ -160,15 +161,19 @@ export function useResponsaveisInternos() {
       };
 
       const namesByUserId = new Map<string, string>();
+      const emailsByUserId = new Map<string, string>();
 
       const collectNames = (rows: Array<any> = []) => {
         rows.forEach((row) => {
           const uid = String(row?.user_id || '').trim();
-          if (!uid || namesByUserId.has(uid)) return;
+          if (!uid) return;
           const candidate = String(
             row?.full_name || row?.nome_cliente || row?.nome || row?.display_name || ''
           ).trim();
-          if (candidate) namesByUserId.set(uid, candidate);
+          if (candidate && !namesByUserId.has(uid)) namesByUserId.set(uid, candidate);
+
+          const email = String(row?.email || '').trim();
+          if (email && !emailsByUserId.has(uid)) emailsByUserId.set(uid, email);
         });
       };
 
@@ -190,12 +195,17 @@ export function useResponsaveisInternos() {
           const uid = String(item.user_id || '').trim();
           const role = String(item.role || '').trim();
           const metaName = String(item?.metadata?.full_name || item?.metadata?.display_name || item?.metadata?.name || '').trim();
+          const metaEmail = String(item?.metadata?.email || '').trim();
           const dbName = namesByUserId.get(uid) || '';
+          const dbEmail = emailsByUserId.get(uid) || '';
           const roleLabel = roleLabels[role] || (role || 'Usuário interno');
           const shortId = uid ? uid.slice(0, 8) : 'sem-id';
           const friendly = metaName || dbName;
-          const label = friendly ? `${friendly} (${roleLabel})` : `${roleLabel} · ${shortId}`;
-          return { user_id: uid, role, label };
+          const email = metaEmail || dbEmail || null;
+          const label = friendly
+            ? `${friendly}${email ? ` · ${email}` : ''} (${roleLabel})`
+            : `${roleLabel}${email ? ` · ${email}` : ''} · ${shortId}`;
+          return { user_id: uid, role, label, email };
         })
         .filter((item) => item.user_id)
         .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
