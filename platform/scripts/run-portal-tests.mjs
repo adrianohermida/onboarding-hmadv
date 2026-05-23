@@ -34,6 +34,7 @@ const batches = [
     'tests/advogado-portal-contract.test.js',
     'tests/agenda-tarefas-operational-contract.test.js',
     'tests/cliente-portal-contract.test.js',
+    'tests/crm-conversational-messaging-contract.test.js',
     'tests/documentos-enterprise-contract.test.js',
     'tests/financial-plan-operational-contract.test.js',
     'tests/freshdesk-support-contract.test.js',

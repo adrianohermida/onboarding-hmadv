@@ -55,7 +55,7 @@ function FormNovaAudiencia({ processoId, onClose }: { processoId: string; onClos
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!data) return;
-    await criar.mutateAsync({ processo_id: processoId, tipo, data_audiencia: data, local, observacoes: obs, descricao: null, situacao: 'confirmada', link_videoconferencia: null });
+    await criar.mutateAsync({ processo_id: processoId, tipo, data_audiencia: data, local, descricao: obs || null, situacao: 'confirmada' });
     onClose();
   }
 
@@ -255,13 +255,7 @@ function TabAudiencias({ processoId }: { processoId: string }) {
                   </span>
                 )}
               </div>
-              {a.link_videoconferencia && (
-                <a href={a.link_videoconferencia} target="_blank" rel="noopener noreferrer"
-                  className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline">
-                  <Eye className="h-3 w-3" /> Link videoconferência
-                </a>
-              )}
-              {a.observacoes && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.observacoes}</p>}
+              {a.descricao && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.descricao}</p>}
             </div>
           ))}
         </div>

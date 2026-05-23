@@ -86,7 +86,7 @@ function FormNovaAudiencia({ processoId, onClose }: { processoId: string; onClos
     if (!data) return;
     await criar.mutateAsync({
       processo_id: processoId, tipo, data_audiencia: data,
-      local, observacoes: obs, descricao: null, situacao: 'confirmada', link_videoconferencia: null,
+      local, descricao: obs || null, situacao: 'confirmada',
     });
     onClose();
   }
@@ -460,12 +460,6 @@ function TabAudiencias({ processoId }: { processoId: string }) {
             </span>
           )}
         </div>
-        {a.link_videoconferencia && (
-          <a href={a.link_videoconferencia} target="_blank" rel="noopener noreferrer"
-            className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline">
-            <ExternalLink className="h-3 w-3" /> Link videoconferência
-          </a>
-        )}
       </div>
     );
   }
@@ -553,13 +547,6 @@ const TAREFA_STATUS: Record<string, { label: string; cls: string }> = {
   concluida:    { label: 'Concluída',    cls: 'bg-green-500/10 text-green-500' },
 };
 
-const TAREFA_PRIORIDADE_CLS: Record<string, string> = {
-  critica: 'text-rose-500',
-  alta:    'text-orange-500',
-  media:   'text-amber-500',
-  baixa:   'text-muted-foreground',
-};
-
 function TabTarefas({ processoId }: { processoId: string }) {
   const { data: tarefas = [], isLoading } = useTarefasProcesso(processoId);
   if (isLoading) return <Skeleton />;
@@ -568,28 +555,27 @@ function TabTarefas({ processoId }: { processoId: string }) {
   return (
     <div className="space-y-2">
       {tarefas.map(t => {
+        const done = t.status === 'done' || t.status === 'concluida';
         const stCfg = t.status ? (TAREFA_STATUS[t.status] ?? { label: t.status, cls: 'bg-muted text-muted-foreground' }) : null;
-        const priCls = t.prioridade ? (TAREFA_PRIORIDADE_CLS[t.prioridade] ?? '') : '';
-        const vencida = t.data_vencimento && new Date(t.data_vencimento) < new Date() && t.status !== 'concluida';
+        const vencida = t.due_date && new Date(t.due_date) < new Date() && !done;
         return (
-          <div key={t.id} className={cn('bg-muted/30 rounded-xl p-3 border border-border', t.status === 'concluida' && 'opacity-60')}>
+          <div key={t.id} className={cn('bg-muted/30 rounded-xl p-3 border border-border', done && 'opacity-60')}>
             <div className="flex items-start gap-2">
-              {t.status === 'concluida'
+              {done
                 ? <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                : <Clock className={cn('h-4 w-4 flex-shrink-0 mt-0.5', priCls)} />}
+                : <Clock className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" />}
               <div className="flex-1 min-w-0">
-                <p className={cn('text-sm font-medium', t.status === 'concluida' && 'line-through text-muted-foreground')}>{t.titulo}</p>
+                <p className={cn('text-sm font-medium', done && 'line-through text-muted-foreground')}>{t.title}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {stCfg && <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', stCfg.cls)}>{stCfg.label}</span>}
-                  {t.data_vencimento && (
+                  {t.due_date && (
                     <span className={cn('text-xs flex items-center gap-0.5', vencida ? 'text-rose-500 font-medium' : 'text-muted-foreground')}>
                       {vencida && <AlertTriangle className="h-3 w-3" />}
-                      {fmtDate(t.data_vencimento)}
+                      {fmtDate(t.due_date)}
                     </span>
                   )}
-                  {t.tipo && <span className="text-[11px] text-muted-foreground/60">{t.tipo}</span>}
                 </div>
-                {t.descricao && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.descricao}</p>}
+                {t.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.description}</p>}
               </div>
             </div>
           </div>

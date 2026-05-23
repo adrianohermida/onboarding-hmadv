@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Calendar, Clock, MapPin, Video, Plus, X, Search,
+  Calendar, Clock, MapPin, Plus, X, Search,
   CheckCircle2, AlertCircle, Circle, ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,8 +47,7 @@ function NovaAudienciaForm({ onClose }: { onClose: () => void }) {
   const [tipo, setTipo] = useState('');
   const [dataHora, setDataHora] = useState('');
   const [local, setLocal] = useState('');
-  const [link, setLink] = useState('');
-  const [observacoes, setObservacoes] = useState('');
+  const [descricao, setDescricao] = useState('');
   const criar = useCriarAudiencia();
 
   async function submit(e: React.FormEvent) {
@@ -58,11 +57,9 @@ function NovaAudienciaForm({ onClose }: { onClose: () => void }) {
       processo_id: null,
       tipo: tipo || null,
       data_audiencia: dataHora,
-      descricao: null,
+      descricao: descricao || null,
       local: local || null,
       situacao: 'agendada',
-      link_videoconferencia: link || null,
-      observacoes: observacoes || null,
     });
     onClose();
   }
@@ -95,10 +92,7 @@ function NovaAudienciaForm({ onClose }: { onClose: () => void }) {
       <input placeholder="Local (sala, fórum...)" value={local} onChange={(e) => setLocal(e.target.value)}
         className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
 
-      <input placeholder="Link de videoconferência (opcional)" value={link} onChange={(e) => setLink(e.target.value)}
-        className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
-
-      <textarea placeholder="Observações (opcional)" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2}
+      <textarea placeholder="Descrição / observações (opcional)" value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2}
         className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
 
       <div className="flex gap-2 pt-1">
@@ -278,15 +272,9 @@ export default function AudienciasClient() {
                         <MapPin className="h-3 w-3" />{a.local}
                       </span>
                     )}
-                    {a.link_videoconferencia && (
-                      <a href={a.link_videoconferencia} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-primary hover:underline">
-                        <Video className="h-3 w-3" />Acessar link
-                      </a>
-                    )}
                   </div>
-                  {a.observacoes && (
-                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{a.observacoes}</p>
+                  {a.descricao && (
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{a.descricao}</p>
                   )}
                 </div>
 

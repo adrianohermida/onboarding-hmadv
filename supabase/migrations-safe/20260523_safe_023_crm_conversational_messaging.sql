@@ -373,7 +373,7 @@ CREATE INDEX IF NOT EXISTS idx_crm_messages_tenant_created
 CREATE INDEX IF NOT EXISTS idx_crm_messages_search
   ON crm_messages USING gin (search_vector);
 CREATE INDEX IF NOT EXISTS idx_crm_messages_body_trgm
-  ON crm_messages USING gin (body gin_trgm_ops);
+  ON crm_messages USING gin (body extensions.gin_trgm_ops);
 
 CREATE INDEX IF NOT EXISTS idx_crm_tickets_conversation
   ON crm_tickets (conversation_id, status);
@@ -507,7 +507,7 @@ DROP POLICY IF EXISTS crm_progress_select ON crm_journey_progress;
 DROP POLICY IF EXISTS crm_progress_write ON crm_journey_progress;
 CREATE POLICY crm_progress_select ON crm_journey_progress
   FOR SELECT TO authenticated
-  USING (is_workspace_member_for(tenant_id) OR user_id = auth.uid() OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()));
+  USING (is_workspace_member_for(tenant_id) OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()));
 CREATE POLICY crm_progress_write ON crm_journey_progress
   FOR ALL TO authenticated
   USING (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador']) OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()))

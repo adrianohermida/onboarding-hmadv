@@ -1587,6 +1587,10 @@ async function bootPortalShell() {
   runtimeIsolationEnabled = window.location.pathname.includes('/pages/');
 
   await loadComponents();
+  // Bind shell interactions early so header CTAs work even if user loading is slow.
+  setupShellNavigation();
+  ensureShellManagers();
+
   try {
     await loadUser();
   } catch (error) {
@@ -1595,8 +1599,6 @@ async function bootPortalShell() {
     updateShellModeSelector(false);
   }
   setupServiceErrorBannerListener();
-  setupShellNavigation();
-  ensureShellManagers();
 
   initRouter();
   initToast();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   MessageSquare, Calendar, HelpCircle,
   Send, User, CheckCheck, Clock, CheckCircle2,
@@ -14,30 +14,28 @@ import { toast } from 'sonner';
 
 interface Mensagem {
   id: string;
-  caso_id: string | null;
-  remetente_id: string | null;
-  conteudo: string;
-  lida: boolean;
-  criado_em: string;
-  casos: { nome_cliente: string } | null;
+  user_id: string | null;
+  from_role: string;
+  from_name: string | null;
+  text: string;
+  ts: string;
 }
 
 interface Agendamento {
   id: string;
   slot_id: string | null;
   status: string;
-  nome_cliente: string | null;
-  email_cliente: string | null;
-  tipo_atendimento: string | null;
-  criado_em: string;
+  notes: string | null;
+  created_at: string;
 }
 
 interface Slot {
   id: string;
-  data: string;
-  hora: string;
-  disponivel: boolean;
-  tipo: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  title: string | null;
+  duration_min: number | null;
+  location: string | null;
 }
 
 interface Props {
@@ -61,9 +59,23 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
   const [texto, setTexto] = useState('');
   const qc = useQueryClient();
   const supabase = createClient();
+  const queryKey = useMemo(() => ['atendimento-mensagens'], []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`atendimento-mensagens:${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 're_mensagens' }, () => {
+        qc.invalidateQueries({ queryKey });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc, queryKey, supabase, userId]);
 
   const { data: mensagens = initial } = useQuery<Mensagem[]>({
-    queryKey: ['atendimento-mensagens'],
+    queryKey,
     queryFn: async () => {
       const { data } = await supabase
         .from('re_mensagens')
@@ -74,7 +86,6 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
     },
     initialData: initial,
     staleTime: 15_000,
-    refetchInterval: 30_000,
   });
 
   const enviar = useMutation({
@@ -93,7 +104,7 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
     onError: () => toast.error('Falha ao enviar mensagem'),
   });
 
-  const naoLidas = mensagens.filter((m) => !m.lida && m.remetente_id !== userId).length;
+  const naoLidas = mensagens.filter((m) => m.from_role !== 'user').length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -113,20 +124,20 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
         ) : (
           <div className="divide-y divide-border max-h-72 overflow-y-auto">
             {[...mensagens].reverse().map((m) => {
-              const isMine = m.remetente_id === userId;
+              const isMine = m.from_role === 'user';
               return (
-                <div key={m.id} className={cn('px-4 py-3 flex items-start gap-3', !m.lida && !isMine ? 'bg-primary/5' : '')}>
+                <div key={m.id} className="px-4 py-3 flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
                     <User className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-semibold text-muted-foreground mb-0.5">
-                      {isMine ? 'Você' : 'Hermida Maia Advocacia'}
+                      {isMine ? 'Você' : (m.from_name ?? 'Hermida Maia Advocacia')}
                     </p>
-                    <p className="text-sm">{m.conteudo}</p>
+                    <p className="text-sm">{m.text}</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground flex-shrink-0 mt-0.5">
-                    {new Date(m.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(m.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               );
@@ -159,13 +170,6 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
 
 // ── Agenda tab ────────────────────────────────────────────────────────────────
 
-const TIPO_LABELS: Record<string, string> = {
-  consulta: 'Consulta',
-  retorno: 'Retorno',
-  audiencia: 'Audiência',
-  outros: 'Outros',
-};
-
 function AgendaTab({
   agendamentos,
   slots,
@@ -176,7 +180,6 @@ function AgendaTab({
   userId: string;
 }) {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [tipo, setTipo] = useState('consulta');
   const [obs, setObs] = useState('');
   const qc = useQueryClient();
   const supabase = createClient();
@@ -185,22 +188,18 @@ function AgendaTab({
     mutationFn: async () => {
       if (!selectedSlot) return;
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('re_agendamentos').insert({
+      const { error } = await supabase.from('re_bookings').insert({
         slot_id: selectedSlot.id,
+        user_id: user?.id,
         status: 'pendente',
-        email_cliente: user?.email,
-        nome_cliente: user?.user_metadata?.nome ?? user?.email,
-        tipo_atendimento: tipo,
-        observacoes: obs || null,
+        notes: obs || null,
       });
       if (error) throw error;
-      await supabase.from('re_agenda_slots').update({ disponivel: false }).eq('id', selectedSlot.id);
     },
     onSuccess: () => {
       toast.success('Agendamento solicitado');
       setSelectedSlot(null);
       setObs('');
-      qc.invalidateQueries({ queryKey: ['atendimento-agenda'] });
     },
     onError: () => toast.error('Falha ao agendar'),
   });
@@ -216,8 +215,8 @@ function AgendaTab({
               <div key={a.id} className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card">
                 <CheckCircle2 className={cn('h-5 w-5 flex-shrink-0', a.status === 'confirmado' ? 'text-green-500' : 'text-muted-foreground')} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{TIPO_LABELS[a.tipo_atendimento ?? ''] ?? a.tipo_atendimento ?? 'Atendimento'}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(a.criado_em).toLocaleDateString('pt-BR')}</p>
+                  <p className="text-sm font-medium">{a.notes ?? 'Atendimento'}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <span className={cn(
                   'text-xs px-2 py-0.5 rounded-full font-medium',
@@ -253,13 +252,13 @@ function AgendaTab({
                   )}
                 >
                   <p className="text-xs font-semibold">
-                    {new Date(s.data).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                    {new Date(s.starts_at).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
                     <Clock className="h-3 w-3" />
-                    <span className="text-xs">{s.hora}</span>
+                    <span className="text-xs">{new Date(s.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  {s.tipo && <p className="text-[10px] text-muted-foreground mt-0.5">{s.tipo}</p>}
+                  {s.title && <p className="text-[10px] text-muted-foreground mt-0.5">{s.title}</p>}
                 </button>
               ))}
             </div>
@@ -267,20 +266,8 @@ function AgendaTab({
             {selectedSlot && (
               <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
                 <p className="text-sm font-semibold">
-                  {new Date(selectedSlot.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedSlot.hora}
+                  {new Date(selectedSlot.starts_at).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {new Date(selectedSlot.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Tipo de atendimento</label>
-                  <select
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {Object.entries(TIPO_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
-                  </select>
-                </div>
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Observações (opcional)</label>
                   <textarea
@@ -361,7 +348,7 @@ function AjudaTab() {
 
 export default function AtendimentoHub({ mensagens, agendamentos, slots, userId }: Props) {
   const [tab, setTab] = useState<Tab>('mensagens');
-  const naoLidas = mensagens.filter((m) => !m.lida && m.remetente_id !== userId).length;
+  const naoLidas = mensagens.filter((m) => m.from_role !== 'user').length;
 
   return (
     <div className="space-y-4">

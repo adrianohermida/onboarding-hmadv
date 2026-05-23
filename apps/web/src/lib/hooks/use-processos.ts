@@ -45,7 +45,6 @@ export interface Audiencia {
   descricao: string | null;
   local: string | null;
   situacao: string | null;
-  observacoes: string | null;
   created_at: string;
 }
 

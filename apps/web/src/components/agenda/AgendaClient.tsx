@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
-  Calendar, Clock, MapPin, Video, User, CheckCircle2,
+  Calendar, Clock, MapPin, User, CheckCircle2,
   AlertCircle, ChevronLeft, ChevronRight, Gavel,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,8 +32,7 @@ interface Audiencia {
   data_audiencia: string;
   local: string | null;
   situacao: string | null;
-  link_videoconferencia: string | null;
-  observacoes: string | null;
+  descricao: string | null;
 }
 
 interface Props {
@@ -85,7 +84,7 @@ function useAudienciasJudiciario(enabled: boolean) {
       const { data } = await (supabase as any)
         .schema('judiciario')
         .from('audiencias')
-        .select('id, processo_id, tipo, data_audiencia, local, situacao, link_videoconferencia, observacoes')
+        .select('id, processo_id, tipo, data_audiencia, local, situacao, descricao')
         .order('data_audiencia', { ascending: true })
         .limit(200);
       return data ?? [];
@@ -220,12 +219,6 @@ function CardAudiencia({ a }: { a: Audiencia }) {
             {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
           </span>
           {a.local && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{a.local}</span>}
-          {a.link_videoconferencia && (
-            <a href={a.link_videoconferencia} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 text-primary hover:underline">
-              <Video className="h-3 w-3" />Acessar link
-            </a>
-          )}
         </div>
       </div>
     </div>

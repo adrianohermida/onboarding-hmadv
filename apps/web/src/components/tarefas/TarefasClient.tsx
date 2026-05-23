@@ -27,26 +27,10 @@ interface Tarefa {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const PRIORIDADE_CONFIG: Record<string, { label: string; cls: string }> = {
-  critica: { label: 'Crítica', cls: 'bg-red-500/10 text-red-600 ring-red-400/30' },
-  alta:    { label: 'Alta',    cls: 'bg-rose-500/10 text-rose-500 ring-rose-400/30' },
-  media:   { label: 'Média',  cls: 'bg-amber-500/10 text-amber-600 ring-amber-400/30' },
-  baixa:   { label: 'Baixa',  cls: 'bg-green-500/10 text-green-600 ring-green-400/30' },
-};
-
-const TIPO_CONFIG: Record<string, { label: string; cls: string }> = {
-  processual:     { label: 'Processual',  cls: 'bg-violet-500/10 text-violet-600' },
-  administrativo: { label: 'Adm.',        cls: 'bg-blue-500/10 text-blue-600' },
-  financeiro:     { label: 'Financeiro',  cls: 'bg-green-500/10 text-green-700' },
-  cliente:        { label: 'Cliente',     cls: 'bg-teal-500/10 text-teal-700' },
-  audiencia:      { label: 'Audiência',   cls: 'bg-orange-500/10 text-orange-700' },
-  diligencia:     { label: 'Diligência',  cls: 'bg-slate-500/10 text-slate-700' },
-};
-
 const KANBAN_COLS: { status: string; label: string; headerCls: string }[] = [
   { status: 'pendente',     label: 'Pendente',     headerCls: 'border-amber-300 bg-amber-50 text-amber-800' },
   { status: 'em_andamento', label: 'Em andamento', headerCls: 'border-blue-300 bg-blue-50 text-blue-800' },
-  { status: 'concluida',    label: 'Concluída',    headerCls: 'border-green-300 bg-green-50 text-green-800' },
+  { status: 'done',         label: 'Concluída',    headerCls: 'border-green-300 bg-green-50 text-green-800' },
 ];
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
@@ -69,7 +53,6 @@ function diasAtraso(iso: string | null) {
 
 interface TarefasFiltros {
   status: 'abertas' | 'concluidas' | 'todas';
-  prioridade: string;
   search: string;
 }
 
@@ -289,7 +272,7 @@ function TarefaCard({
 
       {onMover && !done && (
         <div className="flex gap-1 mt-2.5 pt-2 border-t border-border/60">
-          {KANBAN_COLS.filter((c) => c.status !== tarefa.status && c.status !== 'concluida').map((col) => (
+          {KANBAN_COLS.filter((c) => c.status !== tarefa.status && c.status !== 'done').map((col) => (
             <button
               key={col.status}
               onClick={() => onMover(col.status)}
@@ -299,7 +282,7 @@ function TarefaCard({
             </button>
           ))}
           <button
-            onClick={() => onMover('concluida')}
+            onClick={() => onMover('done')}
             className="flex-1 text-[10px] text-green-600 py-1 rounded-lg hover:bg-green-50 transition-colors text-center"
           >
             ✓ Concluir
@@ -362,14 +345,13 @@ export default function TarefasClient({ userId: _userId }: { tarefas?: Tarefa[];
   const atualizar = useAtualizarStatus();
   const [view, setView] = useState<ViewMode>('lista');
   const [statusFiltro, setStatusFiltro] = useState<'abertas' | 'concluidas' | 'todas'>('abertas');
-  const [prioridadeFiltro, setPrioridadeFiltro] = useState('');
   const [rawSearch, setRawSearch] = useState('');
   const [page, setPage] = useState(0);
   const [showForm, setShowForm] = useState(false);
 
   const debouncedSearch = useDebounce(rawSearch, 350);
 
-  const filtros: TarefasFiltros = { status: statusFiltro, prioridade: prioridadeFiltro, search: debouncedSearch };
+  const filtros: TarefasFiltros = { status: statusFiltro, search: debouncedSearch };
   const { data: result, isFetching } = useTarefasPaginadas(filtros, page);
   const { data: counts = { abertas: 0, concluidas: 0, vencidas: 0, criticas: 0 } } = useTarefasContagens();
 
@@ -439,17 +421,6 @@ export default function TarefasClient({ userId: _userId }: { tarefas?: Tarefa[];
             </button>
           ))}
         </div>
-
-        <select
-          value={prioridadeFiltro}
-          onChange={(e) => { setPrioridadeFiltro(e.target.value); setPage(0); }}
-          className="px-2.5 py-1.5 text-xs bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">Toda prioridade</option>
-          {Object.entries(PRIORIDADE_CONFIG).map(([k, v]) => (
-            <option key={k} value={k}>{v.label}</option>
-          ))}
-        </select>
 
         <div className="flex items-center gap-2 ml-auto">
           {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}

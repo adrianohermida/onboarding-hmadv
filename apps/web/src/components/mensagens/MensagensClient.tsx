@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -46,6 +46,22 @@ function formatDataCurta(iso: string) {
 
 function useMensagens(isAdmin: boolean, currentUserId: string) {
   const supabase = createClient();
+  const qc = useQueryClient();
+  const queryKey = useMemo(() => ['mensagens', isAdmin, currentUserId], [currentUserId, isAdmin]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`legacy-mensagens:${isAdmin ? 'admin' : currentUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 're_messages' }, () => {
+        qc.invalidateQueries({ queryKey });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, isAdmin, qc, queryKey, supabase]);
+
   return useQuery<Mensagem[]>({
     queryKey: ['mensagens', isAdmin, currentUserId],
     queryFn: async () => {
@@ -59,7 +75,6 @@ function useMensagens(isAdmin: boolean, currentUserId: string) {
       return data ?? [];
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
   });
 }
 

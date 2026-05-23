@@ -23,11 +23,11 @@ export default async function TimelinePage() {
 
   const [tarefasR, prazosR, audienciasR, publicacoesR] = await Promise.all([
     supabase
-      .from('re_tarefas')
-      .select('id, titulo, descricao, status, prioridade, data_vencimento, criado_em, casos(nome_cliente)')
-      .gte('data_vencimento', desdeISO)
-      .lte('data_vencimento', ateISO)
-      .order('data_vencimento', { ascending: false })
+      .from('re_tasks')
+      .select('id, title, description, status, due_date, created_at, portal_casos!portal_caso_id(full_name)')
+      .gte('due_date', desdeISO)
+      .lte('due_date', ateISO)
+      .order('due_date', { ascending: false })
       .limit(50),
     (supabase as any)
       .schema('judiciario')
@@ -61,12 +61,12 @@ export default async function TimelinePage() {
     eventos.push({
       id: `tarefa-${t.id}`,
       tipo: 'tarefa',
-      titulo: t.titulo,
-      descricao: t.descricao,
-      data: t.data_vencimento ?? t.criado_em,
-      urgencia: t.prioridade === 'alta' || t.prioridade === 'critica' ? t.prioridade : null,
+      titulo: t.title,
+      descricao: t.description,
+      data: t.due_date ?? t.created_at,
+      urgencia: null,
       status: t.status,
-      cliente: (t.casos as any)?.nome_cliente ?? null,
+      cliente: (t.portal_casos as any)?.full_name ?? null,
     });
   }
 

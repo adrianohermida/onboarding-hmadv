@@ -10,29 +10,27 @@ export default async function AtendimentoPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const hoje = new Date().toISOString().split('T')[0];
-  const fim = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const agora = new Date().toISOString();
+  const fim = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
 
   const [{ data: mensagens }, { data: agendamentos }, { data: slots }] = await Promise.all([
     supabase
-      .from('re_mensagens')
-      .select('id, caso_id, remetente_id, conteudo, lida, criado_em, casos(nome_cliente)')
-      .order('criado_em', { ascending: false })
+      .from('re_messages')
+      .select('id, user_id, from_role, from_name, text, ts')
+      .order('ts', { ascending: false })
       .limit(50),
     supabase
-      .from('re_agendamentos')
-      .select('id, slot_id, status, nome_cliente, email_cliente, tipo_atendimento, criado_em')
-      .eq('email_cliente', user.email ?? '')
-      .order('criado_em', { ascending: false })
+      .from('re_bookings')
+      .select('id, slot_id, user_id, status, notes, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .limit(10),
     supabase
       .from('re_agenda_slots')
-      .select('id, data, hora, disponivel, tipo')
-      .gte('data', hoje)
-      .lte('data', fim)
-      .eq('disponivel', true)
-      .order('data', { ascending: true })
-      .order('hora', { ascending: true })
+      .select('id, starts_at, ends_at, title, duration_min, location')
+      .gte('starts_at', agora)
+      .lte('starts_at', fim)
+      .order('starts_at', { ascending: true })
       .limit(30),
   ]);
 
