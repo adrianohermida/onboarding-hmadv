@@ -270,6 +270,38 @@ let shellLegalNotificationSource = 'session';
 const shellLegalNotificationFilters = { types: [], statuses: [] };
 let shellActivitiesFilter = 'geral';
 let shellContext = null;
+let shellDrawerLastFocus = null;
+let shellModalLastFocus = null;
+
+function isHTMLElement(value) {
+  return value instanceof HTMLElement;
+}
+
+function focusElementSafe(element) {
+  if (!isHTMLElement(element)) return;
+  try {
+    element.focus({ preventScroll: true });
+  } catch (_) {
+    element.focus();
+  }
+}
+
+function resolveShellFocusTarget(layerId, previousFocus = null) {
+  const triggerSelector = layerId === 'shell-modal-root'
+    ? '[data-shell-action="open-account-modal"], [data-ui-modal-target="#shell-modal-root"]'
+    : '[data-shell-action="open-global-search"], [data-shell-action="open-shell-drawer"], [data-ui-drawer-target="#shell-drawer-root"]';
+
+  const trigger = document.querySelector(triggerSelector);
+  if (isHTMLElement(trigger) && trigger.isConnected && !trigger.closest(`#${layerId}`)) {
+    return trigger;
+  }
+
+  if (isHTMLElement(previousFocus) && previousFocus.isConnected && !previousFocus.closest(`#${layerId}`)) {
+    return previousFocus;
+  }
+
+  return document.querySelector('[data-component="header"] button, main button, a, button, [tabindex]:not([tabindex="-1"])');
+}
 
 function getUserDisplayState(user, isAdmin = false) {
   const email = user?.email || '';
@@ -1920,6 +1952,7 @@ function ensureShellManagers() {
   drawer.id = 'shell-drawer-root';
   drawer.className = 'ui-drawer shell-side-panel';
   drawer.setAttribute('aria-hidden', 'true');
+  drawer.setAttribute('inert', '');
   drawer.innerHTML = `
     <div class="ui-drawer-panel shell-side-panel-body" role="dialog" aria-modal="true" aria-labelledby="shell-drawer-title">
       <header class="ui-drawer-header">
@@ -1940,6 +1973,7 @@ function ensureShellManagers() {
   modal.id = 'shell-modal-root';
   modal.className = 'ui-modal shell-modal';
   modal.setAttribute('aria-hidden', 'true');
+  modal.setAttribute('inert', '');
   modal.innerHTML = `
     <div class="ui-modal-panel" role="dialog" aria-modal="true" aria-labelledby="shell-modal-title">
       <header class="ui-modal-header">
@@ -1982,6 +2016,7 @@ function ensureShellManagers() {
 function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Meu Escritório', body = '' } = {}) {
   ensureShellManagers();
   const drawer = document.getElementById('shell-drawer-root');
+  shellDrawerLastFocus = isHTMLElement(document.activeElement) ? document.activeElement : null;
   const titleEl = document.getElementById('shell-drawer-title');
   const eyebrowEl = document.getElementById('shell-drawer-eyebrow');
   const contentEl = document.getElementById('shell-drawer-content');
@@ -1989,6 +2024,7 @@ function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Meu Escritóri
   if (eyebrowEl) eyebrowEl.textContent = eyebrow;
   if (contentEl) contentEl.innerHTML = body;
   drawer?.classList.add('is-open');
+  drawer?.removeAttribute('inert');
   drawer?.setAttribute('aria-hidden', 'false');
   initUiKit(drawer || document);
   drawer?.querySelector('input, button, a')?.focus?.();
@@ -1996,18 +2032,27 @@ function openShellDrawer({ title = 'Portal jurídico', eyebrow = 'Meu Escritóri
 
 function closeShellDrawer() {
   const drawer = document.getElementById('shell-drawer-root');
+  const activeElement = document.activeElement;
+  const focusTarget = resolveShellFocusTarget('shell-drawer-root', shellDrawerLastFocus);
+  if (drawer && isHTMLElement(activeElement) && drawer.contains(activeElement)) {
+    activeElement.blur();
+  }
   drawer?.classList.remove('is-open');
   drawer?.setAttribute('aria-hidden', 'true');
+  drawer?.setAttribute('inert', '');
+  focusElementSafe(focusTarget);
 }
 
 function openShellModal({ title = 'Portal jurídico', body = '' } = {}) {
   ensureShellManagers();
   const modal = document.getElementById('shell-modal-root');
+  shellModalLastFocus = isHTMLElement(document.activeElement) ? document.activeElement : null;
   const titleEl = document.getElementById('shell-modal-title');
   const contentEl = document.getElementById('shell-modal-content');
   if (titleEl) titleEl.textContent = title;
   if (contentEl) contentEl.innerHTML = body;
   modal?.classList.add('is-open');
+  modal?.removeAttribute('inert');
   modal?.setAttribute('aria-hidden', 'false');
   initUiKit(modal || document);
   modal?.querySelector('input, button, a')?.focus?.();
@@ -2015,8 +2060,15 @@ function openShellModal({ title = 'Portal jurídico', body = '' } = {}) {
 
 function closeShellModal() {
   const modal = document.getElementById('shell-modal-root');
+  const activeElement = document.activeElement;
+  const focusTarget = resolveShellFocusTarget('shell-modal-root', shellModalLastFocus);
+  if (modal && isHTMLElement(activeElement) && modal.contains(activeElement)) {
+    activeElement.blur();
+  }
   modal?.classList.remove('is-open');
   modal?.setAttribute('aria-hidden', 'true');
+  modal?.setAttribute('inert', '');
+  focusElementSafe(focusTarget);
 }
 
 function renderAccountModal(view = 'conta') {

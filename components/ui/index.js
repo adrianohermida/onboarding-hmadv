@@ -13,18 +13,64 @@ function getTarget(selector) {
   try { return document.querySelector(selector); } catch (_) { return null; }
 }
 
+function isHTMLElement(value) {
+  return value instanceof HTMLElement;
+}
+
+function focusElementSafe(element) {
+  if (!isHTMLElement(element)) return;
+  try {
+    element.focus({ preventScroll: true });
+  } catch (_) {
+    element.focus();
+  }
+}
+
+function resolveLayerCloseFocusTarget(layer) {
+  if (!layer) return null;
+
+  if (layer.id) {
+    const triggerSelector = layer.classList.contains('ui-drawer')
+      ? `[data-ui-drawer-target="#${layer.id}"]`
+      : `[data-ui-modal-target="#${layer.id}"]`;
+    const trigger = document.querySelector(triggerSelector);
+    if (isHTMLElement(trigger) && trigger.isConnected) {
+      return trigger;
+    }
+  }
+
+  const remembered = layer.__uiReturnFocusElement;
+  if (isHTMLElement(remembered) && remembered.isConnected && !layer.contains(remembered)) {
+    return remembered;
+  }
+
+  return document.querySelector('[data-component="header"] button, main button, a, button, [tabindex]:not([tabindex="-1"])');
+}
+
 function openLayer(layer) {
   if (!layer) return;
+  const activeElement = document.activeElement;
+  if (isHTMLElement(activeElement) && !layer.contains(activeElement)) {
+    layer.__uiReturnFocusElement = activeElement;
+  }
   layer.classList.add('is-open');
+  layer.removeAttribute('inert');
   layer.setAttribute('aria-hidden', 'false');
   const focusable = layer.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-  focusable?.focus?.();
+  focusElementSafe(focusable);
 }
 
 function closeLayer(layer) {
   if (!layer) return;
+  const activeElement = document.activeElement;
+  const focusTarget = resolveLayerCloseFocusTarget(layer);
+  if (isHTMLElement(activeElement) && layer.contains(activeElement)) {
+    activeElement.blur();
+  }
   layer.classList.remove('is-open');
   layer.setAttribute('aria-hidden', 'true');
+  layer.setAttribute('inert', '');
+  focusElementSafe(focusTarget);
 }
 
 function bindOnce(element, key, handler) {
