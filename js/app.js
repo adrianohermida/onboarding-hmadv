@@ -65,6 +65,62 @@ const ROUTE_ACTIVITY_CATEGORY = {
 
 window.__shellVersion = SHELL_VERSION;
 
+function normalizeSupabaseRestUrl(rawUrl) {
+  const url = new URL(rawUrl, window.location.origin);
+  if (!url.pathname.includes('/rest/v1/')) return url;
+
+  const table = url.pathname.split('/').pop() || '';
+  if (table === 'portal_custas') {
+    url.searchParams.delete('deleted_at');
+    const order = url.searchParams.get('order') || '';
+    if (order.includes('data_lancamento')) {
+      url.searchParams.set('order', 'created_at.desc');
+    }
+  }
+
+  if (table === 'portal_contratos') {
+    url.searchParams.delete('deleted_at');
+    if ((url.searchParams.get('order') || '') === 'updated_at.desc') {
+      url.searchParams.set('order', 'created_at.desc');
+    }
+  }
+
+  if (table === 'portal_casos') {
+    if ((url.searchParams.get('select') || '') === '*') {
+      url.searchParams.set('select', 'id,user_id,workspace_id,full_name,fase,onboarding_done,numero_processo,cnj_step_atual,created_at,updated_at');
+    }
+    url.searchParams.delete('on_conflict');
+  }
+
+  return url;
+}
+
+function installSupabaseRestCompatibilityFetch() {
+  if (window.__supabaseRestCompatibilityInstalled) return;
+  const nativeFetch = window.fetch.bind(window);
+
+  window.fetch = (input, init) => {
+    try {
+      if (typeof Request !== 'undefined' && input instanceof Request) {
+        const normalized = normalizeSupabaseRestUrl(input.url).toString();
+        return nativeFetch(new Request(normalized, input), init);
+      }
+
+      const raw = typeof input === 'string'
+        ? input
+        : (input instanceof URL ? input.toString() : String(input));
+      const normalized = normalizeSupabaseRestUrl(raw).toString();
+      return nativeFetch(normalized, init);
+    } catch (_) {
+      return nativeFetch(input, init);
+    }
+  };
+
+  window.__supabaseRestCompatibilityInstalled = true;
+}
+
+installSupabaseRestCompatibilityFetch();
+
 const componentHtmlCache = new Map();
 let appUserDetail = null;
 let shellNavInFlight = false;
