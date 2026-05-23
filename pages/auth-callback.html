@@ -89,6 +89,38 @@ function getLegacySupabaseConfig() {
   };
 }
 
+async function resolveLegacyRole(cfg, accessToken, userId) {
+  if (!cfg.url || !cfg.anonKey || !accessToken || !userId) {
+    return null;
+  }
+
+  const url = new URL(`${cfg.url.replace(/\/$/, '')}/rest/v1/admin_users`);
+  url.searchParams.set('select', 'role');
+  url.searchParams.set('user_id', `eq.${userId}`);
+  url.searchParams.set('limit', '1');
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      apikey: cfg.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  let payload = [];
+  try {
+    payload = await response.json();
+  } catch (_) {
+    payload = [];
+  }
+
+  if (!response.ok || !Array.isArray(payload) || !payload[0] || !payload[0].role) {
+    return null;
+  }
+
+  return String(payload[0].role);
+}
+
 async function handleLegacyFallback(payload) {
   const cfg = getLegacySupabaseConfig();
   if (!cfg.url || !cfg.anonKey) {
@@ -114,16 +146,21 @@ async function handleLegacyFallback(payload) {
     throw new Error(userPayload.error_description || userPayload.msg || userPayload.error || 'Link inválido ou expirado.');
   }
 
+  const role = await resolveLegacyRole(cfg, accessToken, String(userPayload.user.id || ''));
+
   try {
     localStorage.setItem('hm_legacy_access_token', accessToken);
     localStorage.setItem('hm_legacy_refresh_token', refreshToken);
     localStorage.setItem('hm_legacy_user', JSON.stringify(userPayload.user));
+    if (role) {
+      localStorage.setItem('hm_legacy_role', role);
+    }
   } catch (_) {}
 
   return {
     ok: true,
     user: userPayload.user,
-    role: null,
+    role,
   };
 }
 

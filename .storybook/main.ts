@@ -5,6 +5,10 @@ const config: StorybookConfig = {
     {
       directory: '../design-system/stories',
       files: '**/*.stories.@(js|jsx|mjs|ts|tsx)'
+    },
+    {
+      directory: '../components',
+      files: '**/*.stories.@(js|jsx|mjs|ts|tsx)'
     }
   ],
 

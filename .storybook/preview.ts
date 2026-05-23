@@ -1,6 +1,8 @@
 import type { Preview } from '@storybook/html-vite';
 import '../design-system/tokens/core-v2.css';
 import '../design-system/components/base-v2.css';
+import '../styles/components.css';
+import { initUiKit } from '../components/ui/index.js';
 
 // Decorador global para injetar contexto de auth simulado ou herdado
 const withAuthContext = (story: () => HTMLElement) => {
@@ -26,6 +28,7 @@ const withAuthContext = (story: () => HTMLElement) => {
   }
 
   wrapper.appendChild(story());
+  initUiKit(wrapper);
   return wrapper;
 };
 
