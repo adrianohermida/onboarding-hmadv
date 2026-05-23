@@ -16,16 +16,13 @@ const TAREFAS_PAGE_SIZE = 30;
 
 interface Tarefa {
   id: string;
-  titulo: string;
-  descricao: string | null;
+  title: string;
+  description: string | null;
   status: string;
-  prioridade: string | null;
-  tipo: string | null;
-  caso_id: string | null;
-  responsavel_id: string | null;
-  data_vencimento: string | null;
-  criado_em: string;
-  casos: { nome_cliente: string } | null;
+  due_date: string | null;
+  created_at: string;
+  portal_caso_id: string | null;
+  portal_casos: { full_name: string } | null;
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -91,15 +88,14 @@ function useTarefasPaginadas(filtros: TarefasFiltros, page: number) {
       const to = from + TAREFAS_PAGE_SIZE - 1;
 
       let q = supabase
-        .from('re_tarefas')
-        .select('id, titulo, descricao, status, prioridade, tipo, caso_id, responsavel_id, data_vencimento, criado_em, casos(nome_cliente)', { count: 'exact' })
-        .order('data_vencimento', { ascending: true })
+        .from('re_tasks')
+        .select('id, title, description, status, due_date, created_at, portal_caso_id, portal_casos!portal_caso_id(full_name)', { count: 'exact' })
+        .order('due_date', { ascending: true, nullsFirst: false })
         .range(from, to);
 
-      if (filtros.status === 'abertas') q = q.in('status', ['pendente', 'em_andamento']);
-      else if (filtros.status === 'concluidas') q = q.eq('status', 'concluida');
-      if (filtros.prioridade) q = q.eq('prioridade', filtros.prioridade);
-      if (filtros.search.trim().length >= 2) q = q.ilike('titulo', `%${filtros.search.trim()}%`);
+      if (filtros.status === 'abertas') q = q.not('status', 'in', '("done","cancelled","concluida","cancelada")');
+      else if (filtros.status === 'concluidas') q = q.in('status', ['done', 'concluida']);
+      if (filtros.search.trim().length >= 2) q = q.ilike('title', `%${filtros.search.trim()}%`);
 
       const { data, count, error } = await q;
       if (error) throw error;

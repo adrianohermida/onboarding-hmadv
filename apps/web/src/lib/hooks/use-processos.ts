@@ -314,20 +314,17 @@ export interface PublicacaoProcesso {
 
 export interface TarefaProcesso {
   id: string;
-  titulo: string;
-  descricao: string | null;
+  title: string;
+  description: string | null;
   status: string | null;
-  prioridade: string | null;
-  tipo: string | null;
-  data_vencimento: string | null;
-  criado_em: string;
+  due_date: string | null;
+  created_at: string;
 }
 
 export interface DocumentoProcesso {
   id: string;
-  nome: string | null;
+  nome_arquivo: string | null;
   tipo: string | null;
-  status: string | null;
   workflow_status: string | null;
   storage_path: string | null;
   created_at: string;
@@ -358,11 +355,10 @@ export function useTarefasProcesso(processoId: string | null) {
     staleTime: 30_000,
     queryFn: async () => {
       const { data } = await createClient()
-        .from('re_tarefas')
-        .select('id, titulo, descricao, status, prioridade, tipo, data_vencimento, criado_em')
-        .eq('processo_id', processoId)
-        .order('data_vencimento', { ascending: true })
-        .limit(100);
+        .from('re_tasks')
+        .select('id, title, description, status, due_date, created_at')
+        .order('due_date', { ascending: true })
+        .limit(50);
       return data ?? [];
     },
   });
@@ -376,7 +372,7 @@ export function useDocumentosProcesso(userIds: string[]) {
     queryFn: async () => {
       const { data } = await createClient()
         .from('portal_documentos')
-        .select('id, nome, tipo, status, workflow_status, storage_path, created_at, user_id')
+        .select('id, nome_arquivo, tipo, workflow_status, storage_path, created_at, user_id')
         .in('user_id', userIds)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
