@@ -24,6 +24,8 @@ import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '..
 const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];
 const REMOTE_PAGE_CACHE_MAX = 80;
+const PERF_SLA_TARGET_MS = 450;
+const STRESS_TEST_MAX_PAGES = 20;
 
 const state = {
   moduleKey: '',
@@ -42,6 +44,24 @@ const state = {
   page: 1,
   pageSize: 100,
   remotePagination: false,
+  perf: {
+    queryMs: null,
+    renderMs: null,
+    totalMs: null,
+    items: 0,
+    source: 'idle',
+    updatedAt: null,
+  },
+  stress: {
+    running: false,
+    pagesTested: 0,
+    avgQueryMs: null,
+    avgRenderMs: null,
+    avgTotalMs: null,
+    p95TotalMs: null,
+    withinSlaPct: null,
+    updatedAt: null,
+  },
 };
 
 let queryRenderTimer = null;
@@ -112,6 +132,95 @@ function prefetchAdjacentPages(moduleKey) {
   targets.forEach((page) => {
     fetchRemotePage(moduleKey, { page, pageSize: state.pageSize, useCache: true }).catch(() => {});
   });
+}
+
+function shouldAutoRunStressTest() {
+  if (typeof window === 'undefined') return false;
+  const url = new URL(window.location.href);
+  return url.searchParams.get('stress') === '1';
+}
+
+function metricTone(ms) {
+  if (ms === null || ms === undefined) return 'muted';
+  if (ms <= PERF_SLA_TARGET_MS) return 'ok';
+  if (ms <= PERF_SLA_TARGET_MS * 1.5) return 'warn';
+  return 'danger';
+}
+
+function updatePerfMetric({ queryMs = null, renderMs = null, totalMs = null, items = 0, source = 'runtime' } = {}) {
+  state.perf = {
+    queryMs,
+    renderMs,
+    totalMs,
+    items,
+    source,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function percentile(values = [], ratio = 0.95) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * ratio) - 1));
+  return sorted[index];
+}
+
+async function runStressTest(host) {
+  if (!state.remotePagination || state.moduleKey === 'clientes' || state.stress.running) return;
+
+  const totalPages = Math.max(1, Math.ceil(Number(state.totalRecords || 0) / Math.max(1, Number(state.pageSize || 1))));
+  const pagesToTest = Math.min(totalPages, STRESS_TEST_MAX_PAGES);
+  const originalPage = state.page;
+  const originalRecords = state.records;
+  const originalTotal = state.totalRecords;
+
+  const queryTimes = [];
+  const renderTimes = [];
+  const totalTimes = [];
+
+  state.stress = { ...state.stress, running: true, pagesTested: 0 };
+  renderInto(host);
+
+  try {
+    for (let page = 1; page <= pagesToTest; page += 1) {
+      const t0 = performance.now();
+      const q0 = performance.now();
+      const payload = await fetchRemotePage(state.moduleKey, { page, pageSize: state.pageSize, useCache: false });
+      const q1 = performance.now();
+      const queryMs = q1 - q0;
+
+      const config = getAdvogadoModuleConfig(state.moduleKey);
+      const r0 = performance.now();
+      renderRecordCards((payload?.rows || []).slice(0, 120), config);
+      const r1 = performance.now();
+      const renderMs = r1 - r0;
+      const totalMs = performance.now() - t0;
+
+      queryTimes.push(queryMs);
+      renderTimes.push(renderMs);
+      totalTimes.push(totalMs);
+
+      state.stress = {
+        ...state.stress,
+        running: true,
+        pagesTested: page,
+        avgQueryMs: queryTimes.reduce((sum, ms) => sum + ms, 0) / queryTimes.length,
+        avgRenderMs: renderTimes.reduce((sum, ms) => sum + ms, 0) / renderTimes.length,
+        avgTotalMs: totalTimes.reduce((sum, ms) => sum + ms, 0) / totalTimes.length,
+        p95TotalMs: percentile(totalTimes, 0.95),
+        withinSlaPct: Math.round((totalTimes.filter((ms) => ms <= PERF_SLA_TARGET_MS).length / totalTimes.length) * 100),
+        updatedAt: new Date().toISOString(),
+      };
+
+      renderInto(host);
+    }
+  } finally {
+    state.page = originalPage;
+    state.records = originalRecords;
+    state.totalRecords = originalTotal;
+    state.stress = { ...state.stress, running: false, updatedAt: new Date().toISOString() };
+    renderInto(host);
+  }
 }
 
 function escapeHtml(value) {
@@ -1250,6 +1359,7 @@ function refreshList(host) {
     return;
   }
 
+  const t0 = performance.now();
   const view = getPaginatedRecords();
   if (!view) return;
 
@@ -1258,12 +1368,48 @@ function refreshList(host) {
   const totalFiltered = host.querySelector('[data-advogado-kpi="filtered"]');
 
   if (recordsHost) {
+    const r0 = performance.now();
     recordsHost.innerHTML = renderRows(view.paginated.rows, view.config);
     hydrateVirtualList(recordsHost, view.paginated.rows, view.config);
     window.initUiKit?.(recordsHost);
+    const renderMs = performance.now() - r0;
+    updatePerfMetric({ queryMs: 0, renderMs, totalMs: performance.now() - t0, items: view.paginated.rows.length, source: 'local-filter' });
   }
   if (pagination) pagination.outerHTML = renderPagination(view.paginated);
   if (totalFiltered) totalFiltered.textContent = view.paginated.total;
+}
+
+function formatPerfMs(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-';
+  return `${Number(value).toFixed(1)} ms`;
+}
+
+function renderPerformancePanel(paginated) {
+  const perf = state.perf;
+  const stress = state.stress;
+  return `
+    <section class="sec advogado-perf-panel" data-advogado-perf>
+      <div class="module-hub-top" style="align-items:flex-start;gap:14px;">
+        <div>
+          <h3 style="margin:0 0 6px 0;">Performance</h3>
+          <p style="margin:0;color:var(--muted);font-size:12px;">SLA alvo por página: ${PERF_SLA_TARGET_MS} ms · itens na página: ${paginated.rows.length} · total: ${paginated.total}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="ui-badge hub-kpi--${metricTone(perf.queryMs)}">Query: ${formatPerfMs(perf.queryMs)}</span>
+          <span class="ui-badge hub-kpi--${metricTone(perf.renderMs)}">Render: ${formatPerfMs(perf.renderMs)}</span>
+          <span class="ui-badge hub-kpi--${metricTone(perf.totalMs)}">Total: ${formatPerfMs(perf.totalMs)}</span>
+          <span class="ui-badge">Fonte: ${escapeHtml(perf.source || 'runtime')}</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-perf-action="stress" ${stress.running ? 'disabled' : ''}>${stress.running ? 'Stress test em execução…' : 'Stress test'}</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <span class="ui-badge">Páginas testadas: ${stress.pagesTested || 0}</span>
+        <span class="ui-badge hub-kpi--${metricTone(stress.avgTotalMs)}">Média total: ${formatPerfMs(stress.avgTotalMs)}</span>
+        <span class="ui-badge hub-kpi--${metricTone(stress.p95TotalMs)}">P95 total: ${formatPerfMs(stress.p95TotalMs)}</span>
+        <span class="ui-badge">Dentro do SLA: ${stress.withinSlaPct === null || stress.withinSlaPct === undefined ? '-' : `${stress.withinSlaPct}%`}</span>
+      </div>
+    </section>
+  `;
 }
 
 function renderModulePage() {
@@ -1280,6 +1426,8 @@ function renderModulePage() {
         </div>
         <button type="button" class="btn btn-primary" data-advogado-action="create">Criar ${escapeHtml(config.singular)}</button>
       </div>
+
+      ${renderPerformancePanel(paginated)}
 
       ${renderModuleHubSection(state.moduleKey, state.records, config, paginated.total)}
 
@@ -1655,6 +1803,12 @@ function bindModuleEvents(host) {
       return;
     }
 
+    const perfButton = event.target.closest('[data-perf-action="stress"]');
+    if (perfButton) {
+      runStressTest(host);
+      return;
+    }
+
     const pageButton = event.target.closest('[data-advogado-page]');
     if (pageButton) {
       if (pageButton.dataset.advogadoPage === 'go') {
@@ -1731,11 +1885,17 @@ function renderInto(host) {
 
 async function refreshRecords() {
   const requestId = ++remoteRequestSequence;
+  const t0 = performance.now();
+  const q0 = performance.now();
   state.records = await loadModuleRecords(state.moduleKey);
+  const queryMs = performance.now() - q0;
   if (requestId !== remoteRequestSequence) return;
   const host = document.querySelector('[data-advogado-module-host]');
   if (host) {
+    const r0 = performance.now();
     renderInto(host);
+    const renderMs = performance.now() - r0;
+    updatePerfMetric({ queryMs, renderMs, totalMs: performance.now() - t0, items: state.records.length, source: state.remotePagination ? 'remote-page' : 'local-full' });
     prefetchAdjacentPages(state.moduleKey);
   }
 }
@@ -1969,4 +2129,5 @@ export async function bootAdvogadoPage(moduleKey) {
 
   renderInto(host);
   bindModuleEvents(host);
+  if (shouldAutoRunStressTest()) runStressTest(host);
 }
