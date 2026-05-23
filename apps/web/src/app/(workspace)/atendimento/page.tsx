@@ -34,12 +34,20 @@ export default async function AtendimentoPage() {
       .limit(30),
   ]);
 
+  const { data: workspaceMember } = await supabase
+    .from('portal_workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle();
+
   return (
     <AtendimentoHub
       mensagens={mensagens ?? []}
       agendamentos={agendamentos ?? []}
       slots={slots ?? []}
       userId={user.id}
+      tenantId={workspaceMember?.workspace_id ?? null}
     />
   );
 }

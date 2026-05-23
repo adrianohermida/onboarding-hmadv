@@ -29,6 +29,7 @@ describe('crm conversational messaging contract', () => {
     expect(sql).toContain('can_access_crm_conversation');
     expect(sql).toContain('is_workspace_member_for(tenant_id');
     expect(sql).toContain('search_vector tsvector GENERATED ALWAYS');
+    expect(sql).toContain('CREATE OR REPLACE VIEW vw_crm_inbox WITH (security_invoker = true)');
     expect(sql).toContain('ALTER PUBLICATION supabase_realtime ADD TABLE crm_messages');
   });
 
@@ -40,9 +41,13 @@ describe('crm conversational messaging contract', () => {
 
     expect(mensagens).not.toContain('refetchInterval');
     expect(atendimento).not.toContain('refetchInterval');
-    expect(mensagens).toContain("channel(`legacy-mensagens:");
+    expect(mensagens).toContain('useRealtimeInbox');
+    expect(mensagens).toContain('useRealtimeConversation');
+    expect(mensagens).not.toContain("from('re_messages')");
+    expect(mensagens).not.toContain('buildConversas');
     expect(atendimento).toContain("channel(`atendimento-mensagens:");
     expect(atendimento).toContain("table: 're_mensagens'");
+    expect(atendimento).toContain('ensurePortalConversation');
     expect(service).toContain("from('vw_crm_inbox')");
     expect(service).toContain("from('crm_messages')");
     expect(service).toContain("channel(`crm:conversation:");
@@ -55,6 +60,6 @@ describe('crm conversational messaging contract', () => {
 
     expect(audit).toContain('Conversas nao existiam como entidade persistida');
     expect(audit).toContain('RLS por `tenant_id`');
-    expect(audit).toContain('Trocar `MensagensClient.tsx` para consumir `vw_crm_inbox`');
+    expect(audit).toContain('`MensagensClient.tsx` passou a consumir `vw_crm_inbox`');
   });
 });

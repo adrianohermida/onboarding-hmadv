@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { ConversationalService } from '@/features/conversational/ConversationalService';
+import { useRealtimeConversation, useRealtimeInbox } from '@/features/conversational/useRealtimeInbox';
+import type { CrmConversation } from '@/features/conversational/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +46,7 @@ interface Props {
   agendamentos: Agendamento[];
   slots: Slot[];
   userId: string;
+  tenantId: string | null;
 }
 
 type Tab = 'mensagens' | 'agenda' | 'ajuda';
@@ -55,11 +59,26 @@ const TABS = [
 
 // ── Mensagens tab ─────────────────────────────────────────────────────────────
 
-function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string }) {
+function MensagensTab({
+  initial,
+  userId,
+  tenantId,
+}: {
+  initial: Mensagem[];
+  userId: string;
+  tenantId: string | null;
+}) {
   const [texto, setTexto] = useState('');
   const qc = useQueryClient();
   const supabase = createClient();
+  const service = useMemo(() => new ConversationalService(supabase), [supabase]);
   const queryKey = useMemo(() => ['atendimento-mensagens'], []);
+  const { data: inbox = [], refetch: refetchInbox } = useRealtimeInbox({ tenantId });
+  const crmConversation = useMemo(
+    () => inbox.find((item) => item.contact_user_id === userId && item.channel === 'portal') ?? inbox[0] ?? null,
+    [inbox, userId],
+  );
+  const { data: crmMessages = [], sendMessage } = useRealtimeConversation(crmConversation?.id ?? null);
 
   useEffect(() => {
     const channel = supabase
@@ -74,15 +93,23 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
     };
   }, [qc, queryKey, supabase, userId]);
 
-  const { data: mensagens = initial } = useQuery<Mensagem[]>({
+  const { data: mensagensLegadas = initial } = useQuery<Mensagem[]>({
     queryKey,
+    enabled: !crmConversation,
     queryFn: async () => {
       const { data } = await supabase
         .from('re_mensagens')
         .select('id, caso_id, remetente_id, conteudo, lida, criado_em, casos(nome_cliente)')
         .order('criado_em', { ascending: false })
         .limit(50);
-      return data ?? [];
+      return (data ?? []).map((row: any) => ({
+        id: row.id,
+        user_id: row.remetente_id ?? null,
+        from_role: row.remetente_id === userId ? 'user' : 'admin',
+        from_name: row.casos?.nome_cliente ?? null,
+        text: row.conteudo ?? '',
+        ts: row.criado_em,
+      }));
     },
     initialData: initial,
     staleTime: 15_000,
@@ -90,21 +117,40 @@ function MensagensTab({ initial, userId }: { initial: Mensagem[]; userId: string
 
   const enviar = useMutation({
     mutationFn: async (conteudo: string) => {
-      const { error } = await supabase.from('re_mensagens').insert({
-        remetente_id: userId,
-        conteudo: conteudo.trim(),
-        lida: false,
+      if (!tenantId) throw new Error('Workspace nao encontrado');
+      const conversation: CrmConversation = crmConversation ?? await service.ensurePortalConversation({
+        tenantId,
+        currentUserId: userId,
       });
-      if (error) throw error;
+      await service.sendMessage({
+        conversationId: conversation.id,
+        tenantId: conversation.tenant_id,
+        body: conteudo.trim(),
+        senderRole: 'client',
+        visibleToClient: true,
+        channel: 'portal',
+      });
     },
     onSuccess: () => {
       setTexto('');
+      refetchInbox();
+      qc.invalidateQueries({ queryKey: ['crm-messages', crmConversation?.id] });
       qc.invalidateQueries({ queryKey: ['atendimento-mensagens'] });
     },
     onError: () => toast.error('Falha ao enviar mensagem'),
   });
 
-  const naoLidas = mensagens.filter((m) => m.from_role !== 'user').length;
+  const mensagens = crmConversation
+    ? crmMessages.map((m) => ({
+        id: m.id,
+        user_id: m.sender_user_id,
+        from_role: m.sender_role === 'client' ? 'user' : 'admin',
+        from_name: null,
+        text: m.body,
+        ts: m.created_at,
+      }))
+    : mensagensLegadas;
+  const naoLidas = crmConversation?.unread_client_count ?? mensagens.filter((m) => m.from_role !== 'user').length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -346,7 +392,7 @@ function AjudaTab() {
 
 // ── Hub ───────────────────────────────────────────────────────────────────────
 
-export default function AtendimentoHub({ mensagens, agendamentos, slots, userId }: Props) {
+export default function AtendimentoHub({ mensagens, agendamentos, slots, userId, tenantId }: Props) {
   const [tab, setTab] = useState<Tab>('mensagens');
   const naoLidas = mensagens.filter((m) => m.from_role !== 'user').length;
 
@@ -381,7 +427,7 @@ export default function AtendimentoHub({ mensagens, agendamentos, slots, userId 
       </div>
 
       <div>
-        {tab === 'mensagens' && <MensagensTab initial={mensagens} userId={userId} />}
+        {tab === 'mensagens' && <MensagensTab initial={mensagens} userId={userId} tenantId={tenantId} />}
         {tab === 'agenda'    && <AgendaTab agendamentos={agendamentos} slots={slots} userId={userId} />}
         {tab === 'ajuda'     && <AjudaTab />}
       </div>

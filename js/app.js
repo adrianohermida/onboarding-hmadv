@@ -21,7 +21,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260523g';
+const SHELL_VERSION = '20260523h';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -75,6 +75,7 @@ const OPTIONAL_OPERATIONAL_TABLES = new Set([
   'serventias',
   'relacoes_processuais',
 ]);
+const OPTIONAL_OPERATIONAL_ALWAYS_FALLBACK = true;
 const OPTIONAL_MISSING_TABLES_STORAGE_KEY = 'portal:optional-missing-rest-tables';
 const OPTIONAL_SCHEMA_MISSING_STORAGE_KEY = 'portal:optional-rest-schema-missing';
 
@@ -136,6 +137,7 @@ function isKnownMissingOptionalTable(url) {
 
 function shouldBypassOptionalRestRequest(url, method) {
   if (method !== 'GET' || !isOptionalOperationalRestRequest(url)) return false;
+  if (OPTIONAL_OPERATIONAL_ALWAYS_FALLBACK) return true;
   if (window.location.protocol === 'file:') return true;
   return isKnownMissingOptionalTable(url);
 }

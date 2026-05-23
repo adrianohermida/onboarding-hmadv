@@ -52,6 +52,7 @@ export interface CrmConversation {
   pipeline_stage: ConversationPipelineStage;
   assigned_user_id: string | null;
   fd_ticket_id: number | null;
+  crm_ticket_id?: string | null;
   tags: string[];
   last_message_at: string | null;
   last_message_preview: string | null;

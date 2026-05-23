@@ -7,6 +7,7 @@ export class ConversationalService {
   constructor(private readonly supabase: SupabaseClient) {}
 
   async listInbox(params: {
+    tenantId?: string | null;
     search?: string;
     status?: string;
     assignedUserId?: string;
@@ -19,6 +20,7 @@ export class ConversationalService {
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(params.limit ?? 40);
 
+    if (params.tenantId) query = query.eq('tenant_id', params.tenantId);
     if (params.status && params.status !== 'all') query = query.eq('status', params.status);
     if (params.assignedUserId) query = query.eq('assigned_user_id', params.assignedUserId);
     if (params.cursor) query = query.lt('last_message_at', params.cursor);
@@ -30,6 +32,40 @@ export class ConversationalService {
     const { data, error } = await query;
     if (error) throw error;
     return (data ?? []) as CrmConversation[];
+  }
+
+  async ensurePortalConversation(params: {
+    tenantId: string;
+    currentUserId: string;
+    title?: string;
+    contactName?: string | null;
+  }): Promise<CrmConversation> {
+    const existing = await this.listInbox({ tenantId: params.tenantId, limit: 50 });
+    const active = existing.find((item) =>
+      item.contact_user_id === params.currentUserId &&
+      item.channel === 'portal' &&
+      !item.archived_at &&
+      item.status !== 'archived',
+    );
+    if (active) return active;
+
+    const { data, error } = await this.supabase
+      .from('crm_conversations')
+      .insert({
+        tenant_id: params.tenantId,
+        contact_user_id: params.currentUserId,
+        contact_name: params.contactName ?? null,
+        title: params.title ?? 'Atendimento do cliente',
+        channel: 'portal',
+        status: 'open',
+        priority: 'normal',
+        pipeline_stage: 'triagem',
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as CrmConversation;
   }
 
   async listMessages(conversationId: string, params: { limit?: number; before?: string | null } = {}): Promise<CrmMessage[]> {

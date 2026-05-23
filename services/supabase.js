@@ -37,6 +37,7 @@ const OPTIONAL_OPERATIONAL_TABLES = new Set([
   'serventias',
   'relacoes_processuais',
 ]);
+const OPTIONAL_OPERATIONAL_ALWAYS_FALLBACK = true;
 const OPTIONAL_MISSING_TABLES_STORAGE_KEY = 'portal:optional-missing-rest-tables';
 const OPTIONAL_SCHEMA_MISSING_STORAGE_KEY = 'portal:optional-rest-schema-missing';
 
@@ -98,6 +99,7 @@ function isKnownMissingOptionalTable(url) {
 
 function shouldBypassOptionalRestRequest(url, method) {
   if (method !== 'GET' || !isOptionalOperationalRestRequest(url)) return false;
+  if (OPTIONAL_OPERATIONAL_ALWAYS_FALLBACK) return true;
   if (window.location.protocol === 'file:') return true;
   return isKnownMissingOptionalTable(url);
 }

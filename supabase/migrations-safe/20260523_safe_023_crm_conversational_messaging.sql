@@ -576,7 +576,7 @@ TO authenticated;
 GRANT EXECUTE ON FUNCTION can_access_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION can_write_crm_conversation(uuid) TO authenticated;
 
-CREATE OR REPLACE VIEW vw_crm_inbox AS
+CREATE OR REPLACE VIEW vw_crm_inbox WITH (security_invoker = true) AS
 SELECT
   c.id,
   c.tenant_id,

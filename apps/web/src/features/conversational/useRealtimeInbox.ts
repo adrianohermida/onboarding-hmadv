@@ -21,6 +21,7 @@ export function useRealtimeInbox(params: {
     queryKey,
     enabled: Boolean(params.tenantId),
     queryFn: () => service.listInbox({
+      tenantId: params.tenantId,
       search: params.search,
       status: params.status,
       assignedUserId: params.assignedUserId,
