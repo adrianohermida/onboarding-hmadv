@@ -1,11 +1,11 @@
 /**
  * Auth Manager - Gerencia autenticação multi-projeto Supabase
  * Projeto Default: sspvizogbcyigquqycsz
- * Projeto Mensageria: fmtmcblvzfisenhvcjoo
+ * Projeto Mensageria: cundpbzqghmkohcozsex
  */
 
 const DEFAULT_SUPABASE_URL = 'https://sspvizogbcyigquqycsz.supabase.co';
-const DEFAULT_MESSAGING_URL = 'https://fmtmcblvzfisenhvcjoo.supabase.co';
+const DEFAULT_MESSAGING_URL = 'https://cundpbzqghmkohcozsex.supabase.co';
 
 function readStorageValue(key) {
   try {
