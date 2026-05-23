@@ -52,7 +52,7 @@ const KANBAN_COLS: { status: string; label: string; headerCls: string }[] = [
 // ── Utils ─────────────────────────────────────────────────────────────────────
 
 function isOverdue(dateStr: string | null, status: string) {
-  if (!dateStr || status === 'concluida' || status === 'cancelada') return false;
+  if (!dateStr || status === 'done' || status === 'cancelled' || status === 'concluida' || status === 'cancelada') return false;
   return new Date(dateStr) < new Date();
 }
 
@@ -119,7 +119,7 @@ function useTarefasContagens() {
         abertas:    abertas.count ?? 0,
         concluidas: concluidas.count ?? 0,
         vencidas:   vencidas.count ?? 0,
-        criticas:   criticas.count ?? 0,
+        criticas:   0,
       };
     },
   });
@@ -130,7 +130,7 @@ function useAtualizarStatus() {
   const supabase = createClient();
   return useMutation({
     mutationFn: async ({ id, novoStatus }: { id: string; novoStatus: string }) => {
-      await supabase.from('re_tarefas').update({ status: novoStatus }).eq('id', id);
+      await supabase.from('re_tasks').update({ status: novoStatus }).eq('id', id);
     },
     onMutate: async ({ id, novoStatus }) => {
       await qc.cancelQueries({ queryKey: ['tarefas'] });
@@ -152,17 +152,14 @@ function useCriarTarefa() {
   const supabase = createClient();
   return useMutation({
     mutationFn: async (nova: {
-      titulo: string; descricao?: string; prioridade: string;
-      tipo?: string; data_vencimento?: string;
+      titulo: string; descricao?: string; data_vencimento?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('re_tarefas').insert({
-        titulo: nova.titulo,
-        descricao: nova.descricao || null,
-        prioridade: nova.prioridade,
-        tipo: nova.tipo || null,
-        data_vencimento: nova.data_vencimento || null,
-        responsavel_id: user?.id,
+      const { error } = await supabase.from('re_tasks').insert({
+        title: nova.titulo,
+        description: nova.descricao || null,
+        due_date: nova.data_vencimento || null,
+        created_by: user?.id,
         status: 'pendente',
       });
       if (error) throw error;
@@ -176,15 +173,13 @@ function useCriarTarefa() {
 function NovaTarefaForm({ onClose }: { onClose: () => void }) {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [prioridade, setPrioridade] = useState('media');
-  const [tipo, setTipo] = useState('');
   const [vencimento, setVencimento] = useState('');
   const criar = useCriarTarefa();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!titulo.trim()) return;
-    await criar.mutateAsync({ titulo: titulo.trim(), descricao, prioridade, tipo, data_vencimento: vencimento });
+    await criar.mutateAsync({ titulo: titulo.trim(), descricao, data_vencimento: vencimento });
     onClose();
   }
 
@@ -211,30 +206,10 @@ function NovaTarefaForm({ onClose }: { onClose: () => void }) {
         rows={2}
         className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
       />
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-[11px] text-muted-foreground mb-1">Prioridade</label>
-          <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="critica">Crítica</option>
-            <option value="alta">Alta</option>
-            <option value="media">Média</option>
-            <option value="baixa">Baixa</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-muted-foreground mb-1">Tipo</label>
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">Geral</option>
-            {Object.entries(TIPO_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-muted-foreground mb-1">Vencimento</label>
-          <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
-        </div>
+      <div>
+        <label className="block text-[11px] text-muted-foreground mb-1">Vencimento</label>
+        <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)}
+          className="w-full px-2 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onClose}
@@ -260,11 +235,9 @@ function TarefaCard({
   onToggle: () => void;
   onMover?: (novoStatus: string) => void;
 }) {
-  const overdue = isOverdue(tarefa.data_vencimento, tarefa.status);
-  const done = tarefa.status === 'concluida';
-  const atraso = overdue ? diasAtraso(tarefa.data_vencimento) : null;
-  const pCfg = tarefa.prioridade ? PRIORIDADE_CONFIG[tarefa.prioridade] : null;
-  const tipoCfg = tarefa.tipo ? TIPO_CONFIG[tarefa.tipo] : null;
+  const overdue = isOverdue(tarefa.due_date, tarefa.status);
+  const done = tarefa.status === 'done' || tarefa.status === 'concluida';
+  const atraso = overdue ? diasAtraso(tarefa.due_date) : null;
 
   return (
     <div className={cn(
@@ -286,42 +259,29 @@ function TarefaCard({
 
         <div className="flex-1 min-w-0">
           <p className={cn('text-sm font-medium leading-snug', done && 'line-through text-muted-foreground')}>
-            {tarefa.titulo}
+            {tarefa.title}
           </p>
 
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {pCfg && (
-              <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded ring-1 ring-inset', pCfg.cls)}>
-                {pCfg.label}
-              </span>
-            )}
-            {tipoCfg && (
-              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', tipoCfg.cls)}>
-                {tipoCfg.label}
-              </span>
-            )}
-          </div>
-
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            {tarefa.casos?.nome_cliente && (
+            {tarefa.portal_casos?.full_name && (
               <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
-                {tarefa.casos.nome_cliente}
+                {tarefa.portal_casos.full_name}
               </span>
             )}
-            {tarefa.data_vencimento && (
+            {tarefa.due_date && (
               <span className={cn('flex items-center gap-1 text-[11px]',
                 overdue && !done ? 'text-rose-500 font-medium' : 'text-muted-foreground')}>
                 <Calendar className="h-3 w-3" />
                 {overdue && !done && atraso
                   ? `Venceu ${atraso}d atrás`
-                  : formatDate(tarefa.data_vencimento)}
+                  : formatDate(tarefa.due_date)}
               </span>
             )}
           </div>
 
-          {!compact && tarefa.descricao && (
+          {!compact && tarefa.description && (
             <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-              {tarefa.descricao}
+              {tarefa.description}
             </p>
           )}
         </div>
@@ -423,7 +383,8 @@ export default function TarefasClient({ userId: _userId }: { tarefas?: Tarefa[];
   }
 
   function handleToggle(t: Tarefa) {
-    atualizar.mutate({ id: t.id, novoStatus: t.status === 'concluida' ? 'pendente' : 'concluida' });
+    const isDone = t.status === 'done' || t.status === 'concluida';
+    atualizar.mutate({ id: t.id, novoStatus: isDone ? 'pendente' : 'done' });
   }
 
   function handleMover(id: string, novoStatus: string) {
