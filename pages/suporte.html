@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Suporte — Hermida Maia Advocacia</title>
-<link rel="stylesheet" href="../styles/variables.css?v=20260523f">
-<link rel="stylesheet" href="../styles/main.css?v=20260523f">
-<link rel="stylesheet" href="../styles/layout.css?v=20260523f">
-<link rel="stylesheet" href="../styles/components.css?v=20260523f">
+<link rel="stylesheet" href="../styles/variables.css?v=20260523g">
+<link rel="stylesheet" href="../styles/main.css?v=20260523g">
+<link rel="stylesheet" href="../styles/layout.css?v=20260523g">
+<link rel="stylesheet" href="../styles/components.css?v=20260523g">
 </head>
 <body>
 
@@ -212,7 +212,7 @@
 
 <div class="toast" id="toast"><span id="toast-msg"></span></div>
 
-<script type="module" src="../js/app.js?v=20260523f"></script>
+<script type="module" src="../js/app.js?v=20260523g"></script>
 <script type="module">
 import { showToast }        from '../utils/helpers.js';
 import { AdminService } from '../services/database.js';
@@ -433,6 +433,12 @@ async function init({ page = ticketState.page, reset = false } = {}) {
 
     if (!suporteSessionLoaded || !currentUser?.id) {
       renderUnauthenticatedState('Aguardando autenticação da sessão para carregar chamados.');
+      return;
+    }
+
+    if (window.location.protocol === 'file:') {
+      freshdeskAuthUnavailable = true;
+      renderUnauthenticatedState('Suporte Freshdesk indisponível em execução local (file://). Use ambiente autenticado para consultar chamados.');
       return;
     }
 
@@ -661,6 +667,10 @@ window.submitTicket = async function() {
 
 setupTicketFilters();
 document.addEventListener('app:ready', () => {
+  if (window.location.protocol === 'file:') {
+    renderUnauthenticatedState('Suporte Freshdesk indisponível em execução local (file://). Use ambiente autenticado para consultar chamados.');
+    return;
+  }
   if (currentUser?.id && suporteSessionLoaded) {
     init({ page: 1 });
     return;
