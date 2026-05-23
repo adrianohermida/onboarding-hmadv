@@ -239,6 +239,8 @@ let lastTickets = [];
 let suporteSessionLoaded = false;
 let suporteUnauthNotified = false;
 let freshdeskAuthUnavailable = false;
+let suporteStartupInitDone = false;
+let suporteLastUserLoadedKey = null;
 
 const byId = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -384,17 +386,23 @@ function renderUnauthenticatedState(message = 'Sua sessão não está autenticad
 }
 
 document.addEventListener('app:user-loaded', async (e) => {
+  const eventUserId = e.detail?.user?.id || null;
+  const eventIsAdmin = !!e.detail?.isAdmin;
+  const eventKey = `${eventUserId || 'anon'}:${eventIsAdmin ? 'admin' : 'client'}:${requestedClientId || '-'}`;
+  if (suporteLastUserLoadedKey === eventKey) return;
+  suporteLastUserLoadedKey = eventKey;
+
   currentUser = e.detail?.user;
   currentCaso = e.detail?.caso;
   isAdminUser = !!e.detail?.isAdmin;
   suporteSessionLoaded = true;
-  freshdeskAuthUnavailable = false;
 
   const bar = byId('suporte-admin-bar');
   if (!bar) return;
   if (!isAdminUser) {
     bar.style.display = 'none';
     await resolveSupportContext();
+    suporteStartupInitDone = true;
     await init({ page: 1, reset: true });
     return;
   }
@@ -416,6 +424,7 @@ document.addEventListener('app:user-loaded', async (e) => {
   }
 
   await resolveSupportContext();
+  suporteStartupInitDone = true;
   await init({ page: 1, reset: true });
 });
 
@@ -477,6 +486,10 @@ async function init({ page = ticketState.page, reset = false } = {}) {
       }
       return;
     }
+
+    // Session became valid again, clear the temporary unauthenticated lock.
+    freshdeskAuthUnavailable = false;
+    suporteUnauthNotified = false;
 
     const filters = collectFilters();
     const ticketResult = await FreshdeskService.listTickets({ ...filters, page }).catch(error => ({
@@ -631,6 +644,17 @@ window.submitTicket = async function() {
   btn.disabled = true; btn.textContent = 'Enviando...';
 
   try {
+    if (freshdeskAuthUnavailable) {
+      const hasSession = await ensureFreshdeskSession();
+      if (!hasSession) {
+        showToast('Sessão de suporte expirada. Faça login novamente.', 'warn');
+        renderUnauthenticatedState('Sessão ausente para criar chamados. Faça login novamente.');
+        return;
+      }
+      freshdeskAuthUnavailable = false;
+      suporteUnauthNotified = false;
+    }
+
     const ticket = await FreshdeskService.createTicket({ subject, description: desc, tags: ['portal'], attachments: files });
 
     if (currentUser) {
@@ -658,8 +682,20 @@ window.submitTicket = async function() {
 
     await init({ page: 1, reset: true });
   } catch (err) {
+    let handledUnauth = false;
+    if (isUnauthenticatedError(err)) {
+      freshdeskAuthUnavailable = true;
+      renderUnauthenticatedState('Sessão não autenticada no Freshdesk. Faça login novamente para criar chamados.');
+      if (!suporteUnauthNotified) {
+        showToast('Sessão de suporte não autenticada. Faça login novamente.', 'warn');
+        suporteUnauthNotified = true;
+      }
+      handledUnauth = true;
+    }
     console.error(err);
-    showToast(err?.message || 'Erro ao criar chamado. Tente novamente.', 'error');
+    if (!handledUnauth) {
+      showToast(err?.message || 'Erro ao criar chamado. Tente novamente.', 'error');
+    }
   } finally {
     btn.disabled = false; btn.textContent = 'Enviar chamado';
   }
@@ -667,11 +703,13 @@ window.submitTicket = async function() {
 
 setupTicketFilters();
 document.addEventListener('app:ready', () => {
+  if (suporteStartupInitDone) return;
   if (window.location.protocol === 'file:') {
     renderUnauthenticatedState('Suporte Freshdesk indisponível em execução local (file://). Use ambiente autenticado para consultar chamados.');
     return;
   }
   if (currentUser?.id && suporteSessionLoaded) {
+    suporteStartupInitDone = true;
     init({ page: 1 });
     return;
   }

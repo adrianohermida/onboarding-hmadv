@@ -126,7 +126,7 @@ export const FreshdeskService = {
         body: { action: 'create_ticket', subject, description, priority, tags, attachments: normalizedAttachments },
         includeApiKey: false,
         timeoutMs: normalizedAttachments.length ? 45000 : 20000,
-        retries: 1,
+        retries: 0,
       });
       return normalizeTicketResponse(response);
     } catch (error) {
