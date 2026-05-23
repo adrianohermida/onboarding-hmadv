@@ -110,11 +110,10 @@ function useTarefasContagens() {
     queryKey: ['tarefas-contagens'],
     staleTime: 60_000,
     queryFn: async () => {
-      const [abertas, concluidas, vencidas, criticas] = await Promise.all([
-        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento']),
-        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('status', 'concluida'),
-        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).in('status', ['pendente', 'em_andamento']).lt('data_vencimento', new Date().toISOString()),
-        supabase.from('re_tarefas').select('id', { count: 'exact', head: true }).eq('prioridade', 'critica').not('status', 'eq', 'concluida'),
+      const [abertas, concluidas, vencidas] = await Promise.all([
+        supabase.from('re_tasks').select('id', { count: 'exact', head: true }).not('status', 'in', '("done","cancelled","concluida","cancelada")'),
+        supabase.from('re_tasks').select('id', { count: 'exact', head: true }).in('status', ['done', 'concluida']),
+        supabase.from('re_tasks').select('id', { count: 'exact', head: true }).not('status', 'in', '("done","cancelled","concluida","cancelada")').lt('due_date', new Date().toISOString().split('T')[0]),
       ]);
       return {
         abertas:    abertas.count ?? 0,
