@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2e6da4">
+  <meta name="description" content="Design System Recupera Empresas v2.0 - Demo Mobile-First">
+  <title>Design System v2.0 | Demo Recupera Empresas</title>
+  
+  <!-- Design System Core -->
+  <link rel="stylesheet" href="tokens/core-v2.css">
+  <link rel="stylesheet" href="components/base-v2.css">
+  <link rel="stylesheet" href="patterns/pwa.css">
+  
+  <style>
+    /* Demo-specific styles */
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--ds-space-4);
+    }
+    
+    .demo-section {
+      margin-bottom: var(--ds-space-8);
+    }
+    
+    .demo-section-title {
+      font-size: var(--ds-font-size-xl);
+      font-weight: var(--ds-font-weight-bold);
+      color: var(--ds-color-brand-700);
+      margin-bottom: var(--ds-space-4);
+      padding-bottom: var(--ds-space-2);
+      border-bottom: 2px solid var(--ds-color-brand-200);
+    }
+    
+    .component-grid {
+      display: grid;
+      gap: var(--ds-space-4);
+      grid-template-columns: 1fr;
+    }
+    
+    @media (min-width: 768px) {
+      .component-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .component-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    .color-palette {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--ds-space-3);
+      margin-bottom: var(--ds-space-4);
+    }
+    
+    .color-swatch {
+      border-radius: var(--ds-radius-md);
+      overflow: hidden;
+      box-shadow: var(--ds-shadow-sm);
+    }
+    
+    .color-swatch-preview {
+      height: 80px;
+      width: 100%;
+    }
+    
+    .color-swatch-info {
+      padding: var(--ds-space-2);
+      background: var(--ds-color-surface-0);
+    }
+    
+    .color-swatch-name {
+      font-size: var(--ds-font-size-xs);
+      font-weight: var(--ds-font-weight-medium);
+      color: var(--ds-color-text-secondary);
+    }
+    
+    .color-swatch-value {
+      font-size: var(--ds-font-size-xs);
+      color: var(--ds-color-text-tertiary);
+      font-family: var(--ds-font-family-mono);
+    }
+    
+    .demo-nav {
+      position: sticky;
+      top: 0;
+      background: var(--ds-color-surface-0);
+      border-bottom: 1px solid var(--ds-color-border-default);
+      padding: var(--ds-space-3) var(--ds-space-4);
+      z-index: var(--ds-z-sticky);
+      display: flex;
+      gap: var(--ds-space-2);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .demo-nav a {
+      white-space: nowrap;
+      padding: var(--ds-space-2) var(--ds-space-3);
+      border-radius: var(--ds-radius-full);
+      font-size: var(--ds-font-size-sm);
+      font-weight: var(--ds-font-weight-medium);
+      color: var(--ds-color-text-secondary);
+      text-decoration: none;
+      transition: all var(--ds-transition-fast);
+    }
+    
+    .demo-nav a:hover {
+      background: var(--ds-color-brand-50);
+      color: var(--ds-color-brand-700);
+    }
+    
+    .demo-nav a.active {
+      background: var(--ds-color-brand-100);
+      color: var(--ds-color-brand-800);
+    }
+    
+    /* Safe area demo */
+    .safe-area-demo {
+      border: 2px dashed var(--ds-color-brand-300);
+      border-radius: var(--ds-radius-lg);
+      padding: var(--ds-space-4);
+      margin-bottom: var(--ds-space-4);
+    }
+    
+    .safe-area-label {
+      font-size: var(--ds-font-size-xs);
+      color: var(--ds-color-brand-700);
+      font-weight: var(--ds-font-weight-semibold);
+      text-transform: uppercase;
+      letter-spacing: var(--ds-letter-spacing-wide);
+      margin-bottom: var(--ds-space-2);
+    }
+  </style>
+</head>
+<body>
+  <!-- Network Status -->
+  <div class="ds-network-status" id="network-status" hidden>
+    <span id="network-message"></span>
+  </div>
+  
+  <!-- Navigation -->
+  <nav class="demo-nav ds-safe-area-top">
+    <a href="#cores" class="active">Cores</a>
+    <a href="#tipografia">Tipografia</a>
+    <a href="#botoes">Botões</a>
+    <a href="#inputs">Inputs</a>
+    <a href="#cards">Cards</a>
+    <a href="#badges">Badges</a>
+    <a href="#pwa">PWA</a>
+  </nav>
+  
+  <!-- Main Content -->
+  <main class="demo-container ds-safe-area-bottom">
+    <header style="padding: var(--ds-space-6) 0;">
+      <h1 class="ds-heading-1">Design System v2.0</h1>
+      <p class="ds-body-large" style="color: var(--ds-color-text-tertiary);">
+        Recupera Empresas • Mobile-First • Android/iOS Guidelines • PWA Ready
+      </p>
+      <div style="display: flex; gap: var(--ds-space-2); margin-top: var(--ds-space-3);">
+        <span class="ds-badge ds-badge-success">v2.0.0</span>
+        <span class="ds-badge ds-badge-primary">WCAG AA</span>
+        <span class="ds-chip">Touch-Friendly</span>
+      </div>
+    </header>
+    
+    <!-- Cores Section -->
+    <section id="cores" class="demo-section">
+      <h2 class="demo-section-title">🎨 Paleta de Cores</h2>
+      
+      <h3 class="ds-heading-4" style="margin-bottom: var(--ds-space-3);">Brand Colors</h3>
+      <div class="color-palette">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-brand-900);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Brand 900</div>
+            <div class="color-swatch-value">#1a3a5c</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-brand-700);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Brand 700</div>
+            <div class="color-swatch-value">#2e6da4</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-brand-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Brand 500</div>
+            <div class="color-swatch-value">#4f8ec8</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-accent-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Accent 500</div>
+            <div class="color-swatch-value">#f5a623</div>
+          </div>
+        </div>
+      </div>
+      
+      <h3 class="ds-heading-4" style="margin-bottom: var(--ds-space-3);">Semantic Colors</h3>
+      <div class="color-palette">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-success-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Success</div>
+            <div class="color-swatch-value">#1a7a4a</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-warning-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Warning</div>
+            <div class="color-swatch-value">#b45309</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-danger-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Danger</div>
+            <div class="color-swatch-value">#c0392b</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background: var(--ds-color-info-500);"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Info</div>
+            <div class="color-swatch-value">#0ea5e9</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Tipografia Section -->
+    <section id="tipografia" class="demo-section">
+      <h2 class="demo-section-title">📝 Tipografia Fluida</h2>
+      
+      <div class="component-grid">
+        <div>
+          <h1 class="ds-heading-1">Heading 1</h1>
+          <p class="ds-caption">clamp(30px, 1.875rem + 0.7vw, 36px)</p>
+        </div>
+        <div>
+          <h2 class="ds-heading-2">Heading 2</h2>
+          <p class="ds-caption">clamp(24px, 1.5rem + 0.5vw, 30px)</p>
+        </div>
+        <div>
+          <h3 class="ds-heading-3">Heading 3</h3>
+          <p class="ds-caption">clamp(20px, 1.25rem + 0.3vw, 24px)</p>
+        </div>
+        <div>
+          <h4 class="ds-heading-4">Heading 4</h4>
+          <p class="ds-caption">clamp(18px, 1.125rem + 0.2vw, 20px)</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: var(--ds-space-6);">
+        <p class="ds-body-large">Body Large - Ideal para textos introdutórios</p>
+        <p class="ds-body">Body - Texto padrão para conteúdo principal</p>
+        <p class="ds-body-small">Body Small - Textos secundários e descrições</p>
+        <p class="ds-caption">Caption - Legendas e informações auxiliares</p>
+      </div>
+    </section>
+    
+    <!-- Botões Section -->
+    <section id="botoes" class="demo-section">
+      <h2 class="demo-section-title">🔘 Botões (48x48px min)</h2>
+      
+      <div class="component-grid">
+        <div>
+          <div class="safe-area-label">Variantes Principais</div>
+          <div style="display: flex; flex-direction: column; gap: var(--ds-space-2);">
+            <button class="ds-btn ds-btn-primary">Primário</button>
+            <button class="ds-btn ds-btn-secondary">Secundário</button>
+            <button class="ds-btn ds-btn-tertiary">Terciário</button>
+            <button class="ds-btn ds-btn-danger">Perigo</button>
+          </div>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Tamanhos</div>
+          <div style="display: flex; flex-direction: column; gap: var(--ds-space-2);">
+            <button class="ds-btn ds-btn-primary ds-btn-sm">Small (44px)</button>
+            <button class="ds-btn ds-btn-primary">Medium (48px)</button>
+            <button class="ds-btn ds-btn-primary ds-btn-lg">Large (56px)</button>
+            <button class="ds-btn ds-btn-primary ds-btn-xl">XL (64px)</button>
+          </div>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Estados</div>
+          <div style="display: flex; flex-direction: column; gap: var(--ds-space-2);">
+            <button class="ds-btn ds-btn-primary">Normal</button>
+            <button class="ds-btn ds-btn-primary" disabled>Disabled</button>
+            <button class="ds-btn ds-btn-primary" aria-disabled="true">Aria Disabled</button>
+          </div>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Com Ícones</div>
+          <div style="display: flex; flex-direction: column; gap: var(--ds-space-2);">
+            <button class="ds-btn ds-btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Adicionar
+            </button>
+            <button class="ds-btn ds-btn-secondary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16,17 21,12 16,7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Exportar
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: var(--ds-space-4);" class="safe-area-demo">
+        <div class="safe-area-label">Full Width Mobile</div>
+        <button class="ds-btn ds-btn-primary ds-btn-block-mobile">Confirmar Ação</button>
+        <p class="ds-caption" style="margin-top: var(--ds-space-2);">
+          👆 Em mobile (< 480px), este botão ocupa 100% da largura
+        </p>
+      </div>
+    </section>
+    
+    <!-- Inputs Section -->
+    <section id="inputs" class="demo-section">
+      <h2 class="demo-section-title">📝 Inputs & Formulários</h2>
+      
+      <div class="component-grid">
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label ds-label-required">Nome Completo</label>
+            <input type="text" class="ds-input" placeholder="Digite seu nome" />
+          </div>
+        </div>
+        
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label">E-mail</label>
+            <input type="email" class="ds-input" placeholder="email@empresa.com.br" />
+          </div>
+        </div>
+        
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label ds-label-required">Senha</label>
+            <input type="password" class="ds-input" placeholder="••••••••" />
+          </div>
+        </div>
+        
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label">Buscar</label>
+            <div style="position: relative;">
+              <svg class="ds-input-icon ds-input-icon-left" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="search" class="ds-input ds-input-icon-left" placeholder="Pesquisar..." />
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label">Status</label>
+            <select class="ds-input">
+              <option>Selecione...</option>
+              <option>Ativo</option>
+              <option>Pendente</option>
+              <option>Inativo</option>
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <div class="ds-input-wrapper">
+            <label class="ds-label">Mensagem</label>
+            <textarea class="ds-input" rows="3" placeholder="Digite sua mensagem..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: var(--ds-space-4);" class="safe-area-demo">
+        <div class="safe-area-label">Estado de Erro</div>
+        <div class="ds-input-wrapper">
+          <label class="ds-label ds-label-required">CPF</label>
+          <input type="text" class="ds-input ds-input-error" value="123.456.789-00" />
+          <span class="ds-error-message">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            CPF inválido. Digite 11 números.
+          </span>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Cards Section -->
+    <section id="cards" class="demo-section">
+      <h2 class="demo-section-title">📦 Cards Responsivos</h2>
+      
+      <div class="component-grid">
+        <article class="ds-card">
+          <header class="ds-card-header">
+            <h3 class="ds-heading-4">Card Padrão</h3>
+            <span class="ds-badge ds-badge-neutral">Default</span>
+          </header>
+          <div class="ds-card-body">
+            <p class="ds-body">Conteúdo do card com padding padrão e bordas sutis.</p>
+          </div>
+          <footer class="ds-card-footer">
+            <button class="ds-btn ds-btn-sm ds-btn-secondary">Ação</button>
+          </footer>
+        </article>
+        
+        <article class="ds-card ds-card-elevated">
+          <header class="ds-card-header">
+            <h3 class="ds-heading-4">Card Elevado</h3>
+            <span class="ds-badge ds-badge-primary">Shadow</span>
+          </header>
+          <div class="ds-card-body">
+            <p class="ds-body">Card com sombra mais pronunciada para destaque.</p>
+          </div>
+          <footer class="ds-card-footer">
+            <button class="ds-btn ds-btn-sm ds-btn-primary">Ação</button>
+          </footer>
+        </article>
+        
+        <article class="ds-card ds-card-filled">
+          <header class="ds-card-header">
+            <h3 class="ds-heading-4">Card Preenchido</h3>
+            <span class="ds-badge ds-badge-success">Filled</span>
+          </header>
+          <div class="ds-card-body">
+            <p class="ds-body">Card com fundo colorido para agrupamento visual.</p>
+          </div>
+          <footer class="ds-card-footer">
+            <button class="ds-btn ds-btn-sm ds-btn-tertiary">Ação</button>
+          </footer>
+        </article>
+      </div>
+    </section>
+    
+    <!-- Badges Section -->
+    <section id="badges" class="demo-section">
+      <h2 class="demo-section-title">🏷️ Badges & Chips</h2>
+      
+      <div style="margin-bottom: var(--ds-space-6);">
+        <div class="safe-area-label">Badges Estáticos</div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--ds-space-2);">
+          <span class="ds-badge ds-badge-primary">Primário</span>
+          <span class="ds-badge ds-badge-success">Sucesso</span>
+          <span class="ds-badge ds-badge-warning">Atenção</span>
+          <span class="ds-badge ds-badge-danger">Erro</span>
+          <span class="ds-badge ds-badge-neutral">Neutro</span>
+          <span class="ds-badge ds-badge-lg ds-badge-success">Large</span>
+          <span class="ds-badge ds-badge-sm ds-badge-warning">Small</span>
+        </div>
+      </div>
+      
+      <div>
+        <div class="safe-area-label">Chips Interativos</div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--ds-space-2);">
+          <button class="ds-chip">
+            <span>Filtro 1</span>
+          </button>
+          <button class="ds-chip ds-chip-selected">
+            <span>Filtro Selecionado</span>
+            <button class="ds-chip-remove" aria-label="Remover">×</button>
+          </button>
+          <button class="ds-chip">
+            <span>+ Adicionar</span>
+          </button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- PWA Section -->
+    <section id="pwa" class="demo-section">
+      <h2 class="demo-section-title">📲 PWA & Offline Support</h2>
+      
+      <div class="component-grid">
+        <div>
+          <div class="safe-area-label">Network Status</div>
+          <button class="ds-btn ds-btn-primary ds-btn-sm" onclick="showNetworkStatus('online')">
+            Simular Online
+          </button>
+          <button class="ds-btn ds-btn-danger ds-btn-sm" onclick="showNetworkStatus('offline')" style="margin-left: var(--ds-space-2);">
+            Simular Offline
+          </button>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Cache Status</div>
+          <div style="display: flex; gap: var(--ds-space-2);">
+            <span class="ds-cache-status cached">
+              <span class="ds-cache-status-dot"></span>
+              Cacheado
+            </span>
+            <span class="ds-cache-status syncing">
+              <span class="ds-cache-status-dot"></span>
+              Sincronizando
+            </span>
+          </div>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Loading States</div>
+          <div class="ds-pwa-loading">
+            <div class="ds-pwa-spinner"></div>
+            <span class="ds-pwa-loading-text">Carregando...</span>
+          </div>
+        </div>
+        
+        <div>
+          <div class="safe-area-label">Skeleton Loading</div>
+          <div class="ds-card">
+            <div class="ds-card-body">
+              <div class="ds-skeleton ds-skeleton-title" style="width: 60%;"></div>
+              <div class="ds-skeleton ds-skeleton-text"></div>
+              <div class="ds-skeleton ds-skeleton-text"></div>
+              <div class="ds-skeleton ds-skeleton-text" style="width: 80%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: var(--ds-space-6);" class="safe-area-demo">
+        <div class="safe-area-label">Safe Areas (Notch Support)</div>
+        <div class="ds-card" style="padding: var(--ds-space-4);">
+          <p class="ds-body-small">
+            Este card usa <code style="background: var(--ds-color-surface-2); padding: 2px 6px; border-radius: 4px;">ds-safe-area-top</code> e 
+            <code style="background: var(--ds-color-surface-2); padding: 2px 6px; border-radius: 4px;">ds-safe-area-bottom</code> para respeitar 
+            áreas seguras em dispositivos com notch (iPhone X+).
+          </p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer style="padding: var(--ds-space-8) 0; border-top: 1px solid var(--ds-color-border-default); margin-top: var(--ds-space-8);">
+      <div style="display: flex; flex-direction: column; gap: var(--ds-space-3); align-items: center; text-align: center;">
+        <p class="ds-body-small">
+          Design System Recupera Empresas v2.0
+        </p>
+        <div style="display: flex; gap: var(--ds-space-2);">
+          <span class="ds-badge ds-badge-success">Mobile-First</span>
+          <span class="ds-badge ds-badge-primary">WCAG AA</span>
+          <span class="ds-badge ds-badge-warning">PWA Ready</span>
+        </div>
+        <p class="ds-caption">
+          Baseado em Material Design 3 e Human Interface Guidelines
+        </p>
+      </div>
+    </footer>
+  </main>
+  
+  <!-- Scripts -->
+  <script>
+    // Network status simulation
+    function showNetworkStatus(status) {
+      const banner = document.getElementById('network-status');
+      const message = document.getElementById('network-message');
+      
+      banner.hidden = false;
+      banner.classList.add('visible');
+      
+      if (status === 'online') {
+        banner.classList.add('online');
+        banner.classList.remove('offline');
+        message.textContent = '✅ Conexão restabelecida!';
+      } else {
+        banner.classList.add('offline');
+        banner.classList.remove('online');
+        message.textContent = '⚠️ Você está offline. Algumas funcionalidades podem estar limitadas.';
+      }
+      
+      setTimeout(() => {
+        banner.classList.remove('visible');
+        setTimeout(() => {
+          banner.hidden = true;
+          banner.classList.remove('online', 'offline');
+        }, 300);
+      }, 3000);
+    }
+    
+    // Smooth scroll for nav
+    document.querySelectorAll('.demo-nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+        
+        targetSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+        
+        // Update active state
+        document.querySelectorAll('.demo-nav a').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+    
+    // Real-time network status
+    window.addEventListener('online', () => {
+      showNetworkStatus('online');
+    });
+    
+    window.addEventListener('offline', () => {
+      showNetworkStatus('offline');
+    });
+  </script>
+</body>
+</html>
