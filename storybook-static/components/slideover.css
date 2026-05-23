@@ -1,0 +1,252 @@
+/**
+ * Slideover Component - Recupera Empresas Design System
+ * Painel lateral responsivo, acessível e mobile-first
+ */
+
+/* Base Slideover */
+.slideover-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  z-index: var(--z-slideover);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-standard) var(--ease-standard),
+              visibility var(--duration-standard) var(--ease-standard);
+}
+
+.slideover-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.slideover-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface-surface);
+  box-shadow: var(--shadow-2xl);
+  transform: translateX(100%);
+  transition: transform var(--duration-standard) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.slideover-overlay.active .slideover-panel {
+  transform: translateX(0);
+}
+
+/* Header */
+.slideover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.slideover-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: var(--leading-tight);
+}
+
+.slideover-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.slideover-close {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-standard);
+}
+
+.slideover-close:hover {
+  background: var(--surface-surface-elevated);
+  color: var(--text-primary);
+}
+
+.slideover-close:focus-visible {
+  outline: 2px solid var(--brand-deep-blue-700);
+  outline-offset: 2px;
+}
+
+/* Body */
+.slideover-body {
+  padding: var(--space-5);
+  overflow-y: auto;
+  flex: 1;
+  color: var(--text-primary);
+}
+
+/* Footer */
+.slideover-footer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.slideover-footer.stacked {
+  flex-direction: column;
+}
+
+/* Variantes de Tamanho */
+.slideover-sm {
+  max-width: 360px;
+}
+
+.slideover-md {
+  max-width: 480px;
+}
+
+.slideover-lg {
+  max-width: 640px;
+}
+
+.slideover-full {
+  max-width: 100%;
+}
+
+/* Posição Esquerda */
+.slideover-left .slideover-panel {
+  right: auto;
+  left: 0;
+  transform: translateX(-100%);
+  border-left: none;
+  border-right: 1px solid var(--border-subtle);
+}
+
+/* Responsividade Mobile */
+@media (max-width: 639px) {
+  .slideover-panel {
+    max-width: 100%;
+  }
+
+  .slideover-header,
+  .slideover-body,
+  .slideover-footer {
+    padding: var(--space-4);
+  }
+
+  .slideover-footer {
+    flex-direction: column-reverse;
+  }
+
+  .slideover-footer .btn {
+    width: 100%;
+  }
+}
+
+/* Tablet */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .slideover-lg {
+    max-width: 560px;
+  }
+}
+
+/* Acessibilidade */
+.slideover-overlay[aria-hidden="true"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.slideover-overlay[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Focus Trap */
+.slideover-overlay.active {
+  pointer-events: auto;
+}
+
+/* Animação */
+@keyframes slideoverFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideoverSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideoverSlideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .slideover-overlay,
+  .slideover-panel {
+    transition: none;
+  }
+}
+
+/* High Contrast */
+@media (prefers-contrast: high) {
+  .slideover-panel {
+    border: 2px solid var(--text-primary);
+  }
+
+  .slideover-header,
+  .slideover-footer {
+    border-color: var(--text-primary);
+  }
+}
+
+/* Scrollbar customizada */
+.slideover-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.slideover-body::-webkit-scrollbar-track {
+  background: var(--surface-surface);
+}
+
+.slideover-body::-webkit-scrollbar-thumb {
+  background: var(--grafite-500);
+  border-radius: var(--radius-full);
+}
+
+.slideover-body::-webkit-scrollbar-thumb:hover {
+  background: var(--grafite-400);
+}

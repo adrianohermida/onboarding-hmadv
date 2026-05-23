@@ -5,6 +5,29 @@ import '../design-system/tokens/core-v2.css';
 import '../design-system/components/base-v2.css';
 import '../design-system/patterns/pwa.css';
 
+// Keep old and prefixed deep links working during cache rollout windows.
+if (typeof window !== 'undefined') {
+  const url = new URL(window.location.href);
+  const storyId = url.searchParams.get('id');
+
+  if (storyId) {
+    let normalizedId = storyId;
+
+    if (storyId.startsWith('componentes-botões--')) {
+      normalizedId = storyId.replace('componentes-botões--', 'design-system-componentes-botões--');
+    }
+
+    if (storyId.startsWith('componentes-botoes--')) {
+      normalizedId = storyId.replace('componentes-botoes--', 'design-system-componentes-botões--');
+    }
+
+    if (normalizedId !== storyId) {
+      url.searchParams.set('id', normalizedId);
+      window.history.replaceState({}, '', url.toString());
+    }
+  }
+}
+
 const preview: Preview = {
   parameters: {
     controls: {

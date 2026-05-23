@@ -1,0 +1,58 @@
+:root {
+  --ds-color-brand-900: #1a3a5c;
+  --ds-color-brand-700: #2e6da4;
+  --ds-color-brand-500: #4f8ec8;
+  --ds-color-accent-500: #f5a623;
+  --ds-color-bg-0: #ffffff;
+  --ds-color-bg-100: #f8fbff;
+  --ds-color-bg-200: #edf1f7;
+  --ds-color-ink-900: #0f1923;
+  --ds-color-ink-700: #3d4f63;
+  --ds-color-ink-500: #64748b;
+  --ds-color-line-200: #e2e8f0;
+  --ds-color-ok-500: #1a7a4a;
+  --ds-color-warn-500: #b45309;
+  --ds-color-danger-500: #c0392b;
+
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-10: 40px;
+
+  --ds-font-family-sans: 'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
+  --ds-font-family-serif: 'Lucida Sans', 'Lucida Sans Unicode', Arial, 'Segoe UI', sans-serif;
+  --ds-font-size-xs: 11px;
+  --ds-font-size-sm: 12px;
+  --ds-font-size-md: 14px;
+  --ds-font-size-lg: 16px;
+  --ds-font-size-xl: 20px;
+
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 8px;
+
+  --ds-shadow-sm: 0 1px 4px rgba(15, 25, 35, .05);
+  --ds-shadow-md: 0 4px 14px rgba(15, 25, 35, .08);
+  --ds-shadow-lg: 0 10px 24px rgba(15, 25, 35, .14);
+
+  --ds-z-dropdown: 100;
+  --ds-z-overlay: 900;
+  --ds-z-modal: 1000;
+  --ds-z-toast: 1100;
+
+  --ds-transition-fast: .15s ease;
+  --ds-transition-base: .25s cubic-bezier(.4, 0, .2, 1);
+  --ds-transition-slow: .4s ease;
+
+  --ds-breakpoint-sm: 480px;
+  --ds-breakpoint-md: 768px;
+  --ds-breakpoint-lg: 1024px;
+  --ds-breakpoint-xl: 1280px;
+
+  --ds-overlay-glass: rgba(15, 25, 35, .42);
+  --ds-surface-glass: linear-gradient(160deg, rgba(255,255,255,.82), rgba(248,251,255,.62));
+}
