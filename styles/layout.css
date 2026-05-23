@@ -320,6 +320,8 @@ body.app-loaded .sk { display: none !important; }
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .shell-action-btn {
@@ -346,6 +348,9 @@ body.app-loaded .sk { display: none !important; }
 .shell-action-btn svg {
   width: 18px;
   height: 18px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
 }
 
 .shell-notification-dot {
@@ -1483,10 +1488,21 @@ body.app-loaded .sk { display: none !important; }
 
   .header-actions {
     gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .shell-mode-selector .portal-mode-btn {
+    padding: 4px 8px;
+    font-size: 11px;
   }
 
   .header-user {
     padding-right: 4px;
+  }
+
+  .header-user-meta {
+    display: none;
   }
 
   .header-user-menu {

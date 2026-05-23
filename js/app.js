@@ -235,9 +235,8 @@ function mountPortalViewModeSelector(containerOrId, options = {}) {
 
   const shellSelector = document.getElementById('shell-mode-selector');
   if (shellSelector && container.id !== 'shell-mode-selector') {
-    container.innerHTML = '';
-    container.hidden = true;
-    return () => {};
+    shellSelector.hidden = true;
+    shellSelector.innerHTML = '';
   }
 
   const {
@@ -831,8 +830,9 @@ function setupShellNavigation() {
   markInitialStylesAsCore();
 
   document.addEventListener('click', event => {
-    const shellAction = event.target?.closest?.('[data-shell-action]');
-    const clickedInsideAccountMenu = !!event.target?.closest?.('#header-user-shell');
+    const target = event.target instanceof Element ? event.target : null;
+    const shellAction = target?.closest('[data-shell-action]');
+    const clickedInsideAccountMenu = !!target?.closest('#header-user-shell');
 
     if (!clickedInsideAccountMenu) {
       setAccountMenuOpen(false);
@@ -889,6 +889,12 @@ function setupShellNavigation() {
       return;
     }
 
+    if (shellAction?.dataset.shellAction === 'workspace-panel') {
+      event.preventDefault();
+      openWorkspacePanel({ reload: false });
+      return;
+    }
+
     if (shellAction?.dataset.shellAction === 'close-shell-drawer') {
       event.preventDefault();
       closeShellDrawer();
@@ -908,7 +914,7 @@ function setupShellNavigation() {
       return;
     }
 
-    const atividadesFilter = event.target?.closest?.('[data-atividades-filter]');
+    const atividadesFilter = target?.closest('[data-atividades-filter]');
     if (atividadesFilter) {
       event.preventDefault();
       shellActivitiesFilter = atividadesFilter.dataset.atividadesFilter;
@@ -917,13 +923,13 @@ function setupShellNavigation() {
       return;
     }
 
-    if (event.target?.closest?.('[data-legal-filter-clear]')) {
+    if (target?.closest('[data-legal-filter-clear]')) {
       event.preventDefault();
       clearLegalNotificationFilters();
       return;
     }
 
-    const legalFilter = event.target?.closest?.('[data-legal-filter-kind]');
+    const legalFilter = target?.closest('[data-legal-filter-kind]');
     if (legalFilter) {
       event.preventDefault();
       toggleLegalNotificationFilter(legalFilter.dataset.legalFilterKind, legalFilter.dataset.legalFilterValue);
@@ -931,7 +937,7 @@ function setupShellNavigation() {
       return;
     }
 
-    const legalItem = event.target?.closest?.('[data-legal-notification-id]');
+    const legalItem = target?.closest('[data-legal-notification-id]');
     if (legalItem) {
       event.preventDefault();
       openLegalNotificationDetail(legalItem.dataset.legalNotificationId);
