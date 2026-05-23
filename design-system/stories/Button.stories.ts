@@ -2,6 +2,20 @@ import type { Meta, StoryObj } from '@storybook/html';
 import '../tokens/core-v2.css';
 import '../components/base-v2.css';
 
+function Template({ children, variant, size, disabled, loading, block, icon }: any) {
+  return `
+  <button 
+    class="ds-btn ds-btn-${variant} ds-btn-${size} ${block ? 'ds-btn-block' : ''} ${disabled ? 'is-disabled' : ''} ${loading ? 'is-loading' : ''}"
+    ${disabled ? 'disabled' : ''}
+    aria-busy="${loading}"
+  >
+    ${icon ? `<span class="ds-btn-icon">${icon}</span>` : ''}
+    <span class="ds-btn-label">${children}</span>
+    ${loading ? '<span class="ds-btn-spinner"></span>' : ''}
+  </button>
+`;
+}
+
 /**
  * ## Botões do Design System Recupera Empresas
  * 
@@ -15,6 +29,7 @@ import '../components/base-v2.css';
 const meta = {
   title: 'Componentes/Botões',
   tags: ['autodocs'],
+  render: Template,
   argTypes: {
     variant: {
       control: 'select',
@@ -55,19 +70,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// Template base
-const Template = ({ children, variant, size, disabled, loading, block, icon }: any) => `
-  <button 
-    class="ds-btn ds-btn-${variant} ds-btn-${size} ${block ? 'ds-btn-block' : ''} ${disabled ? 'is-disabled' : ''} ${loading ? 'is-loading' : ''}"
-    ${disabled ? 'disabled' : ''}
-    aria-busy="${loading}"
-  >
-    ${icon ? `<span class="ds-btn-icon">${icon}</span>` : ''}
-    <span class="ds-btn-label">${children}</span>
-    ${loading ? '<span class="ds-btn-spinner"></span>' : ''}
-  </button>
-`;
 
 /**
  * ### Primário
