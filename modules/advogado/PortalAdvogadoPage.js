@@ -1699,6 +1699,27 @@ export async function bootAdvogadoPage(moduleKey) {
   const host = document.querySelector('[data-advogado-module-host]');
   if (!host) return;
 
+  host.innerHTML = `
+    <div class="advogado-page">
+      <div class="skeleton-header">
+        <div class="skel skel-title"></div>
+        <div class="skel skel-sub"></div>
+      </div>
+      <div class="skeleton-kpis">
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+        <div class="skel skel-kpi"></div>
+      </div>
+      <div class="skeleton-rows">
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+      </div>
+    </div>`;
+
   await loadRemoteClients();
   await loadInternalUsers();
 

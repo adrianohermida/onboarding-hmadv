@@ -34,6 +34,7 @@ const FRESHCHAT_WATCHDOG_INTERVAL_MS = 5000;
 const SHELL_WORKSPACE_KEY = 'portal:workspace-state';
 const SHELL_NOTIFICATIONS_KEY = 'portal:notifications';
 const SHELL_ACTIVITIES_KEY = 'portal:activities';
+const SHELL_ACTIVITIES_SEEN_KEY = 'portal:activities-seen';
 const SHELL_CONTEXT_EVENT = 'shell:set-context';
 const SHELL_ACTIVITIES_MAX = 50;
 const SHELL_TENANT_CONFIG_KEY = 'portal:tenant-config';
@@ -2014,6 +2015,14 @@ function getShellActivities() {
   }
 }
 
+function getActivitiesLastSeen() {
+  try { return parseInt(sessionStorage.getItem(SHELL_ACTIVITIES_SEEN_KEY) || '0', 10); } catch { return 0; }
+}
+
+function markActivitiesAsSeen() {
+  try { sessionStorage.setItem(SHELL_ACTIVITIES_SEEN_KEY, String(Date.now())); } catch {}
+}
+
 function addShellActivity({ category = 'geral', title, text, href = null } = {}) {
   if (!title) return;
   const item = {
@@ -2034,8 +2043,8 @@ function addShellActivity({ category = 'geral', title, text, href = null } = {})
 function renderShellActivityCount() {
   const badge = document.getElementById('shell-activity-count');
   if (!badge) return;
-  const today = Date.now() - 8 * 60 * 60 * 1000;
-  const count = getShellActivities().filter(a => a.ts > today).length;
+  const lastSeen = getActivitiesLastSeen();
+  const count = getShellActivities().filter(a => a.ts > lastSeen).length;
   badge.hidden = count === 0;
   badge.textContent = String(Math.min(count, 9));
 }
@@ -2061,17 +2070,20 @@ function shellGroupActivitiesByDay(items) {
   return groups.filter(g => g.items.length > 0);
 }
 
-function renderActivityItem(item) {
+function renderActivityItem(item, lastSeen = 0) {
+  const unread = item.ts > lastSeen;
+  const actionHtml = item.href
+    ? `<a href="${escapeShellHtml(item.href)}" data-page="${escapeShellHtml(item.href.replace('.html', ''))}" class="shell-activity-action">Ver →</a>`
+    : '';
   return `
-    <div class="shell-activity-item">
+    <div class="shell-activity-item${unread ? ' is-unread' : ''}">
       <span class="shell-activity-dot is-${escapeShellHtml(item.category)}" aria-hidden="true"></span>
-      <div>
-        ${item.href
-          ? `<a href="${escapeShellHtml(item.href)}" data-page="${escapeShellHtml(item.href.replace('.html', ''))}" class="shell-activity-link"><strong>${escapeShellHtml(item.title)}</strong></a>`
-          : `<strong>${escapeShellHtml(item.title)}</strong>`}
+      <div class="shell-activity-body">
+        <strong>${escapeShellHtml(item.title)}</strong>
         <small>${escapeShellHtml(item.text)}</small>
         <small class="shell-activity-time">${shellTimeAgo(item.ts)}</small>
       </div>
+      ${actionHtml}
     </div>`;
 }
 
@@ -2085,6 +2097,7 @@ function renderAtividadesPanel(filter = 'geral') {
     return `<button type="button" class="shell-activity-filter ${active ? 'is-active' : ''}" data-atividades-filter="${escapeShellHtml(key)}">${escapeShellHtml(meta.label)}${count > 0 ? ` <span class="shell-activity-count-pill">${count}</span>` : ''}</button>`;
   }).join('');
 
+  const lastSeen = getActivitiesLastSeen();
   let feed;
   if (items.length === 0) {
     feed = '<div class="shell-empty-state">Nenhuma atividade registrada para este filtro.</div>';
@@ -2093,7 +2106,7 @@ function renderAtividadesPanel(filter = 'geral') {
     feed = groups.map(g => `
       <div class="shell-activity-group">
         <div class="shell-activity-group-label">${escapeShellHtml(g.label)}</div>
-        <div class="shell-activity-feed">${g.items.map(renderActivityItem).join('')}</div>
+        <div class="shell-activity-feed">${g.items.map(item => renderActivityItem(item, lastSeen)).join('')}</div>
       </div>`).join('');
   }
 
@@ -2117,6 +2130,8 @@ function openAtividadesPanel(filter) {
     title: 'Atividades Recentes',
     body: renderAtividadesPanel(shellActivitiesFilter),
   });
+  markActivitiesAsSeen();
+  renderShellActivityCount();
 }
 
 /* ── STATUS DO SISTEMA ────────────────────────── */
