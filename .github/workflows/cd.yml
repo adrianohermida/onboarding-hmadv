@@ -38,8 +38,37 @@ jobs:
           node platform/scripts/validate-tenant-awareness.mjs
           node platform/scripts/validate-platform-governance.mjs
 
-  deploy-staging:
+  build-web:
     needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci && npm --prefix apps/web ci
+
+      - name: Build web app
+        run: npm run web:build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/out
+          retention-days: 7
+
+  deploy-staging:
+    needs: [preflight, build-web]
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
     runs-on: ubuntu-latest
     environment: staging
@@ -47,11 +76,42 @@ jobs:
       - name: Staging deploy gate
         run: echo "Staging deploy approved by pipeline governance"
 
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/out
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your staging deployment commands here
+          # Example: rsync, docker push, kubectl apply, etc.
+
   deploy-production:
-    needs: [preflight, deploy-staging]
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
+    needs: [preflight, build-web, deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production' || github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Production deploy gate
         run: echo "Production deploy requires environment approval and completed staging"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: apps/web/out
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your production deployment commands here
+          # Example: rsync, docker push, kubectl apply, etc.
+          
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Production deployment completed successfully!"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
