@@ -1,1 +1,7 @@
-(onboarding-hmadv is a single modified file that appears to be a source/config file, not a build artifact, dependency, or temporary file - no files in the change list match the criteria for ignoring, so output nothing)
+```
+# Environment variables
+.env*
+
+# Executable file
+onboarding-hmadv
+```
