@@ -21,7 +21,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260523e';
+const SHELL_VERSION = '20260523f';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -64,6 +64,102 @@ const ROUTE_ACTIVITY_CATEGORY = {
 };
 
 window.__shellVersion = SHELL_VERSION;
+
+const OPTIONAL_OPERATIONAL_TABLES = new Set([
+  'portal_operational_records',
+  'portal_operational_record_audit',
+  'portal_partes_vinculos',
+  'custas_processuais',
+  'tpu',
+  'orgaos_judiciarios',
+  'serventias',
+  'relacoes_processuais',
+]);
+const OPTIONAL_MISSING_TABLES_STORAGE_KEY = 'portal:optional-missing-rest-tables';
+const OPTIONAL_SCHEMA_MISSING_STORAGE_KEY = 'portal:optional-rest-schema-missing';
+
+function readMissingOptionalTables() {
+  try {
+    const raw = localStorage.getItem(OPTIONAL_MISSING_TABLES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+const missingOptionalTables = new Set(readMissingOptionalTables());
+
+if (missingOptionalTables.has('portal_operational_records')) {
+  try {
+    localStorage.setItem(OPTIONAL_SCHEMA_MISSING_STORAGE_KEY, '1');
+  } catch (_) {}
+}
+
+function isOptionalSchemaMarkedMissing() {
+  try {
+    return localStorage.getItem(OPTIONAL_SCHEMA_MISSING_STORAGE_KEY) === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+function getOptionalOperationalTable(url) {
+  if (!url.pathname.includes('/rest/v1/')) return '';
+  const table = url.pathname.split('/').pop() || '';
+  return OPTIONAL_OPERATIONAL_TABLES.has(table) ? table : '';
+}
+
+function persistMissingOptionalTables() {
+  try {
+    localStorage.setItem(
+      OPTIONAL_MISSING_TABLES_STORAGE_KEY,
+      JSON.stringify(Array.from(missingOptionalTables)),
+    );
+  } catch (_) {}
+}
+
+function markOptionalTableAsMissing(url) {
+  const table = getOptionalOperationalTable(url);
+  if (!table || missingOptionalTables.has(table)) return;
+  missingOptionalTables.add(table);
+  persistMissingOptionalTables();
+  try {
+    localStorage.setItem(OPTIONAL_SCHEMA_MISSING_STORAGE_KEY, '1');
+  } catch (_) {}
+}
+
+function isKnownMissingOptionalTable(url) {
+  const table = getOptionalOperationalTable(url);
+  return !!table && (missingOptionalTables.has(table) || isOptionalSchemaMarkedMissing());
+}
+
+function shouldBypassOptionalRestRequest(url, method) {
+  if (method !== 'GET' || !isOptionalOperationalRestRequest(url)) return false;
+  if (window.location.protocol === 'file:') return true;
+  return isKnownMissingOptionalTable(url);
+}
+
+function getFetchMethod(input, init) {
+  const method = (init && typeof init === 'object' && init.method)
+    || (typeof Request !== 'undefined' && input instanceof Request ? input.method : null)
+    || 'GET';
+  return String(method).toUpperCase();
+}
+
+function isOptionalOperationalRestRequest(url) {
+  return !!getOptionalOperationalTable(url);
+}
+
+function emptyListResponse() {
+  return new Response('[]', {
+    status: 200,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'x-compat-fallback': 'optional-table-404-as-empty-list',
+    },
+  });
+}
 
 function normalizeSupabaseRestUrl(rawUrl) {
   const url = new URL(rawUrl, window.location.origin);
@@ -113,18 +209,38 @@ function installSupabaseRestCompatibilityFetch() {
   if (window.__supabaseRestCompatibilityInstalled) return;
   const nativeFetch = window.fetch.bind(window);
 
-  window.fetch = (input, init) => {
+  const fetchWithOperationalFallback = async (requestInput, requestInit, normalizedUrl) => {
+    const method = getFetchMethod(requestInput, requestInit);
+
+    if (shouldBypassOptionalRestRequest(normalizedUrl, method)) {
+      return emptyListResponse();
+    }
+
+    const response = await nativeFetch(requestInput, requestInit);
+    if (
+      response.status === 404 &&
+      method === 'GET' &&
+      isOptionalOperationalRestRequest(normalizedUrl)
+    ) {
+      markOptionalTableAsMissing(normalizedUrl);
+      return emptyListResponse();
+    }
+    return response;
+  };
+
+  window.fetch = async (input, init) => {
     try {
       if (typeof Request !== 'undefined' && input instanceof Request) {
-        const normalized = normalizeSupabaseRestUrl(input.url).toString();
-        return nativeFetch(new Request(normalized, input), init);
+        const normalizedUrl = normalizeSupabaseRestUrl(input.url);
+        const normalizedRequest = new Request(normalizedUrl.toString(), input);
+        return fetchWithOperationalFallback(normalizedRequest, init, normalizedUrl);
       }
 
       const raw = typeof input === 'string'
         ? input
         : (input instanceof URL ? input.toString() : String(input));
-      const normalized = normalizeSupabaseRestUrl(raw).toString();
-      return nativeFetch(normalized, init);
+      const normalizedUrl = normalizeSupabaseRestUrl(raw);
+      return fetchWithOperationalFallback(normalizedUrl.toString(), init, normalizedUrl);
     } catch (_) {
       return nativeFetch(input, init);
     }
