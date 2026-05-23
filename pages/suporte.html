@@ -218,6 +218,7 @@ import { showToast }        from '../utils/helpers.js';
 import { AdminService } from '../services/database.js';
 import { FreshdeskService } from '../services/freshdesk.js';
 import { invokeEdgeFunction } from '../services/edge.js';
+import { supabase } from '../services/supabase.js';
 import { buildCaseContextHref, getCaseFlowSummary } from '../js/case-flow.js';
 
 window.showToast = showToast;
@@ -235,6 +236,9 @@ let isReadonlyAdminView = false;
 let targetCaseSummary = null;
 let ticketState = { page: 1, pageSize: 10, total: 0, totalPages: 1, filters: {} };
 let lastTickets = [];
+let suporteSessionLoaded = false;
+let suporteUnauthNotified = false;
+let freshdeskAuthUnavailable = false;
 
 const byId = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -331,16 +335,67 @@ function collectFilters() {
   };
 }
 
+function isUnauthenticatedError(error) {
+  const status = Number(error?.status || 0);
+  const message = String(error?.message || '');
+  return status === 401 || /unauthenticated|sess[aã]o\s+(ausente|inv[aá]lida)|login/i.test(message);
+}
+
+async function ensureFreshdeskSession() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) return true;
+  } catch (_) {}
+
+  try {
+    const { data } = await supabase.auth.refreshSession();
+    if (data?.session?.access_token) return true;
+  } catch (_) {}
+
+  return false;
+}
+
+function renderUnauthenticatedState(message = 'Sua sessão não está autenticada para carregar chamados agora.') {
+  const tbody = byId('tickets-tbody');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">${esc(message)}</td></tr>`;
+  }
+
+  const empty = byId('tickets-empty');
+  const wrap = byId('tickets-table-wrap');
+  if (empty) empty.style.display = 'none';
+  if (wrap) wrap.style.display = '';
+
+  byId('contact-bar') && (byId('contact-bar').style.display = 'none');
+  byId('kpi-abertos') && (byId('kpi-abertos').textContent = '—');
+  byId('kpi-resolvidos') && (byId('kpi-resolvidos').textContent = '—');
+  byId('kpi-total-tickets') && (byId('kpi-total-tickets').textContent = '—');
+  byId('ticket-count') && (byId('ticket-count').textContent = 'sessão pendente');
+
+  ticketState = {
+    page: 1,
+    pageSize: Number(byId('filter-page-size')?.value || 10),
+    total: 0,
+    totalPages: 1,
+    filters: collectFilters(),
+  };
+  lastTickets = [];
+  renderPagination();
+}
+
 document.addEventListener('app:user-loaded', async (e) => {
   currentUser = e.detail?.user;
   currentCaso = e.detail?.caso;
   isAdminUser = !!e.detail?.isAdmin;
+  suporteSessionLoaded = true;
+  freshdeskAuthUnavailable = false;
 
   const bar = byId('suporte-admin-bar');
   if (!bar) return;
   if (!isAdminUser) {
     bar.style.display = 'none';
     await resolveSupportContext();
+    await init({ page: 1, reset: true });
     return;
   }
 
@@ -361,6 +416,7 @@ document.addEventListener('app:user-loaded', async (e) => {
   }
 
   await resolveSupportContext();
+  await init({ page: 1, reset: true });
 });
 
 async function init({ page = ticketState.page, reset = false } = {}) {
@@ -374,6 +430,11 @@ async function init({ page = ticketState.page, reset = false } = {}) {
 
   try {
     if (reset) page = 1;
+
+    if (!suporteSessionLoaded || !currentUser?.id) {
+      renderUnauthenticatedState('Aguardando autenticação da sessão para carregar chamados.');
+      return;
+    }
 
     if (hasTargetClientContext()) {
       lastTickets = [];
@@ -395,13 +456,35 @@ async function init({ page = ticketState.page, reset = false } = {}) {
       return;
     }
 
+    if (freshdeskAuthUnavailable) {
+      renderUnauthenticatedState('Sessão não autenticada no Freshdesk. Recarregue a página após confirmar o login.');
+      return;
+    }
+
+    const hasSession = await ensureFreshdeskSession();
+    if (!hasSession) {
+      freshdeskAuthUnavailable = true;
+      renderUnauthenticatedState('Sessão ausente para consultar o suporte. Faça login novamente.');
+      if (!suporteUnauthNotified) {
+        showToast('Sessão de suporte ausente. Entre novamente no portal.', 'warn');
+        suporteUnauthNotified = true;
+      }
+      return;
+    }
+
     const filters = collectFilters();
-    const [ticketResult, contact] = await Promise.all([
-      FreshdeskService.listTickets({ ...filters, page }).catch(error => ({ data: [], total: 0, page, pageSize: filters.pageSize, totalPages: 1, error })),
-      FreshdeskService.getContact().catch(() => null),
-    ]);
+    const ticketResult = await FreshdeskService.listTickets({ ...filters, page }).catch(error => ({
+      data: [],
+      total: 0,
+      page,
+      pageSize: filters.pageSize,
+      totalPages: 1,
+      error,
+    }));
 
     if (ticketResult.error) throw ticketResult.error;
+
+    const contact = await FreshdeskService.getContact().catch(() => null);
 
     ticketState = {
       page: ticketResult.page,
@@ -416,9 +499,18 @@ async function init({ page = ticketState.page, reset = false } = {}) {
     updateKPIs(lastTickets, ticketResult.total);
     renderPagination();
   } catch (error) {
-    console.error(error);
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Não foi possível carregar os chamados.</td></tr>';
-    showToast(error?.message || 'Não foi possível carregar seus chamados.', 'error');
+    if (isUnauthenticatedError(error)) {
+      freshdeskAuthUnavailable = true;
+      renderUnauthenticatedState('Sessão não autenticada no Freshdesk. Recarregue a página após confirmar o login.');
+      if (!suporteUnauthNotified) {
+        showToast('Sessão de suporte não autenticada. Atualize a página após o login.', 'warn');
+        suporteUnauthNotified = true;
+      }
+    } else {
+      console.error(error);
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px;">Não foi possível carregar os chamados.</td></tr>';
+      showToast(error?.message || 'Não foi possível carregar seus chamados.', 'error');
+    }
   } finally {
     suporteBooting = false;
   }
@@ -568,7 +660,13 @@ window.submitTicket = async function() {
 };
 
 setupTicketFilters();
-document.addEventListener('app:ready', () => init({ page: 1 }));
+document.addEventListener('app:ready', () => {
+  if (currentUser?.id && suporteSessionLoaded) {
+    init({ page: 1 });
+    return;
+  }
+  renderUnauthenticatedState('Aguardando autenticação da sessão para carregar chamados.');
+});
 document.addEventListener('app:route-will-change', () => {
   if (typeof unmountModeSelector === 'function') {
     unmountModeSelector();
