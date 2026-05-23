@@ -1,0 +1,18 @@
+// Dentro do script do admin/index.html
+const storybookFrame = document.getElementById('storybook-frame');
+
+window.addEventListener('message', (event) => {
+  // Verifica origem por segurança
+  if (event.origin !== window.location.origin) return;
+
+  if (event.data.type === 'REQUEST_AUTH') {
+    // Envia dados do usuário logado para o Storybook
+    if (window.AuthManager && window.AuthManager.currentUser) {
+      storybookFrame.contentWindow.postMessage({
+        type: 'AUTH_SYNC',
+        user: window.AuthManager.currentUser,
+        session: window.AuthManager.session
+      }, '*');
+    }
+  }
+});

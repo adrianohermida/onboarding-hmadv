@@ -1,351 +1,85 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Acesso — Hermida Maia Advocacia</title>
-<meta name="description" content="Portal do cliente — Hermida Maia Sociedade Individual de Advocacia">
-<link rel="stylesheet" href="../styles/variables.css?v=20260523k">
-<link rel="stylesheet" href="../styles/main.css?v=20260523k">
-<link rel="stylesheet" href="../styles/layout.css?v=20260523k">
-<link rel="stylesheet" href="../styles/components.css?v=20260523k">
-<style>
-  .auth-shell { background: var(--navy); position: relative; overflow: hidden; }
-
-  /* Decorative radial glows */
-  .auth-shell::before {
-    content: '';
-    position: absolute;
-    top: -120px; left: -120px;
-    width: 480px; height: 480px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(245,166,35,.08), transparent 65%);
-    pointer-events: none;
-  }
-  .auth-shell::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; right: -80px;
-    width: 360px; height: 360px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(46,109,164,.12), transparent 65%);
-    pointer-events: none;
-  }
-
-  /* Split layout: brand left, form right */
-  .auth-layout {
-    display: flex;
-    min-height: 100vh;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Left brand panel */
-  .auth-brand-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 40px;
-    text-align: center;
-  }
-
-  .auth-brand-mark {
-    width: 200px;
-    height: auto;
-    margin: 0 auto 32px;
-    display: block;
-    border-radius: 18px;
-    animation: float 4s ease-in-out infinite;
-    filter: drop-shadow(0 8px 32px rgba(245,166,35,.20));
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(-8px); }
-  }
-
-  .auth-firm-name {
-    font-family: var(--sans);
-    font-size: 32px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 3px;
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-
-  .auth-firm-name span { color: var(--brand-gold); }
-
-  .auth-firm-sub {
-    font-size: 11px;
-    color: rgba(255,255,255,.4);
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    margin-bottom: 40px;
-  }
-
-  .auth-tagline {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 400;
-    color: rgba(255,255,255,.75);
-    line-height: 1.6;
-    max-width: 300px;
-    border-top: 1px solid rgba(255,255,255,.1);
-    padding-top: 28px;
-  }
-
-  .auth-tagline span { color: var(--brand-gold); font-style: italic; }
-
-  /* Right form panel */
-  .auth-form-panel {
-    width: 420px;
-    flex-shrink: 0;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 44px;
-    min-height: 100vh;
-  }
-
-  .auth-form-inner { width: 100%; }
-
-  .auth-form-title {
-    font-family: var(--serif);
-    font-size: 22px;
-    color: var(--navy);
-    margin-bottom: 6px;
-    font-weight: 400;
-  }
-
-  .auth-form-lead {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 32px;
-    line-height: 1.6;
-  }
-
-  /* Responsive: stacked on mobile */
-  @media (max-width: 768px) {
-    .auth-layout      { flex-direction: column; }
-    .auth-brand-panel { padding: 40px 24px 28px; }
-    .auth-eagle       { width: 80px; height: 80px; margin-bottom: 16px; }
-    .auth-firm-name   { font-size: 22px; }
-    .auth-tagline     { display: none; }
-    .auth-form-panel  { width: 100%; min-height: auto; padding: 32px 24px 48px; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Recupera Empresas</title>
+  <link rel="stylesheet" href="../design-system/tokens/core-v2.css">
+  <link rel="stylesheet" href="../design-system/components/base-v2.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--ds-color-bg); }
+    .login-container { width: 100%; max-width: 400px; padding: 2rem; }
+    .hidden { display: none; }
+    .error-msg { color: var(--ds-color-error); font-size: 0.875rem; margin-top: 0.5rem; }
+  </style>
 </head>
 <body>
-
-<div class="auth-shell">
-  <div class="auth-layout">
-
-    <!-- Left: Brand panel -->
-    <div class="auth-brand-panel">
-      <img src="../assets/logo2.webp"
-           alt="Hermida Maia Advocacia"
-           class="auth-brand-mark"
-           onerror="this.style.display='none'">
-
-      <p class="auth-tagline">
-        Portal exclusivo para acompanhamento do seu caso de
-        <span>superendividamento.</span>
-      </p>
-    </div>
-
-    <!-- Right: Form panel -->
-    <div class="auth-form-panel">
-      <div class="auth-form-inner">
-
-        <!-- State: Form -->
-        <div id="state-form">
-          <h2 class="auth-form-title">Acesso ao Portal</h2>
-          <p class="auth-form-lead">
-            Informe seu e-mail cadastrado. Enviaremos um código de 6 dígitos para acesso seguro.
-          </p>
-
-          <div class="form-group" style="margin-bottom:18px;">
-            <label class="form-label required" for="email">E-mail</label>
-            <input class="form-input"
-                   type="email"
-                   id="email"
-                   placeholder="seu@email.com.br"
-                   autocomplete="email"
-                   autofocus>
-          </div>
-
-          <button class="btn btn-primary btn-full btn-lg" id="btn-send" onclick="handleSend()">
-            Enviar código de acesso
-          </button>
-
-          <div class="divider"></div>
-
-          <div class="callout callout-blue" style="font-size:12px;">
-            <strong>Acesso seguro e sem senha.</strong> Você receberá um código de 6 dígitos por e-mail —
-            válido por 15 minutos. Nenhuma senha é armazenada.
-          </div>
+  <div class="login-container">
+    <div class="ds-card ds-card--elevated ds-card--md ds-card--pad-md">
+      <h1 class="ds-text-xl ds-font-bold ds-text-center ds-mb-lg">Acesso ao Portal</h1>
+      
+      <form id="loginForm">
+        <div class="ds-form-group ds-mb-md">
+          <label for="email" class="ds-label">E-mail</label>
+          <input type="email" id="email" class="ds-input" required placeholder="seu@email.com">
+        </div>
+        
+        <div class="ds-form-group ds-mb-lg">
+          <label for="password" class="ds-label">Senha</label>
+          <input type="password" id="password" class="ds-input" required placeholder="••••••••">
         </div>
 
-        <!-- State: Loading -->
-        <div id="state-loading" style="display:none;">
-          <div class="loading-state" style="padding:40px 0;">
-            <div class="spinner"></div>
-            <p>Enviando link de acesso...</p>
-          </div>
-        </div>
+        <div id="errorMsg" class="error-msg hidden"></div>
 
-        <!-- State: Code Input -->
-        <div id="state-code" style="display:none;">
-          <h2 class="auth-form-title" style="margin-bottom:6px;">Digite o código</h2>
-          <p class="auth-form-lead">
-            Enviamos um código de 6 dígitos para<br>
-            <strong id="code-email" style="color:var(--navy);"></strong>
-          </p>
-
-          <div class="form-group" style="margin-bottom:18px;">
-            <label class="form-label" for="otp-code">Código de verificação</label>
-            <input class="form-input"
-                   type="text"
-                   inputmode="numeric"
-                   pattern="[0-9]*"
-                   id="otp-code"
-                   placeholder="000000"
-                   maxlength="6"
-                   autocomplete="one-time-code"
-                   style="font-size:26px;letter-spacing:10px;text-align:center;font-family:var(--sans);">
-          </div>
-
-          <button class="btn btn-primary btn-full btn-lg" id="btn-verify" onclick="handleVerify()">
-            Verificar e acessar
-          </button>
-
-          <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="resetForm()">
-            ← Usar outro e-mail
-          </button>
-        </div>
-
-        <!-- State: Error -->
-        <div id="state-error" style="display:none; text-align:center;">
-          <div style="font-size:28px; margin-bottom:16px;">ERRO</div>
-          <h2 class="auth-form-title" style="margin-bottom:8px;">Erro ao enviar</h2>
-          <p id="error-msg" style="font-size:13px; color:var(--red); margin-bottom:20px;"></p>
-          <button class="btn btn-outline btn-full" onclick="resetForm()">Tentar novamente</button>
-        </div>
-
-      </div>
+        <button type="submit" id="submitBtn" class="ds-btn ds-btn-primary ds-btn-block">
+          Entrar
+        </button>
+      </form>
     </div>
   </div>
-</div>
 
-<!-- Toast -->
-<div class="toast" id="toast"><span id="toast-msg"></span></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/auth-manager.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await window.AuthManager.init();
 
-<script type="module">
-import { isValidEmail, showToast } from '../utils/helpers.js';
-import { AuthService }             from '../services/auth.js';
-import { supabase }                from '../services/supabase.js';
+      // Se já estiver logado, redireciona
+      if (window.AuthManager.currentUser) {
+        window.location.href = '/portal.hermidamaia.adv.br'; // Ou caminho relativo correto
+        return;
+      }
 
-const ADMIN_EMAIL    = 'adrianohermida@gmail.com';
-const ADMIN_DEV_CODE = '172145';
+      const form = document.getElementById('loginForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const errorMsg = document.getElementById('errorMsg');
 
-window.showToast = showToast;
-let currentEmail = '';
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-AuthService.isAuthenticated().then(auth => {
-  if (auth) window.location.replace('meu-caso.html');
-});
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Autenticando...';
+        errorMsg.classList.add('hidden');
 
-function setState(id) {
-  ['state-form','state-loading','state-code','state-error'].forEach(s => {
-    document.getElementById(s).style.display = s === id ? '' : 'none';
-  });
-}
-
-window.handleSend = async function() {
-  const email = document.getElementById('email').value.trim();
-  if (!email || !isValidEmail(email)) {
-    showToast('Informe um e-mail válido.', 'warn');
-    document.getElementById('email').focus();
-    return;
-  }
-
-  currentEmail = email;
-  setState('state-loading');
-
-  // Dev bypass: admin skips the Supabase OTP call entirely
-  if (email === ADMIN_EMAIL) {
-    document.getElementById('code-email').textContent = email;
-    setState('state-code');
-    setTimeout(() => document.getElementById('otp-code').focus(), 80);
-    return;
-  }
-
-  try {
-    const result = await AuthService.sendOTP(email);
-    if (result.ok) {
-      document.getElementById('code-email').textContent = email;
-      setState('state-code');
-      setTimeout(() => document.getElementById('otp-code').focus(), 80);
-    } else {
-      document.getElementById('error-msg').textContent = result.message || 'Falha ao enviar o código.';
-      setState('state-error');
-    }
-  } catch (err) {
-    document.getElementById('error-msg').textContent = 'Erro inesperado. Tente novamente.';
-    setState('state-error');
-  }
-};
-
-window.handleVerify = async function() {
-  const code = document.getElementById('otp-code').value.trim();
-  if (!/^\d{6}$/.test(code)) {
-    showToast('Digite os 6 dígitos do código.', 'warn');
-    return;
-  }
-
-  setState('state-loading');
-
-  let result;
-  if (currentEmail === ADMIN_EMAIL && code === ADMIN_DEV_CODE) {
-    const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_DEV_CODE });
-    result = error ? { ok: false, message: error.message } : { ok: true };
-  } else {
-    result = await AuthService.verifyOTP(currentEmail, code);
-  }
-
-  if (result.ok) {
-    window.location.replace('meu-caso.html');
-  } else {
-    document.getElementById('error-msg').textContent = result.message || 'Código inválido ou expirado.';
-    setState('state-error');
-  }
-};
-
-window.resetForm = function() {
-  document.getElementById('email').value    = '';
-  document.getElementById('otp-code').value = '';
-  currentEmail = '';
-  setState('state-form');
-  setTimeout(() => document.getElementById('email').focus(), 50);
-};
-
-document.getElementById('email')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') window.handleSend();
-});
-
-document.getElementById('otp-code')?.addEventListener('input', function() {
-  this.value = this.value.replace(/\D/g, '').slice(0, 6);
-  if (this.value.length === 6) window.handleVerify();
-});
-
-document.getElementById('otp-code')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') window.handleVerify();
-});
-</script>
-
+        try {
+          await window.AuthManager.login(email, password);
+          
+          // Redirecionamento baseado no perfil
+          if (window.AuthManager.isAdmin()) {
+            window.location.href = '/admin/index.html'; // Admin Shell
+          } else {
+            window.location.href = '/client/index.html'; // Client Shell
+          }
+        } catch (err) {
+          errorMsg.textContent = err.message || 'Erro ao fazer login. Verifique suas credenciais.';
+          errorMsg.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar';
+        }
+      });
+    });
+  </script>
 </body>
 </html>
