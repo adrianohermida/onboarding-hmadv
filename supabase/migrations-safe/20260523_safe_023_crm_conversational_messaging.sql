@@ -22,7 +22,7 @@ AS $$
       SELECT pwm.workspace_id
       FROM portal_workspace_members pwm
       WHERE pwm.user_id = auth.uid()
-      ORDER BY pwm.created_at ASC NULLS LAST
+      ORDER BY pwm.id ASC
       LIMIT 1
     ),
     (
