@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mensagens — Hermida Maia Advocacia</title>
-<link rel="stylesheet" href="../styles/variables.css?v=20260523a">
-<link rel="stylesheet" href="../styles/main.css?v=20260523a">
-<link rel="stylesheet" href="../styles/layout.css?v=20260523a">
-<link rel="stylesheet" href="../styles/components.css?v=20260523a">
+<link rel="stylesheet" href="../styles/variables.css?v=20260523c">
+<link rel="stylesheet" href="../styles/main.css?v=20260523c">
+<link rel="stylesheet" href="../styles/layout.css?v=20260523c">
+<link rel="stylesheet" href="../styles/components.css?v=20260523c">
 </head>
 <body>
 <div class="portal-shell">
@@ -20,11 +20,11 @@
     </main>
   </div>
 </div>
-<script type="module" src="../js/app.js?v=20260523a"></script>
+<script type="module" src="../js/app.js?v=20260523c"></script>
 <script type="module">
   import { checkIsAdmin } from '../services/database.js';
-  import { bootAdvogadoPage } from '../modules/advogado/PortalAdvogadoPage.js?v=20260523a';
-  import { bootClientePage } from '../modules/cliente/PortalClientePage.js?v=20260523a';
+  import { bootAdvogadoPage } from '../modules/advogado/PortalAdvogadoPage.js?v=20260523c';
+  import { bootClientePage } from '../modules/cliente/PortalClientePage.js?v=20260523c';
 
   document.addEventListener('app:ready', async () => {
     const isAdmin = await checkIsAdmin().catch(() => false);

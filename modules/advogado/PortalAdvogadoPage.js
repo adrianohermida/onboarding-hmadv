@@ -1337,15 +1337,6 @@ async function renderPainelPage(host) {
         </div>
       </div>
 
-      <details class="painel-modules-details" open>
-        <summary class="painel-modules-summary">
-          <span>Todos os módulos</span>
-          <span class="painel-modules-count">${ADMIN_PAGE_KEYS.length} módulos operacionais</span>
-        </summary>
-        <div class="advogado-workspace-grid">${moduleCards}</div>
-      </details>
-
-      ${renderCaseManagementPanel()}
     </section>
   `;
 }
