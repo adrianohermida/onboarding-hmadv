@@ -7,17 +7,20 @@ const config: StorybookConfig = {
       files: '**/*.stories.@(js|jsx|mjs|ts|tsx)'
     }
   ],
+
   addons: [
-    '@storybook/addon-essentials'
+    '@storybook/addon-docs',
+    '@storybook/addon-links',
+    '@storybook/addon-a11y',
+    '@storybook/addon-mcp'
   ],
+
   framework: {
     name: '@storybook/html-vite',
     options: {}
   },
-  docs: {
-    autodocs: 'tag'
-  },
-  staticDirs: ['../design-system'],
+
+  staticDirs: ['../design-system']
 };
 
 export default config;
