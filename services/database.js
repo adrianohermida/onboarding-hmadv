@@ -31,14 +31,35 @@ async function getCaseContext(uid) {
 }
 
 async function getLatestCaseRow(uid, select = '*') {
-  const { data, error } = await supabase
+  // Primary path: newest row by updated_at.
+  const primary = await supabase
     .from('portal_casos')
     .select(select)
     .eq('user_id', uid)
     .order('updated_at', { ascending: false })
     .limit(1);
-  if (error) throw error;
-  return data?.[0] ?? null;
+
+  if (!primary.error) return primary.data?.[0] ?? null;
+
+  // Compatibility fallback: environments with schema drift may miss updated_at.
+  const fallbackCreatedAt = await supabase
+    .from('portal_casos')
+    .select(select)
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (!fallbackCreatedAt.error) return fallbackCreatedAt.data?.[0] ?? null;
+
+  // Last-resort fallback without ordering avoids hard failures and 409 loops.
+  const fallbackNoOrder = await supabase
+    .from('portal_casos')
+    .select(select)
+    .eq('user_id', uid)
+    .limit(1);
+
+  if (fallbackNoOrder.error) throw fallbackNoOrder.error;
+  return fallbackNoOrder.data?.[0] ?? null;
 }
 
 async function saveCaseByUser(uid, fields = {}) {
@@ -59,7 +80,14 @@ async function saveCaseByUser(uid, fields = {}) {
     .insert({ user_id: uid, ...fields })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    // Concurrency/race safe: another request may have created the row first.
+    if (error.code === '23505' || error.status === 409) {
+      const winner = await getLatestCaseRow(uid, '*').catch(() => null);
+      if (winner) return winner;
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -314,7 +342,8 @@ export const CaseService = {
       const { error } = await supabase
         .from('portal_casos')
         .insert({ user_id: uid });
-      if (error && error.code !== '23505') throw error;
+      // 23505/409 can happen on parallel boots; treat as already-created.
+      if (error && error.code !== '23505' && error.status !== 409) throw error;
     }
     await supabase
       .from('portal_documentos')
