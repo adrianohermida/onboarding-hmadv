@@ -17,21 +17,21 @@ export interface WorkspaceContext {
 
 export interface ClienteSummary {
   user_id: string;
-  nome: string;
+  full_name: string;
   email: string;
-  telefone: string;
   cpf: string;
   fase: string;
-  status: string;
   onboarding_done: boolean;
+  cnj_step_atual: number;
+  n_credores: number | null;
   created_at: string;
 }
 
 export interface Documento {
   id: string;
   tipo: string;
-  nome: string | null;
-  url: string | null;
+  nome_arquivo: string | null;
+  storage_path: string | null;
   workflow_status: import('./database').WorkflowStatus;
   admin_notes: string | null;
   direction: string;

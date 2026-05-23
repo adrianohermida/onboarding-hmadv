@@ -186,10 +186,10 @@ export default function AdminDashboard({ clients, pendingDocs }: Props) {
                 className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
               >
                 <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0 uppercase">
-                  {c.nome?.split(' ').slice(0, 2).map((w: string) => w[0]).join('') || '?'}
+                  {c.full_name?.split(' ').slice(0, 2).map((w: string) => w[0]).join('') || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{c.nome || '—'}</p>
+                  <p className="text-sm font-medium truncate">{c.full_name || '—'}</p>
                   <p className="text-xs text-muted-foreground">{formatDate(c.created_at)}</p>
                 </div>
                 <StatusBadge status={c.fase} labels={FASE_LABELS} />

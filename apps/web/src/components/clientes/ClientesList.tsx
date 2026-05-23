@@ -150,10 +150,10 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
-                      {getInitials(c.nome)}
+                      {getInitials(c.full_name)}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{c.nome || '—'}</p>
+                      <p className="font-medium text-foreground">{c.full_name || '—'}</p>
                       {c.cpf && <p className="text-xs text-muted-foreground">{c.cpf}</p>}
                     </div>
                   </div>
@@ -198,10 +198,10 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
             className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:bg-muted/40 transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">
-              {getInitials(c.nome)}
+              {getInitials(c.full_name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{c.nome || '—'}</p>
+              <p className="font-medium text-sm truncate">{c.full_name || '—'}</p>
               <p className="text-xs text-muted-foreground truncate">{c.email || c.cpf || '—'}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
