@@ -80,3 +80,4 @@ Thumbs.db
 .mypy_cache/
 .gradle/
 target/
+apps/web/.next/
