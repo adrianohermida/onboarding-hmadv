@@ -16,6 +16,8 @@ const schema = z.object({
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
 });
+type ConviteFormData = z.infer<typeof schema>;
+const passwordFields: Array<keyof ConviteFormData> = ['password', 'confirmPassword'];
 
 export default function ConvitePage() {
   const { token } = useParams<{ token: string }>();
@@ -23,7 +25,7 @@ export default function ConvitePage() {
   const [step, setStep] = useState<'loading' | 'set-password' | 'done'>('loading');
   const [loading, setLoading] = useState(false);
 
-  const form = useForm({ resolver: zodResolver(schema) });
+  const form = useForm<ConviteFormData>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
     async function verifyToken() {
@@ -35,7 +37,7 @@ export default function ConvitePage() {
     verifyToken();
   }, [token, router]);
 
-  async function handleSubmit({ password }: { password: string; confirmPassword: string }) {
+  async function handleSubmit({ password }: ConviteFormData) {
     setLoading(true);
     try {
       const supabase = createClient();
@@ -63,19 +65,19 @@ export default function ConvitePage() {
               <h2 className="text-lg font-semibold text-white mb-1">Defina sua senha</h2>
               <p className="text-slate-400 text-sm">Bem-vindo! Crie sua senha para ativar sua conta.</p>
             </div>
-            {['password', 'confirmPassword'].map((field) => (
+            {passwordFields.map((field) => (
               <div key={field} className="space-y-1.5">
                 <label className="text-sm text-slate-300 font-medium">
                   {field === 'password' ? 'Senha' : 'Confirmar senha'}
                 </label>
                 <input
-                  {...form.register(field as 'password' | 'confirmPassword')}
+                  {...form.register(field)}
                   type="password"
                   placeholder="••••••••"
                   className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
-                {form.formState.errors[field as 'password'] && (
-                  <p className="text-red-400 text-xs">{form.formState.errors[field as 'password']?.message}</p>
+                {form.formState.errors[field] && (
+                  <p className="text-red-400 text-xs">{String(form.formState.errors[field]?.message ?? '')}</p>
                 )}
               </div>
             ))}

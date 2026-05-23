@@ -22,15 +22,10 @@
   "private": true,
   "devDependencies": {
     "@types/node": "^25.9.1",
-    "@types/react": "^19.2.15",
-    "@types/react-dom": "^19.2.3",
     "jsdom": "^26.1.0",
-    "typescript": "^6.0.3",
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "next": "^16.2.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react": "^19.2.6"
   }
 }

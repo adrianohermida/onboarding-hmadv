@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 
 const emailSchema = z.object({ email: z.string().email('E-mail inválido') });
 const otpSchema = z.object({ token: z.string().min(6, 'Token inválido').max(6) });
+type EmailFormData = z.infer<typeof emailSchema>;
+type OtpFormData = z.infer<typeof otpSchema>;
 
 type Step = 'email' | 'otp';
 
@@ -19,10 +21,10 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const emailForm = useForm({ resolver: zodResolver(emailSchema) });
-  const otpForm = useForm({ resolver: zodResolver(otpSchema) });
+  const emailForm = useForm<EmailFormData>({ resolver: zodResolver(emailSchema) });
+  const otpForm = useForm<OtpFormData>({ resolver: zodResolver(otpSchema) });
 
-  async function handleEmailSubmit({ email: e }: { email: string }) {
+  async function handleEmailSubmit({ email: e }: EmailFormData) {
     setLoading(true);
     try {
       const supabase = createClient();
@@ -39,7 +41,7 @@ export default function LoginForm() {
     }
   }
 
-  async function handleOtpSubmit({ token }: { token: string }) {
+  async function handleOtpSubmit({ token }: OtpFormData) {
     setLoading(true);
     try {
       const supabase = createClient();
@@ -76,7 +78,7 @@ export default function LoginForm() {
               />
             </div>
             {emailForm.formState.errors.email && (
-              <p className="text-red-400 text-xs">{emailForm.formState.errors.email.message}</p>
+              <p className="text-red-400 text-xs">{String(emailForm.formState.errors.email.message ?? '')}</p>
             )}
           </div>
           <button
@@ -115,7 +117,7 @@ export default function LoginForm() {
               />
             </div>
             {otpForm.formState.errors.token && (
-              <p className="text-red-400 text-xs">{otpForm.formState.errors.token.message}</p>
+              <p className="text-red-400 text-xs">{String(otpForm.formState.errors.token.message ?? '')}</p>
             )}
           </div>
           <button
