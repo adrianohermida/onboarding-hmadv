@@ -1,0 +1,649 @@
+const { getConfigs } = require("./storage");
+const { jsonPost, probeJsonEndpoint, probeJsonGetEndpoint } = require("./http-client");
+const { joinUrl, extractContent, buildProviderError } = require("./utils");
+const { describeAttempt } = require("./provider-diagnostics");
+const { buildProxyTargets, callProxyProvider } = require("./provider-proxy");
+const { appendChatDebug } = require("./chat-debug");
+const { getLocalChatPath, getLocalChatTarget, getLocalProviderLabel } = require("./local-provider");
+const { ensureLocalRuntimeStarted } = require("./local-runtime-bootstrap");
+
+const LOCAL_RUNTIME_CATALOG_CACHE = {
+  expiresAt: 0,
+  value: null,
+};
+const LOW_RESOURCE_MODEL_PREFERENCES = [
+  "qwen3.5:cloud",
+  "qwen3:4b",
+  "qwen3:8b",
+  "llama3.2:latest",
+  "llama3.1:latest",
+  "llama2:latest",
+];
+
+function isConnectionError(error) {
+  const raw = String(error?.message || "").toLowerCase();
+  return raw.includes("econnrefused") || raw.includes("socket hang up") || raw.includes("timeout");
+}
+
+function buildCloudflareRunUrl(accountId, model) {
+  const normalizedAccountId = String(accountId || "").trim();
+  const normalizedModel = String(model || "").trim().replace(/^\/+/, "");
+  return `https://api.cloudflare.com/client/v4/accounts/${normalizedAccountId}/ai/run/${normalizedModel}`;
+}
+
+function getRuntimeCatalogUrls(runtimeEndpoint) {
+  const endpoint = String(runtimeEndpoint || "").trim();
+  if (!endpoint) return [];
+  const base = endpoint.replace(/\/v1\/chat\/completions$/i, "");
+  return [
+    { url: joinUrl(base, "/v1/models"), parser: "openai" },
+    { url: joinUrl(base, "/api/tags"), parser: "ollama" },
+  ];
+}
+
+function parseCatalogProbe(probe, parser) {
+  if (!probe?.ok) return null;
+  if (parser === "openai") {
+    const models = Array.isArray(probe?.body?.data) ? probe.body.data : null;
+    return Array.isArray(models)
+      ? models.map((item) => item?.id || item?.model || item?.name || null).filter(Boolean)
+      : [];
+  }
+  const models = Array.isArray(probe?.body?.models) ? probe.body.models : null;
+  return Array.isArray(models)
+    ? models.map((item) => item?.name || item?.model || item?.id || null).filter(Boolean)
+    : [];
+}
+
+async function discoverAiCoreRuntimeCatalogs(aiCoreCandidates) {
+  const targets = [];
+  const seen = new Set();
+  for (const baseUrl of aiCoreCandidates || []) {
+    const healthUrl = joinUrl(baseUrl, "/health");
+    try {
+      const probe = await probeJsonGetEndpoint(healthUrl, {}, { timeoutMs: 5000 });
+      const transportEndpoint = String(probe?.body?.providers?.local?.diagnostics?.transport_endpoint || "").trim();
+      for (const target of getRuntimeCatalogUrls(transportEndpoint)) {
+        if (!target?.url || seen.has(target.url)) continue;
+        seen.add(target.url);
+        targets.push(target);
+      }
+    } catch {}
+  }
+  return targets;
+}
+
+async function readLocalRuntimeCatalog(configs) {
+  if (LOCAL_RUNTIME_CATALOG_CACHE.value && Date.now() < LOCAL_RUNTIME_CATALOG_CACHE.expiresAt) {
+    return LOCAL_RUNTIME_CATALOG_CACHE.value;
+  }
+  const seen = new Set();
+  const urls = [];
+  for (const target of await discoverAiCoreRuntimeCatalogs(configs.local.candidates)) {
+    if (!target?.url || seen.has(target.url)) continue;
+    seen.add(target.url);
+    urls.push(target);
+  }
+  for (const baseUrl of configs.local.runtimeCatalogCandidates || []) {
+    for (const target of getRuntimeCatalogUrls(baseUrl)) {
+      if (!target?.url || seen.has(target.url)) continue;
+      seen.add(target.url);
+      urls.push(target);
+    }
+  }
+  for (const target of urls) {
+    try {
+      const probe = await probeJsonGetEndpoint(target.url, {}, { timeoutMs: 5000 });
+      const models = parseCatalogProbe(probe, target.parser);
+      if (probe.ok && Array.isArray(models) && models.length) {
+        const result = { url: target.url, models };
+        LOCAL_RUNTIME_CATALOG_CACHE.value = result;
+        LOCAL_RUNTIME_CATALOG_CACHE.expiresAt = Date.now() + 30000;
+        return result;
+      }
+    } catch {}
+  }
+  const fallback = { url: "", models: [] };
+  LOCAL_RUNTIME_CATALOG_CACHE.value = fallback;
+  LOCAL_RUNTIME_CATALOG_CACHE.expiresAt = Date.now() + 10000;
+  return fallback;
+}
+
+async function resolveRequestedLocalModel(requestedModel, configs) {
+  const requested = String(requestedModel || "").trim();
+  if (!requested) return { model: requested, catalog: [] };
+  const catalog = await readLocalRuntimeCatalog(configs);
+  if (!catalog.models.length) return { model: requested, catalog: [] };
+  if (catalog.models.includes(requested)) return { model: requested, catalog: catalog.models, catalogUrl: catalog.url };
+  const normalized = requested.replace(/:latest$/i, "");
+  const alias = catalog.models.find((item) => item.replace(/:latest$/i, "") === normalized);
+  return {
+    model: alias || requested,
+    catalog: catalog.models,
+    catalogUrl: catalog.url,
+  };
+}
+
+function pickLowResourceModel(catalog, currentModel) {
+  const models = Array.isArray(catalog) ? catalog : [];
+  const current = String(currentModel || "").trim().toLowerCase();
+  for (const preferred of LOW_RESOURCE_MODEL_PREFERENCES) {
+    const match = models.find((item) => String(item || "").trim().toLowerCase() === preferred);
+    if (match && String(match).trim().toLowerCase() !== current) return match;
+  }
+  const generic = models.find((item) => {
+    const normalized = String(item || "").trim().toLowerCase();
+    return normalized && normalized !== current && !normalized.includes("gemma4");
+  });
+  return generic || "";
+}
+
+// ─── Chamadas LLM ─────────────────────────────────────────────────────────────
+
+async function callLocal(messages, model, options = {}) {
+  const configs = getConfigs();
+  const startedAt = Date.now();
+  appendChatDebug({
+    scope: "chat.local.start",
+    sessionId: options.sessionId || null,
+    requestedModel: model || null,
+    messageCount: Array.isArray(messages) ? messages.length : 0,
+  });
+  const resolvedModelInfo = await resolveRequestedLocalModel(model, configs);
+  const effectiveModel = resolvedModelInfo.model || model;
+  appendChatDebug({
+    scope: "chat.local.catalog",
+    sessionId: options.sessionId || null,
+    requestedModel: model || null,
+    effectiveModel,
+    runtimeCatalogUrl: resolvedModelInfo.catalogUrl || null,
+    runtimeCatalogCount: Array.isArray(resolvedModelInfo.catalog) ? resolvedModelInfo.catalog.length : 0,
+    elapsedMs: Date.now() - startedAt,
+  });
+  let selectedModel = effectiveModel;
+  let lowResourceFallbackUsed = false;
+  let lastError = null;
+  for (const baseUrl of configs.local.candidates) {
+    const target = getLocalChatTarget(baseUrl, configs);
+    const attempts = buildLocalAttempts(messages, options);
+    for (let index = 0; index < attempts.length; index += 1) {
+      const attempt = attempts[index];
+      const attemptStartedAt = Date.now();
+      appendChatDebug({
+        scope: "chat.local.attempt",
+        sessionId: options.sessionId || null,
+        target,
+        profile: attempt.profile,
+        maxTokens: attempt.maxTokens,
+        timeoutMs: attempt.timeoutMs,
+        messageCount: Array.isArray(attempt.messages) ? attempt.messages.length : 0,
+      });
+      try {
+        const response = await jsonPost(
+          target,
+          {
+            model: selectedModel,
+            messages: attempt.messages,
+            max_tokens: attempt.maxTokens,
+            sessionId: options.sessionId || null,
+            session_id: options.sessionId || null,
+            context: attempt.context,
+          },
+          {},
+          { timeoutMs: attempt.timeoutMs },
+        );
+        const degraded = Boolean(response.body?.metadata?.degraded);
+        const fallbackReason = String(response.body?.metadata?.fallback_reason || "").toLowerCase();
+        const lowResourceModel = !lowResourceFallbackUsed && degraded && fallbackReason.includes("memory")
+          ? pickLowResourceModel(resolvedModelInfo.catalog, selectedModel)
+          : "";
+        if (lowResourceModel) {
+          lowResourceFallbackUsed = true;
+          selectedModel = lowResourceModel;
+          appendChatDebug({
+            scope: "chat.local.low-resource-retry",
+            sessionId: options.sessionId || null,
+            target,
+            previousModel: response.body?.metadata?.effective_model || selectedModel,
+            nextModel: lowResourceModel,
+            fallbackReason,
+          });
+          index -= 1;
+          continue;
+        }
+        const content = degraded
+          ? sanitizeLocalFallbackContent(extractContent(response.body), attempt.messages)
+          : extractContent(response.body);
+        if (response.status >= 200 && response.status < 300 && content) {
+          appendChatDebug({
+            scope: "chat.local.success",
+            sessionId: options.sessionId || null,
+            target,
+            profile: attempt.profile,
+            status: response.status,
+            effectiveModel: selectedModel,
+            elapsedMs: Date.now() - attemptStartedAt,
+            totalElapsedMs: Date.now() - startedAt,
+          });
+          return {
+            ok: true,
+            provider: "local",
+            model: selectedModel,
+            content,
+            target,
+            metadata: {
+              ...(response.body?.metadata || {}),
+              retryCount: index,
+              retryProfile: attempt.profile,
+              requested_model: model,
+              effective_model: selectedModel,
+              runtime_catalog_url: resolvedModelInfo.catalogUrl || null,
+              runtime_catalog_count: Array.isArray(resolvedModelInfo.catalog) ? resolvedModelInfo.catalog.length : 0,
+            },
+            degraded,
+          };
+        }
+        lastError = buildProviderError(getLocalProviderLabel(configs), target, response);
+        lastError.provider = "local";
+        lastError.target = target;
+        lastError.responseStatus = response.status;
+        lastError.responseBody = response.body;
+        appendChatDebug({
+          scope: "chat.local.invalid-response",
+          sessionId: options.sessionId || null,
+          target,
+          profile: attempt.profile,
+          status: response.status,
+          elapsedMs: Date.now() - attemptStartedAt,
+          message: lastError.message,
+        });
+        if (!isConnectionError(lastError)) break;
+      } catch (error) {
+        lastError = error;
+        appendChatDebug({
+          scope: "chat.local.exception",
+          sessionId: options.sessionId || null,
+          target,
+          profile: attempt.profile,
+          elapsedMs: Date.now() - attemptStartedAt,
+          message: error?.message || `Falha ao chamar ${getLocalProviderLabel(configs)}.`,
+        });
+        if (!isConnectionError(error)) break;
+      }
+    }
+    if (!isConnectionError(lastError)) break;
+  }
+  throw lastError || new Error("Runtime local indisponivel.");
+}
+
+function buildLocalAttempts(messages, options = {}) {
+  const primaryContext = options.context || null;
+  const compactMessages = trimLocalMessages(messages);
+  const compactTail = compactMessages.slice(-2);
+  return [
+    {
+      profile: "fast_primary",
+      messages: compactMessages,
+      maxTokens: 80,
+      timeoutMs: 42000,
+      context: { ...(primaryContext || {}), retry_profile: "fast_primary", compact_context: true },
+    },
+    {
+      profile: "fast_fallback_minimal",
+      messages: compactTail.length ? compactTail : compactMessages,
+      maxTokens: 64,
+      timeoutMs: 20000,
+      context: { retry_profile: "fast_fallback_minimal", compact_context: true, local_summary_only: true },
+    },
+  ];
+}
+
+function trimLocalMessages(messages) {
+  const safeMessages = Array.isArray(messages) ? messages : [];
+  const tail = safeMessages.slice(-4);
+  const lastUser = [...safeMessages].reverse().find((item) => item?.role === "user");
+  if (lastUser && !tail.includes(lastUser)) return [...tail.slice(-3), lastUser];
+  return tail.length ? tail : safeMessages.slice(-1);
+}
+
+function sanitizeLocalFallbackContent(content, messages = []) {
+  const text = String(content || "").trim();
+  const lastUserMessage = [...(Array.isArray(messages) ? messages : [])]
+    .reverse()
+    .find((item) => item?.role === "user" && String(item?.content || "").trim());
+  const userIntent = String(lastUserMessage?.content || "").replace(/\s+/g, " ").trim();
+  const shortIntent = userIntent.length > 160 ? `${userIntent.slice(0, 160)}...` : userIntent;
+  const cleanedHead = text
+    ? String(text.split(/\n\s*Contexto local recuperado:/i)[0] || "").trim()
+    : "";
+
+  if (!cleanedHead || /provider local nao ficou operacional|modo degradado|contexto local recuperado/i.test(cleanedHead)) {
+    return [
+      "Estou respondendo em modo local seguro enquanto o runtime principal estabiliza.",
+      shortIntent ? `Entendi seu pedido: ${shortIntent}` : "",
+      "Posso continuar de forma objetiva com o contexto recente disponivel e, se for uma acao no navegador, transformar isso em task auditavel.",
+    ].filter(Boolean).join("\n\n");
+  }
+
+  return [
+    cleanedHead,
+    "Usei memoria local de apoio nesta resposta, mas o diagnostico tecnico ficou fora da conversa para manter a experiencia limpa.",
+  ].join("\n\n").trim();
+}
+
+async function callCloud(messages, model) {
+  const configs = getConfigs();
+  let directError = null;
+  if (configs.cloud.baseUrl) {
+    const target = joinUrl(configs.cloud.baseUrl, "/v1/messages");
+    const headers = configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {};
+    const response = await jsonPost(target, { model, messages, max_tokens: 1400 }, headers);
+    const content = extractContent(response.body);
+    if (response.status >= 200 && response.status < 300 && content) {
+      return { ok: true, provider: "cloud", model, content, target };
+    }
+    directError = buildProviderError("Cloud", target, response);
+  }
+  if (!configs.cloud.appUrl) throw directError || new Error("Provider cloud nao configurado. Defina a URL da API ou do proxy em Configuracoes.");
+  const query = messages.map((item) => `[${item.role}] ${item.content}`).join("\n");
+  const headers = configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {};
+  try {
+    const result = await callProxyProvider(configs.cloud.appUrl, { query, provider: "cloud", model }, headers, "Cloud proxy");
+    return { ok: true, provider: "cloud", model, content: result.content, target: result.target };
+  } catch (proxyError) {
+    throw directError || proxyError;
+  }
+}
+
+async function callCloudflare(messages, model) {
+  const configs = getConfigs();
+  let directError = null;
+  if (configs.cloudflare.accountId && configs.cloudflare.apiToken) {
+    const target = buildCloudflareRunUrl(configs.cloudflare.accountId, model);
+    const response = await jsonPost(target, { messages }, { Authorization: `Bearer ${configs.cloudflare.apiToken}` });
+    const content = extractContent(response.body) || extractContent(response.body?.result);
+    if (response.status >= 200 && response.status < 300 && content) {
+      return {
+        ok: true,
+        provider: "cloudflare",
+        model,
+        content,
+        target,
+        metadata: response.body?.result?.usage ? { usage: response.body.result.usage } : null,
+      };
+    }
+    directError = buildProviderError("Cloudflare API", target, response);
+  }
+  if (!configs.cloudflare.appUrl) throw directError || new Error("Provider cloudflare nao configurado. Defina Account ID + API Token ou URL do proxy em Configuracoes.");
+  const query = messages.map((item) => `[${item.role}] ${item.content}`).join("\n");
+  const headers = configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {};
+  try {
+    const result = await callProxyProvider(configs.cloudflare.appUrl, { query, provider: "cloudflare", model }, headers, "Cloudflare proxy");
+    return { ok: true, provider: "cloudflare", model, content: result.content, target: result.target };
+  } catch (proxyError) {
+    throw directError || proxyError;
+  }
+}
+
+// ─── Diagnóstico ──────────────────────────────────────────────────────────────
+
+function buildCloudTests(configs) {
+  const tests = [];
+  if (configs.cloud.baseUrl) {
+    tests.push({
+      url: joinUrl(configs.cloud.baseUrl, "/v1/messages"),
+      body: { model: configs.cloud.model, max_tokens: 8, messages: [{ role: "user", content: "OK" }] },
+      headers: configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {},
+      isConfigured: true,
+      hint: "URL direta da API cloud. Verifique modelo e token.",
+    });
+  }
+  if (configs.cloud.appUrl) {
+    buildProxyTargets(configs.cloud.appUrl, "/api/admin-lawdesk-chat",
+      "Rota proxy admin. Exige token Bearer de sessao administrativa valida."
+    ).forEach((target) => tests.push({
+      url: target.url,
+      body: { query: "Responda com OK", provider: "cloud", model: configs.cloud.model },
+      headers: configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {},
+      hint: target.hint,
+      isConfigured: target.isConfigured,
+    }));
+  }
+  return tests;
+}
+
+function buildCloudflareTests(configs) {
+  const tests = [];
+  if (configs.cloudflare.accountId && configs.cloudflare.apiToken) {
+    tests.push({
+      url: buildCloudflareRunUrl(configs.cloudflare.accountId, configs.cloudflare.model),
+      body: { messages: [{ role: "user", content: "OK" }] },
+      headers: { Authorization: `Bearer ${configs.cloudflare.apiToken}` },
+      isConfigured: true,
+      hint: "API direta Cloudflare Workers AI.",
+    });
+  }
+  if (configs.cloudflare.appUrl) {
+    buildProxyTargets(configs.cloudflare.appUrl, "/api/admin-lawdesk-chat",
+      "Sem Account ID/API Token, usa proxy admin. Exige token Bearer."
+    ).forEach((target) => tests.push({
+      url: target.url,
+      body: { query: "Responda com OK", provider: "cloudflare", model: configs.cloudflare.model },
+      headers: configs.cloud.authToken ? { Authorization: `Bearer ${configs.cloud.authToken}` } : {},
+      hint: target.hint,
+      isConfigured: target.isConfigured,
+    }));
+  }
+  return tests;
+}
+
+function notConfiguredResult(provider, configs, reason) {
+  return {
+    ok: false,
+    provider,
+    issue: "not_configured",
+    message: reason,
+    configuredUrl: null,
+    model: configs[provider]?.model || null,
+    attempts: [],
+    recommendation: provider === "cloudflare"
+      ? "Preencha Account ID e API Token do Cloudflare Workers AI em Configuracoes."
+      : "Preencha a URL direta da API cloud ou o token Bearer do proxy em Configuracoes.",
+  };
+}
+
+async function diagnose(provider) {
+  const configs = getConfigs();
+  if (provider === "local") {
+    await ensureLocalRuntimeStarted(configs, "diagnostics_local");
+  }
+
+  const localHint = `Confirme se o provider local esta rodando e se a URL aponta para ${getLocalChatPath(configs)}.`;
+  const testsMap = {
+    local: configs.local.candidates.map((baseUrl) => ({
+      url: getLocalChatTarget(baseUrl, configs),
+      body: { model: configs.local.model, max_tokens: 8, messages: [{ role: "user", content: "OK" }] },
+      model: configs.local.model,
+      isConfigured: true,
+      hint: localHint,
+    })),
+    cloud: buildCloudTests(configs),
+    cloudflare: buildCloudflareTests(configs),
+  };
+
+  const tests = testsMap[provider] || [];
+
+  if (!tests.length) {
+    if (provider === "cloud") return notConfiguredResult("cloud", configs, "Nenhuma URL de API ou proxy cloud configurada.");
+    if (provider === "cloudflare") return notConfiguredResult("cloudflare", configs, "Nenhuma credencial Cloudflare ou URL de proxy configurada.");
+    return { ok: false, provider, issue: "not_configured", message: `Provider ${provider} desconhecido.`, attempts: [] };
+  }
+
+  const attempts = [];
+  for (const test of tests) {
+    try {
+      const timeoutMs = provider === "local" ? 8000 : 8000;
+      const described = describeAttempt(
+        await probeJsonEndpoint(test.url, test.body, test.headers || {}, { timeoutMs }),
+        test.hint,
+      );
+      attempts.push(described);
+      if (described.ok) break;
+    } catch (error) {
+      const described = describeAttempt({ ok: false, url: test.url, error: error?.message || "Falha de conexao." }, test.hint);
+      attempts.push(described);
+    }
+  }
+
+  if (provider === "local") await enrichLocalCatalogDiagnosis(configs, attempts);
+
+  const success = attempts.find((item) => item.ok);
+  const configuredAttempt = attempts.find((item) => tests.find((test) => test.url === item.url)?.isConfigured);
+  const reachableAlternative = attempts.find((item) => item.url !== configuredAttempt?.url && (item.ok || item.status));
+
+  if (success) {
+    const portMismatch = configuredAttempt && success.url !== configuredAttempt.url;
+    return {
+      ok: true,
+      provider,
+      issue: portMismatch ? "port_mismatch" : null,
+      message: portMismatch ? `Conexao ${provider} confirmada em porta alternativa.` : `Conexao ${provider} confirmada.`,
+      activeUrl: success.url,
+      configuredUrl: configuredAttempt?.url || tests[0]?.url || null,
+      recommendedUrl: portMismatch ? success.url : null,
+      model: configs[provider]?.model,
+      attempts,
+    };
+  }
+
+  if (configuredAttempt?.issue === "service_offline" && reachableAlternative) {
+    return {
+      ok: false,
+      provider,
+      issue: "port_mismatch",
+      message: `O provider ${provider} nao respondeu na URL configurada, mas existe um proxy em outra porta.`,
+      configuredUrl: configuredAttempt.url,
+      recommendedUrl: reachableAlternative.url,
+      model: configs[provider]?.model,
+      attempts,
+    };
+  }
+
+  return {
+    ok: false,
+    provider,
+    issue: attempts[0]?.issue || "unreachable",
+    message: `Nao foi possivel conectar ao provider ${provider}.`,
+    configuredUrl: tests[0]?.url || null,
+    model: configs[provider]?.model,
+    attempts,
+  };
+}
+
+async function enrichLocalCatalogDiagnosis(configs, attempts) {
+  const modelNotFoundAttempt = attempts.find((item) => item.issue === "model_not_found");
+  if (!modelNotFoundAttempt) return;
+  let runtimeCatalogUrls = [];
+  const aiCoreAttempt = attempts.find((item) => item.url === getLocalChatTarget(configs.local.candidates[0], configs));
+  if (aiCoreAttempt) {
+    const healthInsight = await readAiCoreLocalInsight(configs.local.candidates);
+    if (healthInsight?.providerDiagnostics) {
+      modelNotFoundAttempt.aiCoreDiagnostics = healthInsight.providerDiagnostics;
+      const runtimeEndpoint = String(healthInsight.providerDiagnostics.transport_endpoint || "").trim();
+      if (runtimeEndpoint) {
+        modelNotFoundAttempt.runtimeEndpoint = runtimeEndpoint;
+        runtimeCatalogUrls = getRuntimeCatalogUrls(runtimeEndpoint);
+      }
+      if (healthInsight.issue === "runtime_model_unavailable") {
+        modelNotFoundAttempt.issue = "runtime_model_unavailable";
+        modelNotFoundAttempt.summary = "O provider local esta online, mas o runtime por tras dele nao tem um modelo carregado que responda ao alias configurado.";
+        modelNotFoundAttempt.recommendation = `Revise o runtime local apontado pelo provider (${runtimeEndpoint || "endpoint nao informado"}) e carregue o modelo/alias esperado, ou ajuste LOCAL_LLM_MODEL para um modelo realmente disponivel.`;
+      }
+      if (healthInsight.issue === "runtime_catalog_invalid") {
+        modelNotFoundAttempt.issue = "runtime_catalog_invalid";
+        modelNotFoundAttempt.summary = "O provider local encontrou o runtime, mas o catalogo publicado por ele esta invalido ou vazio.";
+        modelNotFoundAttempt.recommendation = `Corrija o runtime local apontado pelo provider (${runtimeEndpoint || "endpoint nao informado"}) para responder um catalogo valido do modelo antes de usar o chat local.`;
+      }
+    }
+  }
+  const fallbackCatalogUrls = (configs.local.runtimeCatalogCandidates || []).flatMap((baseUrl) => ([
+    { url: joinUrl(baseUrl, "/v1/models"), parser: "openai" },
+    { url: joinUrl(baseUrl, "/api/tags"), parser: "ollama" },
+  ]));
+  const catalogTargets = [...runtimeCatalogUrls, ...fallbackCatalogUrls]
+    .filter((item, index, list) => item?.url && list.findIndex((entry) => entry.url === item.url) === index);
+  for (const target of catalogTargets) {
+    try {
+      const probe = await probeJsonGetEndpoint(target.url, {}, { timeoutMs: 5000 });
+      const models = parseCatalogProbe(probe, target.parser);
+      if (probe.ok && models && models.length === 0) {
+        modelNotFoundAttempt.issue = "runtime_catalog_empty";
+        modelNotFoundAttempt.summary = "O provider local respondeu, mas o catalogo do runtime local esta vazio.";
+        modelNotFoundAttempt.recommendation = `Suba ou carregue um modelo no runtime local (${target.url}) antes de usar o alias ${configs.local.model}.`;
+        modelNotFoundAttempt.runtimeCatalog = { url: target.url, count: 0, models: [] };
+        return;
+      }
+      if (probe.ok && models && models.length > 0) {
+        modelNotFoundAttempt.runtimeCatalog = {
+          url: target.url,
+          count: models.length,
+          models,
+        };
+        return;
+      }
+    } catch { /* ignora falha de catalogo */ }
+  }
+}
+
+async function readAiCoreLocalInsight(candidates) {
+  for (const baseUrl of candidates || []) {
+    try {
+      const probe = await probeJsonGetEndpoint(joinUrl(baseUrl, "/health"), {}, { timeoutMs: 5000 });
+      const providerDiagnostics = probe?.body?.providers?.local?.diagnostics;
+      if (!providerDiagnostics || !probe.ok) continue;
+      const transportEndpoint = String(providerDiagnostics.transport_endpoint || "");
+      const resolvedModel = String(providerDiagnostics.resolved_model || providerDiagnostics.model || "").trim();
+      const runtimeModelsProbe = transportEndpoint.includes("/v1/chat/completions")
+        ? await probeJsonGetEndpoint(joinUrl(transportEndpoint.replace(/\/v1\/chat\/completions$/i, ""), "/v1/models"), {}, { timeoutMs: 5000 }).catch(() => null)
+        : null;
+      const models = Array.isArray(runtimeModelsProbe?.body?.data) ? runtimeModelsProbe.body.data : null;
+      if (runtimeModelsProbe?.ok && (!Array.isArray(models) || models.length === 0)) {
+        return {
+          issue: "runtime_catalog_invalid",
+          providerDiagnostics,
+          runtimeModels: {
+            url: joinUrl(transportEndpoint.replace(/\/v1\/chat\/completions$/i, ""), "/v1/models"),
+            payload: runtimeModelsProbe.body,
+          },
+        };
+      }
+      if (runtimeModelsProbe?.ok && Array.isArray(models) && models.length > 0) {
+        const availableModels = models
+          .map((item) => item?.id || item?.model || item?.name || null)
+          .filter(Boolean);
+        if (resolvedModel && !availableModels.includes(resolvedModel)) {
+          return {
+            issue: "runtime_model_unavailable",
+            providerDiagnostics,
+            runtimeModels: {
+              url: joinUrl(transportEndpoint.replace(/\/v1\/chat\/completions$/i, ""), "/v1/models"),
+              count: availableModels.length,
+              models: availableModels,
+            },
+          };
+        }
+      }
+      return { issue: null, providerDiagnostics };
+    } catch {
+      // ignora health auxiliar
+    }
+  }
+  return null;
+}
+
+module.exports = {
+  callLocal,
+  callCloud,
+  callCloudflare,
+  diagnose,
+};
