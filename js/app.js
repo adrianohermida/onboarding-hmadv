@@ -21,7 +21,7 @@ const VIEW_MODE_KEY = 'portal:view-mode';
 const VIEW_MODE_EVENT = 'portal:view-mode-changed';
 const SHELL_SUPPRESSED_EVENT = 'shell:callback-suppressed';
 const SHELL_SERVICE_ERROR_EVENT = 'portal:service-error';
-const SHELL_VERSION = '20260523j';
+const SHELL_VERSION = '20260523k';
 const SHELL_TELEMETRY_MAX = 100;
 const SHELL_TELEMETRY_SAMPLE_RATE = 0.6;
 const SHELL_TELEMETRY_MAX_PER_ROUTE = 24;
@@ -202,6 +202,13 @@ function normalizeSupabaseRestUrl(rawUrl) {
       url.searchParams.set('select', 'id,user_id,workspace_id,full_name,fase,onboarding_done,numero_processo,cnj_step_atual,created_at,updated_at');
     }
     url.searchParams.delete('on_conflict');
+  }
+
+  if (table === 'publicacoes') {
+    const order = url.searchParams.get('order') || '';
+    if (order.includes('updated_at')) {
+      url.searchParams.set('order', order.replace(/updated_at/g, 'data_publicacao'));
+    }
   }
 
   return url;
