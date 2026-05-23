@@ -1386,12 +1386,37 @@ window.resetCaseJourney = async function() {
   if (!window.confirm('Reiniciar a jornada e o formulário deste caso?')) return;
 
   try {
-    await supabase.from('portal_casos').upsert({
-      user_id: targetUserId,
-      onboarding_done: false,
-      cnj_step_atual: 0,
-      cnj_json: null,
-    }, { onConflict: 'user_id' });
+    const nowIso = new Date().toISOString();
+    const { data: casos } = await supabase
+      .from('portal_casos')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const caseId = casos?.[0]?.id || null;
+
+    if (caseId) {
+      await supabase
+        .from('portal_casos')
+        .update({
+          onboarding_done: false,
+          cnj_step_atual: 0,
+          cnj_json: null,
+          updated_at: nowIso,
+        })
+        .eq('id', caseId);
+    } else {
+      await supabase
+        .from('portal_casos')
+        .insert({
+          user_id: targetUserId,
+          onboarding_done: false,
+          cnj_step_atual: 0,
+          cnj_json: null,
+          updated_at: nowIso,
+        });
+    }
+
     await supabase.from('portal_documentos')
       .update({ workflow_status: null, status: null, storage_path: null, admin_notes: null, updated_at: new Date().toISOString() })
       .eq('user_id', targetUserId)
