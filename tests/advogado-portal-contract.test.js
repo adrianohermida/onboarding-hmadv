@@ -25,6 +25,9 @@ function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
 }
 
+const shellVersion = readFile('js', 'app.js').match(/const SHELL_VERSION = '([^']+)'/)?.[1] ?? 'missing';
+const shellScript = `../js/app.js?v=${shellVersion}`;
+
 describe('portal do advogado contract', () => {
   it('connects the lawyer workspace modules to the canonical admin sidebar', () => {
     const adminModules = getSidebarModules({ isAdmin: true }).map(module => module.key);
@@ -48,7 +51,7 @@ describe('portal do advogado contract', () => {
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
-      expect(html).toContain('../js/app.js?v=20260523a');
+      expect(html).toContain(shellScript);
     });
   });
 
@@ -58,7 +61,7 @@ describe('portal do advogado contract', () => {
 
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
-      expect(html).toContain('../js/app.js?v=20260523a');
+      expect(html).toContain(shellScript);
     });
   });
 
@@ -70,7 +73,7 @@ describe('portal do advogado contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260523a');
+      expect(html).toContain(shellScript);
     });
   });
 

@@ -47,7 +47,7 @@ describe('crm conversational messaging contract', () => {
     expect(service).toContain("from('crm_messages')");
     expect(service).toContain("channel(`crm:conversation:");
     expect(hook).toContain('onMutate');
-    expect(hook).toContain('delivery_status: \\'sending\\'');
+    expect(hook).toContain("delivery_status: 'sending'");
   });
 
   it('documents the audit and migration path from legacy feeds to juridical inbox', () => {

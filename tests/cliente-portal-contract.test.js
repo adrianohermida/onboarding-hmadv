@@ -24,6 +24,9 @@ function readFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
 }
 
+const shellVersion = readFile('js', 'app.js').match(/const SHELL_VERSION = '([^']+)'/)?.[1] ?? 'missing';
+const shellScript = `../js/app.js?v=${shellVersion}`;
+
 describe('portal do cliente contract', () => {
   it('connects the client workspace modules to the canonical sidebar', () => {
     const modules = getSidebarModules({ isAdmin: false });
@@ -43,7 +46,7 @@ describe('portal do cliente contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('main class="page-content"');
-      expect(html).toContain('../js/app.js?v=20260523a');
+      expect(html).toContain(shellScript);
     });
   });
 

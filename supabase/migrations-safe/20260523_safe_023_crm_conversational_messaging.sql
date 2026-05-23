@@ -372,8 +372,34 @@ CREATE INDEX IF NOT EXISTS idx_crm_messages_tenant_created
   ON crm_messages (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_messages_search
   ON crm_messages USING gin (search_vector);
-CREATE INDEX IF NOT EXISTS idx_crm_messages_body_trgm
-  ON crm_messages USING gin (body extensions.gin_trgm_ops);
+DO $$
+DECLARE
+  trgm_opclass text;
+BEGIN
+  /*
+   * Supabase environments may install pg_trgm in different schemas
+   * (for example public or extensions). Resolve the available opclass
+   * dynamically to keep this migration portable and idempotent.
+   */
+  SELECT format('%I.%I', n.nspname, oc.opcname)
+    INTO trgm_opclass
+  FROM pg_opclass oc
+  JOIN pg_namespace n ON n.oid = oc.opcnamespace
+  JOIN pg_am am ON am.oid = oc.opcmethod
+  WHERE am.amname = 'gin'
+    AND oc.opcname = 'gin_trgm_ops'
+  ORDER BY CASE n.nspname WHEN 'extensions' THEN 0 WHEN 'public' THEN 1 ELSE 2 END
+  LIMIT 1;
+
+  IF trgm_opclass IS NULL THEN
+    RAISE NOTICE 'gin_trgm_ops not found; skipping idx_crm_messages_body_trgm';
+  ELSE
+    EXECUTE format(
+      'CREATE INDEX IF NOT EXISTS idx_crm_messages_body_trgm ON crm_messages USING gin (body %s)',
+      trgm_opclass
+    );
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_crm_tickets_conversation
   ON crm_tickets (conversation_id, status);

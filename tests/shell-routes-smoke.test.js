@@ -10,6 +10,11 @@ function readWorkspaceFile(...parts) {
   return fs.readFileSync(path.join(root, ...parts), 'utf8');
 }
 
+const shellVersion = readWorkspaceFile('js', 'app.js').match(/const SHELL_VERSION = '([^']+)'/)?.[1] ?? 'missing';
+const shellScript = `../js/app.js?v=${shellVersion}`;
+const layoutStyle = `../styles/layout.css?v=${shellVersion}`;
+const componentsStyle = `../styles/components.css?v=${shellVersion}`;
+
 describe('authenticated route shell smoke', () => {
   it('keeps sidebar fallback connected to the canonical client modules', () => {
     const sidebarHtml = readWorkspaceFile('shell', 'sidebar', 'sidebar.html');
@@ -29,9 +34,9 @@ describe('authenticated route shell smoke', () => {
       expect(pageHtml).toContain('data-component="sidebar"');
       expect(pageHtml).toContain('data-component="header"');
       expect(pageHtml).toContain('main class="page-content"');
-      expect(pageHtml).toContain('../js/app.js?v=20260523a');
-      expect(pageHtml).toContain('../styles/layout.css?v=20260523a');
-      expect(pageHtml).toContain('../styles/components.css?v=20260523a');
+      expect(pageHtml).toContain(shellScript);
+      expect(pageHtml).toContain(layoutStyle);
+      expect(pageHtml).toContain(componentsStyle);
       expect(pageHtml.replace(/<script[\s\S]*?<\/script>/gi, '')).toMatch(/<main class="page-content"[\s\S]*?<\/main>/);
     });
   });
