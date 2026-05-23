@@ -93,8 +93,10 @@ function ResponsavelSelect({
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const selectedLabel = useMemo(
     () => options.find((item) => item.user_id === value)?.label || '',
@@ -264,6 +266,19 @@ function BulkResponsavelMultiSelect({
       .map(([role, items]) => ({ role, label: roleGroupLabel(role), items }));
   }, [options, search]);
 
+  const flatOptions = useMemo(
+    () => grouped.flatMap((group) => group.items),
+    [grouped]
+  );
+
+  const optionIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    flatOptions.forEach((item, index) => {
+      if (!map.has(item.user_id)) map.set(item.user_id, index);
+    });
+    return map;
+  }, [flatOptions]);
+
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       if (!rootRef.current) return;
@@ -273,6 +288,21 @@ function BulkResponsavelMultiSelect({
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    setActiveIndex(0);
+    const timer = window.setTimeout(() => searchInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || flatOptions.length === 0) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const activeEl = root.querySelector<HTMLButtonElement>(`[data-option-index="${activeIndex}"]`);
+    activeEl?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, flatOptions.length, open]);
+
   function toggleValue(userId: string) {
     if (values.includes(userId)) {
       onChange(values.filter((id) => id !== userId));
@@ -281,11 +311,49 @@ function BulkResponsavelMultiSelect({
     onChange([...values, userId]);
   }
 
+  function handleKeyNavigation(event: React.KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      if (!flatOptions.length) return;
+      setActiveIndex((current) => (current + 1) % flatOptions.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      if (!flatOptions.length) return;
+      setActiveIndex((current) => (current - 1 + flatOptions.length) % flatOptions.length);
+      return;
+    }
+
+    if (event.key === 'Enter' && open && flatOptions.length) {
+      event.preventDefault();
+      const active = flatOptions[activeIndex];
+      if (!active) return;
+      toggleValue(active.user_id);
+    }
+  }
+
   return (
     <div ref={rootRef} className={cn('relative min-w-[320px]', className)}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
+        onKeyDown={handleKeyNavigation}
         className="w-full px-2.5 py-1.5 text-xs bg-background border border-border rounded-md text-left flex items-center justify-between gap-2"
       >
         <span className="truncate text-muted-foreground">{selectedLabels.length ? `${selectedLabels.length} selecionado(s)` : 'Responsável interno...'}</span>
@@ -320,8 +388,10 @@ function BulkResponsavelMultiSelect({
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
+                ref={searchInputRef}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={handleKeyNavigation}
                 placeholder="Buscar responsável"
                 className="w-full pl-8 pr-2 py-1.5 text-xs bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -336,12 +406,18 @@ function BulkResponsavelMultiSelect({
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
                 {group.items.map((item) => {
                   const selected = values.includes(item.user_id);
+                  const itemIndex = optionIndexById.get(item.user_id) ?? -1;
+                  const isActive = itemIndex === activeIndex;
                   return (
                     <button
                       key={item.user_id}
                       type="button"
+                      data-option-index={itemIndex}
                       onClick={() => toggleValue(item.user_id)}
-                      className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-muted flex items-start justify-between gap-2"
+                      className={cn(
+                        'w-full px-2 py-1.5 text-left text-xs rounded hover:bg-muted flex items-start justify-between gap-2',
+                        isActive && 'bg-muted'
+                      )}
                     >
                       <span className="min-w-0 truncate">{renderHighlightedText(item.label, search)}</span>
                       {selected ? <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" /> : null}
