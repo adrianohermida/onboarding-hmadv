@@ -1,11 +1,7 @@
 /**
- * Auth Manager - Gerencia autenticação multi-projeto Supabase
- * Projeto Default: sspvizogbcyigquqycsz
- * Projeto Mensageria: cundpbzqghmkohcozsex
+ * Auth Manager - cliente frontend para autenticação via backend BFF.
+ * O browser não conversa com o provedor de identidade diretamente.
  */
-
-const DEFAULT_SUPABASE_URL = 'https://sspvizogbcyigquqycsz.supabase.co';
-const DEFAULT_MESSAGING_URL = 'https://cundpbzqghmkohcozsex.supabase.co';
 
 function readStorageValue(key) {
   try {
@@ -17,71 +13,29 @@ function readStorageValue(key) {
   }
 }
 
-function looksLikeSupabaseJwt(value) {
-  return typeof value === 'string' && value.split('.').length === 3;
-}
-
-function mapAuthError(error) {
-  if (!error) return new Error('Falha de autenticação no Supabase.');
-  const status = Number(error.status || error?.response?.status || 0);
-  const message = String(error.message || '').toLowerCase();
-
-  if (status === 401 && (message.includes('invalid api key') || message.includes('invalid') || message.includes('jwt'))) {
-    return new Error('Chave ANON do Supabase inválida ou desatualizada. Atualize SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
-  }
-
-  if (message.includes('invalid login credentials')) {
-    return new Error('E-mail ou senha inválidos.');
-  }
-
-  if (message.includes('email not confirmed')) {
-    return new Error('E-mail não confirmado. Verifique sua caixa de entrada antes de entrar.');
-  }
-
-  return new Error(error.message || 'Falha de autenticação no Supabase.');
-}
-
 function readRuntimeConfig() {
-  const injected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
-  const defaultUrl =
-    injected.defaultUrl ||
-    readStorageValue('SUPABASE_URL') ||
-    readStorageValue('NEXT_PUBLIC_SUPABASE_URL') ||
-    DEFAULT_SUPABASE_URL;
+  const injected = (typeof window !== 'undefined' && window.__HM_AUTH__) || {};
+  const currentHost = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
 
-  const defaultKey =
-    injected.defaultKey ||
-    readStorageValue('SUPABASE_ANON_KEY') ||
-    readStorageValue('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    '';
-
-  const messagingUrl = injected.messagingUrl || readStorageValue('SUPABASE_URL_MESSAGING') || DEFAULT_MESSAGING_URL;
-  const messagingKey =
-    injected.messagingKey ||
-    readStorageValue('SUPABASE_ANON_KEY_MESSAGING') ||
-    null;
+  const authApiBase =
+    injected.baseUrl ||
+    readStorageValue('HM_AUTH_API_BASE') ||
+    (currentHost === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : '');
 
   return {
-    default: { url: defaultUrl, key: defaultKey },
-    messaging: { url: messagingUrl, key: messagingKey },
+    authApiBase,
   };
 }
 
-const SUPABASE_CONFIG = {
-  default: {
-    url: DEFAULT_SUPABASE_URL,
-    key: '',
-  },
-  messaging: {
-    url: DEFAULT_MESSAGING_URL,
-    key: null,
-  }
-};
+function normalizeError(error) {
+  if (!error) return new Error('Falha de autenticação.');
+  if (typeof error === 'string') return new Error(error);
+  const message = String(error.message || error.error || 'Falha de autenticação.').trim();
+  return new Error(message || 'Falha de autenticação.');
+}
 
 class AuthManager {
   constructor() {
-    this.defaultClient = null;
-    this.messagingClient = null;
     this.currentUser = null;
     this.session = null;
     this.currentAdminRole = null;
@@ -100,53 +54,73 @@ class AuthManager {
 
   validateConfig() {
     const config = this.runtimeConfig || readRuntimeConfig();
-    const defaultUrl = String(config?.default?.url || '');
-    const defaultKey = String(config?.default?.key || '');
-
-    if (!defaultUrl.startsWith('https://') || !defaultUrl.includes('.supabase.co')) {
-      throw new Error('SUPABASE_URL inválida. Verifique window.__HM_SUPABASE__.defaultUrl.');
-    }
-
-    if (!looksLikeSupabaseJwt(defaultKey)) {
-      throw new Error('SUPABASE_ANON_KEY inválida ou ausente. Configure window.__HM_SUPABASE__.defaultKey ou localStorage SUPABASE_ANON_KEY.');
+    if (typeof config.authApiBase !== 'string') {
+      throw new Error('Configuração de autenticação inválida.');
     }
   }
 
   ensureReady() {
-    if (!this.initialized || !this.defaultClient) {
+    if (!this.initialized) {
       throw new Error('AuthManager não inicializado. Recarregue a página e tente novamente.');
     }
   }
 
-  async init() {
-    if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
-      throw new Error('SDK do Supabase não carregado.');
+  resolveApiUrl(path) {
+    const base = String((this.runtimeConfig && this.runtimeConfig.authApiBase) || '').trim();
+    if (!base) return path;
+    const sanitizedBase = base.replace(/\/$/, '');
+    return `${sanitizedBase}${path}`;
+  }
+
+  async request(path, init = {}) {
+    const response = await fetch(this.resolveApiUrl(path), {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers || {}),
+      },
+    });
+
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch (_) {
+      payload = {};
     }
 
+    if (!response.ok || payload.ok === false) {
+      throw normalizeError(payload);
+    }
+
+    return payload;
+  }
+
+  async applyAuthPayload(payload) {
+    const user = payload?.user || null;
+    const role = payload?.role || null;
+
+    this.currentUser = user;
+    this.currentAdminRole = role;
+    this.session = payload?.session || null;
+
+    if (user) {
+      try {
+        localStorage.setItem('auth_synced', 'true');
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent('auth:complete', { detail: user }));
+    }
+
+    return payload;
+  }
+
+  async init() {
     this.runtimeConfig = readRuntimeConfig();
     this.validateConfig();
 
-    SUPABASE_CONFIG.default = this.runtimeConfig.default;
-    SUPABASE_CONFIG.messaging = this.runtimeConfig.messaging;
-
-    this.defaultClient = supabase.createClient(SUPABASE_CONFIG.default.url, SUPABASE_CONFIG.default.key);
-
-    if (SUPABASE_CONFIG.messaging.key && looksLikeSupabaseJwt(SUPABASE_CONFIG.messaging.key)) {
-      this.messagingClient = supabase.createClient(SUPABASE_CONFIG.messaging.url, SUPABASE_CONFIG.messaging.key);
-    } else {
-      this.messagingClient = null;
-    }
-
-    const { data: { session }, error } = await this.defaultClient.auth.getSession();
-    if (error) {
-      throw mapAuthError(error);
-    }
-
-    if (session) {
-      this.currentUser = session.user || null;
-      this.session = session;
-      await this.resolveAdminRole();
-      await this.propagateSession(session);
+    const payload = await this.request('/api/auth/session', { method: 'GET' });
+    if (payload && payload.authenticated) {
+      await this.applyAuthPayload(payload);
     }
 
     this.initialized = true;
@@ -156,175 +130,106 @@ class AuthManager {
   async login(email, password) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.signInWithPassword({
-      email,
-      password,
+    const payload = await this.request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
 
-    if (error) throw mapAuthError(error);
-
-    await this.completeAuth(data);
-    return data;
+    await this.completeAuth(payload);
+    return payload;
   }
 
   async completeAuth(data) {
-    if (!data?.session) return data;
-
-    // Propaga para o projeto de mensageria
-    await this.propagateSession(data.session);
-    this.currentUser = data.user;
-    this.session = data.session;
-    await this.resolveAdminRole();
-
-    // Salva indicador de auth completa
-    try {
-      localStorage.setItem('auth_synced', 'true');
-    } catch (_) {}
-    window.dispatchEvent(new CustomEvent('auth:complete', { detail: data.user }));
-
-    return data;
+    if (!data?.user) return data;
+    return this.applyAuthPayload(data);
   }
 
   async register(email, password, metadata = {}) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: this.buildCallbackUrl(),
-        data: metadata,
-      },
+    const payload = await this.request('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, metadata }),
     });
 
-    if (error) throw mapAuthError(error);
-
-    if (data?.session) await this.completeAuth(data);
-    return data;
+    if (payload?.user) await this.completeAuth(payload);
+    return payload;
   }
 
   async sendMagicLink(email) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: this.buildCallbackUrl(),
-      },
+    return this.request('/api/auth/magic-link', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
-
-    if (error) throw mapAuthError(error);
-    return data;
   }
 
   async sendOtp(email) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      },
+    return this.request('/api/auth/otp/send', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
-
-    if (error) throw mapAuthError(error);
-    return data;
   }
 
   async verifyOtp(email, token, type = 'email') {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.verifyOtp({
-      email,
-      token: String(token || '').trim(),
-      type,
+    const payload = await this.request('/api/auth/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify({ email, token: String(token || '').trim(), type }),
     });
 
-    if (error) throw mapAuthError(error);
-
-    if (data?.session) await this.completeAuth(data);
-    return data;
+    if (payload?.user) await this.completeAuth(payload);
+    return payload;
   }
 
   async requestPasswordRecovery(email) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.resetPasswordForEmail(email, {
-      redirectTo: this.buildCallbackUrl(),
+    return this.request('/api/auth/recover', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
-
-    if (error) throw mapAuthError(error);
-    return data;
   }
 
   async updatePassword(newPassword) {
     this.ensureReady();
 
-    const { data, error } = await this.defaultClient.auth.updateUser({ password: newPassword });
+    const payload = await this.request('/api/auth/update-password', {
+      method: 'POST',
+      body: JSON.stringify({ password: newPassword }),
+    });
 
-    if (error) throw mapAuthError(error);
-
-    const { data: sessionData } = await this.defaultClient.auth.getSession();
-    if (sessionData?.session) {
-      await this.completeAuth({
-        user: sessionData.session.user,
-        session: sessionData.session,
-      });
-    }
-    return data;
+    if (payload?.user) await this.completeAuth(payload);
+    return payload;
   }
 
   onAuthStateChange(callback) {
-    if (!this.defaultClient) {
-      return { data: { subscription: { unsubscribe() {} } } };
+    if (typeof callback === 'function') {
+      window.addEventListener('auth:complete', event => callback('SIGNED_IN', event.detail || null));
+      window.addEventListener('auth:logout', () => callback('SIGNED_OUT', null));
     }
-    return this.defaultClient.auth.onAuthStateChange(callback);
+    return { data: { subscription: { unsubscribe() {} } } };
   }
 
-  async propagateSession(sourceSession) {
-    if (!this.messagingClient || !sourceSession?.access_token || !sourceSession?.refresh_token) return;
-
-    // Usa o mesmo JWT para logar no segundo projeto
-    // Nota: Isso requer que o segundo projeto aceite tokens externos ou use a mesma assinatura JWT
-    // Se as chaves JWT forem diferentes, é necessário um endpoint Edge Function para troca de token
-    const { error } = await this.messagingClient.auth.setSession({
-      access_token: sourceSession.access_token,
-      refresh_token: sourceSession.refresh_token,
-    });
-
-    if (error) {
-      console.warn('Falha ao sincronizar sessão de mensageria:', error.message);
-      // Fallback: Tentar login silencioso se o token direto falhar
-      await this.fallbackMessagingAuth(sourceSession.access_token);
-    } else {
-      console.log('Sessão de mensageria sincronizada com sucesso');
-    }
+  async propagateSession() {
+    return null;
   }
 
-  async fallbackMessagingAuth(jwtToken) {
-    // Estratégia alternativa: Chamar uma Edge Function que valida o token do projeto A e cria sessão no B
-    try {
-      const response = await fetch(`${SUPABASE_CONFIG.messaging.url}/functions/v1/sync-auth`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'sync_session' })
-      });
-      
-      if (!response.ok) throw new Error('Edge Function falhou');
-      console.log('Sincronização via Edge Function bem-sucedida');
-    } catch (e) {
-      console.error('Erro crítico na sincronização de auth:', e);
-    }
+  async fallbackMessagingAuth() {
+    return null;
   }
 
   async logout() {
-    if (this.defaultClient) await this.defaultClient.auth.signOut();
-    if (this.messagingClient) await this.messagingClient.auth.signOut();
-    
+    if (this.initialized) {
+      try {
+        await this.request('/api/auth/logout', { method: 'POST' });
+      } catch (_) {}
+    }
+
     this.currentUser = null;
     this.session = null;
     this.currentAdminRole = null;
@@ -335,23 +240,7 @@ class AuthManager {
   }
 
   async resolveAdminRole() {
-    if (!this.defaultClient || !this.currentUser?.id) {
-      this.currentAdminRole = null;
-      return null;
-    }
-
-    const { data, error } = await this.defaultClient
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', this.currentUser.id)
-      .maybeSingle();
-
-    if (error) {
-      this.currentAdminRole = null;
-      return null;
-    }
-
-    this.currentAdminRole = data?.role || null;
+    this.currentAdminRole = this.currentAdminRole || null;
     return this.currentAdminRole;
   }
 

@@ -71,7 +71,8 @@ jobs:
               defaultUrl: sanitize(process.env.SUPABASE_URL),
               defaultKey: sanitize(process.env.SUPABASE_ANON_KEY),
               messagingUrl: sanitize(process.env.SUPABASE_URL_MESSAGING),
-              messagingKey: sanitize(process.env.SUPABASE_ANON_KEY_MESSAGING)
+              messagingKey: sanitize(process.env.SUPABASE_ANON_KEY_MESSAGING),
+              authApiBaseUrl: sanitize(process.env.AUTH_API_BASE_URL || "https://api.hermidamaia.adv.br")
             };
             const js = `(function initRuntimeSupabaseConfig() {\n  window.__HM_SUPABASE__ = ${JSON.stringify(payload, null, 2)};\n})();\n`;
             fs.writeFileSync("storybook-static/js/runtime-config.js", js, "utf8");

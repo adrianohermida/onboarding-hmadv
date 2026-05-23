@@ -229,31 +229,20 @@
         </div>
 
         <button id="submitBtn" class="btn" type="submit">Continuar</button>
-        <div id="statusMsg" class="notice info">Conectando com Supabase...</div>
+        <div id="statusMsg" class="notice info">Inicializando autenticação...</div>
       </form>
     </section>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/runtime-config.js"></script>
   <script src="../js/auth-manager.js"></script>
   <script>
-    const runtimeDefaultKey =
-      (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.defaultKey) ||
-      localStorage.getItem('SUPABASE_ANON_KEY') ||
-      localStorage.getItem('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-      '';
-
-    const defaultRuntimeSupabase = {
-      defaultUrl: 'https://sspvizogbcyigquqycsz.supabase.co',
-      defaultKey: runtimeDefaultKey,
-      messagingUrl: 'https://cundpbzqghmkohcozsex.supabase.co',
-      messagingKey: localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') || null,
-    };
-
-    window.__HM_SUPABASE__ = {
-      ...defaultRuntimeSupabase,
-      ...(window.__HM_SUPABASE__ || {}),
+    window.__HM_AUTH__ = {
+      baseUrl:
+        (window.__HM_AUTH__ && window.__HM_AUTH__.baseUrl) ||
+        (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.authApiBaseUrl) ||
+        localStorage.getItem('HM_AUTH_API_BASE') ||
+        (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : ''),
     };
 
     function setStatus(message, type = 'info') {
@@ -312,11 +301,11 @@
 
       try {
         await window.AuthManager.init();
-        setStatus('Supabase conectado', 'success');
+        setStatus('Sistema de autenticação pronto', 'success');
       } catch (initError) {
         setStatus(
           (initError && initError.message) ||
-            'Configuração do Supabase inválida. Defina SUPABASE_ANON_KEY no runtime/localStorage.',
+            'Configuração de autenticação inválida. Tente novamente em instantes.',
           'error'
         );
         return;

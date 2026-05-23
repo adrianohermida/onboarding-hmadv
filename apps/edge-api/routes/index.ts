@@ -22,6 +22,7 @@ import { handleFreshchat } from './freshchat';
 import { handleFreshsales } from './freshsales';
 import { handleSlack } from './slack';
 import { handleCron } from './cron';
+import { handleAuth } from './auth';
 
 export async function handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
@@ -46,6 +47,11 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     pathname === '/api/admin-auth-config'
   ) {
     return handlePublicConfig(request, env, pathname);
+  }
+
+  // ── Autenticação BFF ───────────────────────────────────────────────────
+  if (pathname.startsWith('/api/auth')) {
+    return handleAuth(request, env, pathname);
   }
 
   // ── Freshchat ────────────────────────────────────────────────────────────

@@ -65,9 +65,21 @@
 </div>
 
 <script src="../js/runtime-config.js"></script>
-<script type="module">
-import { supabase }    from '../services/supabase.js';
-import { AuthService } from '../services/auth.js';
+<script>
+function getAuthApiBase() {
+  return (
+    (window.__HM_AUTH__ && window.__HM_AUTH__.baseUrl) ||
+    (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.authApiBaseUrl) ||
+    localStorage.getItem('HM_AUTH_API_BASE') ||
+    (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : '')
+  );
+}
+
+function authUrl(path) {
+  const base = String(getAuthApiBase() || '').trim().replace(/\/$/, '');
+  if (!base) return path;
+  return `${base}${path}`;
+}
 
 function setState(id) {
   ['state-loading','state-success','state-error'].forEach(s => {
@@ -76,51 +88,41 @@ function setState(id) {
 }
 
 async function handleCallback() {
-  /* Supabase v2 processes URL hash/session automatically on init. */
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search || '');
 
-    if (error) throw error;
+    const accessToken = hashParams.get('access_token') || '';
+    const refreshToken = hashParams.get('refresh_token') || '';
+    const tokenHash = queryParams.get('token_hash') || '';
+    const type = queryParams.get('type') || hashParams.get('type') || 'magiclink';
+    const isRecovery = String(type).toLowerCase() === 'recovery';
 
-    const hash = window.location.hash || '';
-    const isRecovery = hash.includes('type=recovery');
+    const response = await fetch(authUrl('/api/auth/callback'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_hash: tokenHash,
+        type,
+      }),
+    });
 
-    if (data?.session) {
-      setState('state-success');
-      if (isRecovery) {
-        setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
-        return;
-      }
+    const payload = await response.json();
+    if (!response.ok || payload.ok === false || !payload.user) {
+      throw new Error(payload.error || 'Link inválido ou expirado.');
+    }
 
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', data.session.user.id)
-        .maybeSingle();
-
-      const nextPath = adminData ? 'admin/index.html' : 'pages/dashboard.html';
-      setTimeout(() => { window.location.replace(`../${nextPath}`); }, 1200);
+    setState('state-success');
+    if (isRecovery) {
+      setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
       return;
     }
 
-    /* Hash may still contain tokens — listen for one tick */
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      subscription.unsubscribe();
-      if (session) {
-        setState('state-success');
-        if (isRecovery) {
-          setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
-          return;
-        }
-
-        setTimeout(() => { window.location.replace('../pages/dashboard.html'); }, 1200);
-      } else {
-        setState('state-error');
-      }
-    });
-
-    /* Fallback timeout */
-    setTimeout(() => setState('state-error'), 8000);
+    const nextPath = payload.role ? 'admin/index.html' : 'pages/dashboard.html';
+    setTimeout(() => { window.location.replace(`../${nextPath}`); }, 1200);
 
   } catch (err) {
     document.getElementById('error-msg').textContent = err.message || 'Erro ao verificar acesso.';
