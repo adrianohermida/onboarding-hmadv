@@ -93,10 +93,8 @@ function ResponsavelSelect({
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
 
   const selectedLabel = useMemo(
     () => options.find((item) => item.user_id === value)?.label || '',
@@ -227,8 +225,10 @@ function BulkResponsavelMultiSelect({
   className?: string;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const selectedLabels = useMemo(
     () => values
