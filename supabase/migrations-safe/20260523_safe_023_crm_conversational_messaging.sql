@@ -35,30 +35,6 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION is_workspace_member_for(p_workspace_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT COALESCE(
-    EXISTS (
-      SELECT 1
-      FROM portal_workspace_members pwm
-      WHERE pwm.workspace_id = p_workspace_id
-        AND pwm.user_id = auth.uid()
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM portal_workspaces pw
-      WHERE pw.id = p_workspace_id
-        AND pw.owner_id = auth.uid()
-    ),
-    false
-  );
-$$;
-
 CREATE OR REPLACE FUNCTION set_crm_tenant_id()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -463,7 +439,7 @@ DROP POLICY IF EXISTS crm_conversations_tenant_update ON crm_conversations;
 CREATE POLICY crm_conversations_tenant_select ON crm_conversations
   FOR SELECT TO authenticated
   USING (
-    is_workspace_member_for(tenant_id)
+    is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario'])
     OR contact_user_id = auth.uid()
     OR EXISTS (SELECT 1 FROM crm_participants p WHERE p.conversation_id = id AND p.user_id = auth.uid())
     OR EXISTS (SELECT 1 FROM portal_casos pc WHERE pc.id = case_id AND pc.user_id = auth.uid())
@@ -503,7 +479,7 @@ DROP POLICY IF EXISTS crm_messages_conversation_insert ON crm_messages;
 DROP POLICY IF EXISTS crm_messages_conversation_update ON crm_messages;
 CREATE POLICY crm_messages_conversation_select ON crm_messages
   FOR SELECT TO authenticated
-  USING (can_access_crm_conversation(conversation_id) AND (visible_to_client = true OR is_workspace_member_for(tenant_id)));
+  USING (can_access_crm_conversation(conversation_id) AND (visible_to_client = true OR is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario'])));
 CREATE POLICY crm_messages_conversation_insert ON crm_messages
   FOR INSERT TO authenticated
   WITH CHECK (can_write_crm_conversation(conversation_id));
@@ -529,7 +505,7 @@ CREATE POLICY crm_reads_select ON crm_message_reads
   USING (can_access_crm_conversation(conversation_id));
 CREATE POLICY crm_reads_insert ON crm_message_reads
   FOR INSERT TO authenticated
-  WITH CHECK (can_access_crm_conversation(conversation_id) AND (user_id = auth.uid() OR is_workspace_member_for(tenant_id)));
+  WITH CHECK (can_access_crm_conversation(conversation_id) AND (user_id = auth.uid() OR is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario'])));
 
 DROP POLICY IF EXISTS crm_events_select ON crm_message_events;
 DROP POLICY IF EXISTS crm_events_insert ON crm_message_events;
@@ -545,7 +521,7 @@ DROP POLICY IF EXISTS crm_tickets_tenant_write ON crm_tickets;
 CREATE POLICY crm_tickets_tenant_select ON crm_tickets
   FOR SELECT TO authenticated
   USING (
-    is_workspace_member_for(tenant_id)
+    is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario'])
     OR can_access_crm_conversation(conversation_id)
     OR EXISTS (SELECT 1 FROM portal_casos pc WHERE pc.id = case_id AND pc.user_id = auth.uid())
   );
@@ -559,7 +535,7 @@ DROP POLICY IF EXISTS crm_journeys_tenant_write ON crm_journeys;
 CREATE POLICY crm_journeys_tenant_select ON crm_journeys
   FOR SELECT TO authenticated
   USING (
-    is_workspace_member_for(tenant_id)
+    is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario'])
     OR can_access_crm_conversation(conversation_id)
     OR EXISTS (SELECT 1 FROM portal_casos pc WHERE pc.id = case_id AND pc.user_id = auth.uid())
   );
@@ -572,7 +548,7 @@ DROP POLICY IF EXISTS crm_journey_children_select ON crm_journey_steps;
 DROP POLICY IF EXISTS crm_journey_children_write ON crm_journey_steps;
 CREATE POLICY crm_journey_children_select ON crm_journey_steps
   FOR SELECT TO authenticated
-  USING (is_workspace_member_for(tenant_id));
+  USING (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario']));
 CREATE POLICY crm_journey_children_write ON crm_journey_steps
   FOR ALL TO authenticated
   USING (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador']))
@@ -582,7 +558,7 @@ DROP POLICY IF EXISTS crm_progress_select ON crm_journey_progress;
 DROP POLICY IF EXISTS crm_progress_write ON crm_journey_progress;
 CREATE POLICY crm_progress_select ON crm_journey_progress
   FOR SELECT TO authenticated
-  USING (is_workspace_member_for(tenant_id) OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()));
+  USING (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario']) OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()));
 CREATE POLICY crm_progress_write ON crm_journey_progress
   FOR ALL TO authenticated
   USING (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador']) OR participant_id IN (SELECT id FROM crm_participants WHERE user_id = auth.uid()))
@@ -602,10 +578,10 @@ DROP POLICY IF EXISTS crm_activity_select ON crm_activity_logs;
 DROP POLICY IF EXISTS crm_activity_insert ON crm_activity_logs;
 CREATE POLICY crm_activity_select ON crm_activity_logs
   FOR SELECT TO authenticated
-  USING (conversation_id IS NULL OR can_access_crm_conversation(conversation_id) OR is_workspace_member_for(tenant_id));
+  USING (conversation_id IS NULL OR can_access_crm_conversation(conversation_id) OR is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario']));
 CREATE POLICY crm_activity_insert ON crm_activity_logs
   FOR INSERT TO authenticated
-  WITH CHECK (is_workspace_member_for(tenant_id) OR can_write_crm_conversation(conversation_id));
+  WITH CHECK (is_workspace_member_for(tenant_id, ARRAY['owner','admin','advogado','colaborador','financeiro','estagiario']) OR can_write_crm_conversation(conversation_id));
 
 GRANT SELECT, INSERT, UPDATE ON
   crm_conversations,
@@ -625,7 +601,6 @@ TO authenticated;
 GRANT EXECUTE ON FUNCTION can_access_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION can_write_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION current_workspace_id() TO authenticated;
-GRANT EXECUTE ON FUNCTION is_workspace_member_for(uuid) TO authenticated;
 
 CREATE OR REPLACE VIEW vw_crm_inbox WITH (security_invoker = true) AS
 SELECT
