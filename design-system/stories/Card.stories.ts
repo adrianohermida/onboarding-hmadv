@@ -49,7 +49,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Template base
-const Template = (args: any = {}) => {
+function Template(args: any = {}) {
   const {
     variant = 'default',
     size = 'md',
@@ -68,7 +68,7 @@ const Template = (args: any = {}) => {
     </div>
   </article>
 `;
-};
+}
 
 /**
  * ### Default
