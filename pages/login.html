@@ -46,7 +46,7 @@
 
       // Se já estiver logado, redireciona
       if (window.AuthManager.currentUser) {
-        window.location.href = '/portal.hermidamaia.adv.br'; // Ou caminho relativo correto
+        window.location.href = window.AuthManager.isAdmin() ? '/admin/index.html' : '/pages/dashboard.html';
         return;
       }
 
@@ -70,7 +70,7 @@
           if (window.AuthManager.isAdmin()) {
             window.location.href = '/admin/index.html'; // Admin Shell
           } else {
-            window.location.href = '/client/index.html'; // Client Shell
+            window.location.href = '/pages/dashboard.html';
           }
         } catch (err) {
           errorMsg.textContent = err.message || 'Erro ao fazer login. Verifique suas credenciais.';

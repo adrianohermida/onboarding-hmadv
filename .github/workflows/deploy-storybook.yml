@@ -41,10 +41,23 @@ jobs:
 
       - name: Prepare Login Entrypoint
         run: |
-          mkdir -p storybook-static/pages storybook-static/js storybook-static/design-system
+          mkdir -p storybook-static/login storybook-static/pages storybook-static/js storybook-static/design-system
+
+          # Publica páginas do app e entrypoint amigável em /login
           cp pages/login.html storybook-static/pages/login.html
+          cp pages/login.html storybook-static/login/index.html
+
+          # Compatibilidade de nome de arquivo antigo/novo do auth manager
           cp js/uth-manager.js storybook-static/js/auth-manager.js
-          cp -r design-system/* storybook-static/design-system/
+
+          # Publica diretórios necessários para as páginas do app
+          for dir in admin pages js styles assets components design-system services shared utils; do
+            if [ -d "$dir" ]; then
+              mkdir -p "storybook-static/$dir"
+              cp -r "$dir"/* "storybook-static/$dir/" 2>/dev/null || true
+            fi
+          done
+
           cat > storybook-static/index.html << 'EOF'
           <!doctype html>
           <html lang="pt-BR">
@@ -52,13 +65,13 @@ jobs:
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>Portal Hermida Maia</title>
-            <meta http-equiv="refresh" content="0;url=/pages/login.html" />
+            <meta http-equiv="refresh" content="0;url=/login/" />
             <script>
-              window.location.replace('/pages/login.html');
+              window.location.replace('/login/');
             </script>
           </head>
           <body>
-            <a href="/pages/login.html">Ir para login</a>
+            <a href="/login/">Ir para login</a>
           </body>
           </html>
           EOF
