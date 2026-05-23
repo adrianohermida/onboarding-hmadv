@@ -3,6 +3,11 @@
  * O browser não conversa com o provedor de identidade diretamente.
  */
 
+const LEGACY_ACCESS_TOKEN_KEY = 'hm_legacy_access_token';
+const LEGACY_REFRESH_TOKEN_KEY = 'hm_legacy_refresh_token';
+const LEGACY_USER_KEY = 'hm_legacy_user';
+const LEGACY_ROLE_KEY = 'hm_legacy_role';
+
 function readStorageValue(key) {
   try {
     if (typeof localStorage === 'undefined') return null;
@@ -15,6 +20,7 @@ function readStorageValue(key) {
 
 function readRuntimeConfig() {
   const injected = (typeof window !== 'undefined' && window.__HM_AUTH__) || {};
+  const supabaseInjected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
   const currentHost = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
 
   const authApiBase =
@@ -24,6 +30,8 @@ function readRuntimeConfig() {
 
   return {
     authApiBase,
+    supabaseUrl: String(supabaseInjected.defaultUrl || '').trim(),
+    supabaseAnonKey: String(supabaseInjected.defaultKey || '').trim(),
   };
 }
 
@@ -41,6 +49,7 @@ class AuthManager {
     this.currentAdminRole = null;
     this.initialized = false;
     this.runtimeConfig = readRuntimeConfig();
+    this.authMode = 'bff';
   }
 
   buildCallbackUrl() {
@@ -59,6 +68,11 @@ class AuthManager {
     }
   }
 
+  canUseLegacy() {
+    const cfg = this.runtimeConfig || {};
+    return Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
+  }
+
   ensureReady() {
     if (!this.initialized) {
       throw new Error('AuthManager não inicializado. Recarregue a página e tente novamente.');
@@ -72,28 +86,297 @@ class AuthManager {
     return `${sanitizedBase}${path}`;
   }
 
-  async request(path, init = {}) {
-    const response = await fetch(this.resolveApiUrl(path), {
-      ...init,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init.headers || {}),
-      },
-    });
-
+  async fetchJson(url, init = {}) {
+    const response = await fetch(url, init);
     let payload = {};
     try {
       payload = await response.json();
     } catch (_) {
       payload = {};
     }
+    return { response, payload };
+  }
 
-    if (!response.ok || payload.ok === false) {
-      throw normalizeError(payload);
+  legacyHeaders(extra = {}, token = '') {
+    const anonKey = this.runtimeConfig.supabaseAnonKey;
+    const headers = {
+      'Content-Type': 'application/json',
+      apikey: anonKey,
+      ...extra,
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  }
+
+  legacyBaseUrl() {
+    return String(this.runtimeConfig.supabaseUrl || '').replace(/\/$/, '');
+  }
+
+  readLegacySession() {
+    const accessToken = readStorageValue(LEGACY_ACCESS_TOKEN_KEY) || '';
+    const refreshToken = readStorageValue(LEGACY_REFRESH_TOKEN_KEY) || '';
+    let user = null;
+    try {
+      const raw = localStorage.getItem(LEGACY_USER_KEY);
+      user = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      user = null;
     }
 
-    return payload;
+    return {
+      accessToken,
+      refreshToken,
+      user,
+      role: readStorageValue(LEGACY_ROLE_KEY) || null,
+    };
+  }
+
+  persistLegacySession(payload) {
+    const accessToken = String(payload.access_token || '').trim();
+    const refreshToken = String(payload.refresh_token || '').trim();
+    const user = payload.user || null;
+
+    if (accessToken) localStorage.setItem(LEGACY_ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) localStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, refreshToken);
+    if (user) localStorage.setItem(LEGACY_USER_KEY, JSON.stringify(user));
+  }
+
+  clearLegacySession() {
+    try {
+      localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+      localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+      localStorage.removeItem(LEGACY_USER_KEY);
+      localStorage.removeItem(LEGACY_ROLE_KEY);
+    } catch (_) {}
+  }
+
+  async resolveLegacyRole(userId, accessToken) {
+    if (!userId || !accessToken) return null;
+
+    const url = new URL(`${this.legacyBaseUrl()}/rest/v1/admin_users`);
+    url.searchParams.set('select', 'role');
+    url.searchParams.set('user_id', `eq.${userId}`);
+    url.searchParams.set('limit', '1');
+
+    const { response, payload } = await this.fetchJson(url.toString(), {
+      method: 'GET',
+      headers: this.legacyHeaders({}, accessToken),
+    });
+
+    if (!response.ok || !Array.isArray(payload) || !payload[0] || !payload[0].role) {
+      localStorage.removeItem(LEGACY_ROLE_KEY);
+      return null;
+    }
+
+    localStorage.setItem(LEGACY_ROLE_KEY, String(payload[0].role));
+    return String(payload[0].role);
+  }
+
+  async legacyRequest(path, init = {}) {
+    const method = String(init.method || 'GET').toUpperCase();
+    const body = init.body ? JSON.parse(String(init.body)) : {};
+    const base = this.legacyBaseUrl();
+    const current = this.readLegacySession();
+
+    if (path === '/api/auth/session') {
+      if (!current.accessToken) {
+        return { ok: true, authenticated: false, user: null, role: null };
+      }
+
+      let userRes = await this.fetchJson(`${base}/auth/v1/user`, {
+        method: 'GET',
+        headers: this.legacyHeaders({}, current.accessToken),
+      });
+
+      if (!userRes.response.ok && current.refreshToken) {
+        const refreshRes = await this.fetchJson(`${base}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: this.legacyHeaders(),
+          body: JSON.stringify({ refresh_token: current.refreshToken }),
+        });
+
+        if (refreshRes.response.ok && refreshRes.payload?.access_token) {
+          this.persistLegacySession(refreshRes.payload);
+          userRes = await this.fetchJson(`${base}/auth/v1/user`, {
+            method: 'GET',
+            headers: this.legacyHeaders({}, refreshRes.payload.access_token),
+          });
+        }
+      }
+
+      if (!userRes.response.ok || !userRes.payload?.user) {
+        this.clearLegacySession();
+        return { ok: true, authenticated: false, user: null, role: null };
+      }
+
+      const user = userRes.payload.user;
+      const role = await this.resolveLegacyRole(String(user.id || ''), this.readLegacySession().accessToken);
+      return {
+        ok: true,
+        authenticated: true,
+        user,
+        role,
+        session: { token_type: 'bearer', expires_in: null },
+      };
+    }
+
+    if (path === '/api/auth/login' && method === 'POST') {
+      const authRes = await this.fetchJson(`${base}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: this.legacyHeaders(),
+        body: JSON.stringify({ email: body.email, password: body.password }),
+      });
+
+      if (!authRes.response.ok || !authRes.payload?.user) throw normalizeError(authRes.payload);
+      this.persistLegacySession(authRes.payload);
+      const role = await this.resolveLegacyRole(String(authRes.payload.user.id || ''), String(authRes.payload.access_token || ''));
+      return {
+        ok: true,
+        user: authRes.payload.user,
+        role,
+        session: {
+          token_type: String(authRes.payload.token_type || 'bearer'),
+          expires_in: Number(authRes.payload.expires_in || 0) || null,
+        },
+      };
+    }
+
+    if (path === '/api/auth/register' && method === 'POST') {
+      const authRes = await this.fetchJson(`${base}/auth/v1/signup`, {
+        method: 'POST',
+        headers: this.legacyHeaders(),
+        body: JSON.stringify({
+          email: body.email,
+          password: body.password,
+          data: body.metadata || {},
+          options: { emailRedirectTo: this.buildCallbackUrl() },
+        }),
+      });
+      if (!authRes.response.ok) throw normalizeError(authRes.payload);
+      if (authRes.payload?.access_token && authRes.payload?.user) {
+        this.persistLegacySession(authRes.payload);
+      }
+      return {
+        ok: true,
+        pendingVerification: !authRes.payload?.user,
+        user: authRes.payload?.user || null,
+        role: null,
+        session: authRes.payload?.user ? { token_type: String(authRes.payload.token_type || 'bearer'), expires_in: Number(authRes.payload.expires_in || 0) || null } : null,
+      };
+    }
+
+    if ((path === '/api/auth/magic-link' || path === '/api/auth/otp/send') && method === 'POST') {
+      const authRes = await this.fetchJson(`${base}/auth/v1/otp`, {
+        method: 'POST',
+        headers: this.legacyHeaders(),
+        body: JSON.stringify({
+          email: body.email,
+          should_create_user: false,
+          create_user: false,
+          email_redirect_to: this.buildCallbackUrl(),
+        }),
+      });
+      if (!authRes.response.ok) throw normalizeError(authRes.payload);
+      return { ok: true };
+    }
+
+    if (path === '/api/auth/otp/verify' && method === 'POST') {
+      const authRes = await this.fetchJson(`${base}/auth/v1/verify`, {
+        method: 'POST',
+        headers: this.legacyHeaders(),
+        body: JSON.stringify({ email: body.email, token: body.token, type: body.type || 'email' }),
+      });
+      if (!authRes.response.ok || !authRes.payload?.user) throw normalizeError(authRes.payload);
+      this.persistLegacySession(authRes.payload);
+      const role = await this.resolveLegacyRole(String(authRes.payload.user.id || ''), String(authRes.payload.access_token || ''));
+      return {
+        ok: true,
+        user: authRes.payload.user,
+        role,
+        session: { token_type: String(authRes.payload.token_type || 'bearer'), expires_in: Number(authRes.payload.expires_in || 0) || null },
+      };
+    }
+
+    if (path === '/api/auth/recover' && method === 'POST') {
+      const authRes = await this.fetchJson(`${base}/auth/v1/recover`, {
+        method: 'POST',
+        headers: this.legacyHeaders(),
+        body: JSON.stringify({ email: body.email, redirect_to: this.buildCallbackUrl() }),
+      });
+      if (!authRes.response.ok) throw normalizeError(authRes.payload);
+      return { ok: true };
+    }
+
+    if (path === '/api/auth/update-password' && method === 'POST') {
+      if (!current.accessToken) throw new Error('Sessão não encontrada.');
+
+      const authRes = await this.fetchJson(`${base}/auth/v1/user`, {
+        method: 'PUT',
+        headers: this.legacyHeaders({}, current.accessToken),
+        body: JSON.stringify({ password: body.password }),
+      });
+      if (!authRes.response.ok || !authRes.payload?.user) throw normalizeError(authRes.payload);
+      return {
+        ok: true,
+        user: authRes.payload.user,
+        role: current.role || null,
+        session: { token_type: 'bearer', expires_in: null },
+      };
+    }
+
+    if (path === '/api/auth/logout' && method === 'POST') {
+      if (current.accessToken) {
+        await this.fetchJson(`${base}/auth/v1/logout`, {
+          method: 'POST',
+          headers: this.legacyHeaders({}, current.accessToken),
+        });
+      }
+      this.clearLegacySession();
+      return { ok: true };
+    }
+
+    throw new Error('Fluxo de autenticação não suportado no modo legado.');
+  }
+
+  async request(path, init = {}) {
+    if (this.authMode === 'legacy') {
+      return this.legacyRequest(path, init);
+    }
+
+    try {
+      const response = await fetch(this.resolveApiUrl(path), {
+        ...init,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(init.headers || {}),
+        },
+      });
+
+      let payload = {};
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = {};
+      }
+
+      if ((response.status === 404 || response.status === 405) && this.canUseLegacy()) {
+        this.authMode = 'legacy';
+        return this.legacyRequest(path, init);
+      }
+
+      if (!response.ok || payload.ok === false) {
+        throw normalizeError(payload);
+      }
+
+      return payload;
+    } catch (error) {
+      if (this.canUseLegacy()) {
+        this.authMode = 'legacy';
+        return this.legacyRequest(path, init);
+      }
+      throw error;
+    }
   }
 
   async applyAuthPayload(payload) {
@@ -229,6 +512,8 @@ class AuthManager {
         await this.request('/api/auth/logout', { method: 'POST' });
       } catch (_) {}
     }
+
+    this.clearLegacySession();
 
     this.currentUser = null;
     this.session = null;

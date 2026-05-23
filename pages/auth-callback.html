@@ -81,6 +81,52 @@ function authUrl(path) {
   return `${base}${path}`;
 }
 
+function getLegacySupabaseConfig() {
+  const cfg = window.__HM_SUPABASE__ || {};
+  return {
+    url: String(cfg.defaultUrl || '').trim(),
+    anonKey: String(cfg.defaultKey || '').trim(),
+  };
+}
+
+async function handleLegacyFallback(payload) {
+  const cfg = getLegacySupabaseConfig();
+  if (!cfg.url || !cfg.anonKey) {
+    throw new Error('Serviço de autenticação temporariamente indisponível.');
+  }
+
+  const accessToken = String(payload.access_token || '').trim();
+  const refreshToken = String(payload.refresh_token || '').trim();
+  if (!accessToken || !refreshToken) {
+    throw new Error('Link inválido ou expirado.');
+  }
+
+  const userResponse = await fetch(`${cfg.url.replace(/\/$/, '')}/auth/v1/user`, {
+    method: 'GET',
+    headers: {
+      apikey: cfg.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const userPayload = await userResponse.json();
+  if (!userResponse.ok || !userPayload.user) {
+    throw new Error(userPayload.error_description || userPayload.msg || userPayload.error || 'Link inválido ou expirado.');
+  }
+
+  try {
+    localStorage.setItem('hm_legacy_access_token', accessToken);
+    localStorage.setItem('hm_legacy_refresh_token', refreshToken);
+    localStorage.setItem('hm_legacy_user', JSON.stringify(userPayload.user));
+  } catch (_) {}
+
+  return {
+    ok: true,
+    user: userPayload.user,
+    role: null,
+  };
+}
+
 function setState(id) {
   ['state-loading','state-success','state-error'].forEach(s => {
     document.getElementById(s).style.display = s === id ? '' : 'none';
@@ -110,9 +156,10 @@ async function handleCallback() {
       }),
     });
 
-    const payload = await response.json();
+    let payload = await response.json();
     if (!response.ok || payload.ok === false || !payload.user) {
-      throw new Error(payload.error || 'Link inválido ou expirado.');
+      const fallbackPayload = await handleLegacyFallback({ access_token: accessToken, refresh_token: refreshToken });
+      payload = fallbackPayload;
     }
 
     setState('state-success');
