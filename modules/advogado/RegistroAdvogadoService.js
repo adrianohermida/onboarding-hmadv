@@ -4,6 +4,10 @@ const AUDIT_PREFIX = 'portal:advogado:audit:';
 const OPERATIONAL_TABLE = 'portal_operational_records';
 const AUDIT_TABLE = 'portal_operational_record_audit';
 const PARTES_LINKS_TABLE = 'portal_partes_vinculos';
+const RECORD_FETCH_BATCH_SIZE = 1000;
+const RECORD_FETCH_MAX_ROWS = 50000;
+const REMOTE_PAGE_DEFAULT = 1;
+const REMOTE_PAGE_SIZE_DEFAULT = 100;
 
 const MODULE_DATA_SOURCES = {
   documentos: { schema: 'public', table: 'portal_documentos', statusField: 'workflow_status' },
@@ -19,6 +23,20 @@ const MODULE_DATA_SOURCES = {
   'orgaos-judiciarios': { schema: 'judiciario', table: 'orgaos_judiciarios', statusField: 'ativa' },
   serventias: { schema: 'judiciario', table: 'serventias', statusField: 'ativa' },
   'relacoes-processuais': { schema: 'judiciario', table: 'relacoes_processuais' },
+};
+
+const MODULE_REMOTE_SEARCH_FIELDS = {
+  processos: ['numero_cnj', 'numero_processo', 'titulo', 'classe', 'assunto', 'tribunal', 'comarca'],
+  movimentacoes: ['conteudo', 'tipo', 'fonte'],
+  publicacoes: ['numero_processo_api', 'nome_cliente', 'conteudo', 'descricao_diario'],
+  audiencias: ['tipo', 'descricao', 'local', 'situacao'],
+  prazos: ['titulo', 'descricao', 'status', 'prioridade'],
+  'financeiro-processual': ['descricao', 'tipo', 'status'],
+  'custas-processuais': ['tipo', 'descricao', 'situacao'],
+  tpu: ['codigo', 'descricao', 'categoria', 'tipo'],
+  'orgaos-judiciarios': ['nome', 'sigla', 'codigo'],
+  serventias: ['nome', 'codigo', 'comarca'],
+  'relacoes-processuais': ['numero_cnj_pai', 'numero_cnj_filho', 'tipo_relacao', 'status'],
 };
 
 let supabaseClientPromise = null;
@@ -786,6 +804,67 @@ function mapSourceRow(moduleKey, row, sourceConfig = {}) {
   };
 }
 
+function sanitizeIlikeText(value = '') {
+  return String(value || '').replace(/[%*,]/g, ' ').trim();
+}
+
+function buildOrIlike(searchFields = [], value = '') {
+  const sanitized = sanitizeIlikeText(value);
+  if (!sanitized || !searchFields.length) return '';
+  return searchFields.map((field) => `${field}.ilike.%${sanitized}%`).join(',');
+}
+
+function normalizeRemoteOptions(options = {}) {
+  const page = Math.max(REMOTE_PAGE_DEFAULT, Number(options.page || REMOTE_PAGE_DEFAULT));
+  const pageSize = Math.max(1, Math.min(1000, Number(options.pageSize || REMOTE_PAGE_SIZE_DEFAULT)));
+  return {
+    page,
+    pageSize,
+    query: String(options.query || '').trim(),
+    status: String(options.status || 'todos').trim(),
+    archived: options.archived === true,
+    processoId: String(options.processoId || '').trim(),
+    planoPagamentoId: String(options.planoPagamentoId || '').trim(),
+    clienteUserId: String(options.clienteUserId || '').trim(),
+    vinculoStatus: String(options.vinculoStatus || 'todos').trim(),
+  };
+}
+
+function paginatedResult(rows, page, pageSize, total) {
+  const safeTotal = Number(total || 0);
+  return {
+    page,
+    pageSize,
+    total: safeTotal,
+    pages: Math.max(1, Math.ceil(safeTotal / pageSize)),
+    rows,
+  };
+}
+
+async function fetchRowsInBatches(queryFactory) {
+  const rows = [];
+
+  for (let from = 0; from < RECORD_FETCH_MAX_ROWS; from += RECORD_FETCH_BATCH_SIZE) {
+    const to = from + RECORD_FETCH_BATCH_SIZE - 1;
+    const { data, error } = await queryFactory().range(from, to);
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    const chunk = data || [];
+    rows.push(...chunk);
+
+    if (chunk.length < RECORD_FETCH_BATCH_SIZE) break;
+  }
+
+  if (rows.length >= RECORD_FETCH_MAX_ROWS) {
+    console.warn(`[RegistroAdvogadoService] Limite de leitura atingido (${RECORD_FETCH_MAX_ROWS} registros).`);
+  }
+
+  return { data: rows, error: null };
+}
+
 async function listSchemaModuleRecords(moduleKey) {
   const sourceConfig = MODULE_DATA_SOURCES[moduleKey];
   if (!sourceConfig) return null;
@@ -795,10 +874,10 @@ async function listSchemaModuleRecords(moduleKey) {
     ? supabase.schema('judiciario')
     : supabase;
 
-  const { data, error } = await scopedClient
+  const { data, error } = await fetchRowsInBatches(() => scopedClient
     .from(sourceConfig.table)
     .select('*')
-    .limit(500);
+    .order('id', { ascending: true }));
 
   if (error) {
     console.warn(`[RegistroAdvogadoService] ${moduleKey} schema list fallback:`, error.message);
@@ -932,11 +1011,11 @@ export function getAdvogadoModuleConfig(moduleKey) {
 export async function listAdvogadoRecords(moduleKey) {
   if (moduleKey === 'partes') {
     const supabase = await getSupabaseClient();
-    const { data, error } = await supabase
+    const { data, error } = await fetchRowsInBatches(() => supabase
       .from(PARTES_LINKS_TABLE)
       .select('*')
       .is('deleted_at', null)
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false }));
 
     if (!error) return (data || []).map(mapPartesRow);
 
@@ -948,17 +1027,102 @@ export async function listAdvogadoRecords(moduleKey) {
   if (schemaRows) return schemaRows;
 
   const supabase = await getSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await fetchRowsInBatches(() => supabase
     .from(OPERATIONAL_TABLE)
     .select('*')
     .eq('module_key', moduleKey)
     .is('deleted_at', null)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false }));
 
   if (!error) return (data || []).map(mapRemoteRow);
 
   console.warn('[RegistroAdvogadoService] Supabase list fallback:', error.message);
   return parseJson(storageKey(moduleKey), []);
+}
+
+export async function listAdvogadoRecordsPage(moduleKey, options = {}) {
+  const normalized = normalizeRemoteOptions(options);
+  const from = (normalized.page - 1) * normalized.pageSize;
+  const to = from + normalized.pageSize - 1;
+
+  if (moduleKey === 'partes') {
+    const supabase = await getSupabaseClient();
+    let query = supabase
+      .from(PARTES_LINKS_TABLE)
+      .select('*', { count: 'exact' })
+      .order('updated_at', { ascending: false });
+
+    if (normalized.archived) query = query.not('archived_at', 'is', null);
+    else query = query.is('deleted_at', null);
+    if (normalized.vinculoStatus !== 'todos') query = query.eq('vinculo_status', normalized.vinculoStatus);
+    if (normalized.processoId) query = query.ilike('processo_id', `%${sanitizeIlikeText(normalized.processoId)}%`);
+    if (normalized.planoPagamentoId) query = query.ilike('plano_pagamento_id', `%${sanitizeIlikeText(normalized.planoPagamentoId)}%`);
+    if (normalized.clienteUserId) query = query.ilike('cliente_user_id', `%${sanitizeIlikeText(normalized.clienteUserId)}%`);
+    if (normalized.query) {
+      const or = buildOrIlike(['nome', 'documento', 'tipo', 'polo', 'advogado', 'observacao', 'processo_id', 'cliente_user_id'], normalized.query);
+      if (or) query = query.or(or);
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    if (!error) {
+      return paginatedResult((data || []).map(mapPartesRow), normalized.page, normalized.pageSize, count);
+    }
+
+    const local = filterAdvogadoRecords(parseJson(storageKey(moduleKey), []), normalized);
+    return paginateAdvogadoRecords(local, normalized.page, normalized.pageSize);
+  }
+
+  const sourceConfig = MODULE_DATA_SOURCES[moduleKey];
+  if (sourceConfig) {
+    const supabase = await getSupabaseClient();
+    const scopedClient = sourceConfig.schema === 'judiciario'
+      ? supabase.schema('judiciario')
+      : supabase;
+
+    let query = scopedClient
+      .from(sourceConfig.table)
+      .select('*', { count: 'exact' })
+      .order('updated_at', { ascending: false, nullsFirst: false });
+
+    if (normalized.status !== 'todos' && sourceConfig.statusField) {
+      query = query.eq(sourceConfig.statusField, normalized.status);
+    }
+    if (normalized.query) {
+      const or = buildOrIlike(MODULE_REMOTE_SEARCH_FIELDS[moduleKey] || [], normalized.query);
+      if (or) query = query.or(or);
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    if (!error) {
+      const rows = (data || []).map((row) => mapSourceRow(moduleKey, row, sourceConfig));
+      return paginatedResult(rows, normalized.page, normalized.pageSize, count);
+    }
+
+    const fallback = await listSchemaModuleRecords(moduleKey);
+    if (fallback) {
+      const local = filterAdvogadoRecords(fallback, normalized);
+      return paginateAdvogadoRecords(local, normalized.page, normalized.pageSize);
+    }
+  }
+
+  const supabase = await getSupabaseClient();
+  let query = supabase
+    .from(OPERATIONAL_TABLE)
+    .select('*', { count: 'exact' })
+    .eq('module_key', moduleKey)
+    .order('updated_at', { ascending: false });
+
+  if (normalized.archived) query = query.not('archived_at', 'is', null);
+  else query = query.is('deleted_at', null);
+  if (normalized.status !== 'todos') query = query.eq('status', normalized.status);
+
+  const { data, error, count } = await query.range(from, to);
+  if (!error) {
+    return paginatedResult((data || []).map(mapRemoteRow), normalized.page, normalized.pageSize, count);
+  }
+
+  const local = filterAdvogadoRecords(parseJson(storageKey(moduleKey), []), normalized);
+  return paginateAdvogadoRecords(local, normalized.page, normalized.pageSize);
 }
 
 export async function saveAdvogadoRecord(moduleKey, payload, existingId = null) {
@@ -1225,6 +1389,7 @@ export async function listAdvogadoAudit(moduleKey, recordId = null) {
 
 export function filterAdvogadoRecords(records, filters = {}) {
   const query = String(filters.query || '').trim().toLowerCase();
+  const queryDigits = query.replace(/\D+/g, '');
   const status = filters.status || 'todos';
   const archived = filters.archived === true;
   const processoId = String(filters.processoId || '').trim().toLowerCase();
@@ -1240,7 +1405,10 @@ export function filterAdvogadoRecords(records, filters = {}) {
     if (clienteUserId && !String(record.cliente_user_id || '').toLowerCase().includes(clienteUserId)) return false;
     if (vinculoStatus !== 'todos' && String(record.vinculo_status || 'ativo') !== vinculoStatus) return false;
     if (!query) return true;
-    return Object.values(record).some(value => String(value ?? '').toLowerCase().includes(query));
+    const textMatch = Object.values(record).some(value => String(value ?? '').toLowerCase().includes(query));
+    if (textMatch) return true;
+    if (!queryDigits) return false;
+    return Object.values(record).some(value => String(value ?? '').replace(/\D+/g, '').includes(queryDigits));
   });
 }
 

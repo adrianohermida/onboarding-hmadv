@@ -1,6 +1,9 @@
 import { EMPTY_FORM } from "./constants";
 import { getRelationSelectionValue, getSuggestionSelectionValue } from "./processos-screen-utils";
 
+const RELATION_FETCH_PAGE_SIZE = 1000;
+const RELATION_FETCH_MAX_PAGES = 100;
+
 export function useProcessosRelationActions({
   adminFetch,
   allMatchingRelationsSelected,
@@ -25,6 +28,17 @@ export function useProcessosRelationActions({
   setSelectedSuggestionKeys,
   setSuggestionSelectionLoading,
 }) {
+  async function fetchAllPagedItems(action, extraParams = "") {
+    const items = [];
+    for (let page = 1; page <= RELATION_FETCH_MAX_PAGES; page += 1) {
+      const payload = await adminFetch(`/api/admin-hmadv-processos?action=${action}&selection=1&page=${page}&pageSize=${RELATION_FETCH_PAGE_SIZE}${extraParams}`);
+      const chunk = payload?.data?.items || [];
+      items.push(...chunk);
+      if (chunk.length < RELATION_FETCH_PAGE_SIZE) break;
+    }
+    return items;
+  }
+
   async function toggleAllMatchingRelations() {
     if (allMatchingRelationsSelected) {
       setSelectedRelations([]);
@@ -33,8 +47,8 @@ export function useProcessosRelationActions({
     }
     setRelationSelectionLoading(true);
     try {
-      const payload = await adminFetch(`/api/admin-hmadv-processos?action=relacoes&selection=1&page=1&pageSize=500&query=${encodeURIComponent(search || "")}`);
-      setSelectedRelations((payload.data.items || []).map((item) => item.selection_key).filter(Boolean));
+      const items = await fetchAllPagedItems("relacoes", `&query=${encodeURIComponent(search || "")}`);
+      setSelectedRelations(items.map((item) => item.selection_key).filter(Boolean));
       setAllMatchingRelationsSelected(true);
     } finally {
       setRelationSelectionLoading(false);
@@ -49,8 +63,8 @@ export function useProcessosRelationActions({
     }
     setSuggestionSelectionLoading(true);
     try {
-      const payload = await adminFetch(`/api/admin-hmadv-processos?action=sugestoes_relacoes&selection=1&page=1&pageSize=500&query=${encodeURIComponent(search || "")}&minScore=${encodeURIComponent(relationMinScore || "0.45")}`);
-      setSelectedSuggestionKeys((payload.data.items || []).map((item) => item.suggestion_key).filter(Boolean));
+      const items = await fetchAllPagedItems("sugestoes_relacoes", `&query=${encodeURIComponent(search || "")}&minScore=${encodeURIComponent(relationMinScore || "0.45")}`);
+      setSelectedSuggestionKeys(items.map((item) => item.suggestion_key).filter(Boolean));
       setAllMatchingSuggestionsSelected(true);
     } finally {
       setSuggestionSelectionLoading(false);
@@ -59,14 +73,14 @@ export function useProcessosRelationActions({
 
   async function loadSelectedRelationItems() {
     if (!(allMatchingRelationsSelected || selectedRelations.length > relations.items.length)) return relations.items.filter((item) => selectedRelations.includes(getRelationSelectionValue(item)));
-    const payload = await adminFetch(`/api/admin-hmadv-processos?action=relacoes&page=1&pageSize=500&query=${encodeURIComponent(search || "")}`);
-    return (payload.data.items || []).filter((item) => selectedRelations.includes(getRelationSelectionValue(item)));
+    const items = await fetchAllPagedItems("relacoes", `&query=${encodeURIComponent(search || "")}`);
+    return items.filter((item) => selectedRelations.includes(getRelationSelectionValue(item)));
   }
 
   async function loadSelectedSuggestionItems() {
     if (!(allMatchingSuggestionsSelected || selectedSuggestionKeys.length > relationSuggestions.items.length)) return relationSuggestions.items.filter((item) => selectedSuggestionKeys.includes(getSuggestionSelectionValue(item)));
-    const payload = await adminFetch(`/api/admin-hmadv-processos?action=sugestoes_relacoes&page=1&pageSize=500&query=${encodeURIComponent(search || "")}&minScore=${encodeURIComponent(relationMinScore || "0.45")}`);
-    return (payload.data.items || []).filter((item) => selectedSuggestionKeys.includes(getSuggestionSelectionValue(item)));
+    const items = await fetchAllPagedItems("sugestoes_relacoes", `&query=${encodeURIComponent(search || "")}&minScore=${encodeURIComponent(relationMinScore || "0.45")}`);
+    return items.filter((item) => selectedSuggestionKeys.includes(getSuggestionSelectionValue(item)));
   }
 
   async function handleSaveRelation() {

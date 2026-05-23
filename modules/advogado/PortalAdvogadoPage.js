@@ -8,6 +8,7 @@ import {
   listAdvogadoRecords,
   listAdvogadoAudit,
   listAdvogadoTimeline,
+  listAdvogadoRecordsPage,
   paginateAdvogadoRecords,
   saveAdvogadoRecord,
 } from './RegistroAdvogadoService.js';
@@ -22,10 +23,13 @@ import { buildCaseContextHref, formatCaseFlowDate, getCaseFlowSummary } from '..
 
 const ADMIN_PAGE_KEYS = ['clientes', 'partes', 'documentos', 'planos', 'processos', 'movimentacoes', 'publicacoes', 'audiencias', 'prazos', 'custas-processuais', 'financeiro-processual', 'tpu', 'orgaos-judiciarios', 'serventias', 'relacoes-processuais', 'tarefas', 'agenda', 'mensagens', 'financeiro'];
 const CASE_MANAGEMENT_PAGES = ['onboarding-v2', 'onboarding', 'financial-dashboard', 'suporte'];
+const REMOTE_PAGE_CACHE_MAX = 80;
 
 const state = {
   moduleKey: '',
   records: [],
+  totalRecords: 0,
+  listChunkObserver: null,
   remoteClients: [],
   internalUsers: [],
   query: '',
@@ -36,10 +40,79 @@ const state = {
   clienteUserId: '',
   vinculoStatus: 'todos',
   page: 1,
-  pageSize: 8,
+  pageSize: 100,
+  remotePagination: false,
 };
 
 let queryRenderTimer = null;
+let remoteRequestSequence = 0;
+const remotePageCache = new Map();
+
+function buildRemoteQueryState(moduleKey, page, pageSize) {
+  return {
+    moduleKey,
+    page,
+    pageSize,
+    query: state.query,
+    status: state.status,
+    archived: state.archived,
+    processoId: state.processoId,
+    planoPagamentoId: state.planoPagamentoId,
+    clienteUserId: state.clienteUserId,
+    vinculoStatus: state.vinculoStatus,
+  };
+}
+
+function buildRemotePageCacheKey(queryState) {
+  return JSON.stringify(queryState);
+}
+
+function upsertRemotePageCache(key, value) {
+  if (remotePageCache.has(key)) remotePageCache.delete(key);
+  remotePageCache.set(key, value);
+  while (remotePageCache.size > REMOTE_PAGE_CACHE_MAX) {
+    const oldestKey = remotePageCache.keys().next().value;
+    if (!oldestKey) break;
+    remotePageCache.delete(oldestKey);
+  }
+}
+
+function clearRemotePageCache() {
+  remotePageCache.clear();
+}
+
+async function fetchRemotePage(moduleKey, options = {}) {
+  const page = Math.max(1, Number(options.page || state.page || 1));
+  const pageSize = Math.max(1, Math.min(1000, Number(options.pageSize || state.pageSize || 100)));
+  const useCache = options.useCache !== false;
+  const queryState = buildRemoteQueryState(moduleKey, page, pageSize);
+  const cacheKey = buildRemotePageCacheKey(queryState);
+
+  if (useCache && remotePageCache.has(cacheKey)) {
+    return remotePageCache.get(cacheKey);
+  }
+
+  const payload = await listAdvogadoRecordsPage(moduleKey, queryState);
+  const normalized = {
+    page: Number(payload?.page || page),
+    pageSize: Number(payload?.pageSize || pageSize),
+    total: Number(payload?.total || 0),
+    pages: Number(payload?.pages || 1),
+    rows: payload?.rows || [],
+  };
+
+  upsertRemotePageCache(cacheKey, normalized);
+  return normalized;
+}
+
+function prefetchAdjacentPages(moduleKey) {
+  if (!state.remotePagination || moduleKey === 'clientes') return;
+  const totalPages = Math.max(1, Math.ceil(Number(state.totalRecords || 0) / Math.max(1, Number(state.pageSize || 1))));
+  const targets = [state.page - 1, state.page + 1].filter((page) => page >= 1 && page <= totalPages);
+  targets.forEach((page) => {
+    fetchRemotePage(moduleKey, { page, pageSize: state.pageSize, useCache: true }).catch(() => {});
+  });
+}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -67,8 +140,34 @@ function normalizeStatusLabel(value = '') {
   return String(value || '-').replace(/_/g, ' ');
 }
 
+function isCnjField(fieldKey = '') {
+  const key = String(fieldKey || '').toLowerCase();
+  return key.includes('numero_cnj') || key === 'numero_processo';
+}
+
+function formatCnjValue(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '-';
+  const digits = raw.replace(/\D+/g, '');
+  if (digits.length !== 20) return raw;
+  return `${digits.slice(0, 7)}-${digits.slice(7, 9)}.${digits.slice(9, 13)}.${digits.slice(13, 14)}.${digits.slice(14, 16)}.${digits.slice(16, 20)}`;
+}
+
+function formatFieldValue(fieldKey, value) {
+  if (value === null || value === undefined || value === '') return '-';
+  if (isCnjField(fieldKey)) return formatCnjValue(value);
+  if (fieldKey === 'valor') return formatMoney(value);
+  if (fieldKey.includes('data') || fieldKey.includes('prazo') || fieldKey.includes('vencimento')) return formatDate(value);
+  return value;
+}
+
 function getRecordTitle(record, config) {
-  return record[config.primaryField] || record.nome || record.cliente || record.titulo || record.descricao || 'Registro';
+  const primaryKey = config?.primaryField;
+  const primaryValue = primaryKey ? record[primaryKey] : null;
+  if (primaryValue) return formatFieldValue(primaryKey, primaryValue);
+  if (record.numero_cnj) return formatCnjValue(record.numero_cnj);
+  if (record.numero_processo) return formatCnjValue(record.numero_processo);
+  return record.nome || record.cliente || record.titulo || record.descricao || 'Registro';
 }
 
 function getInternalUserOptions() {
@@ -129,9 +228,31 @@ function localRecordsWithRemoteClients(moduleKey) {
   return [...local, ...remote];
 }
 
-async function loadModuleRecords(moduleKey) {
+async function loadModuleRecords(moduleKey, options = {}) {
+  const forceFull = options.forceFull === true;
+
+  if (!forceFull && state.remotePagination && moduleKey !== 'clientes') {
+    const page = await listAdvogadoRecordsPage(moduleKey, {
+      page: state.page,
+      pageSize: state.pageSize,
+      query: state.query,
+      status: state.status,
+      archived: state.archived,
+      processoId: state.processoId,
+      planoPagamentoId: state.planoPagamentoId,
+      clienteUserId: state.clienteUserId,
+      vinculoStatus: state.vinculoStatus,
+    });
+
+    state.totalRecords = Number(page?.total || 0);
+    state.localRecords = page?.rows || [];
+    return state.localRecords;
+  }
+
   state.localRecords = await listAdvogadoRecords(moduleKey);
-  return localRecordsWithRemoteClients(moduleKey);
+  const merged = localRecordsWithRemoteClients(moduleKey);
+  state.totalRecords = merged.length;
+  return merged;
 }
 
 function renderField(field, record = {}, moduleKey = '') {
@@ -395,7 +516,7 @@ async function openDetail(record) {
     return `
       <div class="advogado-detail-row">
         <span>${escapeHtml(field.label)}</span>
-        <strong>${escapeHtml(value || '-')}</strong>
+        <strong>${escapeHtml(formatFieldValue(field.key, value))}</strong>
       </div>
     `;
   }).join('');
@@ -431,7 +552,7 @@ function getSecondaryInfo(record, config) {
   return keys.map(key => {
     const field = config.fields.find(item => item.key === key);
     const raw = record[key];
-    const value = key === 'valor' ? formatMoney(raw) : key.includes('data') || key.includes('prazo') || key.includes('vencimento') ? formatDate(raw) : raw;
+    const value = formatFieldValue(key, raw);
     return `<span>${escapeHtml(field?.label || key)}: ${escapeHtml(value)}</span>`;
   }).join('');
 }
@@ -733,6 +854,32 @@ function renderFinancialSimulatorResult(host) {
   return plan;
 }
 
+function renderRecordCards(rows, config) {
+  return rows.map(record => {
+    const readOnly = record.source === 'supabase';
+    return `
+      <article class="advogado-record-card" data-record-id="${escapeHtml(record.id)}">
+        <div class="advogado-record-main">
+          <span class="ui-badge advogado-status">${escapeHtml(normalizeStatusLabel(record.status))}</span>
+          <h2>${escapeHtml(getRecordTitle(record, config))}</h2>
+          <div class="advogado-record-meta">${getSecondaryInfo(record, config)}</div>
+        </div>
+        <div class="advogado-record-side">
+          <span>Atualizado em ${formatDate(record.updatedAt || record.createdAt)}</span>
+          <div class="advogado-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-action="timeline">Timeline</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="detail">Detalhe</button>
+            ${state.moduleKey === 'clientes' ? '<button type="button" class="btn btn-ghost btn-sm" data-action="invite">Convidar acesso</button>' : ''}
+            <button type="button" class="btn btn-ghost btn-sm" data-action="edit" ${readOnly ? 'disabled' : ''}>Editar</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="archive" ${readOnly || record.archived ? 'disabled' : ''}>Arquivar</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="delete" ${readOnly ? 'disabled' : ''}>Excluir</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
 function renderRows(rows, config) {
   if (!rows.length) {
     return `
@@ -743,38 +890,80 @@ function renderRows(rows, config) {
     `;
   }
 
+  const useVirtualChunking = rows.length > 120;
+  const initialChunkSize = 80;
+  const initialRows = useVirtualChunking ? rows.slice(0, initialChunkSize) : rows;
+  const renderedCount = initialRows.length;
+
   return `
-    <div class="advogado-record-list" data-virtual-list="advogado-records">
-      ${rows.map(record => {
-        const readOnly = record.source === 'supabase';
-        return `
-          <article class="advogado-record-card" data-record-id="${escapeHtml(record.id)}">
-            <div class="advogado-record-main">
-              <span class="ui-badge advogado-status">${escapeHtml(normalizeStatusLabel(record.status))}</span>
-              <h2>${escapeHtml(getRecordTitle(record, config))}</h2>
-              <div class="advogado-record-meta">${getSecondaryInfo(record, config)}</div>
-            </div>
-            <div class="advogado-record-side">
-              <span>Atualizado em ${formatDate(record.updatedAt || record.createdAt)}</span>
-              <div class="advogado-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-action="timeline">Timeline</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-action="detail">Detalhe</button>
-                ${state.moduleKey === 'clientes' ? '<button type="button" class="btn btn-ghost btn-sm" data-action="invite">Convidar acesso</button>' : ''}
-                <button type="button" class="btn btn-ghost btn-sm" data-action="edit" ${readOnly ? 'disabled' : ''}>Editar</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-action="archive" ${readOnly || record.archived ? 'disabled' : ''}>Arquivar</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-action="delete" ${readOnly ? 'disabled' : ''}>Excluir</button>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('')}
+    <div class="advogado-record-list" data-virtual-list="advogado-records" data-rendered-count="${renderedCount}" data-total-count="${rows.length}" data-chunk-size="80" data-virtual-enabled="${useVirtualChunking ? '1' : '0'}">
+      ${renderRecordCards(initialRows, config)}
     </div>
+    ${useVirtualChunking ? `<div class="advogado-virtual-footer" data-virtual-footer>Renderizando ${renderedCount} de ${rows.length} itens desta página…</div>` : ''}
   `;
+}
+
+function teardownVirtualListObserver() {
+  if (state.listChunkObserver) {
+    state.listChunkObserver.disconnect();
+    state.listChunkObserver = null;
+  }
+}
+
+function hydrateVirtualList(host, rows, config) {
+  teardownVirtualListObserver();
+  const list = host.querySelector('[data-virtual-list="advogado-records"]');
+  if (!list || list.dataset.virtualEnabled !== '1') return;
+
+  const footer = host.querySelector('[data-virtual-footer]');
+  const chunkSize = Number(list.dataset.chunkSize || 80);
+
+  const appendNextChunk = () => {
+    const rendered = Number(list.dataset.renderedCount || 0);
+    if (rendered >= rows.length) {
+      if (footer) footer.textContent = `Todos os ${rows.length} itens da página foram renderizados.`;
+      teardownVirtualListObserver();
+      return;
+    }
+    const nextRows = rows.slice(rendered, rendered + chunkSize);
+    list.insertAdjacentHTML('beforeend', renderRecordCards(nextRows, config));
+    const nextCount = rendered + nextRows.length;
+    list.dataset.renderedCount = String(nextCount);
+    if (footer) footer.textContent = `Renderizando ${nextCount} de ${rows.length} itens desta página…`;
+  };
+
+  const sentinel = document.createElement('div');
+  sentinel.className = 'advogado-virtual-sentinel';
+  list.after(sentinel);
+
+  state.listChunkObserver = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    appendNextChunk();
+  }, { root: null, threshold: 0.1, rootMargin: '400px' });
+
+  state.listChunkObserver.observe(sentinel);
 }
 
 function getPaginatedRecords() {
   const config = getAdvogadoModuleConfig(state.moduleKey);
   if (!config) return null;
+
+  if (state.remotePagination && state.moduleKey !== 'clientes') {
+    const total = Number(state.totalRecords || 0);
+    const pages = Math.max(1, Math.ceil(total / state.pageSize));
+    const safePage = Math.min(Math.max(1, state.page), pages);
+    state.page = safePage;
+    return {
+      config,
+      paginated: {
+        page: safePage,
+        pageSize: state.pageSize,
+        total,
+        pages,
+        rows: state.records,
+      },
+    };
+  }
 
   const isPartes = state.moduleKey === 'partes';
   const filtered = filterAdvogadoRecords(state.records, {
@@ -818,13 +1007,25 @@ function renderPartesAdvancedFilters() {
 }
 
 function renderPagination(paginated) {
+  const pageSizeOptions = [25, 50, 100, 250, 500, 1000];
   return `
     <div class="advogado-pagination" data-advogado-pagination>
       <span>${paginated.total} registro(s)</span>
       <div>
+        <label class="ui-field" style="min-width:140px;">
+          <span class="ui-label">Itens/página</span>
+          <select class="ui-select" data-advogado-filter="pageSize">
+            ${pageSizeOptions.map((size) => `<option value="${size}" ${Number(paginated.pageSize) === size ? 'selected' : ''}>${size}</option>`).join('')}
+          </select>
+        </label>
         <button type="button" class="btn btn-ghost btn-sm" data-advogado-page="prev" ${paginated.page <= 1 ? 'disabled' : ''}>Anterior</button>
         <span>Página ${paginated.page} de ${paginated.pages}</span>
         <button type="button" class="btn btn-ghost btn-sm" data-advogado-page="next" ${paginated.page >= paginated.pages ? 'disabled' : ''}>Próxima</button>
+        <label class="ui-field" style="min-width:130px;">
+          <span class="ui-label">Ir para</span>
+          <input class="ui-input" type="number" min="1" max="${paginated.pages}" value="${paginated.page}" data-advogado-filter="pageJump">
+        </label>
+        <button type="button" class="btn btn-ghost btn-sm" data-advogado-page="go">Ir</button>
       </div>
     </div>
   `;
@@ -1048,6 +1249,11 @@ function renderModuleHubSection(moduleKey, records, config, paginatedTotal) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function refreshList(host) {
+  if (state.remotePagination && state.moduleKey !== 'clientes') {
+    refreshRecords();
+    return;
+  }
+
   const view = getPaginatedRecords();
   if (!view) return;
 
@@ -1057,6 +1263,7 @@ function refreshList(host) {
 
   if (recordsHost) {
     recordsHost.innerHTML = renderRows(view.paginated.rows, view.config);
+    hydrateVirtualList(recordsHost, view.paginated.rows, view.config);
     window.initUiKit?.(recordsHost);
   }
   if (pagination) pagination.outerHTML = renderPagination(view.paginated);
@@ -1390,7 +1597,7 @@ function bindModuleEvents(host) {
     if (!['query', 'processoId', 'planoPagamentoId', 'clienteUserId'].includes(filter)) return;
     state.page = 1;
     clearTimeout(queryRenderTimer);
-    queryRenderTimer = setTimeout(() => refreshList(host), 120);
+    queryRenderTimer = setTimeout(() => refreshList(host), state.remotePagination ? 280 : 120);
   });
 
   host.addEventListener('change', event => {
@@ -1399,6 +1606,9 @@ function bindModuleEvents(host) {
     if (filter === 'status') state.status = event.target.value;
     if (filter === 'archived') state.archived = event.target.value === 'arquivados';
     if (filter === 'vinculoStatus') state.vinculoStatus = event.target.value;
+    if (filter === 'pageSize') {
+      state.pageSize = Math.max(1, Math.min(1000, Number(event.target.value || 100)));
+    }
     state.page = 1;
     refreshList(host);
   });
@@ -1449,7 +1659,13 @@ function bindModuleEvents(host) {
 
     const pageButton = event.target.closest('[data-advogado-page]');
     if (pageButton) {
-      state.page += pageButton.dataset.advogadoPage === 'next' ? 1 : -1;
+      if (pageButton.dataset.advogadoPage === 'go') {
+        const jumpInput = host.querySelector('[data-advogado-filter="pageJump"]');
+        const requested = Number(jumpInput?.value || state.page || 1);
+        state.page = Math.max(1, Math.trunc(requested || 1));
+      } else {
+        state.page += pageButton.dataset.advogadoPage === 'next' ? 1 : -1;
+      }
       refreshList(host);
       return;
     }
@@ -1503,7 +1719,13 @@ function bindModuleEvents(host) {
 }
 
 function renderInto(host) {
+  teardownVirtualListObserver();
   host.innerHTML = renderModulePage();
+  const view = getPaginatedRecords();
+  if (view) {
+    const recordsHost = host.querySelector('#advogado-records-host');
+    if (recordsHost) hydrateVirtualList(recordsHost, view.paginated.rows, view.config);
+  }
   window.initUiKit?.(host);
   const simulator = host.querySelector('[data-financial-simulator]');
   if (simulator) renderFinancialSimulatorResult(simulator);
@@ -1647,8 +1869,8 @@ async function renderAdminFinanceiroHub(host) {
   const activeTab = tabs.some(t => t.key === hash) ? hash : 'honorarios';
 
   const [honRecords, cobRecords, clients] = await Promise.all([
-    loadModuleRecords('financeiro').catch(() => []),
-    loadModuleRecords('financeiro-processual').catch(() => []),
+    loadModuleRecords('financeiro', { forceFull: true }).catch(() => []),
+    loadModuleRecords('financeiro-processual', { forceFull: true }).catch(() => []),
     AdminService.getClients().catch(() => []),
   ]);
 
@@ -1689,6 +1911,8 @@ async function renderAdminFinanceiroHub(host) {
 export async function bootAdvogadoPage(moduleKey) {
   const host = document.querySelector('[data-advogado-module-host]');
   if (!host) return;
+
+  teardownVirtualListObserver();
 
   host.innerHTML = `
     <div class="advogado-page">
@@ -1735,6 +1959,8 @@ export async function bootAdvogadoPage(moduleKey) {
   state.clienteUserId = '';
   state.vinculoStatus = 'todos';
   state.page = 1;
+  state.pageSize = 25;
+  state.remotePagination = moduleKey !== 'clientes';
   state.records = await loadModuleRecords(moduleKey);
 
   renderInto(host);
