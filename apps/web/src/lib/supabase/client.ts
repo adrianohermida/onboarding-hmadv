@@ -76,5 +76,5 @@ export function createClient() {
         fetch: compatibilityFetch,
       },
     },
-  );
+  ) as any;
 }

@@ -21,7 +21,7 @@ export async function createClient() {
         },
       },
     },
-  );
+  ) as any;
 }
 
 export async function createServiceClient() {
@@ -35,5 +35,5 @@ export async function createServiceClient() {
         setAll: () => {},
       },
     },
-  );
+  ) as any;
 }

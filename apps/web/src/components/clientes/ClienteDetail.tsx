@@ -295,7 +295,7 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
             <EmptyState icon={Gavel} title="Nenhum processo vinculado" description="Os processos jurídicos vinculados a este cliente aparecerão aqui." action={<Link href="/processos" className="text-xs text-primary hover:underline">Ver todos os processos</Link>} />
           ) : (
             <div className="divide-y divide-border">
-              {processos.map((p) => (
+              {processos.map((p: any) => (
                 <div key={p.id} className="px-4 py-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
                   <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Gavel className="h-4 w-4 text-violet-500" />

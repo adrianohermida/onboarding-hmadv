@@ -337,7 +337,7 @@ function TabDocumentos({ clientUserIds }: { clientUserIds: string[] }) {
           <div key={doc.id} className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3 border border-border">
             <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{doc.nome || 'Documento'}</p>
+              <p className="text-sm font-medium truncate">{doc.nome_arquivo || 'Documento'}</p>
               <p className="text-xs text-muted-foreground">{doc.tipo || '—'} · {fmtDate(doc.created_at)}</p>
             </div>
             {wfCfg && (
@@ -451,7 +451,7 @@ function TabAudiencias({ processoId }: { processoId: string }) {
             <p className="text-sm font-medium">{a.tipo || 'Audiência'}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{fmtDateTime(a.data_audiencia)}</p>
             {a.local && <p className="text-xs text-muted-foreground">{a.local}</p>}
-            {a.observacoes && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.observacoes}</p>}
+            {a.descricao && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.descricao}</p>}
           </div>
           {a.situacao && (
             <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0',

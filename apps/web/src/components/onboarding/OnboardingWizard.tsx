@@ -86,6 +86,7 @@ export default function OnboardingWizard({ caso, userId }: Props) {
       numero_dependentes: caso.numero_dependentes ?? 0,
     } as StepData,
   });
+  const formErrors = errors as Record<string, { message?: string }>;
 
   async function saveStep(data: StepData) {
     startSave(async () => {
@@ -159,11 +160,11 @@ export default function OnboardingWizard({ caso, userId }: Props) {
         <form onSubmit={handleSubmit(saveStep)} className="p-5 space-y-4">
           {step === 0 && (
             <>
-              <Field label="Nome completo *" error={errors.nome?.message}>
+              <Field label="Nome completo *" error={formErrors.nome?.message}>
                 <input {...register('nome')} placeholder="João da Silva" className={inputCls} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="CPF *" error={errors.cpf?.message}>
+                <Field label="CPF *" error={formErrors.cpf?.message}>
                   <input {...register('cpf')} placeholder="000.000.000-00" className={inputCls} />
                 </Field>
                 <Field label="RG">
@@ -171,10 +172,10 @@ export default function OnboardingWizard({ caso, userId }: Props) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Telefone *" error={errors.telefone?.message}>
+                <Field label="Telefone *" error={formErrors.telefone?.message}>
                   <input {...register('telefone')} placeholder="(11) 99999-9999" className={inputCls} />
                 </Field>
-                <Field label="Estado civil *" error={errors.estado_civil?.message}>
+                <Field label="Estado civil *" error={formErrors.estado_civil?.message}>
                   <select {...register('estado_civil')} className={inputCls}>
                     <option value="">Selecione...</option>
                     {ESTADO_CIVIL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -185,7 +186,7 @@ export default function OnboardingWizard({ caso, userId }: Props) {
           )}
 
           {step === 1 && (
-            <Field label="Endereço completo *" error={errors.endereco?.message}>
+            <Field label="Endereço completo *" error={formErrors.endereco?.message}>
               <textarea
                 {...register('endereco')}
                 placeholder="Rua, número, bairro, cidade, estado, CEP"
@@ -201,7 +202,7 @@ export default function OnboardingWizard({ caso, userId }: Props) {
                 <Field label="Profissão">
                   <input {...register('profissao')} placeholder="Ex: Engenheiro" className={inputCls} />
                 </Field>
-                <Field label="Situação *" error={errors.situacao_profissional?.message}>
+                <Field label="Situação *" error={formErrors.situacao_profissional?.message}>
                   <select {...register('situacao_profissional')} className={inputCls}>
                     <option value="">Selecione...</option>
                     {SITUACAO_PROF_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -209,10 +210,10 @@ export default function OnboardingWizard({ caso, userId }: Props) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Renda mensal (R$)" error={errors.renda_mensal?.message}>
+                <Field label="Renda mensal (R$)" error={formErrors.renda_mensal?.message}>
                   <input {...register('renda_mensal')} type="number" step="0.01" min="0" placeholder="0,00" className={inputCls} />
                 </Field>
-                <Field label="Dependentes" error={errors.numero_dependentes?.message}>
+                <Field label="Dependentes" error={formErrors.numero_dependentes?.message}>
                   <input {...register('numero_dependentes')} type="number" min="0" max="20" className={inputCls} />
                 </Field>
               </div>

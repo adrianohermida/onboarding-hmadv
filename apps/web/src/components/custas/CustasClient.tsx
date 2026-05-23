@@ -95,10 +95,10 @@ function useCustasKpis() {
         .select('valor, status')
         .is('deleted_at', null)
         .limit(10_000);
-      const rows = data ?? [];
-      const totalValor = rows.reduce((s, r) => s + (r.valor ?? 0), 0);
-      const totalPago  = rows.filter((r) => r.status === 'pago').reduce((s, r) => s + (r.valor ?? 0), 0);
-      const pendentes  = rows.filter((r) => r.status === 'pendente' || r.status === 'vencido').length;
+      const rows: Array<{ valor: number | null; status: string | null }> = (data ?? []) as Array<{ valor: number | null; status: string | null }>;
+      const totalValor = rows.reduce((s: number, r: { valor: number | null }) => s + (r.valor ?? 0), 0);
+      const totalPago  = rows.filter((r: { status: string | null }) => r.status === 'pago').reduce((s: number, r: { valor: number | null }) => s + (r.valor ?? 0), 0);
+      const pendentes  = rows.filter((r: { status: string | null }) => r.status === 'pendente' || r.status === 'vencido').length;
       return { totalValor, totalPago, pendentes };
     },
   });

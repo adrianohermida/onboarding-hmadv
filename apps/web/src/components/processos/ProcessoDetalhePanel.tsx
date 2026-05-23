@@ -10,7 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   useMovimentacoes, useAudiencias, usePrazos, usePartes,
-  useFinanceiroProcessual, useRisco, useAtualizarProcesso,
+  useFinanceiroProcessual, useRisco, useAtualizarProcesso, useAtualizarPrazo,
   useCriarAudiencia, useCriarPrazoManual, useCriarFinanceiro,
   prazoUrgencia, URGENCIA_PRAZO_CONFIG, STATUS_PROCESSO_CONFIG, formatCnjDigits, onlyDigits,
   type Processo, type Audiencia, type PrazoCalculado, type FinanceiroProcessual,
