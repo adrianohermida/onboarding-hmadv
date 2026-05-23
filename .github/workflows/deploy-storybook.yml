@@ -62,18 +62,16 @@ jobs:
             fi
           done
 
-          # Sanitiza secrets para evitar quebra de JS por quebras de linha/conteúdo acidental extra
-          DEFAULT_KEY_SANITIZED="$(printf '%s' "$SUPABASE_ANON_KEY" | head -n1 | tr -d '\r')"
-          MESSAGING_KEY_SANITIZED="$(printf '%s' "$SUPABASE_ANON_KEY_MESSAGING" | head -n1 | tr -d '\r')"
-
           # Injeta config runtime de Supabase com serialização segura (JSON.stringify)
+          # e sanitização de secrets multiline diretamente no Node.
           node -e '
             const fs = require("node:fs");
+            const sanitize = (value) => String(value || "").split(/\r?\n/)[0].trim();
             const payload = {
-              defaultUrl: process.env.SUPABASE_URL || "",
-              defaultKey: process.env.DEFAULT_KEY_SANITIZED || "",
-              messagingUrl: process.env.SUPABASE_URL_MESSAGING || "",
-              messagingKey: process.env.MESSAGING_KEY_SANITIZED || ""
+              defaultUrl: sanitize(process.env.SUPABASE_URL),
+              defaultKey: sanitize(process.env.SUPABASE_ANON_KEY),
+              messagingUrl: sanitize(process.env.SUPABASE_URL_MESSAGING),
+              messagingKey: sanitize(process.env.SUPABASE_ANON_KEY_MESSAGING)
             };
             const js = `(function initRuntimeSupabaseConfig() {\n  window.__HM_SUPABASE__ = ${JSON.stringify(payload, null, 2)};\n})();\n`;
             fs.writeFileSync("storybook-static/js/runtime-config.js", js, "utf8");
