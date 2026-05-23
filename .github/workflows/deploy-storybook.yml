@@ -16,6 +16,10 @@ concurrency:
 
 jobs:
   deploy-storybook:
+    timeout-minutes: 30
+    env:
+      CI: true
+      STORYBOOK_DISABLE_TELEMETRY: 1
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
