@@ -1,6 +1,6 @@
 import type { Preview } from '@storybook/html';
-import '../tokens/core-v2.css';
-import '../components/base-v2.css';
+import '../design-system/tokens/core-v2.css';
+import '../design-system/components/base-v2.css';
 
 // Decorador global para injetar contexto de auth simulado ou herdado
 const withAuthContext = (story: () => HTMLElement) => {
