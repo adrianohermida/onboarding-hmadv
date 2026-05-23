@@ -35,6 +35,30 @@ jobs:
       - name: Build Storybook
         run: npm run build-storybook
 
+      - name: Prepare Login Entrypoint
+        run: |
+          mkdir -p storybook-static/pages storybook-static/js storybook-static/design-system
+          cp pages/login.html storybook-static/pages/login.html
+          cp js/uth-manager.js storybook-static/js/auth-manager.js
+          cp -r design-system/* storybook-static/design-system/
+          cat > storybook-static/index.html << 'EOF'
+          <!doctype html>
+          <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Portal Hermida Maia</title>
+            <meta http-equiv="refresh" content="0;url=/pages/login.html" />
+            <script>
+              window.location.replace('/pages/login.html');
+            </script>
+          </head>
+          <body>
+            <a href="/pages/login.html">Ir para login</a>
+          </body>
+          </html>
+          EOF
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
