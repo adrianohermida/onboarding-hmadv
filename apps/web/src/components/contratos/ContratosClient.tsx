@@ -21,7 +21,6 @@ interface Contrato {
   assinado_em: string | null;
   arquivo_url: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 interface ContratosPaginados {
@@ -70,9 +69,9 @@ function useContratosPaginados(filtros: { search: string; status: string | null;
       const to   = from + PAGE_SIZE - 1;
       let q = supabase
         .from('portal_contratos')
-        .select('id, user_id, caso_id, titulo, tipo, status, assinatura_status, assinado_em, arquivo_url, created_at, updated_at', { count: 'exact' })
+        .select('id, user_id, caso_id, titulo, tipo, status, assinatura_status, assinado_em, arquivo_url, created_at', { count: 'exact' })
         .is('deleted_at', null)
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to);
       if (filtros.search.trim().length >= 2) q = q.ilike('titulo', `%${filtros.search}%`);
       if (filtros.status)                    q = q.eq('status', filtros.status);
@@ -112,7 +111,7 @@ function useUploadContrato() {
       const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path);
       const { error } = await supabase
         .from('portal_contratos')
-        .update({ arquivo_url: publicUrl, status: 'pendente_assinatura', updated_at: new Date().toISOString() })
+        .update({ arquivo_url: publicUrl, status: 'pendente_assinatura' })
         .eq('id', id);
       if (error) throw error;
     },

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
-  Receipt, Upload, Download, Eye, Clock, CheckCircle2,
+  Receipt, Upload, Download, Clock, CheckCircle2,
   CloudUpload, X, Plus, AlertTriangle, Search, ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,14 +15,10 @@ interface Custa {
   user_id: string;
   caso_id: string | null;
   titulo: string | null;
-  descricao: string | null;
   categoria: string;
   status: string;
   valor: number;
-  data_lancamento: string;
   data_vencimento: string | null;
-  comprovante_url: string | null;
-  comprovante_nome: string | null;
   created_at: string;
 }
 
@@ -74,9 +70,9 @@ function useCustasPaginadas(filtros: { search: string; status: string | null; ca
       const to   = from + PAGE_SIZE - 1;
       let q = supabase
         .from('portal_custas')
-        .select('id, user_id, caso_id, titulo, descricao, categoria, status, valor, data_lancamento, data_vencimento, comprovante_url, comprovante_nome, created_at', { count: 'exact' })
+        .select('id, user_id, caso_id, titulo, categoria, status, valor, data_vencimento, created_at', { count: 'exact' })
         .is('deleted_at', null)
-        .order('data_lancamento', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to);
       if (filtros.search.trim().length >= 2) q = q.ilike('titulo', `%${filtros.search}%`);
       if (filtros.status)    q = q.eq('status', filtros.status);
@@ -117,10 +113,9 @@ function useEnviarComprovante() {
       const path = `custas/${id}_${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path);
       const { error } = await supabase
         .from('portal_custas')
-        .update({ comprovante_url: publicUrl, comprovante_nome: file.name, status: 'pago', updated_at: new Date().toISOString() })
+        .update({ status: 'pago' })
         .eq('id', id);
       if (error) throw error;
     },
@@ -388,12 +383,7 @@ export default function CustasClient({ isAdmin }: Props) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    {c.comprovante_url ? (
-                      <a href={c.comprovante_url} target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Ver comprovante">
-                        <Eye className="h-3.5 w-3.5" />
-                      </a>
-                    ) : (
+                    {c.status !== 'pago' && (
                       <button onClick={() => setUploadFor(c)}
                         className="flex items-center gap-1 px-2 py-1 text-xs bg-muted hover:bg-muted/70 rounded-lg transition-colors" title="Enviar comprovante">
                         <Upload className="h-3 w-3" />
