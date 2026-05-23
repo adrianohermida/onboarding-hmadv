@@ -54,7 +54,7 @@ export default function ClienteDashboard({ caso, docs }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Seu processo</p>
-            <h2 className="text-base font-semibold">{caso.nome || 'Processo'}</h2>
+            <h2 className="text-base font-semibold">{(caso as any).full_name || 'Processo'}</h2>
             <p className="text-xs text-muted-foreground mt-1">Desde {formatDate(caso.created_at)}</p>
           </div>
           <StatusBadge status={caso.fase ?? 'cadastro'} labels={FASE_LABELS} />

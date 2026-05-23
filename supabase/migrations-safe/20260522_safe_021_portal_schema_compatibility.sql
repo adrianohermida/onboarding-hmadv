@@ -111,6 +111,66 @@ ALTER TABLE IF EXISTS portal_casos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS portal_custas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS portal_contratos ENABLE ROW LEVEL SECURITY;
 
+-- ---------------------------------------------------------------------------
+-- RLS compatibility reset (prevents 500 from broken legacy policy predicates)
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE p record;
+BEGIN
+  FOR p IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'portal_casos'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.portal_casos', p.policyname);
+  END LOOP;
+
+  CREATE POLICY portal_casos_owner_all ON public.portal_casos
+    FOR ALL TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+EXCEPTION
+  WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$
+DECLARE p record;
+BEGIN
+  FOR p IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'portal_custas'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.portal_custas', p.policyname);
+  END LOOP;
+
+  CREATE POLICY portal_custas_owner_all ON public.portal_custas
+    FOR ALL TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+EXCEPTION
+  WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$
+DECLARE p record;
+BEGIN
+  FOR p IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'portal_contratos'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.portal_contratos', p.policyname);
+  END LOOP;
+
+  CREATE POLICY portal_contratos_owner_all ON public.portal_contratos
+    FOR ALL TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+EXCEPTION
+  WHEN undefined_table THEN NULL;
+END $$;
+
 -- Force PostgREST to pick up new columns/constraints immediately.
 DO $$ BEGIN PERFORM pg_notify('pgrst', 'reload schema'); EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN PERFORM pg_notify('pgrst', 'reload config'); EXCEPTION WHEN OTHERS THEN NULL; END $$;

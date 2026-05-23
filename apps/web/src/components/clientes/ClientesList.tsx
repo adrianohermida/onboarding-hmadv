@@ -159,8 +159,7 @@ export default function ClientesList({ clients, search = '', fase = '', page }: 
                   </div>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  <p>{c.email || '—'}</p>
-                  {c.telefone && <p className="text-xs">{c.telefone}</p>}
+                  <p>{c.email || c.cpf || '—'}</p>
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={c.fase ?? 'cadastro'} labels={FASE_LABELS} />

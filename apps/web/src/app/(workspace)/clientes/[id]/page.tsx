@@ -10,8 +10,15 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
   const { data: adminData } = await supabase.from('admin_users').select('role').maybeSingle();
   if (!adminData) redirect('/dashboard');
 
+  const { data: caso } = await supabase
+    .from('portal_casos')
+    .select('*')
+    .eq('user_id', params.id)
+    .maybeSingle();
+
+  if (!caso) notFound();
+
   const [
-    { data: caso },
     { data: docs },
     { data: timeline },
     { data: tarefas },
@@ -19,10 +26,9 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
     { data: contratos },
     { data: planos },
   ] = await Promise.all([
-    supabase.from('portal_casos').select('*').eq('user_id', params.id).maybeSingle(),
     supabase
       .from('portal_documentos')
-      .select('id, tipo, nome, workflow_status, direction, require_signature, created_at, updated_at')
+      .select('id, tipo, nome_arquivo, workflow_status, direction, require_signature, created_at, updated_at')
       .eq('user_id', params.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -34,14 +40,14 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       .order('created_at', { ascending: false })
       .limit(30),
     supabase
-      .from('re_tarefas')
-      .select('id, titulo, status, prioridade, data_vencimento, criado_em')
-      .eq('responsavel_id', params.id)
-      .order('data_vencimento', { ascending: true })
+      .from('re_tasks')
+      .select('id, title, status, due_date, created_at')
+      .eq('portal_caso_id', caso.id)
+      .order('due_date', { ascending: true })
       .limit(20),
     supabase
       .from('portal_custas')
-      .select('id, titulo, categoria, status, valor, data_vencimento, comprovante_url, created_at')
+      .select('id, titulo, categoria, status, valor, data_vencimento, created_at')
       .eq('user_id', params.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -51,7 +57,7 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       .select('id, titulo, tipo, status, assinatura_status, assinado_em, arquivo_url, created_at')
       .eq('user_id', params.id)
       .is('deleted_at', null)
-      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(10),
     supabase
       .from('portal_planos_pagamento')
@@ -61,8 +67,6 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       .order('created_at', { ascending: false })
       .limit(5),
   ]);
-
-  if (!caso) notFound();
 
   return (
     <ClienteDetail

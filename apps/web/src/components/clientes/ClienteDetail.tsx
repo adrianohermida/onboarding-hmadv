@@ -18,16 +18,15 @@ import EmptyState from '../ui/EmptyState';
 import { cn } from '@/lib/utils';
 
 type Caso = Tables<'portal_casos'>;
-type Doc = Pick<Tables<'portal_documentos'>, 'id' | 'tipo' | 'nome' | 'workflow_status' | 'direction' | 'require_signature' | 'created_at' | 'updated_at'>;
+type Doc = Pick<Tables<'portal_documentos'>, 'id' | 'tipo' | 'workflow_status' | 'direction' | 'require_signature' | 'created_at' | 'updated_at'> & { nome_arquivo: string | null };
 type TimelineItem = Pick<Tables<'portal_timeline'>, 'id' | 'event_type' | 'title' | 'description' | 'created_at' | 'metadata'>;
 
 interface Tarefa {
   id: string;
-  titulo: string;
+  title: string;
   status: string;
-  prioridade: string | null;
-  data_vencimento: string | null;
-  criado_em: string;
+  due_date: string | null;
+  created_at: string;
 }
 
 interface Custa {
@@ -79,18 +78,23 @@ function fmt(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function useProcessosCliente(casoId: string) {
+function useProcessosCliente(_casoId: string) {
   return useQuery({
-    queryKey: ['processos-cliente', casoId],
+    queryKey: ['processos-cliente', _casoId],
     staleTime: 120_000,
     queryFn: async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('re_processos_judiciais')
-        .select('id, numero_cnj, tribunal, grau, classe_nome, assunto_principal, orgao_julgador, data_distribuicao, ultima_movimentacao, valor_causa')
-        .eq('caso_id', casoId)
-        .order('ultima_movimentacao', { ascending: false });
-      return data ?? [];
+      try {
+        const supabase = createClient();
+        const { data } = await (supabase as any)
+          .schema('judiciario')
+          .from('processos')
+          .select('id, numero_cnj, tribunal, grau, classe_nome, assunto_principal, orgao_julgador, data_distribuicao, data_ultima_movimentacao, valor_causa')
+          .order('data_ultima_movimentacao', { ascending: false })
+          .limit(20);
+        return data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 }
@@ -138,7 +142,7 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
 
   const totalCustas = custas.reduce((s, c) => s + c.valor, 0);
   const totalPlanos = planos.reduce((s, p) => s + p.valor_total, 0);
-  const tarefasPendentes = tarefas.filter((t) => t.status !== 'concluida' && t.status !== 'cancelada');
+  const tarefasPendentes = tarefas.filter((t) => t.status !== 'done' && t.status !== 'cancelled' && t.status !== 'concluida' && t.status !== 'cancelada');
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: 'visao_geral', label: 'Visão geral' },
@@ -159,11 +163,11 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">
-              {getInitials(caso.nome)}
+              {getInitials((caso as any).full_name)}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold truncate">{caso.nome || '—'}</h1>
-              <p className="text-xs text-muted-foreground">{caso.email || caso.cpf || 'Sem contato'}</p>
+              <h1 className="text-lg font-semibold truncate">{(caso as any).full_name || '—'}</h1>
+              <p className="text-xs text-muted-foreground">{caso.cpf || (caso as any).whatsapp || 'Sem contato'}</p>
             </div>
             <div className="flex items-center gap-2">
               <FaseSelector casoId={caso.id} userId={caso.user_id} currentFase={caso.fase} />
@@ -266,10 +270,10 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
                 <InfoRow label="Atualização" value={formatDate(caso.updated_at)} />
               </dl>
             </div>
-            {caso.notes && (
+            {(caso as any).observacoes && (
               <div className="px-4 py-3 border-t border-border bg-muted/20">
                 <p className="text-xs text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm">{caso.notes}</p>
+                <p className="text-sm">{(caso as any).observacoes}</p>
               </div>
             )}
           </div>
@@ -429,7 +433,7 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate capitalize">{doc.nome || doc.tipo.replace(/_/g, ' ')}</p>
+                    <p className="text-sm font-medium truncate capitalize">{doc.nome_arquivo || doc.tipo.replace(/_/g, ' ')}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(doc.updated_at)}</p>
                   </div>
                   <StatusBadge status={doc.workflow_status} labels={WORKFLOW_STATUS_LABELS} />
@@ -449,9 +453,8 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
           ) : (
             <div className="divide-y divide-border">
               {tarefas.map((t) => {
-                const concluida = t.status === 'concluida';
-                const vencida = t.data_vencimento && !concluida && new Date(t.data_vencimento) < new Date();
-                const priCls = t.prioridade ? PRIORIDADE_CLS[t.prioridade] : null;
+                const concluida = t.status === 'done' || t.status === 'concluida';
+                const vencida = t.due_date && !concluida && new Date(t.due_date) < new Date();
                 return (
                   <div key={t.id} className={cn('flex items-start gap-3 px-4 py-3.5 hover:bg-muted/30 transition-colors', vencida && 'bg-rose-500/5')}>
                     {concluida
@@ -460,20 +463,13 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
                         ? <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
                         : <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />}
                     <div className="flex-1 min-w-0">
-                      <p className={cn('text-sm font-medium', concluida && 'line-through text-muted-foreground')}>{t.titulo}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {priCls && (
-                          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', priCls)}>
-                            {t.prioridade}
-                          </span>
-                        )}
-                        {t.data_vencimento && (
-                          <span className={cn('flex items-center gap-1 text-xs', vencida ? 'text-rose-500' : 'text-muted-foreground')}>
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(t.data_vencimento)}
-                          </span>
-                        )}
-                      </div>
+                      <p className={cn('text-sm font-medium', concluida && 'line-through text-muted-foreground')}>{t.title}</p>
+                      {t.due_date && (
+                        <span className={cn('flex items-center gap-1 text-xs mt-0.5', vencida ? 'text-rose-500' : 'text-muted-foreground')}>
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(t.due_date)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
