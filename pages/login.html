@@ -243,7 +243,10 @@
           <input type="password" id="password" class="input" required placeholder="••••••••" autocomplete="current-password">
         </div>
 
-        <div id="errorMsg" class="error-msg hidden"></div>
+        <div class="field" id="emailField">
+          <label for="email">E-mail</label>
+          <input id="email" class="input" type="email" placeholder="seu@email.com" autocomplete="email">
+        </div>
 
         <button type="submit" id="submitBtn" class="submit-btn">
           Entrar
@@ -273,15 +276,18 @@
       await window.AuthManager.init();
       statusMsg.textContent = 'Supabase conectado';
 
-      // Se já estiver logado, redireciona
-      if (window.AuthManager.currentUser) {
-        window.location.href = window.AuthManager.isAdmin() ? '/admin/index.html' : '/pages/dashboard.html';
+      if (window.AuthManager.currentUser && authMode.value !== 'set-password') {
+        await redirectByRole();
         return;
       }
 
-      const form = document.getElementById('loginForm');
-      const submitBtn = document.getElementById('submitBtn');
-      const errorMsg = document.getElementById('errorMsg');
+      authMode.addEventListener('change', () => {
+        applyMode(authMode.value);
+        setStatus('Fluxo pronto para autenticação.', 'info');
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -314,7 +320,6 @@
           errorMsg.classList.remove('hidden');
           statusMsg.textContent = 'Falha de autenticação.';
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Entrar';
         }
       });
     });

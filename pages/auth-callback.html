@@ -75,16 +75,30 @@ function setState(id) {
 }
 
 async function handleCallback() {
-  /* Supabase v2 processes the URL hash automatically on client init.
-     We just need to wait for the auth state to be resolved. */
+  /* Supabase v2 processes URL hash/session automatically on init. */
   try {
     const { data, error } = await supabase.auth.getSession();
 
     if (error) throw error;
 
+    const hash = window.location.hash || '';
+    const isRecovery = hash.includes('type=recovery');
+
     if (data?.session) {
       setState('state-success');
-      setTimeout(() => { window.location.replace('meu-caso.html'); }, 1200);
+      if (isRecovery) {
+        setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
+        return;
+      }
+
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', data.session.user.id)
+        .maybeSingle();
+
+      const nextPath = adminData ? 'admin/index.html' : 'pages/dashboard.html';
+      setTimeout(() => { window.location.replace(`../${nextPath}`); }, 1200);
       return;
     }
 
@@ -93,7 +107,12 @@ async function handleCallback() {
       subscription.unsubscribe();
       if (session) {
         setState('state-success');
-        setTimeout(() => { window.location.replace('meu-caso.html'); }, 1200);
+        if (isRecovery) {
+          setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
+          return;
+        }
+
+        setTimeout(() => { window.location.replace('../pages/dashboard.html'); }, 1200);
       } else {
         setState('state-error');
       }
