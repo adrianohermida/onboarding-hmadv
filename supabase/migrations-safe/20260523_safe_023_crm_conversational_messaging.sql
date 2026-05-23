@@ -10,6 +10,55 @@
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
+CREATE OR REPLACE FUNCTION current_workspace_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (
+      SELECT pwm.workspace_id
+      FROM portal_workspace_members pwm
+      WHERE pwm.user_id = auth.uid()
+      ORDER BY pwm.created_at ASC NULLS LAST
+      LIMIT 1
+    ),
+    (
+      SELECT pw.id
+      FROM portal_workspaces pw
+      WHERE pw.owner_id = auth.uid()
+      ORDER BY pw.created_at ASC NULLS LAST
+      LIMIT 1
+    )
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION is_workspace_member_for(p_workspace_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    EXISTS (
+      SELECT 1
+      FROM portal_workspace_members pwm
+      WHERE pwm.workspace_id = p_workspace_id
+        AND pwm.user_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM portal_workspaces pw
+      WHERE pw.id = p_workspace_id
+        AND pw.owner_id = auth.uid()
+    ),
+    false
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION set_crm_tenant_id()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -575,6 +624,8 @@ TO authenticated;
 
 GRANT EXECUTE ON FUNCTION can_access_crm_conversation(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION can_write_crm_conversation(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION current_workspace_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION is_workspace_member_for(uuid) TO authenticated;
 
 CREATE OR REPLACE VIEW vw_crm_inbox WITH (security_invoker = true) AS
 SELECT
