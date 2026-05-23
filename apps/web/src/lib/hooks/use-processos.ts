@@ -45,7 +45,6 @@ export interface Audiencia {
   descricao: string | null;
   local: string | null;
   situacao: string | null;
-  link_videoconferencia: string | null;
   observacoes: string | null;
   created_at: string;
 }
@@ -138,7 +137,7 @@ export function useAudiencias(processoId?: string | null) {
     queryFn: async () => {
       let q = jud()
         .from('audiencias')
-        .select('id, processo_id, tipo, data_audiencia, descricao, local, situacao, link_videoconferencia, observacoes, created_at')
+        .select('id, processo_id, tipo, data_audiencia, descricao, local, situacao, observacoes, created_at')
         .order('data_audiencia', { ascending: true });
       if (processoId) q = q.eq('processo_id', processoId);
       const { data } = await q.limit(100);
@@ -552,7 +551,7 @@ export function useAudienciasPaginadas(filtros: AudienciasPaginadasFiltros, page
       let q = jud()
         .from('audiencias')
         .select(
-          'id, processo_id, tipo, data_audiencia, descricao, local, situacao, link_videoconferencia, observacoes, created_at',
+          'id, processo_id, tipo, data_audiencia, descricao, local, situacao, observacoes, created_at',
           { count: 'exact' }
         )
         .range(from, to);
