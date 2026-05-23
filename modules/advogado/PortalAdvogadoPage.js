@@ -232,20 +232,16 @@ async function loadModuleRecords(moduleKey, options = {}) {
   const forceFull = options.forceFull === true;
 
   if (!forceFull && state.remotePagination && moduleKey !== 'clientes') {
-    const page = await listAdvogadoRecordsPage(moduleKey, {
-      page: state.page,
-      pageSize: state.pageSize,
-      query: state.query,
-      status: state.status,
-      archived: state.archived,
-      processoId: state.processoId,
-      planoPagamentoId: state.planoPagamentoId,
-      clienteUserId: state.clienteUserId,
-      vinculoStatus: state.vinculoStatus,
+    const remotePage = await fetchRemotePage(moduleKey, {
+      page: options.page || state.page,
+      pageSize: options.pageSize || state.pageSize,
+      useCache: options.useCache,
     });
 
-    state.totalRecords = Number(page?.total || 0);
-    state.localRecords = page?.rows || [];
+    if (options.page) state.page = Number(remotePage.page || state.page);
+    if (options.pageSize) state.pageSize = Number(remotePage.pageSize || state.pageSize);
+    state.totalRecords = Number(remotePage.total || 0);
+    state.localRecords = remotePage.rows || [];
     return state.localRecords;
   }
 
@@ -1596,6 +1592,7 @@ function bindModuleEvents(host) {
     if (filter === 'clienteUserId') state.clienteUserId = event.target.value;
     if (!['query', 'processoId', 'planoPagamentoId', 'clienteUserId'].includes(filter)) return;
     state.page = 1;
+    clearRemotePageCache();
     clearTimeout(queryRenderTimer);
     queryRenderTimer = setTimeout(() => refreshList(host), state.remotePagination ? 280 : 120);
   });
@@ -1610,6 +1607,7 @@ function bindModuleEvents(host) {
       state.pageSize = Math.max(1, Math.min(1000, Number(event.target.value || 100)));
     }
     state.page = 1;
+    clearRemotePageCache();
     refreshList(host);
   });
 
@@ -1732,9 +1730,14 @@ function renderInto(host) {
 }
 
 async function refreshRecords() {
+  const requestId = ++remoteRequestSequence;
   state.records = await loadModuleRecords(state.moduleKey);
+  if (requestId !== remoteRequestSequence) return;
   const host = document.querySelector('[data-advogado-module-host]');
-  if (host) renderInto(host);
+  if (host) {
+    renderInto(host);
+    prefetchAdjacentPages(state.moduleKey);
+  }
 }
 
 async function loadRemoteClients() {
@@ -1959,8 +1962,9 @@ export async function bootAdvogadoPage(moduleKey) {
   state.clienteUserId = '';
   state.vinculoStatus = 'todos';
   state.page = 1;
-  state.pageSize = 25;
+  state.pageSize = 100;
   state.remotePagination = moduleKey !== 'clientes';
+  clearRemotePageCache();
   state.records = await loadModuleRecords(moduleKey);
 
   renderInto(host);
