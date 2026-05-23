@@ -14,7 +14,7 @@ const MODULE_DATA_SOURCES = {
   planos: { schema: 'public', table: 'portal_planos_pagamento' },
   processos: { schema: 'judiciario', table: 'processos' },
   movimentacoes: { schema: 'judiciario', table: 'movimentacoes' },
-  publicacoes: { schema: 'judiciario', table: 'publicacoes' },
+  publicacoes: { schema: 'judiciario', table: 'publicacoes', orderField: 'data_publicacao' },
   audiencias: { schema: 'judiciario', table: 'audiencias' },
   prazos: { schema: 'judiciario', table: 'prazo_tarefa' },
   'financeiro-processual': { schema: 'judiciario', table: 'financeiro_processual', statusField: 'situacao' },
@@ -785,8 +785,8 @@ function mapRemoteRow(row) {
 function mapSourceRow(moduleKey, row, sourceConfig = {}) {
   const config = getAdvogadoModuleConfig(moduleKey);
   const statusKey = sourceConfig.statusField || 'status';
-  const createdAt = row.created_at || row.data_hora_cadastro || row.data_movimentacao || row.data || null;
-  const updatedAt = row.updated_at || row.data_hora_movimento || row.data_audiencia || createdAt;
+  const createdAt = row.created_at || row.data_hora_cadastro || row.data_movimentacao || row.data_publicacao || row.data || null;
+  const updatedAt = row.updated_at || row.data_hora_movimento || row.data_audiencia || row.data_publicacao || createdAt;
   const archivedAt = row.archived_at || null;
   const deletedAt = row.deleted_at || null;
   const rawStatus = row[statusKey];
@@ -1078,11 +1078,12 @@ export async function listAdvogadoRecordsPage(moduleKey, options = {}) {
     const scopedClient = sourceConfig.schema === 'judiciario'
       ? supabase.schema('judiciario')
       : supabase;
+    const orderField = sourceConfig.orderField || 'updated_at';
 
     let query = scopedClient
       .from(sourceConfig.table)
       .select('*', { count: 'exact' })
-      .order('updated_at', { ascending: false, nullsFirst: false });
+      .order(orderField, { ascending: false, nullsFirst: false });
 
     if (normalized.status !== 'todos' && sourceConfig.statusField) {
       query = query.eq(sourceConfig.statusField, normalized.status);
