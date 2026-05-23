@@ -1,6 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON } from '../utils/config.js';
 
+function looksLikeSupabaseJwt(value) {
+  return typeof value === 'string' && value.split('.').length === 3;
+}
+
 const CASE_SELECT_FALLBACK = [
   'id',
   'user_id',
@@ -172,6 +176,14 @@ async function compatibilityFetch(input, init = {}) {
     return emptyListResponse();
   }
   return response;
+}
+
+if (!SUPABASE_URL || !String(SUPABASE_URL).startsWith('https://')) {
+  throw new Error('SUPABASE_URL inválida.');
+}
+
+if (!looksLikeSupabaseJwt(SUPABASE_ANON)) {
+  throw new Error('SUPABASE_ANON inválida ou ausente. Configure SUPABASE_ANON_KEY/NEXT_PUBLIC_SUPABASE_ANON_KEY.');
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {

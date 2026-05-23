@@ -4,18 +4,61 @@
  * Projeto Mensageria: fmtmcblvzfisenhvcjoo
  */
 
-const DEFAULT_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs';
+const DEFAULT_SUPABASE_URL = 'https://sspvizogbcyigquqycsz.supabase.co';
+const DEFAULT_MESSAGING_URL = 'https://fmtmcblvzfisenhvcjoo.supabase.co';
+
+function readStorageValue(key) {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const value = localStorage.getItem(key);
+    return value && String(value).trim() ? String(value).trim() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function looksLikeSupabaseJwt(value) {
+  return typeof value === 'string' && value.split('.').length === 3;
+}
+
+function mapAuthError(error) {
+  if (!error) return new Error('Falha de autenticação no Supabase.');
+  const status = Number(error.status || error?.response?.status || 0);
+  const message = String(error.message || '').toLowerCase();
+
+  if (status === 401 && (message.includes('invalid api key') || message.includes('invalid') || message.includes('jwt'))) {
+    return new Error('Chave ANON do Supabase inválida ou desatualizada. Atualize SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  }
+
+  if (message.includes('invalid login credentials')) {
+    return new Error('E-mail ou senha inválidos.');
+  }
+
+  if (message.includes('email not confirmed')) {
+    return new Error('E-mail não confirmado. Verifique sua caixa de entrada antes de entrar.');
+  }
+
+  return new Error(error.message || 'Falha de autenticação no Supabase.');
+}
 
 function readRuntimeConfig() {
   const injected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
+  const defaultUrl =
+    injected.defaultUrl ||
+    readStorageValue('SUPABASE_URL') ||
+    readStorageValue('NEXT_PUBLIC_SUPABASE_URL') ||
+    DEFAULT_SUPABASE_URL;
 
-  const defaultUrl = injected.defaultUrl || 'https://sspvizogbcyigquqycsz.supabase.co';
-  const defaultKey = injected.defaultKey || DEFAULT_SUPABASE_ANON;
+  const defaultKey =
+    injected.defaultKey ||
+    readStorageValue('SUPABASE_ANON_KEY') ||
+    readStorageValue('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+    '';
 
-  const messagingUrl = injected.messagingUrl || 'https://fmtmcblvzfisenhvcjoo.supabase.co';
+  const messagingUrl = injected.messagingUrl || readStorageValue('SUPABASE_URL_MESSAGING') || DEFAULT_MESSAGING_URL;
   const messagingKey =
     injected.messagingKey ||
-    (typeof localStorage !== 'undefined' ? localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') : null) ||
+    readStorageValue('SUPABASE_ANON_KEY_MESSAGING') ||
     null;
 
   return {
@@ -26,11 +69,11 @@ function readRuntimeConfig() {
 
 const SUPABASE_CONFIG = {
   default: {
-    url: 'https://sspvizogbcyigquqycsz.supabase.co',
-    key: DEFAULT_SUPABASE_ANON,
+    url: DEFAULT_SUPABASE_URL,
+    key: '',
   },
   messaging: {
-    url: 'https://fmtmcblvzfisenhvcjoo.supabase.co',
+    url: DEFAULT_MESSAGING_URL,
     key: null,
   }
 };
@@ -42,6 +85,8 @@ class AuthManager {
     this.currentUser = null;
     this.session = null;
     this.currentAdminRole = null;
+    this.initialized = false;
+    this.runtimeConfig = readRuntimeConfig();
   }
 
   buildCallbackUrl() {
@@ -53,40 +98,70 @@ class AuthManager {
     return this.isAdmin() ? '/admin/index.html' : '/pages/dashboard.html';
   }
 
-  async init() {
-    // Inicializa clientes Supabase (assumindo que a lib está carregada globalmente ou via import)
-    if (typeof supabase !== 'undefined') {
-      const runtimeConfig = readRuntimeConfig();
-      SUPABASE_CONFIG.default = runtimeConfig.default;
-      SUPABASE_CONFIG.messaging = runtimeConfig.messaging;
+  validateConfig() {
+    const config = this.runtimeConfig || readRuntimeConfig();
+    const defaultUrl = String(config?.default?.url || '');
+    const defaultKey = String(config?.default?.key || '');
 
-      this.defaultClient = supabase.createClient(SUPABASE_CONFIG.default.url, SUPABASE_CONFIG.default.key);
-
-      if (SUPABASE_CONFIG.messaging.key) {
-        this.messagingClient = supabase.createClient(SUPABASE_CONFIG.messaging.url, SUPABASE_CONFIG.messaging.key);
-      }
-      
-      // Restaura sessão se existir
-      const { data: { session } } = await this.defaultClient.auth.getSession();
-      if (session) {
-        this.currentUser = session.user || null;
-        this.session = session;
-        await this.resolveAdminRole();
-        await this.propagateSession(session);
-      }
+    if (!defaultUrl.startsWith('https://') || !defaultUrl.includes('.supabase.co')) {
+      throw new Error('SUPABASE_URL inválida. Verifique window.__HM_SUPABASE__.defaultUrl.');
     }
+
+    if (!looksLikeSupabaseJwt(defaultKey)) {
+      throw new Error('SUPABASE_ANON_KEY inválida ou ausente. Configure window.__HM_SUPABASE__.defaultKey ou localStorage SUPABASE_ANON_KEY.');
+    }
+  }
+
+  ensureReady() {
+    if (!this.initialized || !this.defaultClient) {
+      throw new Error('AuthManager não inicializado. Recarregue a página e tente novamente.');
+    }
+  }
+
+  async init() {
+    if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
+      throw new Error('SDK do Supabase não carregado.');
+    }
+
+    this.runtimeConfig = readRuntimeConfig();
+    this.validateConfig();
+
+    SUPABASE_CONFIG.default = this.runtimeConfig.default;
+    SUPABASE_CONFIG.messaging = this.runtimeConfig.messaging;
+
+    this.defaultClient = supabase.createClient(SUPABASE_CONFIG.default.url, SUPABASE_CONFIG.default.key);
+
+    if (SUPABASE_CONFIG.messaging.key && looksLikeSupabaseJwt(SUPABASE_CONFIG.messaging.key)) {
+      this.messagingClient = supabase.createClient(SUPABASE_CONFIG.messaging.url, SUPABASE_CONFIG.messaging.key);
+    } else {
+      this.messagingClient = null;
+    }
+
+    const { data: { session }, error } = await this.defaultClient.auth.getSession();
+    if (error) {
+      throw mapAuthError(error);
+    }
+
+    if (session) {
+      this.currentUser = session.user || null;
+      this.session = session;
+      await this.resolveAdminRole();
+      await this.propagateSession(session);
+    }
+
+    this.initialized = true;
     return this;
   }
 
   async login(email, password) {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
 
     await this.completeAuth(data);
     return data;
@@ -102,14 +177,16 @@ class AuthManager {
     await this.resolveAdminRole();
 
     // Salva indicador de auth completa
-    localStorage.setItem('auth_synced', 'true');
+    try {
+      localStorage.setItem('auth_synced', 'true');
+    } catch (_) {}
     window.dispatchEvent(new CustomEvent('auth:complete', { detail: data.user }));
 
     return data;
   }
 
   async register(email, password, metadata = {}) {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.signUp({
       email,
@@ -120,32 +197,43 @@ class AuthManager {
       },
     });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
 
     if (data?.session) await this.completeAuth(data);
     return data;
   }
 
   async sendMagicLink(email) {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.signInWithOtp({
       email,
       options: {
+        shouldCreateUser: false,
         emailRedirectTo: this.buildCallbackUrl(),
       },
     });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
     return data;
   }
 
   async sendOtp(email) {
-    return this.sendMagicLink(email);
+    this.ensureReady();
+
+    const { data, error } = await this.defaultClient.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+      },
+    });
+
+    if (error) throw mapAuthError(error);
+    return data;
   }
 
   async verifyOtp(email, token, type = 'email') {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.verifyOtp({
       email,
@@ -153,29 +241,29 @@ class AuthManager {
       type,
     });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
 
     if (data?.session) await this.completeAuth(data);
     return data;
   }
 
   async requestPasswordRecovery(email) {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.resetPasswordForEmail(email, {
       redirectTo: this.buildCallbackUrl(),
     });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
     return data;
   }
 
   async updatePassword(newPassword) {
-    if (!this.defaultClient) throw new Error('Cliente não inicializado');
+    this.ensureReady();
 
     const { data, error } = await this.defaultClient.auth.updateUser({ password: newPassword });
 
-    if (error) throw error;
+    if (error) throw mapAuthError(error);
 
     const { data: sessionData } = await this.defaultClient.auth.getSession();
     if (sessionData?.session) {
@@ -188,12 +276,14 @@ class AuthManager {
   }
 
   onAuthStateChange(callback) {
-    if (!this.defaultClient) return { data: { subscription: { unsubscribe() {} } } };
+    if (!this.defaultClient) {
+      return { data: { subscription: { unsubscribe() {} } } };
+    }
     return this.defaultClient.auth.onAuthStateChange(callback);
   }
 
   async propagateSession(sourceSession) {
-    if (!this.messagingClient) return;
+    if (!this.messagingClient || !sourceSession?.access_token || !sourceSession?.refresh_token) return;
 
     // Usa o mesmo JWT para logar no segundo projeto
     // Nota: Isso requer que o segundo projeto aceite tokens externos ou use a mesma assinatura JWT
@@ -238,7 +328,9 @@ class AuthManager {
     this.currentUser = null;
     this.session = null;
     this.currentAdminRole = null;
-    localStorage.removeItem('auth_synced');
+    try {
+      localStorage.removeItem('auth_synced');
+    } catch (_) {}
     window.dispatchEvent(new CustomEvent('auth:logout'));
   }
 

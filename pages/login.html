@@ -237,9 +237,15 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/auth-manager.js"></script>
   <script>
+    const runtimeDefaultKey =
+      (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.defaultKey) ||
+      localStorage.getItem('SUPABASE_ANON_KEY') ||
+      localStorage.getItem('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+      '';
+
     const defaultRuntimeSupabase = {
       defaultUrl: 'https://sspvizogbcyigquqycsz.supabase.co',
-      defaultKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs',
+      defaultKey: runtimeDefaultKey,
       messagingUrl: 'https://fmtmcblvzfisenhvcjoo.supabase.co',
       messagingKey: localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') || null,
     };
@@ -303,8 +309,17 @@
       if (initialMode) authMode.value = initialMode;
       applyMode(authMode.value);
 
-      await window.AuthManager.init();
-      setStatus('Supabase conectado', 'success');
+      try {
+        await window.AuthManager.init();
+        setStatus('Supabase conectado', 'success');
+      } catch (initError) {
+        setStatus(
+          (initError && initError.message) ||
+            'Configuração do Supabase inválida. Defina SUPABASE_ANON_KEY no runtime/localStorage.',
+          'error'
+        );
+        return;
+      }
 
       if (window.AuthManager.currentUser && authMode.value !== 'set-password') {
         await redirectByRole();
