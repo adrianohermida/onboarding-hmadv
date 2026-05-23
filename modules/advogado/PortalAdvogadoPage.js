@@ -1,5 +1,5 @@
 import { AdminService } from '../../services/database.js';
-import * as RegistroAdvogadoService from './RegistroAdvogadoService.js?v=20260523i';
+import * as RegistroAdvogadoService from './RegistroAdvogadoService.js?v=20260523j';
 import {
   buildOperationalControl,
   buildOperationalNotification,
