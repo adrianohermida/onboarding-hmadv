@@ -13,6 +13,7 @@
     "test": "node platform/scripts/run-portal-tests.mjs",
     "git:unify-main": "powershell -ExecutionPolicy Bypass -File ./platform/scripts/unify-main.ps1",
     "storybook": "storybook dev -p 6006",
+    "storybook:ci": "cross-env STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6011 --ci",
     "build-storybook": "storybook build"
   },
   "repository": {
@@ -23,6 +24,7 @@
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "@playwright/test": "^1.60.0",
     "@storybook/addon-a11y": "^8.6.18",
     "@storybook/addon-essentials": "^8.6.18",
