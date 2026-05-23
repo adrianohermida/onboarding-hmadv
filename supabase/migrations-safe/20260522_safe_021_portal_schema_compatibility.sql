@@ -12,10 +12,34 @@ ALTER TABLE IF EXISTS portal_casos
   ADD COLUMN IF NOT EXISTS numero_processo text,
   ADD COLUMN IF NOT EXISTS onboarding_done boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS cnj_step_atual integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS renda_mensal numeric(14,2),
+  ADD COLUMN IF NOT EXISTS renda numeric(14,2),
+  ADD COLUMN IF NOT EXISTS renda_familiar numeric(14,2),
+  ADD COLUMN IF NOT EXISTS numero_dependentes integer,
+  ADD COLUMN IF NOT EXISTS n_dependentes integer,
+  ADD COLUMN IF NOT EXISTS despesas_json jsonb,
+  ADD COLUMN IF NOT EXISTS despesas jsonb,
+  ADD COLUMN IF NOT EXISTS credores_cnj jsonb,
   ADD COLUMN IF NOT EXISTS cnj_json jsonb,
   ADD COLUMN IF NOT EXISTS fd_ticket_id bigint,
   ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+-- Deduplicate legacy rows so UNIQUE(user_id) can be created safely.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'portal_casos' AND column_name = 'user_id')
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'portal_casos' AND column_name = 'id') THEN
+    DELETE FROM public.portal_casos pc
+    USING public.portal_casos pc_keep
+    WHERE pc.user_id = pc_keep.user_id
+      AND pc.id <> pc_keep.id
+      AND COALESCE(pc.updated_at, pc.created_at, to_timestamp(0)) <= COALESCE(pc_keep.updated_at, pc_keep.created_at, to_timestamp(0));
+  END IF;
+EXCEPTION
+  WHEN undefined_table THEN NULL;
+  WHEN undefined_column THEN NULL;
+END $$;
 
 -- Ensure upsert(on_conflict=user_id) is valid in PostgREST
 DO $$
@@ -86,5 +110,9 @@ EXCEPTION WHEN undefined_table THEN NULL; END $$;
 ALTER TABLE IF EXISTS portal_casos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS portal_custas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS portal_contratos ENABLE ROW LEVEL SECURITY;
+
+-- Force PostgREST to pick up new columns/constraints immediately.
+DO $$ BEGIN PERFORM pg_notify('pgrst', 'reload schema'); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN PERFORM pg_notify('pgrst', 'reload config'); EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 COMMIT;

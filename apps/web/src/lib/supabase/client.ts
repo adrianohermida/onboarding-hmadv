@@ -14,6 +14,19 @@ const CASE_SELECT_FALLBACK = [
   'updated_at',
 ].join(',');
 
+const CASE_SELECT_RISKY_COLUMNS = [
+  'renda_mensal',
+  'renda',
+  'renda_familiar',
+  'numero_dependentes',
+  'n_dependentes',
+  'despesas_json',
+  'despesas',
+  'credores_cnj',
+  'onboarding_done',
+  'cnj_step_atual',
+];
+
 function normalizeRestUrl(input: RequestInfo | URL): URL {
   const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
   const url = new URL(raw);
@@ -34,7 +47,9 @@ function normalizeRestUrl(input: RequestInfo | URL): URL {
   }
 
   if (table === 'portal_casos') {
-    if (url.searchParams.get('select') === '*') {
+    const selectParam = url.searchParams.get('select') || '';
+    const hasRiskyColumns = CASE_SELECT_RISKY_COLUMNS.some((col) => selectParam.includes(col));
+    if (selectParam === '*' || hasRiskyColumns) {
       url.searchParams.set('select', CASE_SELECT_FALLBACK);
     }
     url.searchParams.delete('on_conflict');

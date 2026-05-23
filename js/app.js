@@ -70,6 +70,18 @@ function normalizeSupabaseRestUrl(rawUrl) {
   if (!url.pathname.includes('/rest/v1/')) return url;
 
   const table = url.pathname.split('/').pop() || '';
+  const caseRiskyColumns = [
+    'renda_mensal',
+    'renda',
+    'renda_familiar',
+    'numero_dependentes',
+    'n_dependentes',
+    'despesas_json',
+    'despesas',
+    'credores_cnj',
+    'onboarding_done',
+    'cnj_step_atual',
+  ];
   if (table === 'portal_custas') {
     url.searchParams.delete('deleted_at');
     const order = url.searchParams.get('order') || '';
@@ -86,7 +98,9 @@ function normalizeSupabaseRestUrl(rawUrl) {
   }
 
   if (table === 'portal_casos') {
-    if ((url.searchParams.get('select') || '') === '*') {
+    const selectParam = url.searchParams.get('select') || '';
+    const hasRiskyColumns = caseRiskyColumns.some(col => selectParam.includes(col));
+    if (selectParam === '*' || hasRiskyColumns) {
       url.searchParams.set('select', 'id,user_id,workspace_id,full_name,fase,onboarding_done,numero_processo,cnj_step_atual,created_at,updated_at');
     }
     url.searchParams.delete('on_conflict');

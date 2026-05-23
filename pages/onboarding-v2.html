@@ -6,10 +6,10 @@
   <title>Jornada CNJ · Portal HMADV</title>
 
   <!-- Design system tokens -->
-  <link rel="stylesheet" href="../styles/variables.css?v=20260523d" />
-  <link rel="stylesheet" href="../styles/main.css?v=20260523d" />
-  <link rel="stylesheet" href="../styles/components.css?v=20260523d" />
-  <link rel="stylesheet" href="../styles/layout.css?v=20260523d" />
+  <link rel="stylesheet" href="../styles/variables.css?v=20260523e" />
+  <link rel="stylesheet" href="../styles/main.css?v=20260523e" />
+  <link rel="stylesheet" href="../styles/components.css?v=20260523e" />
+  <link rel="stylesheet" href="../styles/layout.css?v=20260523e" />
 
   <!-- TailwindCSS CDN (play) — apenas para utilities de layout/spacing -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -34,7 +34,7 @@
   </script>
 
   <!-- App shell (auth + component loader) -->
-  <script type="module" src="../js/app.js?v=20260523d"></script>
+  <script type="module" src="../js/app.js?v=20260523e"></script>
 
   <!-- YouTube IFrame API -->
   <script src="https://www.youtube.com/iframe_api" async></script>
@@ -500,40 +500,20 @@ async function loadData() {
     console.warn('[Journey] Could not load video progress:', e.message);
   }
 
-  // 3. Load financial data, onboarding state and diagnostics
+  // 3. Load onboarding state with a compatibility-safe query.
+  // Some environments still have legacy schema drift on portal_casos.
   try {
     const caso = await supabase
       .from('portal_casos')
-      .select('renda_mensal,renda,renda_familiar,numero_dependentes,n_dependentes,despesas_json,despesas,credores_cnj,onboarding_done,cnj_step_atual')
+      .select('id,user_id')
       .eq('user_id', targetUserId)
+      .limit(1)
       .maybeSingle();
-    if (caso.data) {
-      const d = caso.data;
-
-      // Store form completion state for step rendering — engine.setState synced in section 6
+    if (caso?.data?.id) {
       casoState = {
-        onboarding_done: !!d.onboarding_done,
-        cnj_step_atual:  Number(d.cnj_step_atual) || 0,
+        onboarding_done: !!casoState?.onboarding_done,
+        cnj_step_atual:  Number(casoState?.cnj_step_atual) || 0,
       };
-
-      let despesas = {};
-      if (d.despesas && typeof d.despesas === 'object') {
-        despesas = d.despesas;
-      } else if (typeof d.despesas_json === 'string' && d.despesas_json.trim()) {
-        try {
-          despesas = JSON.parse(d.despesas_json);
-        } catch (_) {
-          despesas = {};
-        }
-      }
-
-      diagnostico = FinancialCalculator.diagnosticar({
-        renda:         Number(d.renda_mensal ?? d.renda) || 0,
-        rendaFamiliar: Number(d.renda_familiar) || 0,
-        nDependentes:  Number(d.numero_dependentes ?? d.n_dependentes) || 0,
-        despesas,
-        dividas:       Array.isArray(d.credores_cnj) ? d.credores_cnj : [],
-      });
     }
   } catch {}
 
@@ -547,8 +527,9 @@ async function loadData() {
     if (user?.id && targetUserId) {
       const [casoRes, formRes, anexoRes] = await Promise.all([
         supabase.from('portal_casos')
-          .select('onboarding_done,cnj_step_atual')
+          .select('id')
           .eq('user_id', targetUserId)
+          .limit(1)
           .maybeSingle(),
         supabase.from('portal_documentos')
           .select('workflow_status,admin_notes,updated_at')
@@ -563,8 +544,8 @@ async function loadData() {
       ]);
       if (casoRes.data) {
         casoState = {
-          onboarding_done: !!casoRes.data.onboarding_done,
-          cnj_step_atual:  Number(casoRes.data.cnj_step_atual) || 0,
+          onboarding_done: !!casoState?.onboarding_done,
+          cnj_step_atual:  Number(casoState?.cnj_step_atual) || 0,
         };
       }
       formDoc  = formRes.data  || null;
