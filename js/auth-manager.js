@@ -4,14 +4,34 @@
  * Projeto Mensageria: fmtmcblvzfisenhvcjoo
  */
 
+const DEFAULT_SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs';
+
+function readRuntimeConfig() {
+  const injected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
+
+  const defaultUrl = injected.defaultUrl || 'https://sspvizogbcyigquqycsz.supabase.co';
+  const defaultKey = injected.defaultKey || DEFAULT_SUPABASE_ANON;
+
+  const messagingUrl = injected.messagingUrl || 'https://fmtmcblvzfisenhvcjoo.supabase.co';
+  const messagingKey =
+    injected.messagingKey ||
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('SUPABASE_ANON_KEY_MESSAGING') : null) ||
+    null;
+
+  return {
+    default: { url: defaultUrl, key: defaultKey },
+    messaging: { url: messagingUrl, key: messagingKey },
+  };
+}
+
 const SUPABASE_CONFIG = {
   default: {
     url: 'https://sspvizogbcyigquqycsz.supabase.co',
-    key: 'SUPABASE_ANON_KEY', // Substituir pela chave real ou env
+    key: DEFAULT_SUPABASE_ANON,
   },
   messaging: {
     url: 'https://fmtmcblvzfisenhvcjoo.supabase.co',
-    key: 'SUPABASE_ANON_KEY_MESSAGING', // Substituir pela chave real ou env
+    key: null,
   }
 };
 
@@ -21,17 +41,28 @@ class AuthManager {
     this.messagingClient = null;
     this.currentUser = null;
     this.session = null;
+    this.currentAdminRole = null;
   }
 
   async init() {
     // Inicializa clientes Supabase (assumindo que a lib está carregada globalmente ou via import)
     if (typeof supabase !== 'undefined') {
+      const runtimeConfig = readRuntimeConfig();
+      SUPABASE_CONFIG.default = runtimeConfig.default;
+      SUPABASE_CONFIG.messaging = runtimeConfig.messaging;
+
       this.defaultClient = supabase.createClient(SUPABASE_CONFIG.default.url, SUPABASE_CONFIG.default.key);
-      this.messagingClient = supabase.createClient(SUPABASE_CONFIG.messaging.url, SUPABASE_CONFIG.messaging.key);
+
+      if (SUPABASE_CONFIG.messaging.key) {
+        this.messagingClient = supabase.createClient(SUPABASE_CONFIG.messaging.url, SUPABASE_CONFIG.messaging.key);
+      }
       
       // Restaura sessão se existir
       const { data: { session } } = await this.defaultClient.auth.getSession();
       if (session) {
+        this.currentUser = session.user || null;
+        this.session = session;
+        await this.resolveAdminRole();
         await this.propagateSession(session);
       }
     }
@@ -53,6 +84,7 @@ class AuthManager {
       await this.propagateSession(data.session);
       this.currentUser = data.user;
       this.session = data.session;
+      await this.resolveAdminRole();
       
       // Salva indicador de auth completa
       localStorage.setItem('auth_synced', 'true');
@@ -107,12 +139,34 @@ class AuthManager {
     
     this.currentUser = null;
     this.session = null;
+    this.currentAdminRole = null;
     localStorage.removeItem('auth_synced');
     window.dispatchEvent(new CustomEvent('auth:logout'));
   }
 
+  async resolveAdminRole() {
+    if (!this.defaultClient || !this.currentUser?.id) {
+      this.currentAdminRole = null;
+      return null;
+    }
+
+    const { data, error } = await this.defaultClient
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', this.currentUser.id)
+      .maybeSingle();
+
+    if (error) {
+      this.currentAdminRole = null;
+      return null;
+    }
+
+    this.currentAdminRole = data?.role || null;
+    return this.currentAdminRole;
+  }
+
   isAdmin() {
-    return this.currentUser?.email === 'adrianohermida@gmail.com';
+    return !!this.currentAdminRole;
   }
 }
 
