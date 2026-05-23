@@ -11,6 +11,10 @@ function jud() {
 export interface Processo {
   id: string;
   numero_cnj: string | null;
+  titulo: string | null;
+  polo_ativo: string | null;
+  polo_passivo: string | null;
+  responsavel: string | null;
   tribunal: string | null;
   comarca: string | null;
   ramo: string | null;
@@ -101,13 +105,42 @@ export function useProcessos() {
     queryKey: ['processos-judiciario'],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await jud()
-        .from('processos')
-        .select('id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at')
-        .order('data_ultima_movimentacao', { ascending: false })
-        .limit(200);
+      const baseSelect = 'id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at';
+      const extendedSelect = `id, numero_cnj, titulo, polo_ativo, polo_passivo, responsavel, ${baseSelect.replace('id, numero_cnj, ', '')}`;
+
+      const run = async (selectColumns: string) => {
+        const { data, error } = await jud()
+          .from('processos')
+          .select(selectColumns)
+          .order('data_ultima_movimentacao', { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return data ?? [];
+      };
+
+      try {
+        return await run(extendedSelect);
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (!/polo_ativo|polo_passivo|responsavel|titulo/i.test(message)) throw error;
+        const rows = await run(baseSelect);
+        return rows.map((row: any) => ({ ...row, titulo: null, polo_ativo: null, polo_passivo: null, responsavel: null }));
+      }
+    },
+  });
+}
+
+export function useResponsaveisInternos() {
+  return useQuery<Array<{ user_id: string; role: string }>>({
+    queryKey: ['responsaveis-internos'],
+    staleTime: 120_000,
+    queryFn: async () => {
+      const { data, error } = await createClient()
+        .from('portal_workspace_members')
+        .select('user_id, role')
+        .in('role', ['master_admin', 'tenant_admin', 'advogado', 'colaborador']);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Array<{ user_id: string; role: string }>;
     },
   });
 }
@@ -213,7 +246,7 @@ export function useRisco(processoId: string | null) {
 export function useAtualizarProcesso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Processo, 'status' | 'prioridade' | 'monitoramento_ativo'>> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Processo, 'status' | 'prioridade' | 'monitoramento_ativo' | 'responsavel'>> }) => {
       const { error } = await jud()
         .from('processos')
         .update({ ...patch, updated_at: new Date().toISOString() })
@@ -221,6 +254,71 @@ export function useAtualizarProcesso() {
       if (error) throw error;
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['processos-judiciario'] });
+    },
+  });
+}
+
+export function useExcluirProcesso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await jud().from('processos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['processos-paginados'] });
+      qc.invalidateQueries({ queryKey: ['processos-judiciario'] });
+    },
+  });
+}
+
+export function useBulkAtualizarProcessos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, patch }: { ids: string[]; patch: Partial<Pick<Processo, 'status' | 'monitoramento_ativo' | 'responsavel'>> }) => {
+      if (!ids.length) return;
+      const { error } = await jud()
+        .from('processos')
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['processos-paginados'] });
+      qc.invalidateQueries({ queryKey: ['processos-judiciario'] });
+    },
+  });
+}
+
+export function useBulkExcluirProcessos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return;
+      const { error } = await jud().from('processos').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['processos-paginados'] });
+      qc.invalidateQueries({ queryKey: ['processos-judiciario'] });
+    },
+  });
+}
+
+export function useBulkMesclarProcessos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ destinationId, sourceIds }: { destinationId: string; sourceIds: string[] }) => {
+      if (!destinationId || !sourceIds.length) return;
+      const { error } = await jud()
+        .from('processos')
+        .update({ status: 'arquivado', updated_at: new Date().toISOString() })
+        .in('id', sourceIds.filter((id) => id !== destinationId));
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['processos-paginados'] });
       qc.invalidateQueries({ queryKey: ['processos-judiciario'] });
     },
   });
@@ -389,6 +487,7 @@ export interface ProcessosFiltros {
   search: string;
   status: string | null;
   prioridade: string | null;
+  responsavel: string | null;
 }
 
 export interface ProcessosPaginados {
@@ -404,30 +503,86 @@ export function useProcessosPaginados(filtros: ProcessosFiltros, page: number) {
     queryFn: async () => {
       const from = page * PROCESSOS_PAGE_SIZE;
       const to = from + PROCESSOS_PAGE_SIZE - 1;
+      const search = String(filtros.search || '').trim();
+      const cnjDigits = onlyDigits(search);
+      const cnjStructured = cnjDigits.length === 20 ? formatCnjDigits(cnjDigits) : '';
 
-      let q = jud()
-        .from('processos')
-        .select(
-          'id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at',
-          { count: 'exact' }
-        )
-        .order('data_ultima_movimentacao', { ascending: false })
-        .range(from, to);
+      const baseSelect = 'id, numero_cnj, tribunal, comarca, ramo, orgao_julgador, classe, assunto, status, prioridade, valor_causa, segredo_justica, monitoramento_ativo, data_ajuizamento, data_ultima_movimentacao, created_at, updated_at';
+      const extendedSelect = `id, numero_cnj, titulo, polo_ativo, polo_passivo, responsavel, ${baseSelect.replace('id, numero_cnj, ', '')}`;
 
-      const q2 = filtros.search.trim().length >= 2
-        ? q.or(
-            `numero_cnj.ilike.%${filtros.search}%,tribunal.ilike.%${filtros.search}%,comarca.ilike.%${filtros.search}%,classe.ilike.%${filtros.search}%,assunto.ilike.%${filtros.search}%,orgao_julgador.ilike.%${filtros.search}%`
-          )
-        : q;
+      const run = async (extended = true) => {
+        let q = jud()
+          .from('processos')
+          .select(extended ? extendedSelect : baseSelect, { count: 'exact' })
+          .order('data_ultima_movimentacao', { ascending: false })
+          .range(from, to);
 
-      const q3 = filtros.status ? q2.eq('status', filtros.status) : q2;
-      const q4 = filtros.prioridade ? q3.eq('prioridade', filtros.prioridade) : q3;
+        if (search.length >= 2) {
+          const ors = [
+            `numero_cnj.ilike.%${search}%`,
+            cnjStructured ? `numero_cnj.ilike.%${cnjStructured}%` : '',
+            `tribunal.ilike.%${search}%`,
+            `comarca.ilike.%${search}%`,
+            `classe.ilike.%${search}%`,
+            `assunto.ilike.%${search}%`,
+            `orgao_julgador.ilike.%${search}%`,
+            extended ? `responsavel.ilike.%${search}%` : '',
+            extended ? `polo_ativo.ilike.%${search}%` : '',
+            extended ? `polo_passivo.ilike.%${search}%` : '',
+          ].filter(Boolean);
+          q = q.or(ors.join(','));
+        }
 
-      const { data, error, count } = await q4;
-      if (error) throw error;
-      return { data: data ?? [], total: count ?? 0, page };
+        if (filtros.status === 'ativo') q = q.in('status', ['em_andamento', 'aguardando', 'ativo']);
+        else if (filtros.status === 'baixado') q = q.in('status', ['baixado', 'encerrado', 'arquivado']);
+        else if (filtros.status) q = q.eq('status', filtros.status);
+
+        if (filtros.prioridade) q = q.eq('prioridade', filtros.prioridade);
+        if (extended && filtros.responsavel) q = q.ilike('responsavel', `%${filtros.responsavel}%`);
+
+        const { data, error, count } = await q;
+        if (error) throw error;
+        const rows = data ?? [];
+        return {
+          data: extended ? rows : rows.map((row: any) => ({ ...row, titulo: null, polo_ativo: null, polo_passivo: null, responsavel: null })),
+          total: count ?? 0,
+          page,
+        };
+      };
+
+      try {
+        return await run(true);
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (!/polo_ativo|polo_passivo|responsavel|titulo/i.test(message)) throw error;
+        return run(false);
+      }
     },
   });
+}
+
+export function onlyDigits(value: string | null | undefined) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+export function formatCnjDigits(digits: string) {
+  const normalized = onlyDigits(digits);
+  if (normalized.length !== 20) return normalized;
+  return `${normalized.slice(0, 7)}-${normalized.slice(7, 9)}.${normalized.slice(9, 13)}.${normalized.slice(13, 14)}.${normalized.slice(14, 16)}.${normalized.slice(16, 20)}`;
+}
+
+export function isValidCnj(input: string | null | undefined) {
+  const digits = onlyDigits(input);
+  if (digits.length !== 20) return false;
+  const num = digits.slice(0, 7);
+  const dv = Number(digits.slice(7, 9));
+  const year = digits.slice(9, 13);
+  const justice = digits.slice(13, 14);
+  const court = digits.slice(14, 16);
+  const origin = digits.slice(16, 20);
+  const base = `${num}${year}${justice}${court}${origin}`;
+  const expectedDv = 98 - Number(BigInt(base) % 97n);
+  return expectedDv === dv;
 }
 
 // ─── Prazos — paginação server-side ──────────────────────────────────────────

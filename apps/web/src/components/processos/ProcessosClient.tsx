@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Search, X, ChevronRight, ChevronLeft, Gavel, Loader2 } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Search, X, ChevronRight, ChevronLeft, Gavel, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useProcessosPaginados,
   useAtualizarProcesso,
+  useExcluirProcesso,
+  useBulkAtualizarProcessos,
+  useBulkExcluirProcessos,
+  useBulkMesclarProcessos,
+  useResponsaveisInternos,
   PROCESSOS_PAGE_SIZE,
   type Processo,
   type ProcessosFiltros,
   STATUS_PROCESSO_CONFIG,
   PRIORIDADE_PROCESSO_CONFIG,
+  formatCnjDigits,
+  isValidCnj,
+  onlyDigits,
 } from '@/lib/hooks/use-processos';
 import { useDebounce } from '@/lib/hooks/use-global-search';
 import ProcessoDetalhePanel from './ProcessoDetalhePanel';
@@ -23,12 +31,31 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
+function renderStatusTone(status: string | null | undefined) {
+  const key = String(status || '').toLowerCase();
+  if (['em_andamento', 'aguardando', 'ativo'].includes(key)) return 'bg-green-500/10 text-green-600';
+  if (['suspenso'].includes(key)) return 'bg-amber-500/10 text-amber-600';
+  if (['baixado', 'arquivado', 'encerrado'].includes(key)) return 'bg-slate-500/10 text-slate-600';
+  return 'bg-muted text-muted-foreground';
+}
+
+function buildProcessTitle(p: Processo) {
+  const formattedCnj = formatCnjDigits(onlyDigits(p.numero_cnj || '')) || p.numero_cnj || 'Sem CNJ';
+  const ativo = p.polo_ativo || 'Polo ativo';
+  const passivo = p.polo_passivo || 'Polo passivo';
+  return `${formattedCnj} (${ativo} x ${passivo})`;
+}
+
 export default function ProcessosClient() {
   const [rawSearch, setRawSearch] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<string | null>(null);
   const [prioridadeFiltro, setPrioridadeFiltro] = useState<string | null>(null);
+  const [responsavelFiltro, setResponsavelFiltro] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [bulkResponsavel, setBulkResponsavel] = useState<string>('');
 
   const debouncedSearch = useDebounce(rawSearch, 350);
 
@@ -36,21 +63,34 @@ export default function ProcessosClient() {
     search: debouncedSearch,
     status: statusFiltro,
     prioridade: prioridadeFiltro,
+    responsavel: responsavelFiltro,
   };
 
   const { data: result, isFetching } = useProcessosPaginados(filtros, page);
+  const { data: responsaveisInternos = [] } = useResponsaveisInternos();
   const processos = result?.data ?? [];
   const total = result?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PROCESSOS_PAGE_SIZE));
 
   const atualizar = useAtualizarProcesso();
+  const excluir = useExcluirProcesso();
+  const bulkAtualizar = useBulkAtualizarProcessos();
+  const bulkExcluir = useBulkExcluirProcessos();
+  const bulkMesclar = useBulkMesclarProcessos();
   const selected = selectedId ? processos.find((p) => p.id === selectedId) ?? null : null;
-  const hasFilters = !!rawSearch || !!statusFiltro || !!prioridadeFiltro;
+  const hasFilters = !!rawSearch || !!statusFiltro || !!prioridadeFiltro || !!responsavelFiltro;
+  const pageIds = useMemo(() => processos.map((p) => p.id), [processos]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const cnjDigits = onlyDigits(rawSearch);
+  const looksLikeCnj = cnjDigits.length === 20;
+  const cnjValid = looksLikeCnj ? isValidCnj(rawSearch) : null;
+  const isBusy = isFetching || atualizar.isPending || excluir.isPending || bulkAtualizar.isPending || bulkExcluir.isPending || bulkMesclar.isPending;
 
   const resetFilters = useCallback(() => {
     setRawSearch('');
     setStatusFiltro(null);
     setPrioridadeFiltro(null);
+    setResponsavelFiltro(null);
     setPage(0);
   }, []);
 
@@ -58,10 +98,63 @@ export default function ProcessosClient() {
     setter(value);
     setPage(0);
     setSelectedId(null);
+    setSelectedIds([]);
   }
 
-  function handleUpdate(id: string, patch: Partial<Pick<Processo, 'status' | 'prioridade' | 'monitoramento_ativo'>>) {
+  function handleUpdate(id: string, patch: Partial<Pick<Processo, 'status' | 'prioridade' | 'monitoramento_ativo' | 'responsavel'>>) {
     atualizar.mutate({ id, patch });
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  }
+
+  function togglePageSelection() {
+    if (allPageSelected) {
+      setSelectedIds((current) => current.filter((id) => !pageIds.includes(id)));
+      return;
+    }
+    setSelectedIds((current) => [...new Set([...current, ...pageIds])]);
+  }
+
+  async function handleRowAction(id: string, action: string) {
+    if (action === 'editar') {
+      setSelectedId(id);
+      return;
+    }
+    if (action === 'arquivar') {
+      await atualizar.mutateAsync({ id, patch: { status: 'arquivado' } });
+      return;
+    }
+    if (action === 'excluir') {
+      await excluir.mutateAsync(id);
+      setSelectedIds((current) => current.filter((value) => value !== id));
+    }
+  }
+
+  async function handleBulkStatusApply() {
+    if (!bulkStatus || !selectedIds.length) return;
+    await bulkAtualizar.mutateAsync({ ids: selectedIds, patch: { status: bulkStatus } });
+    setBulkStatus('');
+  }
+
+  async function handleBulkResponsavelApply() {
+    if (!bulkResponsavel || !selectedIds.length) return;
+    await bulkAtualizar.mutateAsync({ ids: selectedIds, patch: { responsavel: bulkResponsavel } });
+    setBulkResponsavel('');
+  }
+
+  async function handleBulkMerge() {
+    if (selectedIds.length < 2) return;
+    await bulkMesclar.mutateAsync({ destinationId: selectedIds[0], sourceIds: selectedIds });
+    setSelectedIds([selectedIds[0]]);
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedIds.length) return;
+    await bulkExcluir.mutateAsync(selectedIds);
+    setSelectedIds([]);
+    setSelectedId(null);
   }
 
   return (
@@ -72,9 +165,10 @@ export default function ProcessosClient() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Número CNJ, tribunal, classe..."
+            placeholder="Parte, CNJ/NUP, assunto, classe, responsável"
             value={rawSearch}
             onChange={(e) => handleFilterChange(setRawSearch, e.target.value)}
+            title="CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO (20 dígitos, DV em módulo 97 base 10)"
             className="w-full pl-9 pr-3 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background transition-colors"
           />
         </div>
@@ -85,6 +179,9 @@ export default function ProcessosClient() {
           className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Todos os status</option>
+          <option value="ativo">Ativo</option>
+          <option value="baixado">Baixado</option>
+          <option value="suspenso">Suspenso</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{STATUS_PROCESSO_CONFIG[s]?.label ?? s}</option>
           ))}
@@ -101,6 +198,17 @@ export default function ProcessosClient() {
           ))}
         </select>
 
+        <select
+          value={responsavelFiltro ?? ''}
+          onChange={(e) => handleFilterChange(setResponsavelFiltro, e.target.value || null)}
+          className="px-2.5 py-2 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Todos responsáveis</option>
+          {responsaveisInternos.map((item) => (
+            <option key={item.user_id} value={item.user_id}>{item.role} · {item.user_id.slice(0, 8)}</option>
+          ))}
+        </select>
+
         {hasFilters && (
           <button
             onClick={resetFilters}
@@ -112,12 +220,72 @@ export default function ProcessosClient() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {looksLikeCnj && (
+            <span className={cn('inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border', cnjValid ? 'border-green-300 bg-green-50 text-green-700' : 'border-rose-300 bg-rose-50 text-rose-700')}>
+              <AlertCircle className="h-3 w-3" />
+              {cnjValid ? 'CNJ válido' : 'CNJ inválido'}
+            </span>
+          )}
           {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {total.toLocaleString('pt-BR')} processo{total !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="px-4 lg:px-6 py-2 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">{selectedIds.length} selecionado(s)</span>
+          <button
+            onClick={handleBulkMerge}
+            disabled={selectedIds.length < 2 || isBusy}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-border hover:bg-muted disabled:opacity-50"
+          >
+            Mesclar processos
+          </button>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            className="px-2.5 py-1.5 text-xs bg-background border border-border rounded-md"
+          >
+            <option value="">Alterar status...</option>
+            <option value="em_andamento">Ativo</option>
+            <option value="baixado">Baixado</option>
+            <option value="suspenso">Suspenso</option>
+          </select>
+          <button
+            onClick={handleBulkStatusApply}
+            disabled={!bulkStatus || isBusy}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-border hover:bg-muted disabled:opacity-50"
+          >
+            Aplicar status
+          </button>
+          <select
+            value={bulkResponsavel}
+            onChange={(e) => setBulkResponsavel(e.target.value)}
+            className="px-2.5 py-1.5 text-xs bg-background border border-border rounded-md"
+          >
+            <option value="">Responsável interno...</option>
+            {responsaveisInternos.map((item) => (
+              <option key={item.user_id} value={item.user_id}>{item.role} · {item.user_id.slice(0, 8)}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBulkResponsavelApply}
+            disabled={!bulkResponsavel || isBusy}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-border hover:bg-muted disabled:opacity-50"
+          >
+            Aplicar responsável
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={isBusy}
+            className="px-2.5 py-1.5 text-xs rounded-md border border-rose-300 text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+          >
+            Excluir
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Lista */}
@@ -130,17 +298,22 @@ export default function ProcessosClient() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30 sticky top-0 z-10">
-                  <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Número / Tribunal</th>
+                  <th className="px-3 py-3">
+                    <input type="checkbox" checked={allPageSelected} onChange={togglePageSelection} />
+                  </th>
+                  <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">CNJ e polos</th>
                   <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
                   <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Prioridade</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Responsável</th>
                   <th className="text-left px-4 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Mov.</th>
                   <th className="w-8" />
+                  <th className="text-left px-2 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {!isFetching && processos.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                    <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
                       Nenhum processo encontrado.
                     </td>
                   </tr>
@@ -149,6 +322,7 @@ export default function ProcessosClient() {
                   const sCfg = p.status ? STATUS_PROCESSO_CONFIG[p.status] : null;
                   const priCfg = p.prioridade ? PRIORIDADE_PROCESSO_CONFIG[p.prioridade] : null;
                   const active = selectedId === p.id;
+                  const isSelected = selectedIds.includes(p.id);
                   return (
                     <tr
                       key={p.id}
@@ -158,15 +332,21 @@ export default function ProcessosClient() {
                         active && 'bg-primary/5 border-l-2 border-l-primary',
                       )}
                     >
+                      <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelection(p.id)} />
+                      </td>
                       <td className="px-4 py-3">
-                        <p className="font-mono text-xs font-semibold text-foreground leading-tight truncate max-w-[160px]">
-                          {p.numero_cnj ?? '—'}
+                        <p className="font-mono text-xs font-semibold text-foreground leading-tight truncate max-w-[280px]">
+                          {buildProcessTitle(p)}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{p.tribunal ?? '—'}</p>
+                        {p.segredo_justica && (
+                          <span className="inline-flex mt-1 rounded-full bg-red-600 text-white text-[10px] px-2 py-0.5 font-semibold">Segredo de Justiça</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {sCfg
-                          ? <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold', sCfg.cls)}>{sCfg.label}</span>
+                          ? <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold', renderStatusTone(p.status), sCfg.cls)}>{sCfg.label}</span>
                           : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3">
@@ -174,11 +354,27 @@ export default function ProcessosClient() {
                           ? <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset', priCfg.cls)}>{priCfg.label}</span>
                           : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{p.responsavel || '—'}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {formatDate(p.data_ultima_movimentacao)}
                       </td>
                       <td className="pr-3">
                         <ChevronRight className={cn('h-4 w-4 text-muted-foreground/50 transition-transform', active && 'rotate-90')} />
+                      </td>
+                      <td className="px-2 py-3" onClick={(event) => event.stopPropagation()}>
+                        <select
+                          defaultValue=""
+                          onChange={async (event) => {
+                            await handleRowAction(p.id, event.target.value);
+                            event.currentTarget.value = '';
+                          }}
+                          className="text-[11px] px-2 py-1 bg-background border border-border rounded"
+                        >
+                          <option value="">Ações</option>
+                          <option value="editar">Editar</option>
+                          <option value="arquivar">Arquivar</option>
+                          <option value="excluir">Excluir</option>
+                        </select>
                       </td>
                     </tr>
                   );
@@ -206,11 +402,11 @@ export default function ProcessosClient() {
                       <Gavel className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-mono text-xs font-semibold text-foreground truncate">{p.numero_cnj ?? '—'}</p>
+                      <p className="font-mono text-xs font-semibold text-foreground truncate">{buildProcessTitle(p)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.tribunal ?? '—'}</p>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {sCfg && (
-                          <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold', sCfg.cls)}>
+                          <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold', renderStatusTone(p.status), sCfg.cls)}>
                             {sCfg.label}
                           </span>
                         )}
@@ -218,6 +414,9 @@ export default function ProcessosClient() {
                           <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset', priCfg.cls)}>
                             {priCfg.label}
                           </span>
+                        )}
+                        {p.segredo_justica && (
+                          <span className="inline-flex rounded-full bg-red-600 text-white text-[10px] px-2 py-0.5 font-semibold">Segredo de Justiça</span>
                         )}
                         <span className="text-[10px] text-muted-foreground">{formatDate(p.data_ultima_movimentacao)}</span>
                       </div>
@@ -233,7 +432,7 @@ export default function ProcessosClient() {
           <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/20 flex-shrink-0">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0 || isFetching}
+              disabled={page === 0 || isBusy}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -244,7 +443,7 @@ export default function ProcessosClient() {
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1 || isFetching}
+              disabled={page >= totalPages - 1 || isBusy}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors"
             >
               Próxima

@@ -12,7 +12,7 @@ import {
   useMovimentacoes, useAudiencias, usePrazos, usePartes,
   useFinanceiroProcessual, useRisco, useAtualizarProcesso,
   useCriarAudiencia, useCriarPrazoManual, useCriarFinanceiro,
-  prazoUrgencia, URGENCIA_PRAZO_CONFIG, STATUS_PROCESSO_CONFIG,
+  prazoUrgencia, URGENCIA_PRAZO_CONFIG, STATUS_PROCESSO_CONFIG, formatCnjDigits, onlyDigits,
   type Processo, type Audiencia, type PrazoCalculado, type FinanceiroProcessual,
 } from '@/lib/hooks/use-processos';
 
@@ -485,6 +485,7 @@ interface Props {
 export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('movimentacoes');
   const atualizar = useAtualizarProcesso();
+  const title = `${formatCnjDigits(onlyDigits(p.numero_cnj || '')) || p.numero_cnj || 'Sem CNJ'} (${p.polo_ativo || 'Polo ativo'} x ${p.polo_passivo || 'Polo passivo'})`;
 
   const statusCfg = p.status ? (STATUS_PROCESSO_CONFIG[p.status] ?? { label: p.status, cls: 'bg-muted text-muted-foreground' }) : null;
 
@@ -502,8 +503,11 @@ export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }:
             <Gavel className="h-4 w-4 text-violet-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-mono text-sm font-bold text-foreground truncate">{p.numero_cnj ?? 'Sem número'}</p>
+            <p className="font-mono text-sm font-bold text-foreground truncate">{title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{p.tribunal ?? '—'} · {p.comarca ?? '—'}</p>
+            {p.segredo_justica && (
+              <span className="inline-flex mt-1 rounded-full bg-red-600 text-white text-[10px] px-2 py-0.5 font-semibold">Segredo de Justiça</span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {statusCfg && (
@@ -526,6 +530,7 @@ export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }:
         {/* Info rápida */}
         <div className="px-4 pb-3 flex items-center gap-4 flex-wrap text-xs text-muted-foreground">
           {p.classe && <span className="flex items-center gap-1"><Scale className="h-3 w-3" /> {p.classe}</span>}
+          {p.responsavel && <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {p.responsavel}</span>}
           {p.valor_causa != null && <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> {fmt(p.valor_causa)}</span>}
           {p.data_ultima_movimentacao && <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> {fmtDate(p.data_ultima_movimentacao)}</span>}
           <button
@@ -536,6 +541,21 @@ export default function ProcessoDetalhePanel({ processo: p, onClose, onUpdate }:
             {p.monitoramento_ativo ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             {p.monitoramento_ativo ? 'Monitorando' : 'Monitorar'}
           </button>
+        </div>
+
+        <div className="px-4 pb-3 grid grid-cols-2 lg:grid-cols-4 gap-1.5 text-[11px]">
+          <Link href="/clientes" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Clientes</Link>
+          <Link href="/publicacoes" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Publicações</Link>
+          <Link href="/prazos" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Prazos</Link>
+          <Link href="/tarefas" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Tarefas</Link>
+          <Link href="/agenda" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Agenda</Link>
+          <Link href="/audiencias" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Audiências</Link>
+          <Link href="/financeiro" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Honorários</Link>
+          <Link href="/custas-processuais" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Custas</Link>
+          <Link href="/mensagens" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Mensagens</Link>
+          <Link href="/suporte" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Suporte</Link>
+          <Link href="/onboarding-v2" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Jornada</Link>
+          <Link href="/processos" className="px-2 py-1.5 rounded-md border border-border hover:bg-muted">Viewpage completa</Link>
         </div>
 
         {/* Tabs */}
