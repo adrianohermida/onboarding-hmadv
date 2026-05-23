@@ -2,7 +2,16 @@ import type { Meta, StoryObj } from '@storybook/html';
 import '../tokens/core-v2.css';
 import '../components/base-v2.css';
 
-function Template({ children, variant, size, disabled, loading, block, icon }: any) {
+function Template(args: any = {}) {
+  const {
+    children = 'Salvar Alterações',
+    variant = 'primary',
+    size = 'md',
+    disabled = false,
+    loading = false,
+    block = false,
+    icon = '',
+  } = args;
   return `
   <button 
     class="ds-btn ds-btn-${variant} ds-btn-${size} ${block ? 'ds-btn-block' : ''} ${disabled ? 'is-disabled' : ''} ${loading ? 'is-loading' : ''}"

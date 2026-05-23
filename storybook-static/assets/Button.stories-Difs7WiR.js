@@ -1,27 +1,27 @@
-/* empty css                */function x({children:h,variant:v,size:y,disabled:m,loading:u,block:S,icon:g}){return`
+/* empty css                */function x(h={}){const{children:v="Salvar Alterações",variant:y="primary",size:S="md",disabled:m=!1,loading:u=!1,block:k=!1,icon:g=""}=h;return`
   <button 
-    class="ds-btn ds-btn-${v} ds-btn-${y} ${S?"ds-btn-block":""} ${m?"is-disabled":""} ${u?"is-loading":""}"
+    class="ds-btn ds-btn-${y} ds-btn-${S} ${k?"ds-btn-block":""} ${m?"is-disabled":""} ${u?"is-loading":""}"
     ${m?"disabled":""}
     aria-busy="${u}"
   >
     ${g?`<span class="ds-btn-icon">${g}</span>`:""}
-    <span class="ds-btn-label">${h}</span>
+    <span class="ds-btn-label">${v}</span>
     ${u?'<span class="ds-btn-spinner"></span>':""}
   </button>
-`}const f={title:"Componentes/Botões",tags:["autodocs"],render:x,argTypes:{variant:{control:"select",options:["primary","secondary","outline","ghost","danger"],description:"Variante visual do botão"},size:{control:"select",options:["sm","md","lg","xl"],description:"Tamanho do botão"},disabled:{control:"boolean",description:"Estado desabilitado"},loading:{control:"boolean",description:"Estado de carregamento"},block:{control:"boolean",description:"Largura total (block)"},icon:{control:"text",description:"Ícone (SVG ou classe)"}},args:{children:"Salvar Alterações",variant:"primary",size:"md",disabled:!1,loading:!1,block:!1},parameters:{docs:{description:{component:`## Botões do Design System Recupera Empresas\r
+`}const w={title:"Componentes/Botões",tags:["autodocs"],render:x,argTypes:{variant:{control:"select",options:["primary","secondary","outline","ghost","danger"],description:"Variante visual do botão"},size:{control:"select",options:["sm","md","lg","xl"],description:"Tamanho do botão"},disabled:{control:"boolean",description:"Estado desabilitado"},loading:{control:"boolean",description:"Estado de carregamento"},block:{control:"boolean",description:"Largura total (block)"},icon:{control:"text",description:"Ícone (SVG ou classe)"}},args:{children:"Salvar Alterações",variant:"primary",size:"md",disabled:!1,loading:!1,block:!1},parameters:{docs:{description:{component:`## Botões do Design System Recupera Empresas\r
 \r
 Botões responsivos mobile-first com:\r
 - Touch targets de 48×48px (Android) / 44×44px (iOS)\r
 - Estados: hover, active, disabled, focus-visible\r
 - Suporte a dark mode automático\r
-- Acessibilidade WCAG AA`}}}},r={args:{variant:"primary",children:"Confirmar Ação"}},s={args:{variant:"secondary",children:"Cancelar"}},t={args:{variant:"outline",children:"Ver Detalhes"}},e={args:{variant:"ghost",children:"Ignorar"}},n={args:{variant:"danger",children:"Excluir"}},o={render:()=>`
+- Acessibilidade WCAG AA`}}}},s={args:{variant:"primary",children:"Confirmar Ação"}},r={args:{variant:"secondary",children:"Cancelar"}},e={args:{variant:"outline",children:"Ver Detalhes"}},t={args:{variant:"ghost",children:"Ignorar"}},n={args:{variant:"danger",children:"Excluir"}},a={render:()=>`
     <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
       <button class="ds-btn ds-btn-primary ds-btn-sm">Small (32px)</button>
       <button class="ds-btn ds-btn-primary ds-btn-md">Medium (40px)</button>
       <button class="ds-btn ds-btn-primary ds-btn-lg">Large (48px)</button>
       <button class="ds-btn ds-btn-primary ds-btn-xl">XL (56px)</button>
     </div>
-  `},a={args:{block:!0,children:"Botão Full Width"}},d={args:{loading:!0,children:"Salvando..."}},i={args:{disabled:!0,children:"Não clicável"}},c={args:{icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',children:"Continuar"}},l={render:()=>`
+  `},o={args:{block:!0,children:"Botão Full Width"}},i={args:{loading:!0,children:"Salvando..."}},d={args:{disabled:!0,children:"Não clicável"}},c={args:{icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',children:"Continuar"}},l={render:()=>`
     <div style="display: flex; gap: 0.5rem;">
       <button class="ds-btn ds-btn-secondary ds-btn-icon" aria-label="Editar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -47,37 +47,37 @@ Botões responsivos mobile-first com:\r
       <button class="ds-btn ds-btn-primary ds-btn-block-mobile">Ação Principal</button>
       <button class="ds-btn ds-btn-secondary ds-btn-block-mobile">Ação Secundária</button>
     </div>
-  `};r.parameters={...r.parameters,docs:{...r.parameters?.docs,source:{originalSource:`{
+  `};s.parameters={...s.parameters,docs:{...s.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'primary',
     children: 'Confirmar Ação'
   }
-}`,...r.parameters?.docs?.source},description:{story:`### Primário\r
-Ação principal da interface`,...r.parameters?.docs?.description}}};s.parameters={...s.parameters,docs:{...s.parameters?.docs,source:{originalSource:`{
+}`,...s.parameters?.docs?.source},description:{story:`### Primário\r
+Ação principal da interface`,...s.parameters?.docs?.description}}};r.parameters={...r.parameters,docs:{...r.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'secondary',
     children: 'Cancelar'
   }
-}`,...s.parameters?.docs?.source},description:{story:`### Secundário\r
-Ações secundárias`,...s.parameters?.docs?.description}}};t.parameters={...t.parameters,docs:{...t.parameters?.docs,source:{originalSource:`{
+}`,...r.parameters?.docs?.source},description:{story:`### Secundário\r
+Ações secundárias`,...r.parameters?.docs?.description}}};e.parameters={...e.parameters,docs:{...e.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'outline',
     children: 'Ver Detalhes'
   }
-}`,...t.parameters?.docs?.source},description:{story:`### Outline\r
-Borda com fundo transparente`,...t.parameters?.docs?.description}}};e.parameters={...e.parameters,docs:{...e.parameters?.docs,source:{originalSource:`{
+}`,...e.parameters?.docs?.source},description:{story:`### Outline\r
+Borda com fundo transparente`,...e.parameters?.docs?.description}}};t.parameters={...t.parameters,docs:{...t.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'ghost',
     children: 'Ignorar'
   }
-}`,...e.parameters?.docs?.source},description:{story:`### Ghost\r
-Sem borda ou fundo (hover apenas)`,...e.parameters?.docs?.description}}};n.parameters={...n.parameters,docs:{...n.parameters?.docs,source:{originalSource:`{
+}`,...t.parameters?.docs?.source},description:{story:`### Ghost\r
+Sem borda ou fundo (hover apenas)`,...t.parameters?.docs?.description}}};n.parameters={...n.parameters,docs:{...n.parameters?.docs,source:{originalSource:`{
   args: {
     variant: 'danger',
     children: 'Excluir'
   }
 }`,...n.parameters?.docs?.source},description:{story:`### Danger\r
-Ações destrutivas`,...n.parameters?.docs?.description}}};o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{
+Ações destrutivas`,...n.parameters?.docs?.description}}};a.parameters={...a.parameters,docs:{...a.parameters?.docs,source:{originalSource:`{
   render: () => \`
     <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
       <button class="ds-btn ds-btn-primary ds-btn-sm">Small (32px)</button>
@@ -86,26 +86,26 @@ Ações destrutivas`,...n.parameters?.docs?.description}}};o.parameters={...o.pa
       <button class="ds-btn ds-btn-primary ds-btn-xl">XL (56px)</button>
     </div>
   \`
-}`,...o.parameters?.docs?.source},description:{story:`### Tamanhos\r
-Comparativo de tamanhos`,...o.parameters?.docs?.description}}};a.parameters={...a.parameters,docs:{...a.parameters?.docs,source:{originalSource:`{
+}`,...a.parameters?.docs?.source},description:{story:`### Tamanhos\r
+Comparativo de tamanhos`,...a.parameters?.docs?.description}}};o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{
   args: {
     block: true,
     children: 'Botão Full Width'
   }
-}`,...a.parameters?.docs?.source},description:{story:`### Block Mobile\r
-Largura total em mobile`,...a.parameters?.docs?.description}}};d.parameters={...d.parameters,docs:{...d.parameters?.docs,source:{originalSource:`{
+}`,...o.parameters?.docs?.source},description:{story:`### Block Mobile\r
+Largura total em mobile`,...o.parameters?.docs?.description}}};i.parameters={...i.parameters,docs:{...i.parameters?.docs,source:{originalSource:`{
   args: {
     loading: true,
     children: 'Salvando...'
   }
-}`,...d.parameters?.docs?.source},description:{story:`### Loading State\r
-Estado de carregamento`,...d.parameters?.docs?.description}}};i.parameters={...i.parameters,docs:{...i.parameters?.docs,source:{originalSource:`{
+}`,...i.parameters?.docs?.source},description:{story:`### Loading State\r
+Estado de carregamento`,...i.parameters?.docs?.description}}};d.parameters={...d.parameters,docs:{...d.parameters?.docs,source:{originalSource:`{
   args: {
     disabled: true,
     children: 'Não clicável'
   }
-}`,...i.parameters?.docs?.source},description:{story:`### Disabled State\r
-Estado desabilitado`,...i.parameters?.docs?.description}}};c.parameters={...c.parameters,docs:{...c.parameters?.docs,source:{originalSource:`{
+}`,...d.parameters?.docs?.source},description:{story:`### Disabled State\r
+Estado desabilitado`,...d.parameters?.docs?.description}}};c.parameters={...c.parameters,docs:{...c.parameters?.docs,source:{originalSource:`{
   args: {
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
     children: 'Continuar'
@@ -146,4 +146,4 @@ Múltiplos botões relacionados`,...p.parameters?.docs?.description}}};b.paramet
     </div>
   \`
 }`,...b.parameters?.docs?.source},description:{story:`### Mobile Stacked\r
-Empilhado em telas pequenas`,...b.parameters?.docs?.description}}};const w=["Primary","Secondary","Outline","Ghost","Danger","Sizes","BlockMobile","Loading","Disabled","WithIcon","IconOnly","ButtonGroup","MobileStacked"];export{a as BlockMobile,p as ButtonGroup,n as Danger,i as Disabled,e as Ghost,l as IconOnly,d as Loading,b as MobileStacked,t as Outline,r as Primary,s as Secondary,o as Sizes,c as WithIcon,w as __namedExportsOrder,f as default};
+Empilhado em telas pequenas`,...b.parameters?.docs?.description}}};const A=["Primary","Secondary","Outline","Ghost","Danger","Sizes","BlockMobile","Loading","Disabled","WithIcon","IconOnly","ButtonGroup","MobileStacked"];export{o as BlockMobile,p as ButtonGroup,n as Danger,d as Disabled,t as Ghost,l as IconOnly,i as Loading,b as MobileStacked,e as Outline,s as Primary,r as Secondary,a as Sizes,c as WithIcon,A as __namedExportsOrder,w as default};
