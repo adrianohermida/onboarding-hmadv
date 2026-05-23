@@ -345,3 +345,53 @@ export const CalendarAndKanban: Story = {
     </div>
   `,
 };
+
+export const FieldScaffold: Story = {
+  render: () => `
+    <form style="display:grid; gap: 12px; max-width: 760px;">
+      <label class="ui-field">
+        <span class="ui-label">Nome do cliente</span>
+        <input class="ui-input" type="text" value="Ana Ferreira" />
+      </label>
+
+      <label class="ui-field">
+        <span class="ui-label">Status do fluxo</span>
+        <select class="ui-select">
+          <option selected>Em análise</option>
+          <option>Aguardando cliente</option>
+          <option>Concluído</option>
+        </select>
+      </label>
+
+      <label class="ui-field">
+        <span class="ui-label">Observações</span>
+        <textarea class="ui-textarea" rows="3">Checklist validado e pendente de assinatura eletrônica.</textarea>
+      </label>
+    </form>
+  `,
+};
+
+export const TimelineDotVariant: Story = {
+  render: () => `
+    <div style="max-width: 760px;">
+      <div class="ui-timeline">
+        <div class="ui-timeline-item">
+          <span class="ui-timeline-dot"></span>
+          <div>
+            <div class="ui-timeline-title">Cliente enviou novo comprovante</div>
+            <div class="ui-timeline-text">Documento anexado ao dossiê e fila de revisão atualizada.</div>
+            <div class="ui-timeline-meta">há 8 minutos</div>
+          </div>
+        </div>
+        <div class="ui-timeline-item">
+          <span class="ui-timeline-dot"></span>
+          <div>
+            <div class="ui-timeline-title">Controladoria validou metadados</div>
+            <div class="ui-timeline-text">Hash e classificação automática conferidos com sucesso.</div>
+            <div class="ui-timeline-meta">ontem</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+};
