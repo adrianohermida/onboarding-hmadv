@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "npx serve . -l 3000",
     "web:dev": "npm --prefix apps/web run dev",
+    "storybook": "npm --prefix apps/web run storybook",
+    "build-storybook": "npm --prefix apps/web run build-storybook",
     "build": "echo 'Site estático — sem build step necessário'",
     "web:build": "npm --prefix apps/web run build",
     "web:start": "npm --prefix apps/web run start",
