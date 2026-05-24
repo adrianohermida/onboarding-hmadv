@@ -12,7 +12,7 @@ function fail(message) {
 const requiredFiles = [
   'ARCHITECTURE.md',
   'package.json',
-  '.github/workflows/static.yml',
+  '.github/workflows/deploy-pages.yml',
 ];
 
 const missing = requiredFiles.filter(f => !fs.existsSync(path.join(root, f)));

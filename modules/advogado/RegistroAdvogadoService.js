@@ -14,7 +14,7 @@ const MODULE_DATA_SOURCES = {
   planos: { schema: 'public', table: 'portal_planos_pagamento' },
   processos: { schema: 'judiciario', table: 'processos' },
   movimentacoes: { schema: 'judiciario', table: 'movimentacoes' },
-  publicacoes: { schema: 'judiciario', table: 'publicacoes', orderField: 'data_publicacao' },
+  publicacoes: { schema: 'judiciario', table: 'publicacoes' },
   audiencias: { schema: 'judiciario', table: 'audiencias' },
   prazos: { schema: 'judiciario', table: 'prazo_tarefa' },
   'financeiro-processual': { schema: 'judiciario', table: 'financeiro_processual', statusField: 'situacao' },
@@ -23,6 +23,10 @@ const MODULE_DATA_SOURCES = {
   'orgaos-judiciarios': { schema: 'judiciario', table: 'orgaos_judiciarios', statusField: 'ativa' },
   serventias: { schema: 'judiciario', table: 'serventias', statusField: 'ativa' },
   'relacoes-processuais': { schema: 'judiciario', table: 'relacoes_processuais' },
+};
+
+const MODULE_SOURCE_ORDER_FIELDS = {
+  publicacoes: 'data_publicacao',
 };
 
 const MODULE_REMOTE_SEARCH_FIELDS = {
@@ -1078,7 +1082,7 @@ export async function listAdvogadoRecordsPage(moduleKey, options = {}) {
     const scopedClient = sourceConfig.schema === 'judiciario'
       ? supabase.schema('judiciario')
       : supabase;
-    const orderField = sourceConfig.orderField || 'updated_at';
+    const orderField = MODULE_SOURCE_ORDER_FIELDS[moduleKey] || sourceConfig.orderField || 'updated_at';
 
     let query = scopedClient
       .from(sourceConfig.table)

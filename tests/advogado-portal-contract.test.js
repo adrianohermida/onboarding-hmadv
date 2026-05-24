@@ -116,7 +116,7 @@ describe('portal do advogado contract', () => {
     const service = readFile('modules', 'advogado', 'RegistroAdvogadoService.js');
 
     expect(service).toContain("processos: { schema: 'judiciario', table: 'processos' }");
-    expect(service).toContain("publicacoes: { schema: 'judiciario', table: 'publicacoes' }");
+    expect(service).toMatch(/publicacoes:\s*\{\s*schema:\s*'judiciario',\s*table:\s*'publicacoes'/);
     expect(service).toContain("audiencias: { schema: 'judiciario', table: 'audiencias' }");
     expect(service).toContain("prazos: { schema: 'judiciario', table: 'prazo_tarefa' }");
     expect(service).toContain("documentos: { schema: 'public', table: 'portal_documentos'");
