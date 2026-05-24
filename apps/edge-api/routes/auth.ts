@@ -31,11 +31,19 @@ function getAdminOtpCode(env: Env): string {
   return String((env as any).HM_ADMIN_OTP_CODE || '172145').trim();
 }
 
+function getAdminPassword(env: Env): string {
+  return String((env as any).HM_ADMIN_DEFAULT_PASSWORD || '172145').trim();
+}
+
 function isAdminOtpUser(env: Env, email: string, token: string): boolean {
   return String(email || '').trim().toLowerCase() === getAdminOtpEmail(env) && String(token || '').trim() === getAdminOtpCode(env);
 }
 
-function buildAdminOtpPayload(env: Env): JsonMap {
+function isAdminPasswordUser(env: Env, email: string, password: string): boolean {
+  return String(email || '').trim().toLowerCase() === getAdminOtpEmail(env) && String(password || '').trim() === getAdminPassword(env);
+}
+
+function buildAdminSessionPayload(env: Env): JsonMap {
   const email = getAdminOtpEmail(env);
   return {
     ok: true,
@@ -54,7 +62,7 @@ function buildAdminOtpPayload(env: Env): JsonMap {
     },
     session: {
       expires_in: null,
-      token_type: 'otp-admin',
+      token_type: 'admin-override',
     },
     role: 'admin',
   };
@@ -368,7 +376,7 @@ export async function handleAuth(
 
       const cookies = readCookies(request);
       if (String(cookies[ADMIN_OTP_COOKIE] || '').trim().toLowerCase() === getAdminOtpEmail(env)) {
-        return jsonWithCors(request, buildAdminOtpPayload(env), 200);
+        return jsonWithCors(request, buildAdminSessionPayload(env), 200);
       }
 
       const cleared = clearSessionCookies(request, jsonWithCors(request, { ok: true, authenticated: false, user: null, role: null }));
@@ -394,6 +402,12 @@ export async function handleAuth(
       const email = String(body.email || '').trim();
       const password = String(body.password || '');
       if (!email || !password) return jsonWithCors(request, { ok: false, error: 'Informe e-mail e senha.' }, 400);
+
+      if (isAdminPasswordUser(env, email, password)) {
+        const payload = buildAdminSessionPayload(env);
+        const response = setAdminOtpCookie(request, jsonWithCors(request, payload, 200), env);
+        return withCors(response, request);
+      }
 
       const authRes = await supabaseAuthFetch(env, request, '/token?grant_type=password', {
         method: 'POST',
@@ -445,10 +459,6 @@ export async function handleAuth(
       const email = String(body.email || '').trim();
       if (!email) return jsonWithCors(request, { ok: false, error: 'Informe o e-mail.' }, 400);
 
-      if (pathname === '/api/auth/otp/send' && String(email).toLowerCase() === getAdminOtpEmail(env)) {
-        return jsonWithCors(request, { ok: true, adminOtp: true }, 200);
-      }
-
       if (pathname === '/api/auth/recover') {
         const authRes = await supabaseAuthFetch(env, request, '/recover', {
           method: 'POST',
@@ -476,12 +486,6 @@ export async function handleAuth(
       const token = String(body.token || '').trim();
       const type = String(body.type || 'email').trim();
       if (!email || !token) return jsonWithCors(request, { ok: false, error: 'Informe e-mail e código OTP.' }, 400);
-
-      if (isAdminOtpUser(env, email, token)) {
-        const payload = buildAdminOtpPayload(env);
-        const response = setAdminOtpCookie(request, jsonWithCors(request, payload, 200), env);
-        return withCors(response, request);
-      }
 
       const authRes = await supabaseAuthFetch(env, request, '/verify', {
         method: 'POST',
