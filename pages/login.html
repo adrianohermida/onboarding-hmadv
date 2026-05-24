@@ -245,6 +245,8 @@
         (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : ''),
     };
 
+    const ADMIN_OTP_EMAIL = 'adrianohermida@gmail.com';
+
     function setStatus(message, type = 'info') {
       const statusMsg = document.getElementById('statusMsg');
       statusMsg.textContent = message;
@@ -365,7 +367,18 @@
           }
 
           if (mode === 'otp') {
-            if (!email || !otp) throw new Error('Informe e-mail e código OTP.');
+            if (!email) throw new Error('Informe o e-mail.');
+
+            const isAdminOtp = email.toLowerCase() === ADMIN_OTP_EMAIL;
+            if (!otp) {
+              if (isAdminOtp) {
+                throw new Error('Informe o OTP admin para continuar.');
+              }
+              await window.AuthManager.sendOtp(email);
+              setStatus('Código OTP enviado por e-mail. Digite o código recebido para validar.', 'success');
+              return;
+            }
+
             await window.AuthManager.verifyOtp(email, otp, 'email');
             await redirectByRole();
             return;
