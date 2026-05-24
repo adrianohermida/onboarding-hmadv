@@ -8,8 +8,39 @@
  * 4. Em Authentication > URL Configuration, adicione o site URL: https://portal.hermidamaia.adv.br
  * 5. Substitua os valores abaixo com as credenciais do seu projeto
  */
-export const SUPABASE_URL  = 'https://sspvizogbcyigquqycsz.supabase.co';
-export const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzcHZpem9nYmN5aWdxdXF5Y3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3OTYxNTYsImV4cCI6MjA4MzM3MjE1Nn0.C1P4wlanONGA9EDNR4nBujJ136sSXlZCioFyd_CWIfs';
+const DEFAULT_SUPABASE_URL = 'https://sspvizogbcyigquqycsz.supabase.co';
+
+function readStorageValue(key) {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const value = localStorage.getItem(key);
+    return value && String(value).trim() ? String(value).trim() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function readRuntimeSupabaseConfig() {
+  const injected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
+  const url =
+    injected.defaultUrl ||
+    readStorageValue('SUPABASE_URL') ||
+    readStorageValue('NEXT_PUBLIC_SUPABASE_URL') ||
+    DEFAULT_SUPABASE_URL;
+
+  const anon =
+    injected.defaultKey ||
+    readStorageValue('SUPABASE_ANON_KEY') ||
+    readStorageValue('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+    '';
+
+  return { url, anon };
+}
+
+const runtimeSupabase = readRuntimeSupabaseConfig();
+
+export const SUPABASE_URL  = runtimeSupabase.url;
+export const SUPABASE_ANON = runtimeSupabase.anon;
 
 export const SITE_URL      = 'https://portal.hermidamaia.adv.br';
 export const CALLBACK_PATH = '/pages/auth-callback.html';

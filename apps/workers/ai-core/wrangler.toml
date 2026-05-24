@@ -57,6 +57,9 @@ CLOUDFLARE_KV_NAMESPACE_ID = "1e0740f44693445cbc798c0fe6e45a98"
 # CLOUDFLARE_S3_API is intentionally left as a runtime secret or dashboard variable.
 # Runtime secrets esperados no worker HMADV IA:
 # - HMDAV_AI_SHARED_SECRET (ou HMADV_AI_SHARED_SECRET / LAWDESK_AI_SHARED_SECRET)
+# - AI_SUPABASE_URL (opcional; prioriza o projeto Supabase dedicado para IA)
+# - AI_SUPABASE_SERVICE_ROLE_KEY (opcional; chave service role do projeto dedicado)
+# - AI_SUPABASE_ANON_KEY (opcional; útil para diagnósticos/browser-config)
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_ROLE_KEY
 # - FRESHSALES_API_BASE

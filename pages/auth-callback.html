@@ -64,9 +64,105 @@
   </div>
 </div>
 
-<script type="module">
-import { supabase }    from '../services/supabase.js';
-import { AuthService } from '../services/auth.js';
+<script src="../js/runtime-config.js"></script>
+<script>
+function getAuthApiBase() {
+  return (
+    (window.__HM_AUTH__ && window.__HM_AUTH__.baseUrl) ||
+    (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.authApiBaseUrl) ||
+    localStorage.getItem('HM_AUTH_API_BASE') ||
+    (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : '')
+  );
+}
+
+function authUrl(path) {
+  const base = String(getAuthApiBase() || '').trim().replace(/\/$/, '');
+  if (!base) return path;
+  return `${base}${path}`;
+}
+
+function getLegacySupabaseConfig() {
+  const cfg = window.__HM_SUPABASE__ || {};
+  return {
+    url: String(cfg.defaultUrl || '').trim(),
+    anonKey: String(cfg.defaultKey || '').trim(),
+  };
+}
+
+async function resolveLegacyRole(cfg, accessToken, userId) {
+  if (!cfg.url || !cfg.anonKey || !accessToken || !userId) {
+    return null;
+  }
+
+  const url = new URL(`${cfg.url.replace(/\/$/, '')}/rest/v1/admin_users`);
+  url.searchParams.set('select', 'role');
+  url.searchParams.set('user_id', `eq.${userId}`);
+  url.searchParams.set('limit', '1');
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      apikey: cfg.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  let payload = [];
+  try {
+    payload = await response.json();
+  } catch (_) {
+    payload = [];
+  }
+
+  if (!response.ok || !Array.isArray(payload) || !payload[0] || !payload[0].role) {
+    return null;
+  }
+
+  return String(payload[0].role);
+}
+
+async function handleLegacyFallback(payload) {
+  const cfg = getLegacySupabaseConfig();
+  if (!cfg.url || !cfg.anonKey) {
+    throw new Error('Serviço de autenticação temporariamente indisponível.');
+  }
+
+  const accessToken = String(payload.access_token || '').trim();
+  const refreshToken = String(payload.refresh_token || '').trim();
+  if (!accessToken || !refreshToken) {
+    throw new Error('Link inválido ou expirado.');
+  }
+
+  const userResponse = await fetch(`${cfg.url.replace(/\/$/, '')}/auth/v1/user`, {
+    method: 'GET',
+    headers: {
+      apikey: cfg.anonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const userPayload = await userResponse.json();
+  if (!userResponse.ok || !userPayload.user) {
+    throw new Error(userPayload.error_description || userPayload.msg || userPayload.error || 'Link inválido ou expirado.');
+  }
+
+  const role = await resolveLegacyRole(cfg, accessToken, String(userPayload.user.id || ''));
+
+  try {
+    localStorage.setItem('hm_legacy_access_token', accessToken);
+    localStorage.setItem('hm_legacy_refresh_token', refreshToken);
+    localStorage.setItem('hm_legacy_user', JSON.stringify(userPayload.user));
+    if (role) {
+      localStorage.setItem('hm_legacy_role', role);
+    }
+  } catch (_) {}
+
+  return {
+    ok: true,
+    user: userPayload.user,
+    role,
+  };
+}
 
 function setState(id) {
   ['state-loading','state-success','state-error'].forEach(s => {
@@ -75,51 +171,42 @@ function setState(id) {
 }
 
 async function handleCallback() {
-  /* Supabase v2 processes URL hash/session automatically on init. */
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search || '');
 
-    if (error) throw error;
+    const accessToken = hashParams.get('access_token') || '';
+    const refreshToken = hashParams.get('refresh_token') || '';
+    const tokenHash = queryParams.get('token_hash') || '';
+    const type = queryParams.get('type') || hashParams.get('type') || 'magiclink';
+    const isRecovery = String(type).toLowerCase() === 'recovery';
 
-    const hash = window.location.hash || '';
-    const isRecovery = hash.includes('type=recovery');
+    const response = await fetch(authUrl('/api/auth/callback'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_hash: tokenHash,
+        type,
+      }),
+    });
 
-    if (data?.session) {
-      setState('state-success');
-      if (isRecovery) {
-        setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
-        return;
-      }
+    let payload = await response.json();
+    if (!response.ok || payload.ok === false || !payload.user) {
+      const fallbackPayload = await handleLegacyFallback({ access_token: accessToken, refresh_token: refreshToken });
+      payload = fallbackPayload;
+    }
 
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', data.session.user.id)
-        .maybeSingle();
-
-      const nextPath = adminData ? 'admin/index.html' : 'pages/dashboard.html';
-      setTimeout(() => { window.location.replace(`../${nextPath}`); }, 1200);
+    setState('state-success');
+    if (isRecovery) {
+      setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
       return;
     }
 
-    /* Hash may still contain tokens — listen for one tick */
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      subscription.unsubscribe();
-      if (session) {
-        setState('state-success');
-        if (isRecovery) {
-          setTimeout(() => { window.location.replace('login.html?mode=recovery'); }, 900);
-          return;
-        }
-
-        setTimeout(() => { window.location.replace('../pages/dashboard.html'); }, 1200);
-      } else {
-        setState('state-error');
-      }
-    });
-
-    /* Fallback timeout */
-    setTimeout(() => setState('state-error'), 8000);
+    const nextPath = payload.role ? 'admin/index.html' : 'pages/dashboard.html';
+    setTimeout(() => { window.location.replace(`../${nextPath}`); }, 1200);
 
   } catch (err) {
     document.getElementById('error-msg').textContent = err.message || 'Erro ao verificar acesso.';

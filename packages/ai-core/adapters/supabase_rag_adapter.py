@@ -6,8 +6,10 @@ Reuses the production infrastructure already deployed:
   - public.upsert_dotobot_memory_embedding RPC  → vector persistence
 
 Environment variables (same keys used by lib/lawdesk/rag.js):
-  SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL     - Supabase project URL
-  SUPABASE_SERVICE_ROLE_KEY                   - Service role key
+    AI_SUPABASE_URL / DOTOBOT_SUPABASE_URL      - dedicated Supabase URL for AI modules
+    AI_SUPABASE_SERVICE_ROLE_KEY                - dedicated Service role key for AI modules
+    SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL     - fallback Supabase project URL
+    SUPABASE_SERVICE_ROLE_KEY                   - fallback Service role key
   DOTOBOT_SUPABASE_EMBED_SECRET               - dotobot-embed auth secret (optional)
   DOTOBOT_SUPABASE_EMBED_FUNCTION             - edge function name (default: dotobot-embed)
   DOTOBOT_SUPABASE_EMBEDDING_MODEL            - Supabase model (default: gte-small)
@@ -49,11 +51,16 @@ def _env(key: str) -> str | None:
 
 
 def _get_supabase_url() -> str | None:
-    return _env('SUPABASE_URL') or _env('NEXT_PUBLIC_SUPABASE_URL')
+    return (
+        _env('AI_SUPABASE_URL')
+        or _env('DOTOBOT_SUPABASE_URL')
+        or _env('SUPABASE_URL')
+        or _env('NEXT_PUBLIC_SUPABASE_URL')
+    )
 
 
 def _get_service_key() -> str | None:
-    return _env('SUPABASE_SERVICE_ROLE_KEY')
+    return _env('AI_SUPABASE_SERVICE_ROLE_KEY') or _env('SUPABASE_SERVICE_ROLE_KEY')
 
 
 def _get_embed_secret() -> str | None:

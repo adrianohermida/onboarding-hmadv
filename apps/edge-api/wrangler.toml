@@ -1,0 +1,33 @@
+name = "hmadv-api"
+main = "index.ts"
+compatibility_date = "2026-03-31"
+workers_dev = false
+
+# Domínio customizado
+routes = [
+  { pattern = "api.hermidamaia.adv.br/*", custom_domain = true }
+]
+
+# Variáveis públicas (não-sigilosas)
+[vars]
+SITE_URL = "https://hermidamaia.adv.br"
+
+# Cron jobs: limpeza de agendamentos expirados
+[triggers]
+crons = ["0 */6 * * *", "0 7 * * *"]
+
+# Segredos esperados (devem ser registrados via Dashboard ou `wrangler secret put`):
+#   SUPABASE_URL
+#   SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+#   FRESHSALES_API_BASE
+#   FRESHSALES_API_KEY
+#   FRESHCHAT_APP_ID
+#   FRESHCHAT_APP_KEY
+#   FRESHCHAT_SECRET_KEY
+#   FRESHDESK_DOMAIN
+#   FRESHDESK_BASIC_TOKEN
+#   SLACK_SIGNING_SECRET
+#   SLACK_BOT_TOKEN
+#   HMADV_AI_SHARED_SECRET
+#   PROCESS_AI_BASE  (URL base do worker hmadv-process-ai, ex: https://ai.hermidamaia.adv.br)

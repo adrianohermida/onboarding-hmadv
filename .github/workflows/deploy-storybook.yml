@@ -20,6 +20,10 @@ jobs:
     env:
       CI: true
       STORYBOOK_DISABLE_TELEMETRY: 1
+      SUPABASE_URL: https://sspvizogbcyigquqycsz.supabase.co
+      SUPABASE_URL_MESSAGING: https://cundpbzqghmkohcozsex.supabase.co
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_ANON_KEY_MESSAGING: ${{ secrets.SUPABASE_ANON_KEY_MESSAGING }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -57,6 +61,22 @@ jobs:
               cp -r "$dir"/* "storybook-static/$dir/" 2>/dev/null || true
             fi
           done
+
+          # Injeta config runtime de Supabase com serialização segura (JSON.stringify)
+          # e sanitização de secrets multiline diretamente no Node.
+          node -e '
+            const fs = require("node:fs");
+            const sanitize = (value) => String(value || "").split(/\r?\n/)[0].trim();
+            const payload = {
+              defaultUrl: sanitize(process.env.SUPABASE_URL),
+              defaultKey: sanitize(process.env.SUPABASE_ANON_KEY),
+              messagingUrl: sanitize(process.env.SUPABASE_URL_MESSAGING),
+              messagingKey: sanitize(process.env.SUPABASE_ANON_KEY_MESSAGING),
+              authApiBaseUrl: sanitize(process.env.AUTH_API_BASE_URL || "https://api.hermidamaia.adv.br")
+            };
+            const js = `(function initRuntimeSupabaseConfig() {\n  window.__HM_SUPABASE__ = ${JSON.stringify(payload, null, 2)};\n})();\n`;
+            fs.writeFileSync("storybook-static/js/runtime-config.js", js, "utf8");
+          '
 
           cat > storybook-static/index.html << 'EOF'
           <!doctype html>

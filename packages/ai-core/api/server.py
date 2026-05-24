@@ -270,9 +270,24 @@ def _url_kind(value: Any) -> str:
 
 def _persistence_config(env: Mapping[str, Any]) -> dict[str, Any]:
     offline_mode = _is_offline_mode(env)
-    supabase_url_key, supabase_url = _resolve_env(env, 'SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL')
-    service_key_key, service_key = _resolve_env(env, 'SUPABASE_SERVICE_ROLE_KEY')
-    anon_key_key, anon_key = _resolve_env(env, 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY')
+    supabase_url_key, supabase_url = _resolve_env(
+        env,
+        'AI_SUPABASE_URL',
+        'DOTOBOT_SUPABASE_URL',
+        'SUPABASE_URL',
+        'NEXT_PUBLIC_SUPABASE_URL',
+    )
+    service_key_key, service_key = _resolve_env(
+        env,
+        'AI_SUPABASE_SERVICE_ROLE_KEY',
+        'SUPABASE_SERVICE_ROLE_KEY',
+    )
+    anon_key_key, anon_key = _resolve_env(
+        env,
+        'AI_SUPABASE_ANON_KEY',
+        'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+        'SUPABASE_ANON_KEY',
+    )
     if _is_placeholder_config(supabase_url):
         supabase_url = None
     if _is_placeholder_config(service_key):
@@ -318,9 +333,9 @@ def _persistence_config(env: Mapping[str, Any]) -> dict[str, Any]:
         'remote_blocked': bool(offline_mode and base_url_kind == 'remote'),
         'detail': detail,
         'recommended_envs': {
-            'url': 'SUPABASE_URL',
-            'service_role': 'SUPABASE_SERVICE_ROLE_KEY',
-            'anon': 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+            'url': 'AI_SUPABASE_URL',
+            'service_role': 'AI_SUPABASE_SERVICE_ROLE_KEY',
+            'anon': 'AI_SUPABASE_ANON_KEY',
         },
     }
 
