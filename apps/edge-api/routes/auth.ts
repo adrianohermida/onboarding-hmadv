@@ -311,6 +311,15 @@ function getCallbackUrl(env: Env): string {
   return `${siteUrl}/pages/auth-callback.html`;
 }
 
+function buildOAuthAuthorizeUrl(env: Env, provider: string, redirectTo?: string): string {
+  const baseUrl = getSupabaseBaseUrl(env).replace(/\/$/, '');
+  const callback = String(redirectTo || getCallbackUrl(env)).trim() || getCallbackUrl(env);
+  const url = new URL(`${baseUrl}${AUTH_BASE}/authorize`);
+  url.searchParams.set('provider', provider);
+  url.searchParams.set('redirect_to', callback);
+  return url.toString();
+}
+
 function mapAuthErrorMessage(raw: unknown): string {
   const message = String((raw as JsonMap)?.msg || (raw as JsonMap)?.error_description || (raw as JsonMap)?.message || (raw as JsonMap)?.error || '').trim();
   if (!message) return 'Falha na autenticação.';
@@ -392,6 +401,23 @@ export async function handleAuth(
       }
       const cleared = clearSessionCookies(request, jsonWithCors(request, { ok: true }));
       return withCors(cleared, request);
+    }
+
+    if (pathname === '/api/auth/oauth/start') {
+      if (request.method !== 'POST') return withCors(methodNotAllowed(request.method), request);
+      const body = await parseJsonBody(request);
+      const provider = String(body.provider || '').trim().toLowerCase();
+      const redirectTo = String(body.redirectTo || '').trim();
+
+      if (!provider || !['google', 'facebook'].includes(provider)) {
+        return jsonWithCors(request, { ok: false, error: 'Provedor OAuth inválido.' }, 400);
+      }
+
+      return jsonWithCors(request, {
+        ok: true,
+        url: buildOAuthAuthorizeUrl(env, provider, redirectTo || getCallbackUrl(env)),
+        provider,
+      }, 200);
     }
 
     if (request.method !== 'POST') return withCors(methodNotAllowed(request.method), request);

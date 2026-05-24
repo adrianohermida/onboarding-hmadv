@@ -57,6 +57,15 @@ class AuthManager {
     return `${origin}/pages/auth-callback.html`;
   }
 
+  buildLegacyOAuthUrl(provider, redirectTo = '') {
+    const base = this.legacyBaseUrl();
+    const callback = String(redirectTo || this.buildCallbackUrl()).trim() || this.buildCallbackUrl();
+    const url = new URL(`${base}/auth/v1/authorize`);
+    url.searchParams.set('provider', provider);
+    url.searchParams.set('redirect_to', callback);
+    return url.toString();
+  }
+
   getRedirectPath() {
     return this.isAdmin() ? '/admin/index.html' : '/pages/dashboard.html';
   }
@@ -335,6 +344,19 @@ class AuthManager {
       return { ok: true };
     }
 
+    if (path === '/api/auth/oauth/start' && method === 'POST') {
+      const provider = String(body.provider || '').trim().toLowerCase();
+      if (!provider || !['google', 'facebook'].includes(provider)) {
+        throw new Error('Provedor OAuth inválido.');
+      }
+
+      return {
+        ok: true,
+        provider,
+        url: this.buildLegacyOAuthUrl(provider, body.redirectTo || this.buildCallbackUrl()),
+      };
+    }
+
     throw new Error('Fluxo de autenticação não suportado no modo legado.');
   }
 
@@ -452,6 +474,24 @@ class AuthManager {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
+  }
+
+  async signInWithProvider(provider) {
+    this.ensureReady();
+    const normalizedProvider = String(provider || '').trim().toLowerCase();
+
+    const payload = await this.request('/api/auth/oauth/start', {
+      method: 'POST',
+      body: JSON.stringify({ provider: normalizedProvider, redirectTo: this.buildCallbackUrl() }),
+    });
+
+    const targetUrl = String(payload?.url || '').trim();
+    if (!targetUrl) {
+      throw new Error('Não foi possível iniciar autenticação social.');
+    }
+
+    window.location.assign(targetUrl);
+    return payload;
   }
 
   async sendOtp(email) {
