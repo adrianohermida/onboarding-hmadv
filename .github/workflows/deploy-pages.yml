@@ -1,8 +1,8 @@
-name: Auto Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -20,29 +20,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-
+          node-version: '20'
+          cache: 'npm'
+      
       - name: Install dependencies
-        run: npm ci && npm --prefix apps/web ci
-
-      - name: Build web app
-        run: npm run web:build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./apps/web/out
+          path: './out'
 
   deploy:
     environment:
@@ -54,10 +48,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Notify deployment success
-        if: success()
-        run: |
-          echo "✅ Deployed to GitHub Pages successfully!"
-          echo "URL: ${{ steps.deployment.outputs.page_url }}"
-          echo "Commit: ${{ github.sha }}"

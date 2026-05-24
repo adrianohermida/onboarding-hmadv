@@ -1,19 +1,13 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog'],
-  },
-  // Enable static export for GitHub Pages deployment
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   output: 'export',
   distDir: 'out',
-  // Disable image optimization for static export (use unoptimized images)
   images: {
     unoptimized: true,
-    remotePatterns: [
-      { protocol: 'https', hostname: '*.supabase.co' },
-      { protocol: 'https', hostname: '*.supabase.in' },
-    ],
   },
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
 };
 
 export default nextConfig;

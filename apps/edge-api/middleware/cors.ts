@@ -6,6 +6,7 @@
 const ALLOWED_ORIGINS = [
   'https://hermidamaia.adv.br',
   'https://www.hermidamaia.adv.br',
+  'https://portal.hermidamaia.adv.br',
   'https://api.hermidamaia.adv.br',
 ];
 
@@ -19,6 +20,7 @@ export function getCorsHeaders(request: Request): Record<string, string> {
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Shared-Secret',
     'Access-Control-Max-Age': '86400',

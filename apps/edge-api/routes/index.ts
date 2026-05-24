@@ -23,8 +23,12 @@ import { handleFreshsales } from './freshsales';
 import { handleSlack } from './slack';
 import { handleCron } from './cron';
 import { handleAuth } from './auth';
+import { handleOptions, withCors } from '../middleware/cors';
 
 export async function handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const preflight = handleOptions(request);
+  if (preflight) return preflight;
+
   const url = new URL(request.url);
   const { pathname, method } = Object.assign(url, { method: request.method });
 
@@ -38,7 +42,7 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     pathname === '/api/cancelar' ||
     pathname === '/api/remarcar'
   ) {
-    return handleAgendamento(request, env, pathname);
+    return withCors(await handleAgendamento(request, env, pathname), request);
   }
 
   // ── Configuração pública ─────────────────────────────────────────────────
@@ -46,12 +50,12 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     pathname === '/api/public-chat-config' ||
     pathname === '/api/admin-auth-config'
   ) {
-    return handlePublicConfig(request, env, pathname);
+    return withCors(await handlePublicConfig(request, env, pathname), request);
   }
 
   // ── Autenticação BFF ───────────────────────────────────────────────────
   if (pathname.startsWith('/api/auth')) {
-    return handleAuth(request, env, pathname);
+    return withCors(await handleAuth(request, env, pathname), request);
   }
 
   // ── Freshchat ────────────────────────────────────────────────────────────
@@ -59,7 +63,7 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     pathname === '/api/freshchat-jwt' ||
     pathname === '/api/freshchat-widget-event'
   ) {
-    return handleFreshchat(request, env, pathname);
+    return withCors(await handleFreshchat(request, env, pathname), request);
   }
 
   // ── Freshsales ───────────────────────────────────────────────────────────
@@ -68,42 +72,42 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     pathname === '/api/admin-freshsales-catalog' ||
     pathname === '/api/admin-freshsales-deal-fields'
   ) {
-    return handleFreshsales(request, env, pathname);
+    return withCors(await handleFreshsales(request, env, pathname), request);
   }
 
   // ── Freddy (memória e ações) ─────────────────────────────────────────────
   if (pathname.startsWith('/api/freddy-')) {
-    return handleFreddy(request, env, pathname);
+    return withCors(await handleFreddy(request, env, pathname), request);
   }
 
   // ── Slack ────────────────────────────────────────────────────────────────
   if (pathname === '/api/slack-events') {
-    return handleSlack(request, env);
+    return withCors(await handleSlack(request, env), request);
   }
 
   // ── Rotas de cliente (portal) ────────────────────────────────────────────
   if (pathname.startsWith('/api/client-')) {
-    return handleClient(request, env, pathname);
+    return withCors(await handleClient(request, env, pathname), request);
   }
 
   // ── Rotas administrativas (interno) ─────────────────────────────────────
   if (pathname.startsWith('/api/admin-') || pathname === '/api/admin-jobs') {
-    return handleAdmin(request, env, pathname);
+    return withCors(await handleAdmin(request, env, pathname), request);
   }
 
   // ── Freshdesk ────────────────────────────────────────────────────────────
   if (pathname === '/api/freshdesk-ticket') {
     const { handleFreshdesk } = await import('./freshdesk');
-    return handleFreshdesk(request, env);
+    return withCors(await handleFreshdesk(request, env), request);
   }
 
   // ── Health check ─────────────────────────────────────────────────────────
   if (pathname === '/api/health' || pathname === '/') {
-    return new Response(
+    return withCors(new Response(
       JSON.stringify({ ok: true, worker: 'hmadv-api', ts: new Date().toISOString() }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    ), request);
   }
 
-  return jsonNotFound(pathname);
+  return withCors(jsonNotFound(pathname), request);
 }

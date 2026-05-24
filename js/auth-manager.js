@@ -79,7 +79,9 @@ class AuthManager {
 
   canUseLegacy() {
     const cfg = this.runtimeConfig || {};
-    return Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
+    const host = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
+    const isLocalDev = host === 'localhost' || host === '127.0.0.1';
+    return Boolean(isLocalDev && cfg.supabaseUrl && cfg.supabaseAnonKey);
   }
 
   ensureReady() {
