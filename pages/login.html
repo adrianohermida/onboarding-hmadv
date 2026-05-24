@@ -87,6 +87,20 @@
       max-width: 35ch;
     }
 
+    .brand-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.22);
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
     .brand ul {
       margin: 0;
       padding-left: 1.15rem;
@@ -109,6 +123,43 @@
       margin: 0.45rem 0 1.2rem;
       color: var(--text-muted);
       font-size: 0.93rem;
+    }
+
+    .flow-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin: 0 0 1rem;
+    }
+
+    .flow-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #f8fbff;
+      color: var(--brand-secondary);
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .flow-link:hover,
+    .flow-link:focus-visible {
+      background: #eef5ff;
+      border-color: rgba(15, 77, 146, 0.35);
+      color: var(--brand-primary);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .flow-link.active {
+      background: rgba(15, 77, 146, 0.1);
+      border-color: rgba(15, 77, 146, 0.35);
+      color: var(--brand-primary-strong);
     }
 
     .field { margin-bottom: 0.85rem; }
@@ -151,7 +202,33 @@
       margin-top: 0.2rem;
     }
 
+    .btn-secondary {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.78rem 0.95rem;
+      font-weight: 800;
+      color: var(--brand-primary-strong);
+      background: #fff;
+      cursor: pointer;
+      margin-top: 0.45rem;
+    }
+
     .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .btn-secondary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .field-note {
+      margin: 0.42rem 0 0;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .inline-actions {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.2rem;
+    }
 
     .notice {
       margin-top: 0.8rem;
@@ -177,27 +254,38 @@
   <div class="shell">
     <section class="brand">
       <img class="brand-logo" src="../assets/logo1.webp" alt="Hermida Maia Advocacia">
+      <div class="brand-eyebrow">Portal Hermida Maia</div>
       <h1>Hermida Maia Advocacia</h1>
-      <p>Autenticação Supabase unificada para portal administrativo e portal do cliente.</p>
+      <p>Acesse sua conta com segurança e escolha a forma de entrada mais conveniente para o seu perfil.</p>
       <ul>
-        <li>Login com senha</li>
-        <li>Magic link e OTP</li>
-        <li>Cadastro e recuperação de senha</li>
+        <li>Código de verificação enviado por e-mail</li>
+        <li>Magic link para acesso sem senha</li>
+        <li>Cadastro, redefinição e atualização de senha</li>
       </ul>
     </section>
 
     <section class="panel">
-      <h2>Acesso ao Portal</h2>
-      <p class="subtitle">Escolha o fluxo de autenticação abaixo.</p>
+      <h2>Acesse sua conta com segurança.</h2>
+      <p id="flowHelper" class="subtitle">Escolha como deseja entrar no portal.</p>
+
+      <nav class="flow-links" aria-label="Fluxos de autenticação">
+        <a class="flow-link" href="?mode=password" data-auth-mode="password">Login com senha</a>
+        <a class="flow-link" href="?mode=register" data-auth-mode="register">Criar nova conta</a>
+        <a class="flow-link" href="?mode=magic" data-auth-mode="magic">Magic link</a>
+        <a class="flow-link" href="?mode=otp" data-auth-mode="otp">Verificar OTP</a>
+        <a class="flow-link" href="?mode=recover" data-auth-mode="recover">Recuperar senha</a>
+        <a class="flow-link" href="?mode=recover" data-auth-mode="recover">Redefinir senha</a>
+        <a class="flow-link" href="?mode=set-password" data-auth-mode="set-password">Definir nova senha</a>
+      </nav>
 
       <form id="loginForm" novalidate>
         <div class="field">
-          <label for="authMode">Fluxo</label>
+          <label for="authMode">Como deseja acessar?</label>
           <select id="authMode" class="select">
             <option value="password">Login com senha</option>
-            <option value="register">Cadastro</option>
+            <option value="register">Criar nova conta</option>
             <option value="magic">Magic link</option>
-            <option value="otp">Verificar OTP</option>
+            <option value="otp">Código por e-mail</option>
             <option value="recover">Recuperar senha</option>
             <option value="set-password">Definir nova senha</option>
           </select>
@@ -214,13 +302,15 @@
         </div>
 
         <div class="field" id="otpField">
-          <label for="otp">Código OTP</label>
-          <input id="otp" class="input" type="text" placeholder="Código recebido por e-mail">
+          <label for="otp">Código de verificação</label>
+          <input id="otp" class="input" type="text" placeholder="000000" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+          <p id="otpFieldHint" class="field-note">Digite o código enviado para seu e-mail.</p>
         </div>
 
         <div class="field" id="passwordField">
           <label for="password">Senha</label>
           <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
+          <p id="passwordAssist" class="field-note hidden">Se você for o usuário administrador, também pode usar a senha padrão neste fluxo.</p>
         </div>
 
         <div class="field" id="confirmPasswordField">
@@ -228,8 +318,13 @@
           <input id="confirmPassword" class="input" type="password" placeholder="Repita a senha">
         </div>
 
+        <div id="otpActions" class="inline-actions hidden">
+          <button id="resendOtpBtn" class="btn-secondary" type="button">Solicitar novamente código</button>
+          <button id="changeEmailBtn" class="btn-secondary" type="button">Alterar e-mail</button>
+        </div>
+
         <button id="submitBtn" class="btn" type="submit">Continuar</button>
-        <div id="statusMsg" class="notice info">Inicializando autenticação...</div>
+        <div id="statusMsg" class="notice info" aria-live="polite" role="status">Verificando sua sessão...</div>
       </form>
     </section>
   </div>
@@ -245,41 +340,8 @@
         (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : ''),
     };
 
-    const ADMIN_OTP_EMAIL = 'adrianohermida@gmail.com';
-
-    function setStatus(message, type = 'info') {
-      const statusMsg = document.getElementById('statusMsg');
-      statusMsg.textContent = message;
-      statusMsg.className = `notice ${type}`;
-    }
-
-    function setVisible(id, visible) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle('hidden', !visible);
-    }
-
-    function getModeConfig(mode) {
-      const map = {
-        password: { name: false, email: true, otp: false, password: true, confirm: false, label: 'Entrar' },
-        register: { name: true, email: true, otp: false, password: true, confirm: true, label: 'Cadastrar' },
-        magic: { name: false, email: true, otp: false, password: false, confirm: false, label: 'Enviar magic link' },
-        otp: { name: false, email: true, otp: true, password: false, confirm: false, label: 'Validar OTP' },
-        recover: { name: false, email: true, otp: false, password: false, confirm: false, label: 'Enviar recuperação' },
-        'set-password': { name: false, email: false, otp: false, password: true, confirm: true, label: 'Atualizar senha' },
-      };
-      return map[mode] || map.password;
-    }
-
-    function applyMode(mode) {
-      const config = getModeConfig(mode);
-      setVisible('nameField', config.name);
-      setVisible('emailField', config.email);
-      setVisible('otpField', config.otp);
-      setVisible('passwordField', config.password);
-      setVisible('confirmPasswordField', config.confirm);
-      document.getElementById('submitBtn').textContent = config.label;
-    }
+    const ADMIN_EMAIL = 'adrianohermida@gmail.com';
+    const OTP_RESEND_SECONDS = 60;
 
     function getModeFromUrl() {
       const params = new URLSearchParams(window.location.search);
@@ -296,6 +358,215 @@
       const form = document.getElementById('loginForm');
       const submitBtn = document.getElementById('submitBtn');
       const authMode = document.getElementById('authMode');
+      const flowHelper = document.getElementById('flowHelper');
+      const statusMsg = document.getElementById('statusMsg');
+      const flowLinks = Array.from(document.querySelectorAll('[data-auth-mode]'));
+      const fullNameInput = document.getElementById('fullName');
+      const emailInput = document.getElementById('email');
+      const otpInput = document.getElementById('otp');
+      const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirmPassword');
+      const resendOtpBtn = document.getElementById('resendOtpBtn');
+      const changeEmailBtn = document.getElementById('changeEmailBtn');
+      const passwordAssist = document.getElementById('passwordAssist');
+
+      let otpRequestedEmail = '';
+      let otpCooldownEndsAt = 0;
+      let otpCountdownTimer = null;
+
+      function normalizeEmail(value) {
+        return String(value || '').trim().toLowerCase();
+      }
+
+      function setStatus(message, type = 'info') {
+        statusMsg.textContent = message;
+        statusMsg.className = `notice ${type}`;
+        statusMsg.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      }
+
+      function setVisible(id, visible) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('hidden', !visible);
+      }
+
+      function mapAuthError(error, mode) {
+        const message = String((error && error.message) || 'Não foi possível concluir sua solicitação.').trim();
+        const lower = message.toLowerCase();
+        if (mode === 'otp' && (lower.includes('otp') || lower.includes('code') || lower.includes('token'))) {
+          return 'Código incorreto ou expirado. Tente novamente.';
+        }
+        if (lower.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
+        if (lower.includes('email not confirmed')) return 'Confirme seu e-mail antes de acessar a conta.';
+        if (lower.includes('sessão não encontrada')) return 'Abra o link enviado por e-mail para definir sua nova senha.';
+        return message || 'Não foi possível concluir sua solicitação.';
+      }
+
+      function updateUrlMode(mode) {
+        const url = new URL(window.location.href);
+        if (mode && mode !== 'password') {
+          url.searchParams.set('mode', mode);
+        } else {
+          url.searchParams.delete('mode');
+        }
+        window.history.replaceState({}, '', url.toString());
+      }
+
+      function clearOtpTimer() {
+        if (otpCountdownTimer) {
+          window.clearInterval(otpCountdownTimer);
+          otpCountdownTimer = null;
+        }
+      }
+
+      function resetOtpState(clearCode = true) {
+        otpRequestedEmail = '';
+        otpCooldownEndsAt = 0;
+        clearOtpTimer();
+        if (clearCode) otpInput.value = '';
+      }
+
+      function getOtpCooldownRemaining() {
+        return Math.max(0, Math.ceil((otpCooldownEndsAt - Date.now()) / 1000));
+      }
+
+      function getModeConfig(mode) {
+        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
+        const map = {
+          password: {
+            name: false,
+            email: true,
+            otp: false,
+            password: true,
+            confirm: false,
+            label: 'Entrar com senha',
+            helper: 'Use seu e-mail e senha para entrar no portal.',
+          },
+          register: {
+            name: true,
+            email: true,
+            otp: false,
+            password: true,
+            confirm: true,
+            label: 'Criar conta',
+            helper: 'Preencha os dados abaixo para criar sua conta.',
+          },
+          magic: {
+            name: false,
+            email: true,
+            otp: false,
+            password: false,
+            confirm: false,
+            label: 'Enviar magic link',
+            helper: 'Enviaremos um link seguro para o seu e-mail.',
+          },
+          otp: {
+            name: false,
+            email: true,
+            otp: otpStepActive,
+            password: false,
+            confirm: false,
+            label: otpStepActive ? 'Verificar código' : 'Enviar código',
+            helper: otpStepActive
+              ? 'Digite o código enviado para seu e-mail.'
+              : 'Informe seu e-mail para receber um código de verificação.',
+          },
+          recover: {
+            name: false,
+            email: true,
+            otp: false,
+            password: false,
+            confirm: false,
+            label: 'Enviar instruções',
+            helper: 'Enviaremos as instruções para redefinir sua senha.',
+          },
+          'set-password': {
+            name: false,
+            email: false,
+            otp: false,
+            password: true,
+            confirm: true,
+            label: 'Salvar nova senha',
+            helper: 'Defina sua nova senha para concluir o acesso.',
+          },
+        };
+        return map[mode] || map.password;
+      }
+
+      function updateModeLinks(mode) {
+        flowLinks.forEach(link => {
+          link.classList.toggle('active', link.dataset.authMode === mode);
+          link.setAttribute('aria-current', link.dataset.authMode === mode ? 'page' : 'false');
+        });
+      }
+
+      function updatePasswordAssist(mode) {
+        setVisible('passwordAssist', mode === 'password' && normalizeEmail(emailInput.value) === ADMIN_EMAIL);
+      }
+
+      function updateOtpActions(mode) {
+        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
+        setVisible('otpActions', otpStepActive);
+        if (!otpStepActive) {
+          resendOtpBtn.disabled = true;
+          resendOtpBtn.textContent = 'Solicitar novamente código';
+          return;
+        }
+
+        const remaining = getOtpCooldownRemaining();
+        resendOtpBtn.disabled = remaining > 0 || submitBtn.disabled;
+        resendOtpBtn.textContent = remaining > 0
+          ? `Solicitar novamente código em ${remaining}s`
+          : 'Solicitar novamente código';
+      }
+
+      function startOtpCooldown() {
+        otpCooldownEndsAt = Date.now() + (OTP_RESEND_SECONDS * 1000);
+        clearOtpTimer();
+        otpCountdownTimer = window.setInterval(() => {
+          updateOtpActions(authMode.value);
+          if (getOtpCooldownRemaining() <= 0) {
+            clearOtpTimer();
+          }
+        }, 1000);
+        updateOtpActions(authMode.value);
+      }
+
+      function focusCurrentField(mode) {
+        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
+        let target = emailInput;
+        if (mode === 'register') target = fullNameInput;
+        if (mode === 'set-password') target = passwordInput;
+        if (mode === 'password' && normalizeEmail(emailInput.value)) target = passwordInput;
+        if (otpStepActive) target = otpInput;
+        window.requestAnimationFrame(() => target && target.focus());
+      }
+
+      function applyMode(mode, options = {}) {
+        const keepOtpState = Boolean(options.keepOtpState);
+        if (mode !== 'otp' && !keepOtpState) {
+          resetOtpState(false);
+        }
+        if (mode === 'otp' && otpRequestedEmail && otpRequestedEmail !== normalizeEmail(emailInput.value)) {
+          resetOtpState();
+        }
+
+        const config = getModeConfig(mode);
+        setVisible('nameField', config.name);
+        setVisible('emailField', config.email);
+        setVisible('otpField', config.otp);
+        setVisible('passwordField', config.password);
+        setVisible('confirmPasswordField', config.confirm);
+        submitBtn.textContent = config.label;
+        flowHelper.textContent = config.helper;
+        updateModeLinks(mode);
+        updatePasswordAssist(mode);
+        updateOtpActions(mode);
+        if (options.updateHistory !== false) {
+          updateUrlMode(mode);
+        }
+        focusCurrentField(mode);
+      }
 
       const initialMode = getModeFromUrl();
       if (initialMode) authMode.value = initialMode;
@@ -303,7 +574,7 @@
 
       try {
         await window.AuthManager.init();
-        setStatus('Sistema de autenticação pronto', 'success');
+        setStatus('Informe seus dados para continuar.', 'info');
       } catch (initError) {
         setStatus(
           (initError && initError.message) ||
@@ -320,40 +591,101 @@
 
       authMode.addEventListener('change', () => {
         applyMode(authMode.value);
-        setStatus('Fluxo pronto para autenticação.', 'info');
+        setStatus('Acesse sua conta com segurança.', 'info');
+      });
+
+      flowLinks.forEach(link => {
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          const mode = link.dataset.authMode || 'password';
+          authMode.value = mode;
+          applyMode(mode);
+          setStatus('Acesse sua conta com segurança.', 'info');
+        });
+      });
+
+      emailInput.addEventListener('input', () => {
+        updatePasswordAssist(authMode.value);
+        if (authMode.value === 'otp' && otpRequestedEmail && otpRequestedEmail !== normalizeEmail(emailInput.value)) {
+          resetOtpState();
+          applyMode('otp', { updateHistory: false, keepOtpState: true });
+          setStatus('Se desejar continuar com outro e-mail, solicite um novo código.', 'info');
+        }
+      });
+
+      otpInput.addEventListener('input', () => {
+        otpInput.value = String(otpInput.value || '').replace(/\D+/g, '').slice(0, 6);
+      });
+
+      resendOtpBtn.addEventListener('click', async () => {
+        const email = (emailInput.value || '').trim();
+        if (!email) {
+          setStatus('Informe o e-mail para solicitar um novo código.', 'error');
+          emailInput.focus();
+          return;
+        }
+
+        if (getOtpCooldownRemaining() > 0) {
+          setStatus('Aguarde um momento antes de solicitar novo código.', 'info');
+          return;
+        }
+
+        resendOtpBtn.disabled = true;
+        try {
+          await window.AuthManager.sendOtp(email);
+          otpRequestedEmail = normalizeEmail(email);
+          startOtpCooldown();
+          setStatus('Se o e-mail informado existir na base de dados, você receberá um código de verificação.', 'success');
+          otpInput.focus();
+        } catch (error) {
+          console.error('[login] resend otp failed', { email, error });
+          setStatus(mapAuthError(error, 'otp'), 'error');
+        } finally {
+          updateOtpActions(authMode.value);
+        }
+      });
+
+      changeEmailBtn.addEventListener('click', () => {
+        resetOtpState();
+        applyMode('otp', { updateHistory: false, keepOtpState: true });
+        setStatus('Informe o e-mail para receber um novo código de verificação.', 'info');
+        emailInput.focus();
       });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         const mode = authMode.value;
-        const email = (document.getElementById('email').value || '').trim();
-        const otp = (document.getElementById('otp').value || '').trim();
-        const password = document.getElementById('password').value || '';
-        const confirmPassword = document.getElementById('confirmPassword').value || '';
-        const fullName = (document.getElementById('fullName').value || '').trim();
+        const email = (emailInput.value || '').trim();
+        const otp = (otpInput.value || '').trim();
+        const password = passwordInput.value || '';
+        const confirmPassword = confirmPasswordInput.value || '';
+        const fullName = (fullNameInput.value || '').trim();
 
         submitBtn.disabled = true;
-        setStatus('Processando autenticação...', 'info');
+        updateOtpActions(mode);
+        setStatus('Processando sua solicitação...', 'info');
 
         try {
           if (mode === 'password') {
-            if (!email || !password) throw new Error('Informe e-mail e senha.');
+            if (!email || !password) throw new Error('Informe e-mail e senha para continuar.');
             await window.AuthManager.login(email, password);
+            setStatus('Acesso confirmado. Redirecionando...', 'success');
             await redirectByRole();
             return;
           }
 
           if (mode === 'register') {
-            if (!email || !password) throw new Error('Informe e-mail e senha para cadastro.');
-            if (password !== confirmPassword) throw new Error('As senhas não conferem.');
+            if (!email || !password) throw new Error('Informe e-mail e senha para criar sua conta.');
+            if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
             const metadata = fullName ? { nome: fullName, full_name: fullName } : {};
             const data = await window.AuthManager.register(email, password, metadata);
             if (data?.session) {
+              setStatus('Conta criada com sucesso. Redirecionando...', 'success');
               await redirectByRole();
               return;
             }
-            setStatus('Cadastro criado. Verifique seu e-mail para confirmar a conta.', 'success');
+            setStatus('Conta criada. Verifique seu e-mail para confirmar o cadastro.', 'success');
           }
 
           if (mode === 'magic') {
@@ -363,45 +695,57 @@
               throw new Error('Fluxo magic link indisponível nesta versão de autenticação.');
             }
             await magicFn.call(window.AuthManager, email);
-            setStatus('Magic link enviado. Confira sua caixa de entrada.', 'success');
+            setStatus('Se o e-mail informado existir na base de dados, você receberá um link de acesso.', 'success');
           }
 
           if (mode === 'otp') {
-            if (!email) throw new Error('Informe o e-mail.');
+            if (!email) throw new Error('Informe o e-mail para continuar.');
 
-            const isAdminOtp = email.toLowerCase() === ADMIN_OTP_EMAIL;
-            if (!otp) {
-              if (isAdminOtp) {
-                throw new Error('Informe o OTP admin para continuar.');
-              }
+            const normalizedEmail = normalizeEmail(email);
+            const otpStepActive = otpRequestedEmail && otpRequestedEmail === normalizedEmail;
+            if (!otpStepActive) {
               await window.AuthManager.sendOtp(email);
-              setStatus('Código OTP enviado por e-mail. Digite o código recebido para validar.', 'success');
+              otpRequestedEmail = normalizedEmail;
+              startOtpCooldown();
+              applyMode('otp', { updateHistory: false, keepOtpState: true });
+              setStatus('Se o e-mail informado existir na base de dados, você receberá um código de verificação.', 'success');
               return;
             }
 
+            if (!otp || otp.length !== 6) {
+              throw new Error('Digite o código de 6 dígitos enviado para o seu e-mail.');
+            }
+
             await window.AuthManager.verifyOtp(email, otp, 'email');
+            setStatus('Código verificado. Redirecionando...', 'success');
             await redirectByRole();
             return;
           }
 
           if (mode === 'recover') {
-            if (!email) throw new Error('Informe o e-mail para recuperação.');
+            if (!email) throw new Error('Informe o e-mail para recuperar sua senha.');
             await window.AuthManager.requestPasswordRecovery(email);
-            setStatus('E-mail de recuperação enviado. Abra o link recebido.', 'success');
+            setStatus('Se o e-mail informado existir na base de dados, você receberá as instruções para redefinir sua senha.', 'success');
           }
 
           if (mode === 'set-password') {
             if (!password) throw new Error('Informe a nova senha.');
-            if (password !== confirmPassword) throw new Error('As senhas não conferem.');
+            if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
             await window.AuthManager.updatePassword(password);
-            setStatus('Senha atualizada. Redirecionando...', 'success');
+            setStatus('Senha redefinida com sucesso. Redirecionando...', 'success');
             await redirectByRole();
             return;
           }
         } catch (error) {
-          setStatus(error?.message || 'Erro de autenticação no Supabase.', 'error');
+          console.error('[login] authentication failed', {
+            mode,
+            email: normalizeEmail(email),
+            error,
+          });
+          setStatus(mapAuthError(error, mode), 'error');
         } finally {
           submitBtn.disabled = false;
+          updateOtpActions(mode);
         }
       });
     });

@@ -371,6 +371,12 @@ class AuthManager {
 
       return payload;
     } catch (error) {
+      console.error('[AuthManager] request failed', {
+        path,
+        authMode: this.authMode,
+        message: String((error && error.message) || error || ''),
+      });
+
       if (this.canUseLegacy()) {
         this.authMode = 'legacy';
         return this.legacyRequest(path, init);
