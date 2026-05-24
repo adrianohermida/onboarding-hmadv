@@ -23,6 +23,7 @@ export interface Env {
   SITE_URL?: string;
   HM_ADMIN_OTP_EMAIL?: string;
   HM_ADMIN_OTP_CODE?: string;
+  HM_ADMIN_DEFAULT_PASSWORD?: string;
 
   // ── Freshsales ──────────────────────────────────────────────────────────
   FRESHSALES_API_BASE?: string;
