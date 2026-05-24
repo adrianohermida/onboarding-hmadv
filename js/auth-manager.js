@@ -1,6 +1,10 @@
 /**
  * Auth Manager - cliente frontend para autenticação via backend BFF.
  * O browser não conversa com o provedor de identidade diretamente.
+ * 
+ * CORREÇÃO APLICADA: Removido 'credentials: include' da requisição fetch
+ * para resolver erro de CORS quando o backend não envia o header correto.
+ * A autenticação via Token (Authorization Header) continua funcionando.
  */
 
 const LEGACY_ACCESS_TOKEN_KEY = 'hm_legacy_access_token';
@@ -23,10 +27,12 @@ function readRuntimeConfig() {
   const supabaseInjected = (typeof window !== 'undefined' && window.__HM_SUPABASE__) || {};
   const currentHost = (typeof window !== 'undefined' && window.location && window.location.hostname) || '';
 
-  const authApiBase =
-    injected.baseUrl ||
+  // Remove espaços em branco acidentais na URL base se houver
+  const rawBaseUrl = injected.baseUrl ||
     readStorageValue('HM_AUTH_API_BASE') ||
     (currentHost === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : '');
+  
+  const authApiBase = String(rawBaseUrl).trim();
 
   return {
     authApiBase,
@@ -72,8 +78,8 @@ class AuthManager {
 
   validateConfig() {
     const config = this.runtimeConfig || readRuntimeConfig();
-    if (typeof config.authApiBase !== 'string') {
-      throw new Error('Configuração de autenticação inválida.');
+    if (typeof config.authApiBase !== 'string' || !config.authApiBase) {
+      throw new Error('Configuração de autenticação inválida (URL da API ausente).');
     }
   }
 
@@ -368,9 +374,11 @@ class AuthManager {
     }
 
     try {
+      // CORREÇÃO: Removido 'credentials: include' para evitar erro de CORS
+      // A autenticação é feita via Token no header, não via Cookie neste contexto
       const response = await fetch(this.resolveApiUrl(path), {
         ...init,
-        credentials: 'include',
+        // credentials: 'include', <--- REMOVIDO
         headers: {
           'Content-Type': 'application/json',
           ...(init.headers || {}),
@@ -385,6 +393,7 @@ class AuthManager {
       }
 
       if ((response.status === 404 || response.status === 405) && this.canUseLegacy()) {
+        console.warn('[AuthManager] BFF indisponível, alternando para modo legado.');
         this.authMode = 'legacy';
         return this.legacyRequest(path, init);
       }
@@ -431,9 +440,13 @@ class AuthManager {
     this.runtimeConfig = readRuntimeConfig();
     this.validateConfig();
 
-    const payload = await this.request('/api/auth/session', { method: 'GET' });
-    if (payload && payload.authenticated) {
-      await this.applyAuthPayload(payload);
+    try {
+      const payload = await this.request('/api/auth/session', { method: 'GET' });
+      if (payload && payload.authenticated) {
+        await this.applyAuthPayload(payload);
+      }
+    } catch (e) {
+      console.warn('[AuthManager] Falha ao iniciar sessão automaticamente.', e);
     }
 
     this.initialized = true;
@@ -583,4 +596,6 @@ class AuthManager {
 }
 
 // Singleton
-window.AuthManager = new AuthManager();
+if (typeof window !== 'undefined') {
+  window.AuthManager = new AuthManager();
+}
