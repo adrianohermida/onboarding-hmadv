@@ -1,0 +1,47 @@
+[04:45:55.265] [INFO] storybook v10.4.1
+[04:46:06.568] [DEBUG] Getting package.json info for D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/package.json...
+[04:46:06.576] [WARN] You are currently using Storybook [1m10.4.1[22m but you have packages which are incompatible with it:
+
+- @storybook/addon-essentials@7.0.6 which depends on 7.0.6
+ Repo: https://github.com/storybookjs/storybook/tree/next/code/addons/essentials
+
+Please consider updating your packages or contacting the maintainers for compatibility details.
+
+For more details on compatibility guidance, see:
+https://github.com/storybookjs/storybook/issues/32836
+[04:46:38.976] [ERROR] [38;2;241;97;97mSB_CORE-SERVER_0002 (CriticalPresetLoadError): Storybook failed to load the following preset: @storybook/nextjs-vite/preset.
+
+Please check whether your setup is correct, the Storybook dependencies (and their peer dependencies) are installed correctly and there are no package version clashes.
+
+If you believe this is a bug, please open an issue on Github.
+
+Error: Cannot find module 'next/dist/compiled/regenerator-runtime'
+Require stack:
+- .\node_modules\next\dist\build\swc\options.js
+- .\node_modules\next\dist\build\swc\index.js
+- .\node_modules\vite-plugin-storybook-nextjs\dist\index.cjs
+- .\node_modules\@storybook\nextjs-vite\dist\preset.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+    at require.resolve (node:internal/modules/helpers:171:31)
+    at Object.<anonymous> (.\node_modules\next\dist\build\swc\options.js:30:40)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+
+More info: 
+[39m
+    at loadPreset (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/_node-chunks/chunk-PNYLLFX3.js:9157:13)
+    at async Promise.all (index 0)
+    at async loadPresets (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/_node-chunks/chunk-PNYLLFX3.js:9166:73)
+    at async getPresets (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/_node-chunks/chunk-PNYLLFX3.js:9197:23)
+    at async buildDevStandalone (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/core-server/index.js:19412:52)
+    at async withTelemetry (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/_node-chunks/chunk-CUZMMOHY.js:655:12)
+    at async dev (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/bin/core.js:2736:3)
+    at async _Command.<anonymous> (file:///D:/Github/onboarding-hmadv/onboarding-hmadv/apps/web/node_modules/storybook/dist/bin/core.js:2806:92)
+[04:46:38.992] [WARN] Broken build, fix the error above.
+You may need to refresh the browser.
+[04:47:01.698] [PROMPT] Would you like to send anonymous crash reports to improve Storybook and fix bugs faster? {"choice":true}
