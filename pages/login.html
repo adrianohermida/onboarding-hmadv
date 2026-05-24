@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Hermida Maia Advocacia</title>
+  <title>Entrar no portal - Hermida Maia Advocacia</title>
   <style>
     :root {
-      --brand-primary: #0f4d92;
-      --brand-primary-strong: #0a386f;
-      --brand-secondary: #0f172a;
-      --brand-accent: #f59e0b;
-      --bg-soft: #f4f8ff;
-      --line: #dbe4f0;
-      --text-muted: #64748b;
-      --danger: #b91c1c;
+      --primary: #1E40AF;
+      --primary-soft: #3B82F6;
+      --bg: #F9FAFB;
+      --text: #111827;
+      --muted: #6B7280;
+      --line: #E5E7EB;
+      --danger: #B91C1C;
       --ok: #166534;
+      --warn: #92400E;
+      --card: #FFFFFF;
     }
 
     * { box-sizing: border-box; }
@@ -22,312 +23,375 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Nunito Sans", "Segoe UI", sans-serif;
+      font-family: Inter, Roboto, "Segoe UI", sans-serif;
+      color: var(--text);
       background:
-        radial-gradient(circle at 20% 18%, rgba(245, 158, 11, 0.22), transparent 34%),
-        radial-gradient(circle at 90% 84%, rgba(15, 77, 146, 0.2), transparent 36%),
-        linear-gradient(140deg, #f9fbff, #edf5ff 46%, #ffffff);
+        radial-gradient(circle at 14% 18%, rgba(59, 130, 246, 0.08), transparent 30%),
+        radial-gradient(circle at 86% 82%, rgba(30, 64, 175, 0.09), transparent 36%),
+        var(--bg);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1rem;
-      color: var(--brand-secondary);
     }
 
-    .shell {
+    .layout {
       width: 100%;
-      max-width: 1020px;
-      display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      background: #fff;
+      max-width: 1120px;
+      background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 24px;
+      border-radius: 20px;
+      box-shadow: 0 24px 56px rgba(17, 24, 39, 0.12);
       overflow: hidden;
-      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.16);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
     }
 
-    .brand {
-      background: linear-gradient(160deg, var(--brand-primary-strong), var(--brand-primary) 52%, #2b7dd9);
-      color: #fff;
-      padding: 2.6rem 2.2rem;
-      position: relative;
-      overflow: hidden;
+    .left {
+      padding: 2.4rem 2rem;
+      background: linear-gradient(165deg, #F8FAFF 0%, #EEF4FF 55%, #F9FBFF 100%);
+      border-right: 1px solid var(--line);
     }
 
-    .brand::after {
-      content: "";
-      position: absolute;
-      width: 340px;
-      height: 340px;
-      border-radius: 50%;
-      right: -120px;
-      bottom: -140px;
-      background: rgba(245, 158, 11, 0.22);
-    }
-
-    .brand-logo {
-      width: 92px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.32);
-      padding: 0.3rem;
-      background: rgba(255,255,255,0.14);
-      display: block;
-      margin-bottom: 1rem;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 1.85rem;
-      line-height: 1.15;
-    }
-
-    .brand p {
-      margin: 0.9rem 0 1.4rem;
-      color: rgba(255,255,255,0.9);
-      max-width: 35ch;
-    }
-
-    .brand-eyebrow {
-      display: inline-flex;
+    .logo-line {
+      display: flex;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.38rem 0.7rem;
-      border-radius: 999px;
-      margin-bottom: 1rem;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.22);
-      font-size: 0.84rem;
-      font-weight: 800;
-      letter-spacing: 0.01em;
+      gap: 0.7rem;
+      margin-bottom: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
     }
 
-    .brand ul {
+    .logo {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .left h1 {
       margin: 0;
-      padding-left: 1.15rem;
-      color: rgba(255,255,255,0.95);
+      font-size: 1.75rem;
+      line-height: 1.2;
     }
 
-    .brand li { margin-bottom: 0.5rem; }
+    .left p {
+      margin: 0.75rem 0 1.4rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 45ch;
+    }
 
-    .panel {
+    .benefits {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .benefit {
+      display: grid;
+      grid-template-columns: 1.4rem 1fr;
+      gap: 0.65rem;
+      align-items: start;
+      color: #1F2937;
+      font-weight: 500;
+    }
+
+    .benefit .dot {
+      color: var(--primary-soft);
+      font-size: 1.05rem;
+      line-height: 1;
+      margin-top: 0.15rem;
+    }
+
+    .right {
       padding: 2rem 1.6rem;
-      background: #fff;
+      background: var(--card);
     }
 
-    .panel h2 {
+    .right h2 {
       margin: 0;
-      font-size: 1.4rem;
+      font-size: 1.9rem;
+      font-weight: 600;
+      line-height: 1.1;
     }
 
-    .panel .subtitle {
-      margin: 0.45rem 0 1.2rem;
-      color: var(--text-muted);
-      font-size: 0.93rem;
-    }
-
-    .flow-links {
+    .flow-tabs {
+      margin: 1rem 0;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.55rem;
-      margin: 0 0 1rem;
+      gap: 0.5rem;
     }
 
-    .flow-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem 0.8rem;
+    .tab {
+      border: 1px solid #CFDAED;
+      background: #F8FBFF;
+      color: #1F2937;
       border-radius: 999px;
-      border: 1px solid #cbd5e1;
-      background: #f8fbff;
-      color: var(--brand-secondary);
-      font-size: 0.84rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+      padding: 0.45rem 0.78rem;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
     }
 
-    .flow-link:hover,
-    .flow-link:focus-visible {
-      background: #eef5ff;
-      border-color: rgba(15, 77, 146, 0.35);
-      color: var(--brand-primary);
+    .tab:hover,
+    .tab:focus-visible {
       outline: none;
-      transform: translateY(-1px);
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
     }
 
-    .flow-link.active {
-      background: rgba(15, 77, 146, 0.1);
-      border-color: rgba(15, 77, 146, 0.35);
-      color: var(--brand-primary-strong);
+    .tab.active {
+      background: rgba(30, 64, 175, 0.1);
+      border-color: rgba(30, 64, 175, 0.35);
+      color: var(--primary);
     }
 
-    .field { margin-bottom: 0.85rem; }
+    .flow-helper {
+      margin: 0 0 0.95rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .alert {
+      margin: 0 0 0.95rem;
+      padding: 0.62rem 0.75rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+      display: none;
+    }
+
+    .alert.show { display: block; }
+    .alert.info { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+    .alert.success { background: #F0FDF4; color: var(--ok); border-color: #BBF7D0; }
+    .alert.error { background: #FEF2F2; color: var(--danger); border-color: #FECACA; }
+    .alert.warn { background: #FFF7ED; color: var(--warn); border-color: #FED7AA; }
+
+    .field { margin-bottom: 0.8rem; }
 
     .field label {
       display: block;
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin-bottom: 0.38rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #374151;
     }
 
-    .input,
-    .select {
+    .input {
       width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 0.72rem 0.85rem;
+      border: 1px solid #D1D5DB;
+      border-radius: 10px;
+      padding: 0.7rem 0.8rem;
       font-size: 0.95rem;
-      outline: none;
+      color: var(--text);
+      background: #FFFFFF;
       transition: border-color .2s ease, box-shadow .2s ease;
-      background: #fff;
-      color: #0f172a;
     }
 
-    .input:focus,
-    .select:focus {
-      border-color: var(--brand-primary);
-      box-shadow: 0 0 0 3px rgba(15, 77, 146, 0.14);
+    .input:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    }
+
+    .otp-note {
+      margin: 0.4rem 0 0;
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.45;
     }
 
     .btn {
       width: 100%;
       border: 0;
-      border-radius: 12px;
-      padding: 0.78rem 0.95rem;
-      font-weight: 800;
+      border-radius: 10px;
+      padding: 0.72rem 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(30, 64, 175, 0.2); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-soft));
       color: #fff;
-      background: linear-gradient(135deg, var(--brand-primary), #2563eb);
-      cursor: pointer;
-      margin-top: 0.2rem;
     }
 
-    .btn-secondary {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 0.78rem 0.95rem;
-      font-weight: 800;
-      color: var(--brand-primary-strong);
-      background: #fff;
-      cursor: pointer;
-      margin-top: 0.45rem;
+    .btn-outline {
+      margin-top: 0.55rem;
+      border: 1px solid #BFDBFE;
+      background: #FFFFFF;
+      color: var(--primary);
     }
 
-    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
-    .btn-secondary:disabled { opacity: 0.65; cursor: not-allowed; }
-
-    .field-note {
-      margin: 0.42rem 0 0;
+    .resend-countdown {
+      margin: 0.45rem 0 0;
       font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.45;
+      color: var(--muted);
     }
 
-    .inline-actions {
+    .context-link {
+      margin-top: 0.6rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .context-link button {
+      border: 0;
+      background: transparent;
+      color: var(--primary-soft);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: inherit;
+      padding: 0;
+    }
+
+    .social {
+      margin-top: 0.85rem;
+      border-top: 1px solid var(--line);
+      padding-top: 0.85rem;
+    }
+
+    .social .divider {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.83rem;
+      margin: 0 0 0.55rem;
+    }
+
+    .hidden { display: none !important; }
+
+    .toast-wrap {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 40;
       display: grid;
-      gap: 0.65rem;
-      margin-top: 0.2rem;
+      gap: 0.45rem;
+      width: min(360px, calc(100vw - 2rem));
+      pointer-events: none;
     }
 
-    .notice {
-      margin-top: 0.8rem;
-      font-size: 0.86rem;
-      min-height: 1.1rem;
+    .toast {
+      pointer-events: auto;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      padding: 0.62rem 0.72rem;
+      font-size: 0.84rem;
+      box-shadow: 0 14px 28px rgba(17, 24, 39, 0.16);
+      background: #fff;
+      color: var(--text);
+      animation: toastIn .2s ease;
     }
 
-    .notice.error { color: var(--danger); }
-    .notice.success { color: var(--ok); }
-    .notice.info { color: var(--text-muted); }
+    .toast.success { border-color: #86EFAC; background: #F0FDF4; color: var(--ok); }
+    .toast.error { border-color: #FCA5A5; background: #FEF2F2; color: var(--danger); }
+    .toast.info { border-color: #93C5FD; background: #EFF6FF; color: #1D4ED8; }
+    .toast.warn { border-color: #FDBA74; background: #FFF7ED; color: var(--warn); }
 
-    .hidden { display: none; }
+    @keyframes toastIn {
+      from { transform: translateY(-4px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
 
-    @media (max-width: 900px) {
-      .shell { grid-template-columns: 1fr; }
-      .brand { padding: 1.6rem 1.2rem; }
-      .brand h1 { font-size: 1.45rem; }
-      .panel { padding: 1.25rem 1.1rem 1.45rem; }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      .left {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 1.4rem 1.2rem;
+      }
+      .right { padding: 1.2rem 1rem 1.4rem; }
+      .left h1 { font-size: 1.45rem; }
+      .right h2 { font-size: 1.55rem; }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <section class="brand">
-      <img class="brand-logo" src="../assets/logo1.webp" alt="Hermida Maia Advocacia">
-      <div class="brand-eyebrow">Portal Hermida Maia</div>
-      <h1>Hermida Maia Advocacia</h1>
-      <p>Acesse sua conta com segurança e escolha a forma de entrada mais conveniente para o seu perfil.</p>
-      <ul>
-        <li>Código de verificação enviado por e-mail</li>
-        <li>Magic link para acesso sem senha</li>
-        <li>Cadastro, redefinição e atualização de senha</li>
+  <div class="layout">
+    <section class="left" aria-label="Informações do portal">
+      <div class="logo-line">
+        <img class="logo" src="../assets/logo1.webp" alt="Logotipo Hermida Maia Advocacia">
+        <span>Hermida Maia Advocacia</span>
+      </div>
+      <h1>Portal Hermida Maia</h1>
+      <p>Gerencie sua jornada jurídica com acesso seguro, rápido e com autenticação inteligente.</p>
+      <ul class="benefits">
+        <li class="benefit"><span class="dot">•</span><span>Código de verificação enviado por e-mail.</span></li>
+        <li class="benefit"><span class="dot">•</span><span>Magic link para acesso sem senha.</span></li>
+        <li class="benefit"><span class="dot">•</span><span>Cadastro, recuperação e atualização de senha.</span></li>
+        <li class="benefit"><span class="dot">•</span><span>Integração com login social via Google e Facebook.</span></li>
       </ul>
     </section>
 
-    <section class="panel">
-      <h2>Acesse sua conta com segurança.</h2>
-      <p id="flowHelper" class="subtitle">Escolha como deseja entrar no portal.</p>
+    <section class="right" aria-label="Formulário de autenticação">
+      <h2>Entrar no portal</h2>
 
-      <nav class="flow-links" aria-label="Fluxos de autenticação">
-        <a class="flow-link" href="?mode=password" data-auth-mode="password">Login com senha</a>
-        <a class="flow-link" href="?mode=register" data-auth-mode="register">Criar nova conta</a>
-        <a class="flow-link" href="?mode=magic" data-auth-mode="magic">Magic link</a>
-        <a class="flow-link" href="?mode=otp" data-auth-mode="otp">Verificar OTP</a>
-        <a class="flow-link" href="?mode=recover" data-auth-mode="recover">Recuperar senha</a>
-        <a class="flow-link" href="?mode=recover" data-auth-mode="recover">Redefinir senha</a>
-        <a class="flow-link" href="?mode=set-password" data-auth-mode="set-password">Definir nova senha</a>
-      </nav>
+      <div id="flowTabs" class="flow-tabs" role="tablist" aria-label="Fluxos de autenticação">
+        <button class="tab" type="button" data-mode="password" role="tab">Entrar</button>
+        <button class="tab" type="button" data-mode="magic" role="tab">Magic link</button>
+        <button class="tab" type="button" data-mode="otp" role="tab">Verificar OTP</button>
+        <button class="tab" type="button" data-mode="register" role="tab">Criar conta</button>
+        <button class="tab" type="button" data-mode="recover" role="tab">Recuperar senha</button>
+        <button class="tab" type="button" data-mode="reset-password" role="tab">Redefinir senha</button>
+        <button class="tab" type="button" data-mode="set-password" role="tab">Definir nova senha</button>
+      </div>
 
-      <form id="loginForm" novalidate>
-        <div class="field">
-          <label for="authMode">Como deseja acessar?</label>
-          <select id="authMode" class="select">
-            <option value="password">Login com senha</option>
-            <option value="register">Criar nova conta</option>
-            <option value="magic">Magic link</option>
-            <option value="otp">Código por e-mail</option>
-            <option value="recover">Recuperar senha</option>
-            <option value="set-password">Definir nova senha</option>
-          </select>
-        </div>
+      <p id="flowHelper" class="flow-helper"></p>
+      <div id="inlineAlert" class="alert" aria-live="polite" role="status"></div>
 
-        <div class="field" id="nameField">
+      <form id="authForm" novalidate>
+        <div id="nameField" class="field hidden">
           <label for="fullName">Nome completo</label>
-          <input id="fullName" class="input" type="text" placeholder="Seu nome completo">
+          <input id="fullName" class="input" type="text" autocomplete="name" placeholder="Seu nome completo">
         </div>
 
-        <div class="field" id="emailField">
+        <div id="emailField" class="field">
           <label for="email">E-mail</label>
-          <input id="email" class="input" type="email" placeholder="seu@email.com" autocomplete="email">
+          <input id="email" class="input" type="email" autocomplete="email" placeholder="seu@email.com">
         </div>
 
-        <div class="field" id="otpField">
-          <label for="otp">Código de verificação</label>
-          <input id="otp" class="input" type="text" placeholder="000000" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-          <p id="otpFieldHint" class="field-note">Digite o código enviado para seu e-mail.</p>
+        <div id="otpField" class="field hidden">
+          <label for="otp">Código OTP</label>
+          <input id="otp" class="input" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+          <p class="otp-note">Digite o código enviado para seu e-mail.</p>
         </div>
 
-        <div class="field" id="passwordField">
+        <div id="passwordField" class="field hidden">
           <label for="password">Senha</label>
-          <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
-          <p id="passwordAssist" class="field-note hidden">Se você for o usuário administrador, também pode usar a senha padrão neste fluxo.</p>
+          <input id="password" class="input" type="password" autocomplete="current-password" placeholder="••••••••">
         </div>
 
-        <div class="field" id="confirmPasswordField">
+        <div id="confirmPasswordField" class="field hidden">
           <label for="confirmPassword">Confirmar senha</label>
-          <input id="confirmPassword" class="input" type="password" placeholder="Repita a senha">
+          <input id="confirmPassword" class="input" type="password" autocomplete="new-password" placeholder="Repita sua senha">
         </div>
 
-        <div id="otpActions" class="inline-actions hidden">
-          <button id="resendOtpBtn" class="btn-secondary" type="button">Solicitar novamente código</button>
-          <button id="changeEmailBtn" class="btn-secondary" type="button">Alterar e-mail</button>
+        <button id="submitBtn" class="btn btn-primary" type="submit"></button>
+
+        <div id="otpExtraActions" class="hidden">
+          <button id="resendOtpBtn" class="btn btn-outline" type="button">Solicitar novamente código</button>
+          <p id="resendCountdown" class="resend-countdown hidden"></p>
         </div>
 
-        <button id="submitBtn" class="btn" type="submit">Continuar</button>
-        <div id="statusMsg" class="notice info" aria-live="polite" role="status">Verificando sua sessão...</div>
+        <div id="contextLink" class="context-link"></div>
+
+        <div class="social">
+          <p class="divider">ou continue com</p>
+          <button id="googleBtn" class="btn btn-outline" type="button">Entrar com Google</button>
+          <button id="facebookBtn" class="btn btn-outline" type="button">Entrar com Facebook</button>
+        </div>
       </form>
     </section>
   </div>
+
+  <div id="toastWrap" class="toast-wrap" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../js/runtime-config.js"></script>
   <script src="../js/auth-manager.js"></script>
@@ -342,413 +406,456 @@
 
     const ADMIN_EMAIL = 'adrianohermida@gmail.com';
     const OTP_RESEND_SECONDS = 60;
+    const MODES = ['password', 'magic', 'otp', 'register', 'recover', 'reset-password', 'set-password'];
 
-    function getModeFromUrl() {
+    const modeConfig = {
+      password: {
+        helper: 'Use seu e-mail e senha para acessar sua conta.',
+        title: 'Entrar no portal',
+        submit: 'Entrar com senha',
+        fields: { name: false, email: true, otp: false, password: true, confirm: false },
+        context: '<button type="button" data-mode-link="recover">Esqueceu sua senha?</button>',
+      },
+      magic: {
+        helper: 'Enviaremos um link seguro para seu e-mail.',
+        title: 'Entrar no portal',
+        submit: 'Enviar magic link',
+        fields: { name: false, email: true, otp: false, password: false, confirm: false },
+        context: '<button type="button" data-mode-link="password">Voltar para login com senha</button>',
+      },
+      otp: {
+        helper: 'Informe seu e-mail para receber um código de verificação.',
+        title: 'Entrar no portal',
+        submit: 'Enviar código',
+        fields: { name: false, email: true, otp: false, password: false, confirm: false },
+        context: '<button type="button" data-mode-link="password">Entrar com senha</button>',
+      },
+      register: {
+        helper: 'Crie sua conta para acessar o portal.',
+        title: 'Criar nova conta',
+        submit: 'Criar nova conta',
+        fields: { name: true, email: true, otp: false, password: true, confirm: true },
+        context: 'Já possui uma conta? <button type="button" data-mode-link="password">Entrar</button>',
+      },
+      recover: {
+        helper: 'Se o e-mail existir, enviaremos instruções para recuperação.',
+        title: 'Recuperar senha',
+        submit: 'Enviar instruções',
+        fields: { name: false, email: true, otp: false, password: false, confirm: false },
+        context: '<button type="button" data-mode-link="password">Voltar para Entrar</button>',
+      },
+      'reset-password': {
+        helper: 'Use o código OTP para redefinir sua senha.',
+        title: 'Redefinir senha',
+        submit: 'Atualizar senha',
+        fields: { name: false, email: true, otp: true, password: true, confirm: true },
+        context: '<button type="button" data-mode-link="recover">Não recebeu o código? Recuperar senha</button>',
+      },
+      'set-password': {
+        helper: 'Defina uma nova senha para concluir o acesso.',
+        title: 'Definir nova senha',
+        submit: 'Salvar nova senha',
+        fields: { name: false, email: false, otp: false, password: true, confirm: true },
+        context: '',
+      },
+    };
+
+    function readModeFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      const mode = params.get('mode') || '';
+      const mode = String(params.get('mode') || '').trim();
       if (mode === 'recovery') return 'set-password';
-      return mode;
+      return MODES.includes(mode) ? mode : 'password';
     }
 
-    async function redirectByRole() {
-      window.location.href = window.AuthManager.getRedirectPath();
+    function writeModeToUrl(mode) {
+      const url = new URL(window.location.href);
+      if (mode === 'password') url.searchParams.delete('mode');
+      else url.searchParams.set('mode', mode);
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    function normalizeEmail(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+    }
+
+    function mapAuthError(error, mode) {
+      const raw = String((error && error.message) || '').trim();
+      const lower = raw.toLowerCase();
+      if (!raw) return 'Verifique seus dados e tente novamente.';
+      if (mode === 'otp' && (lower.includes('otp') || lower.includes('token') || lower.includes('code'))) return 'Código incorreto ou expirado.';
+      if (lower.includes('invalid login credentials')) return 'Verifique seus dados e tente novamente.';
+      if (lower.includes('email not confirmed')) return 'Confirme seu e-mail para concluir o acesso.';
+      return raw;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const form = document.getElementById('loginForm');
+      const tabs = Array.from(document.querySelectorAll('.tab'));
+      const title = document.querySelector('.right h2');
+      const helper = document.getElementById('flowHelper');
+      const inlineAlert = document.getElementById('inlineAlert');
+      const contextLink = document.getElementById('contextLink');
       const submitBtn = document.getElementById('submitBtn');
-      const authMode = document.getElementById('authMode');
-      const flowHelper = document.getElementById('flowHelper');
-      const statusMsg = document.getElementById('statusMsg');
-      const flowLinks = Array.from(document.querySelectorAll('[data-auth-mode]'));
-      const fullNameInput = document.getElementById('fullName');
-      const emailInput = document.getElementById('email');
-      const otpInput = document.getElementById('otp');
-      const passwordInput = document.getElementById('password');
-      const confirmPasswordInput = document.getElementById('confirmPassword');
+      const form = document.getElementById('authForm');
+      const toastWrap = document.getElementById('toastWrap');
+      const googleBtn = document.getElementById('googleBtn');
+      const facebookBtn = document.getElementById('facebookBtn');
       const resendOtpBtn = document.getElementById('resendOtpBtn');
-      const changeEmailBtn = document.getElementById('changeEmailBtn');
-      const passwordAssist = document.getElementById('passwordAssist');
+      const resendCountdown = document.getElementById('resendCountdown');
+      const otpExtraActions = document.getElementById('otpExtraActions');
 
-      let otpRequestedEmail = '';
+      const fields = {
+        name: document.getElementById('nameField'),
+        email: document.getElementById('emailField'),
+        otp: document.getElementById('otpField'),
+        password: document.getElementById('passwordField'),
+        confirm: document.getElementById('confirmPasswordField'),
+      };
+
+      const inputs = {
+        fullName: document.getElementById('fullName'),
+        email: document.getElementById('email'),
+        otp: document.getElementById('otp'),
+        password: document.getElementById('password'),
+        confirmPassword: document.getElementById('confirmPassword'),
+      };
+
+      let currentMode = readModeFromUrl();
+      let otpRequestedFor = '';
       let otpCooldownEndsAt = 0;
-      let otpCountdownTimer = null;
+      let otpTimer = null;
 
-      function normalizeEmail(value) {
-        return String(value || '').trim().toLowerCase();
+      function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type || 'info'}`;
+        toast.textContent = message;
+        toastWrap.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 4200);
       }
 
-      function setStatus(message, type = 'info') {
-        statusMsg.textContent = message;
-        statusMsg.className = `notice ${type}`;
-        statusMsg.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      function showAlert(message, type) {
+        inlineAlert.textContent = message;
+        inlineAlert.className = `alert ${type || 'info'} show`;
+        inlineAlert.setAttribute('role', type === 'error' ? 'alert' : 'status');
       }
 
-      function setVisible(id, visible) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.classList.toggle('hidden', !visible);
+      function hideAlert() {
+        inlineAlert.textContent = '';
+        inlineAlert.className = 'alert';
       }
 
-      function mapAuthError(error, mode) {
-        const message = String((error && error.message) || 'Não foi possível concluir sua solicitação.').trim();
-        const lower = message.toLowerCase();
-        if (mode === 'otp' && (lower.includes('otp') || lower.includes('code') || lower.includes('token'))) {
-          return 'Código incorreto ou expirado. Tente novamente.';
-        }
-        if (lower.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
-        if (lower.includes('email not confirmed')) return 'Confirme seu e-mail antes de acessar a conta.';
-        if (lower.includes('sessão não encontrada')) return 'Abra o link enviado por e-mail para definir sua nova senha.';
-        return message || 'Não foi possível concluir sua solicitação.';
+      function setFieldVisibility(name, visible) {
+        fields[name].classList.toggle('hidden', !visible);
       }
 
-      function updateUrlMode(mode) {
-        const url = new URL(window.location.href);
-        if (mode && mode !== 'password') {
-          url.searchParams.set('mode', mode);
-        } else {
-          url.searchParams.delete('mode');
-        }
-        window.history.replaceState({}, '', url.toString());
-      }
-
-      function clearOtpTimer() {
-        if (otpCountdownTimer) {
-          window.clearInterval(otpCountdownTimer);
-          otpCountdownTimer = null;
-        }
-      }
-
-      function resetOtpState(clearCode = true) {
-        otpRequestedEmail = '';
-        otpCooldownEndsAt = 0;
-        clearOtpTimer();
-        if (clearCode) otpInput.value = '';
-      }
-
-      function getOtpCooldownRemaining() {
+      function getCooldownRemaining() {
         return Math.max(0, Math.ceil((otpCooldownEndsAt - Date.now()) / 1000));
       }
 
-      function getModeConfig(mode) {
-        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
-        const map = {
-          password: {
-            name: false,
-            email: true,
-            otp: false,
-            password: true,
-            confirm: false,
-            label: 'Entrar com senha',
-            helper: 'Use seu e-mail e senha para entrar no portal.',
-          },
-          register: {
-            name: true,
-            email: true,
-            otp: false,
-            password: true,
-            confirm: true,
-            label: 'Criar conta',
-            helper: 'Preencha os dados abaixo para criar sua conta.',
-          },
-          magic: {
-            name: false,
-            email: true,
-            otp: false,
-            password: false,
-            confirm: false,
-            label: 'Enviar magic link',
-            helper: 'Enviaremos um link seguro para o seu e-mail.',
-          },
-          otp: {
-            name: false,
-            email: true,
-            otp: otpStepActive,
-            password: false,
-            confirm: false,
-            label: otpStepActive ? 'Verificar código' : 'Enviar código',
-            helper: otpStepActive
-              ? 'Digite o código enviado para seu e-mail.'
-              : 'Informe seu e-mail para receber um código de verificação.',
-          },
-          recover: {
-            name: false,
-            email: true,
-            otp: false,
-            password: false,
-            confirm: false,
-            label: 'Enviar instruções',
-            helper: 'Enviaremos as instruções para redefinir sua senha.',
-          },
-          'set-password': {
-            name: false,
-            email: false,
-            otp: false,
-            password: true,
-            confirm: true,
-            label: 'Salvar nova senha',
-            helper: 'Defina sua nova senha para concluir o acesso.',
-          },
-        };
-        return map[mode] || map.password;
+      function stopOtpTimer() {
+        if (otpTimer) {
+          window.clearInterval(otpTimer);
+          otpTimer = null;
+        }
       }
 
-      function updateModeLinks(mode) {
-        flowLinks.forEach(link => {
-          link.classList.toggle('active', link.dataset.authMode === mode);
-          link.setAttribute('aria-current', link.dataset.authMode === mode ? 'page' : 'false');
-        });
-      }
+      function refreshOtpCountdown() {
+        const shouldShow = currentMode === 'otp' && Boolean(otpRequestedFor);
+        otpExtraActions.classList.toggle('hidden', !shouldShow);
 
-      function updatePasswordAssist(mode) {
-        setVisible('passwordAssist', mode === 'password' && normalizeEmail(emailInput.value) === ADMIN_EMAIL);
-      }
-
-      function updateOtpActions(mode) {
-        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
-        setVisible('otpActions', otpStepActive);
-        if (!otpStepActive) {
+        if (!shouldShow) {
+          resendCountdown.classList.add('hidden');
           resendOtpBtn.disabled = true;
           resendOtpBtn.textContent = 'Solicitar novamente código';
           return;
         }
 
-        const remaining = getOtpCooldownRemaining();
-        resendOtpBtn.disabled = remaining > 0 || submitBtn.disabled;
-        resendOtpBtn.textContent = remaining > 0
-          ? `Solicitar novamente código em ${remaining}s`
-          : 'Solicitar novamente código';
+        const remaining = getCooldownRemaining();
+        resendOtpBtn.disabled = remaining > 0;
+        resendOtpBtn.textContent = 'Solicitar novamente código';
+
+        if (remaining > 0) {
+          resendCountdown.classList.remove('hidden');
+          resendCountdown.textContent = `Aguarde ${remaining} segundos para reenviar.`;
+        } else {
+          resendCountdown.classList.add('hidden');
+          resendCountdown.textContent = '';
+          stopOtpTimer();
+        }
       }
 
       function startOtpCooldown() {
         otpCooldownEndsAt = Date.now() + (OTP_RESEND_SECONDS * 1000);
-        clearOtpTimer();
-        otpCountdownTimer = window.setInterval(() => {
-          updateOtpActions(authMode.value);
-          if (getOtpCooldownRemaining() <= 0) {
-            clearOtpTimer();
-          }
-        }, 1000);
-        updateOtpActions(authMode.value);
+        stopOtpTimer();
+        otpTimer = window.setInterval(refreshOtpCountdown, 1000);
+        refreshOtpCountdown();
       }
 
-      function focusCurrentField(mode) {
-        const otpStepActive = mode === 'otp' && otpRequestedEmail && otpRequestedEmail === normalizeEmail(emailInput.value);
-        let target = emailInput;
-        if (mode === 'register') target = fullNameInput;
-        if (mode === 'set-password') target = passwordInput;
-        if (mode === 'password' && normalizeEmail(emailInput.value)) target = passwordInput;
-        if (otpStepActive) target = otpInput;
-        window.requestAnimationFrame(() => target && target.focus());
-      }
+      function applyMode(mode, fromUser) {
+        currentMode = mode;
+        const cfg = modeConfig[mode] || modeConfig.password;
 
-      function applyMode(mode, options = {}) {
-        const keepOtpState = Boolean(options.keepOtpState);
-        if (mode !== 'otp' && !keepOtpState) {
-          resetOtpState(false);
+        title.textContent = cfg.title;
+        helper.textContent = cfg.helper;
+        submitBtn.textContent = cfg.submit;
+
+        setFieldVisibility('name', cfg.fields.name);
+        setFieldVisibility('email', cfg.fields.email);
+        setFieldVisibility('otp', cfg.fields.otp);
+        setFieldVisibility('password', cfg.fields.password);
+        setFieldVisibility('confirm', cfg.fields.confirm);
+
+        tabs.forEach(tab => {
+          const active = tab.dataset.mode === mode;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-selected', String(active));
+        });
+
+        contextLink.innerHTML = cfg.context || '';
+        contextLink.classList.toggle('hidden', !cfg.context);
+
+        if (mode !== 'otp') {
+          otpRequestedFor = '';
+          stopOtpTimer();
+          resendCountdown.classList.add('hidden');
+          otpExtraActions.classList.add('hidden');
+          inputs.otp.value = '';
         }
-        if (mode === 'otp' && otpRequestedEmail && otpRequestedEmail !== normalizeEmail(emailInput.value)) {
-          resetOtpState();
-        }
 
-        const config = getModeConfig(mode);
-        setVisible('nameField', config.name);
-        setVisible('emailField', config.email);
-        setVisible('otpField', config.otp);
-        setVisible('passwordField', config.password);
-        setVisible('confirmPasswordField', config.confirm);
-        submitBtn.textContent = config.label;
-        flowHelper.textContent = config.helper;
-        updateModeLinks(mode);
-        updatePasswordAssist(mode);
-        updateOtpActions(mode);
-        if (options.updateHistory !== false) {
-          updateUrlMode(mode);
-        }
-        focusCurrentField(mode);
+        refreshOtpCountdown();
+        writeModeToUrl(mode);
+        if (fromUser) hideAlert();
+
+        const focusTarget = mode === 'register' ? inputs.fullName : mode === 'set-password' ? inputs.password : mode === 'otp' && otpRequestedFor ? inputs.otp : inputs.email;
+        window.requestAnimationFrame(() => focusTarget && focusTarget.focus());
       }
 
-      const initialMode = getModeFromUrl();
-      if (initialMode) authMode.value = initialMode;
-      applyMode(authMode.value);
-
-      try {
-        await window.AuthManager.init();
-        setStatus('Informe seus dados para continuar.', 'info');
-      } catch (initError) {
-        setStatus(
-          (initError && initError.message) ||
-            'Configuração de autenticação inválida. Tente novamente em instantes.',
-          'error'
-        );
-        return;
+      function validateBasicEmail(email) {
+        if (!email) throw new Error('Informe seu e-mail para continuar.');
+        if (!isValidEmail(email)) throw new Error('Digite um e-mail válido.');
       }
 
-      if (window.AuthManager.currentUser && authMode.value !== 'set-password') {
-        await redirectByRole();
-        return;
-      }
-
-      authMode.addEventListener('change', () => {
-        applyMode(authMode.value);
-        setStatus('Acesse sua conta com segurança.', 'info');
-      });
-
-      flowLinks.forEach(link => {
-        link.addEventListener('click', event => {
-          event.preventDefault();
-          const mode = link.dataset.authMode || 'password';
-          authMode.value = mode;
-          applyMode(mode);
-          setStatus('Acesse sua conta com segurança.', 'info');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          applyMode(tab.dataset.mode, true);
         });
       });
 
-      emailInput.addEventListener('input', () => {
-        updatePasswordAssist(authMode.value);
-        if (authMode.value === 'otp' && otpRequestedEmail && otpRequestedEmail !== normalizeEmail(emailInput.value)) {
-          resetOtpState();
-          applyMode('otp', { updateHistory: false, keepOtpState: true });
-          setStatus('Se desejar continuar com outro e-mail, solicite um novo código.', 'info');
-        }
+      contextLink.addEventListener('click', event => {
+        const target = event.target;
+        if (!(target instanceof HTMLButtonElement)) return;
+        const nextMode = target.getAttribute('data-mode-link');
+        if (!nextMode || !MODES.includes(nextMode)) return;
+        applyMode(nextMode, true);
       });
 
-      otpInput.addEventListener('input', () => {
-        otpInput.value = String(otpInput.value || '').replace(/\D+/g, '').slice(0, 6);
+      inputs.otp.addEventListener('input', () => {
+        inputs.otp.value = String(inputs.otp.value || '').replace(/\D+/g, '').slice(0, 6);
       });
 
       resendOtpBtn.addEventListener('click', async () => {
-        const email = (emailInput.value || '').trim();
-        if (!email) {
-          setStatus('Informe o e-mail para solicitar um novo código.', 'error');
-          emailInput.focus();
+        if (currentMode !== 'otp') return;
+        const email = String(inputs.email.value || '').trim();
+        const remaining = getCooldownRemaining();
+        if (remaining > 0) {
+          showAlert(`Aguarde ${remaining} segundos para reenviar.`, 'warn');
           return;
         }
 
-        if (getOtpCooldownRemaining() > 0) {
-          setStatus('Aguarde um momento antes de solicitar novo código.', 'info');
-          return;
-        }
-
-        resendOtpBtn.disabled = true;
         try {
+          validateBasicEmail(email);
+          resendOtpBtn.disabled = true;
           await window.AuthManager.sendOtp(email);
-          otpRequestedEmail = normalizeEmail(email);
+          otpRequestedFor = normalizeEmail(email);
           startOtpCooldown();
-          setStatus('Se o e-mail informado existir na base de dados, você receberá um código de verificação.', 'success');
-          otpInput.focus();
+          showAlert('Se o e-mail informado existir, enviaremos um código de verificação.', 'success');
+          showToast('Código solicitado com sucesso.', 'success');
+          inputs.otp.focus();
         } catch (error) {
-          console.error('[login] resend otp failed', { email, error });
-          setStatus(mapAuthError(error, 'otp'), 'error');
-        } finally {
-          updateOtpActions(authMode.value);
+          const message = mapAuthError(error, 'otp');
+          showAlert(message, 'error');
+          showToast(message, 'error');
+          console.error('[login] otp resend failed', { email, error });
         }
       });
 
-      changeEmailBtn.addEventListener('click', () => {
-        resetOtpState();
-        applyMode('otp', { updateHistory: false, keepOtpState: true });
-        setStatus('Informe o e-mail para receber um novo código de verificação.', 'info');
-        emailInput.focus();
+      googleBtn.addEventListener('click', async () => {
+        googleBtn.disabled = true;
+        try {
+          await window.AuthManager.signInWithProvider('google');
+        } catch (error) {
+          const message = mapAuthError(error, currentMode);
+          showAlert(message, 'error');
+          showToast(message, 'error');
+        } finally {
+          googleBtn.disabled = false;
+        }
       });
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
+      facebookBtn.addEventListener('click', async () => {
+        facebookBtn.disabled = true;
+        try {
+          await window.AuthManager.signInWithProvider('facebook');
+        } catch (error) {
+          const message = mapAuthError(error, currentMode);
+          showAlert(message, 'error');
+          showToast(message, 'error');
+        } finally {
+          facebookBtn.disabled = false;
+        }
+      });
 
-        const mode = authMode.value;
-        const email = (emailInput.value || '').trim();
-        const otp = (otpInput.value || '').trim();
-        const password = passwordInput.value || '';
-        const confirmPassword = confirmPasswordInput.value || '';
-        const fullName = (fullNameInput.value || '').trim();
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        hideAlert();
+
+        const values = {
+          fullName: String(inputs.fullName.value || '').trim(),
+          email: String(inputs.email.value || '').trim(),
+          otp: String(inputs.otp.value || '').trim(),
+          password: String(inputs.password.value || ''),
+          confirmPassword: String(inputs.confirmPassword.value || ''),
+        };
 
         submitBtn.disabled = true;
-        updateOtpActions(mode);
-        setStatus('Processando sua solicitação...', 'info');
+        refreshOtpCountdown();
 
         try {
-          if (mode === 'password') {
-            if (!email || !password) throw new Error('Informe e-mail e senha para continuar.');
-            await window.AuthManager.login(email, password);
-            setStatus('Acesso confirmado. Redirecionando...', 'success');
+          if (currentMode === 'password') {
+            validateBasicEmail(values.email);
+            if (!values.password) throw new Error('Informe sua senha para continuar.');
+            await window.AuthManager.login(values.email, values.password);
+            showToast('Acesso realizado com sucesso.', 'success');
             await redirectByRole();
             return;
           }
 
-          if (mode === 'register') {
-            if (!email || !password) throw new Error('Informe e-mail e senha para criar sua conta.');
-            if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
-            const metadata = fullName ? { nome: fullName, full_name: fullName } : {};
-            const data = await window.AuthManager.register(email, password, metadata);
-            if (data?.session) {
-              setStatus('Conta criada com sucesso. Redirecionando...', 'success');
+          if (currentMode === 'magic') {
+            validateBasicEmail(values.email);
+            await window.AuthManager.sendMagicLink(values.email);
+            showAlert('Link enviado! Verifique seu e-mail.', 'success');
+            showToast('Magic link enviado.', 'success');
+            return;
+          }
+
+          if (currentMode === 'otp') {
+            validateBasicEmail(values.email);
+            const normalizedEmail = normalizeEmail(values.email);
+
+            if (!otpRequestedFor || otpRequestedFor !== normalizedEmail) {
+              await window.AuthManager.sendOtp(values.email);
+              otpRequestedFor = normalizedEmail;
+              startOtpCooldown();
+              setFieldVisibility('otp', true);
+              submitBtn.textContent = 'Verificar código';
+              showAlert('Se o e-mail informado existir, enviaremos um código de verificação.', 'success');
+              showToast('Código enviado.', 'success');
+              inputs.otp.focus();
+              return;
+            }
+
+            if (!values.otp || values.otp.length !== 6) {
+              throw new Error('Digite um código OTP válido de 6 dígitos.');
+            }
+
+            await window.AuthManager.verifyOtp(values.email, values.otp, 'email');
+            showToast('Código verificado com sucesso.', 'success');
+            await redirectByRole();
+            return;
+          }
+
+          if (currentMode === 'register') {
+            validateBasicEmail(values.email);
+            if (!values.fullName) throw new Error('Informe seu nome completo.');
+            if (!values.password) throw new Error('Informe uma senha para criar sua conta.');
+            if (values.password !== values.confirmPassword) throw new Error('As senhas não coincidem.');
+
+            const payload = await window.AuthManager.register(values.email, values.password, {
+              nome: values.fullName,
+              full_name: values.fullName,
+            });
+
+            if (payload && payload.session) {
+              showToast('Conta criada com sucesso.', 'success');
               await redirectByRole();
               return;
             }
-            setStatus('Conta criada. Verifique seu e-mail para confirmar o cadastro.', 'success');
-          }
 
-          if (mode === 'magic') {
-            if (!email) throw new Error('Informe o e-mail para enviar o magic link.');
-            const magicFn = window.AuthManager.sendMagicLink || window.AuthManager.sendOtp;
-            if (typeof magicFn !== 'function') {
-              throw new Error('Fluxo magic link indisponível nesta versão de autenticação.');
-            }
-            await magicFn.call(window.AuthManager, email);
-            setStatus('Se o e-mail informado existir na base de dados, você receberá um link de acesso.', 'success');
-          }
-
-          if (mode === 'otp') {
-            if (!email) throw new Error('Informe o e-mail para continuar.');
-
-            const normalizedEmail = normalizeEmail(email);
-            const otpStepActive = otpRequestedEmail && otpRequestedEmail === normalizedEmail;
-            if (!otpStepActive) {
-              await window.AuthManager.sendOtp(email);
-              otpRequestedEmail = normalizedEmail;
-              startOtpCooldown();
-              applyMode('otp', { updateHistory: false, keepOtpState: true });
-              setStatus('Se o e-mail informado existir na base de dados, você receberá um código de verificação.', 'success');
-              return;
-            }
-
-            if (!otp || otp.length !== 6) {
-              throw new Error('Digite o código de 6 dígitos enviado para o seu e-mail.');
-            }
-
-            await window.AuthManager.verifyOtp(email, otp, 'email');
-            setStatus('Código verificado. Redirecionando...', 'success');
-            await redirectByRole();
+            showAlert('Conta criada com sucesso! Verifique seu e-mail.', 'success');
+            showToast('Cadastro concluído.', 'success');
             return;
           }
 
-          if (mode === 'recover') {
-            if (!email) throw new Error('Informe o e-mail para recuperar sua senha.');
-            await window.AuthManager.requestPasswordRecovery(email);
-            setStatus('Se o e-mail informado existir na base de dados, você receberá as instruções para redefinir sua senha.', 'success');
+          if (currentMode === 'recover') {
+            validateBasicEmail(values.email);
+            await window.AuthManager.requestPasswordRecovery(values.email);
+            showAlert('Se o e-mail existir, enviaremos instruções.', 'success');
+            showToast('Link enviado! Verifique seu e-mail.', 'success');
+            return;
           }
 
-          if (mode === 'set-password') {
-            if (!password) throw new Error('Informe a nova senha.');
-            if (password !== confirmPassword) throw new Error('As senhas digitadas não coincidem.');
-            await window.AuthManager.updatePassword(password);
-            setStatus('Senha redefinida com sucesso. Redirecionando...', 'success');
+          if (currentMode === 'reset-password') {
+            validateBasicEmail(values.email);
+            if (!values.otp || values.otp.length !== 6) throw new Error('Informe o código OTP de 6 dígitos.');
+            if (!values.password) throw new Error('Informe sua nova senha.');
+            if (values.password !== values.confirmPassword) throw new Error('As senhas não coincidem.');
+
+            await window.AuthManager.verifyOtp(values.email, values.otp, 'email');
+            await window.AuthManager.updatePassword(values.password);
+            showAlert('Senha redefinida com sucesso.', 'success');
+            showToast('Senha redefinida com sucesso.', 'success');
+            applyMode('password', true);
+            return;
+          }
+
+          if (currentMode === 'set-password') {
+            if (!values.password) throw new Error('Informe sua nova senha.');
+            if (values.password !== values.confirmPassword) throw new Error('As senhas não coincidem.');
+
+            await window.AuthManager.updatePassword(values.password);
+            showAlert('Senha atualizada.', 'success');
+            showToast('Senha atualizada.', 'success');
             await redirectByRole();
             return;
           }
         } catch (error) {
-          console.error('[login] authentication failed', {
-            mode,
-            email: normalizeEmail(email),
+          const message = mapAuthError(error, currentMode);
+          showAlert(message, 'error');
+          showToast(message, 'error');
+          console.error('[login] authentication flow failed', {
+            mode: currentMode,
+            email: normalizeEmail(values.email),
+            isAdmin: normalizeEmail(values.email) === ADMIN_EMAIL,
             error,
           });
-          setStatus(mapAuthError(error, mode), 'error');
         } finally {
           submitBtn.disabled = false;
-          updateOtpActions(mode);
+          refreshOtpCountdown();
         }
       });
+
+      applyMode(currentMode, false);
+
+      try {
+        await window.AuthManager.init();
+      } catch (error) {
+        const message = mapAuthError(error, currentMode);
+        showAlert(message, 'error');
+        showToast(message, 'error');
+        return;
+      }
+
+      if (window.AuthManager.currentUser && currentMode !== 'set-password') {
+        await redirectByRole();
+      }
     });
+
+    async function redirectByRole() {
+      window.location.href = window.AuthManager.getRedirectPath();
+    }
   </script>
 </body>
 </html>
