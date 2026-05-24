@@ -5,7 +5,7 @@ workers_dev = false
 
 # Domínio customizado
 routes = [
-  { pattern = "api.hermidamaia.adv.br/*", custom_domain = true }
+  { pattern = "api.hermidamaia.adv.br", custom_domain = true }
 ]
 
 # Variáveis públicas (não-sigilosas)
