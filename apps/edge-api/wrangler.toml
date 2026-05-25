@@ -12,9 +12,7 @@ routes = [
 [vars]
 SITE_URL = "https://hermidamaia.adv.br"
 
-# Cron jobs: limpeza de agendamentos expirados
-[triggers]
-crons = ["0 */6 * * *", "0 7 * * *"]
+
 
 # Segredos esperados (devem ser registrados via Dashboard ou `wrangler secret put`):
 #   SUPABASE_URL
