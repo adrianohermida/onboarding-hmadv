@@ -40,4 +40,12 @@ echo "Executando build em apps/web..."
 cd apps/web
 npm run build
 
+# Volta para a raiz do repositório
+cd "$REPO_ROOT"
+
+# Deploy do worker Cloudflare
+echo "Fazendo deploy do worker hmadv-api..."
+cd apps/edge-api
+npx wrangler deploy
+
 echo "Deploy concluído com sucesso!"
