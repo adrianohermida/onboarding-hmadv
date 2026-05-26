@@ -44,7 +44,9 @@
       "Bash(node -e \"const fs=require\\('fs'\\); JSON.parse\\(fs.readFileSync\\('D:/Github/onboarding-hmadv/.claude/settings.json','utf8'\\)\\); console.log\\('JSON válido'\\)\")",
       "Bash(Get-ChildItem \"D:\\\\Github\\\\onboarding-hmadv\\\\apps\\\\web\\\\src\" -Directory)",
       "Bash(Select-Object Name)",
-      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_projects"
+      "mcp__379012c7-f974-4f93-9308-4064fd7aa428__list_projects",
+      "Bash(where wrangler *)",
+      "Bash(npx wrangler *)"
     ]
   }
 }
