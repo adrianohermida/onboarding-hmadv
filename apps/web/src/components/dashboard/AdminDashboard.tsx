@@ -54,8 +54,8 @@ function useAdminCounts() {
           .schema('judiciario')
           .from('audiencias')
           .select('id', { count: 'exact', head: true })
-          .gte('data_hora', hoje)
-          .lte('data_hora', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+          .gte('data_audiencia', hoje)
+          .lte('data_audiencia', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
           .neq('situacao', 'cancelada')
           .catch(() => ({ count: 0 })),
       ]);

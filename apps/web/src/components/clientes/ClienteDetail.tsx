@@ -19,7 +19,13 @@ import { cn } from '@/lib/utils';
 
 type Caso = Tables<'portal_casos'>;
 type Doc = Pick<Tables<'portal_documentos'>, 'id' | 'tipo' | 'workflow_status' | 'direction' | 'require_signature' | 'created_at' | 'updated_at'> & { nome_arquivo: string | null };
-type TimelineItem = Pick<Tables<'portal_timeline'>, 'id' | 'event_type' | 'title' | 'description' | 'created_at' | 'metadata'>;
+interface TimelineItem {
+  id: string;
+  evento_tipo: string;
+  descricao: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
 
 interface Tarefa {
   id: string;
@@ -495,10 +501,12 @@ export default function ClienteDetail({ caso, docs, timeline, tarefas, custas, c
                   </div>
                   <div className="pb-4 flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium">{item.title || item.event_type}</p>
+                      <p className="text-sm font-medium">{item.descricao || item.evento_tipo}</p>
                       <p className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{formatDate(item.created_at)}</p>
                     </div>
-                    {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
+                    {item.descricao && item.evento_tipo && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">{item.evento_tipo}</p>
+                    )}
                   </div>
                 </div>
               ))}

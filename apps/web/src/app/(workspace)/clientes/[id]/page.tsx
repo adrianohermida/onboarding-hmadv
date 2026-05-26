@@ -34,9 +34,9 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
-      .from('portal_timeline')
-      .select('id, event_type, title, description, created_at, metadata')
-      .eq('user_id', params.id)
+      .from('portal_cnj_timeline')
+      .select('id, evento_tipo, descricao, payload, created_at')
+      .eq('caso_id', caso.id)
       .order('created_at', { ascending: false })
       .limit(30),
     supabase
