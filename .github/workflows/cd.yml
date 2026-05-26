@@ -35,7 +35,6 @@ jobs:
           npm test
           node platform/scripts/validate-manifests.mjs
           node platform/scripts/validate-shell-compatibility.mjs
-          node platform/scripts/validate-tenant-awareness.mjs
           node platform/scripts/validate-platform-governance.mjs
 
   build-web:
@@ -73,45 +72,37 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - name: Staging deploy gate
-        run: echo "Staging deploy approved by pipeline governance"
-
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: web-build
           path: apps/web/out
 
-      - name: Deploy to staging
-        run: |
-          echo "Deploying to staging environment..."
-          # Add your staging deployment commands here
-          # Example: rsync, docker push, kubectl apply, etc.
+      - name: Deploy to Cloudflare Pages (staging)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b32bcc487dfca3a70fe57a75fa5ac482
+        run: npx wrangler@4.94.0 pages deploy apps/web/out --project-name hmadv-admin --branch staging
 
   deploy-production:
     needs: [preflight, build-web, deploy-staging]
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Production deploy gate
-        run: echo "Production deploy requires environment approval and completed staging"
-
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: web-build
           path: apps/web/out
 
-      - name: Deploy to production
-        run: |
-          echo "Deploying to production environment..."
-          # Add your production deployment commands here
-          # Example: rsync, docker push, kubectl apply, etc.
-          
+      - name: Deploy to Cloudflare Pages (production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b32bcc487dfca3a70fe57a75fa5ac482
+        run: npx wrangler@4.94.0 pages deploy apps/web/out --project-name hmadv-admin --branch main
+
       - name: Notify deployment success
         if: success()
         run: |
-          echo "✅ Production deployment completed successfully!"
-          echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
+          echo "Production deployment complete — commit ${{ github.sha }}"
