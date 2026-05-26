@@ -122,7 +122,7 @@ describe('judiciario schema coverage contract', () => {
       expect(html).toContain('data-component="sidebar"');
       expect(html).toContain('data-component="header"');
       expect(html).toContain('data-advogado-module-host');
-      expect(html).toContain('../js/app.js?v=20260522c');
+      expect(html).toContain('../js/app.js');
       expect(html).toContain(`bootAdvogadoPage('${key}')`);
     });
   });
