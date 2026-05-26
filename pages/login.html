@@ -401,7 +401,7 @@
         (window.__HM_AUTH__ && window.__HM_AUTH__.baseUrl) ||
         (window.__HM_SUPABASE__ && window.__HM_SUPABASE__.authApiBaseUrl) ||
         localStorage.getItem('HM_AUTH_API_BASE') ||
-        (window.location.hostname === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : ''),
+        (window.location.hostname.endsWith('hermidamaia.adv.br') ? 'https://api.hermidamaia.adv.br' : ''),
     };
 
     const ADMIN_EMAIL = 'adrianohermida@gmail.com';

@@ -30,7 +30,7 @@ function readRuntimeConfig() {
   // Remove espaços em branco acidentais na URL base se houver
   const rawBaseUrl = injected.baseUrl ||
     readStorageValue('HM_AUTH_API_BASE') ||
-    (currentHost === 'portal.hermidamaia.adv.br' ? 'https://api.hermidamaia.adv.br' : '');
+    (currentHost.endsWith('hermidamaia.adv.br') ? 'https://api.hermidamaia.adv.br' : '');
   
   const authApiBase = String(rawBaseUrl).trim();
 
