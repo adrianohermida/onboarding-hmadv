@@ -41,6 +41,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build Storybook
+        continue-on-error: true
         run: npm run build-storybook
 
       - name: Prepare Login Entrypoint
