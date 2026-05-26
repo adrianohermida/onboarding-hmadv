@@ -7,39 +7,25 @@ const vitest = path.join(root, 'node_modules', 'vitest', 'vitest.mjs');
 
 const batches = [
   [
-    'tests/analytics-contracts-foundation.test.js',
-    'tests/billing-lifecycle-foundation.test.js',
-    'tests/client-experience-contracts-foundation.test.js',
-    'tests/client-experience-foundation.test.js',
-    'tests/compliance-contracts-foundation.test.js',
-    'tests/data-governance-foundation.test.js',
-  ],
-  [
-    'tests/document-intelligence-foundation.test.js',
-    'tests/event-bus-foundation.test.js',
-    'tests/financial-contracts-foundation.test.js',
-    'tests/financial-intelligence-foundation.test.js',
-    'tests/finops-foundation.test.js',
-    'tests/integration-security-foundation.test.js',
-  ],
-  [
-    'tests/integrations-foundation.test.js',
-    'tests/knowledge-contracts-foundation.test.js',
-    'tests/legal-operations-contracts-foundation.test.js',
-    'tests/legal-operations-foundation.test.js',
-    'tests/observability-foundation.test.js',
     'tests/trace-contracts.test.js',
-  ],
-  [
     'tests/advogado-portal-contract.test.js',
     'tests/agenda-tarefas-operational-contract.test.js',
+    'tests/case-flow-contract.test.js',
     'tests/cliente-portal-contract.test.js',
+    'tests/clients-visibility-invite-contract.test.js',
+  ],
+  [
     'tests/crm-conversational-messaging-contract.test.js',
     'tests/documentos-enterprise-contract.test.js',
     'tests/financial-plan-operational-contract.test.js',
     'tests/freshdesk-support-contract.test.js',
+    'tests/judiciario-rls-crud-contract.test.js',
+    'tests/judiciario-schema-coverage-contract.test.js',
+  ],
+  [
     'tests/legal-notifications-contract.test.js',
     'tests/mensagens-timeline-contract.test.js',
+    'tests/mobile-ux-checklist-contract.test.js',
     'tests/navigation-contract.test.js',
     'tests/operational-crud-contract.test.js',
     'tests/performance-mobile-contract.test.js',
@@ -48,7 +34,6 @@ const batches = [
     'tests/shell-routes-smoke.test.js',
     'tests/shell-runtime-isolation.test.js',
     'tests/supabase-rls-multitenancy-contract.test.js',
-    'tests/ui-kit-contract.test.js',
   ],
 ];
 

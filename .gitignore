@@ -83,4 +83,7 @@ target/
 apps/web/.next/
 
 *storybook.log
-storybook-static
+storybook-static/
+run*_logs/
+debug-*.log
+autentique_search_report.txt

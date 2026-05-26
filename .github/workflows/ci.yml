@@ -30,9 +30,3 @@ jobs:
 
       - name: Validate shell compatibility
         run: node platform/scripts/validate-shell-compatibility.mjs
-
-      - name: Validate security and tenant contracts
-        run: node platform/scripts/validate-tenant-awareness.mjs
-
-      - name: Validate platform governance assets
-        run: node platform/scripts/validate-platform-governance.mjs

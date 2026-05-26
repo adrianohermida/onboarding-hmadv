@@ -1,7 +1,7 @@
 name = "hmadv-api"
 main = "index.ts"
 compatibility_date = "2026-03-31"
-workers_dev = false
+workers_dev = true
 
 # Domínio customizado
 routes = [
@@ -10,7 +10,7 @@ routes = [
 
 # Variáveis públicas (não-sigilosas)
 [vars]
-SITE_URL = "https://hermidamaia.adv.br"
+SITE_URL = "https://portal.hermidamaia.adv.br"
 
 
 

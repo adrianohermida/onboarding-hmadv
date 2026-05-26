@@ -1,3 +1,0 @@
-# Classification Standards
-
-All data must be classified as PUBLICO, INTERNO, CONFIDENCIAL, SENSIVEL, BIOMETRICO, FINANCEIRO, JURIDICO or LGPD_CRITICO.
