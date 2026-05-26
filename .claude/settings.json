@@ -8,7 +8,23 @@
       "Bash(Select-Object FullName, Name)",
       "Bash(xargs grep -l \"judiciario\\\\|processos\\\\|publicacoes\")",
       "Bash(xargs grep -l \"processos\\\\|publicacoes\\\\|audiencias\")",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(git *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "timeout": 60,
+            "statusMessage": "Auto-deploy: verificando mudanças...",
+            "command": "$loc = 'D:\\Github\\onboarding-hmadv'; $s = git -C $loc status --porcelain 2>$null; if ($s) { git -C $loc add -A; $d = Get-Date -Format 'yyyy-MM-dd HH:mm'; git -C $loc commit -m \"auto: $d\"; git -C $loc push origin main }"
+          }
+        ]
+      }
     ]
   }
 }

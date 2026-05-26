@@ -39,7 +39,8 @@
       "Bash(powershell -c \"\\(Get-Content 'D:\\\\Github\\\\onboarding-hmadv\\\\styles\\\\components.css'\\).Count\")",
       "Bash(npx vitest *)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }
