@@ -40,7 +40,8 @@
       "Bash(npx vitest *)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Bash(node -e \"const fs=require\\('fs'\\); JSON.parse\\(fs.readFileSync\\('D:/Github/onboarding-hmadv/.claude/settings.json','utf8'\\)\\); console.log\\('JSON válido'\\)\")"
     ]
   }
 }
