@@ -93,3 +93,11 @@ jobs:
         run: |
           supabase functions deploy portal-signature-webhook \
             --project-ref sspvizogbcyigquqycsz
+
+      - name: Deploy invite-user
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy invite-user \
+            --project-ref sspvizogbcyigquqycsz
