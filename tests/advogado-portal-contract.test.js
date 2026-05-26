@@ -9,9 +9,10 @@ const root = process.cwd();
 const lawyerKeys = [
   'painel',
   'clientes', 'processos', 'publicacoes', 'prazos', 'tarefas', 'agenda', 'audiencias',
-  'financeiro', 'custas-processuais',
+  'financeiro', 'custas-processuais', 'financeiro-processual',
   'mensagens', 'onboarding-v2', 'suporte', 'partes',
   'analytics', 'ai-copilot', 'gestao',
+  'movimentacoes', 'relacoes-processuais', 'tpu', 'orgaos-judiciarios', 'serventias',
 ];
 
 const crudKeys = [
