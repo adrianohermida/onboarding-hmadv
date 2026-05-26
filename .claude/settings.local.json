@@ -37,7 +37,9 @@
       "Bash(npm test *)",
       "Bash(xargs sed -i 's/20260522d/20260523a/g')",
       "Bash(powershell -c \"\\(Get-Content 'D:\\\\Github\\\\onboarding-hmadv\\\\styles\\\\components.css'\\).Count\")",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }
